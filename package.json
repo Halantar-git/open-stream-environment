@@ -1,0 +1,63 @@
+{
+  "name": "open-stream-environment",
+  "productName": "Open Stream Environment",
+  "version": "1.5.0",
+  "description": "Material Design 3 stream overlay + Figma-style drag-and-drop control panel for Twitch/OBS. Overlay served locally as an OBS Browser Source; Twitch chat/follows/subs and DonationAlerts donations drive live alerts.",
+  "main": "main.js",
+  "private": true,
+  "author": "halantar",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "server:only": "node server/index.js",
+    "dist": "electron-builder",
+    "dist:dir": "electron-builder --dir"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "tmi.js": "^1.8.5",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "electron": "^31.3.0",
+    "electron-builder": "^24.13.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "build": {
+    "appId": "com.openstreamenvironment.app",
+    "productName": "Open Stream Environment",
+    "files": [
+      "main.js",
+      "preload.js",
+      "server/**/*",
+      "control/**/*",
+      "overlay/**/*",
+      "shared/**/*",
+      "config/config.example.json",
+      "assets/**/*",
+      "!node_modules/electron-builder/**"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icons/icon.png"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icons/icon.png",
+      "category": "public.app-category.utilities"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icons/icon.png",
+      "category": "Utility"
+    },
+    "asarUnpack": [
+      "config/**"
+    ]
+  }
+}

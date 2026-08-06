@@ -1,0 +1,90 @@
+{
+  "port": 8710,
+  "twitch": {
+    "channel": "halantar",
+    "clientId": "",
+    "clientSecret": "",
+    "userAccessToken": "",
+    "refreshToken": "",
+    "broadcasterId": ""
+  },
+  "donationAlerts": {
+    "clientId": "",
+    "clientSecret": "",
+    "accessToken": "",
+    "refreshToken": "",
+    "userId": ""
+  },
+  "goal": {
+    "title": "Донат-цель",
+    "current": 0,
+    "target": 5000,
+    "currency": "RUB"
+  },
+  "appearance": {
+    "activeThemeId": "nebula",
+    "customThemes": []
+  },
+  "editor": {
+    "gridSize": 5,
+    "snapEnabled": true
+  },
+  "topDonation": {
+    "user": "",
+    "amount": 0,
+    "currency": "RUB"
+  },
+  "scenes": {
+    "start": {
+      "statusLabel": "СТРИМ СКОРО НАЧНЁТСЯ",
+      "title": "Скоро начнём",
+      "subtitle": "Стрим начнётся через несколько минут. Не переключайтесь!",
+      "showTimer": true,
+      "timerDuration": 600,
+      "timerDoneText": "Начинаем прямо сейчас!",
+      "showEvents": true,
+      "showSocials": true,
+      "socials": [
+        { "platform": "TG", "text": "t.me/your_channel" },
+        { "platform": "DC", "text": "discord.gg/your_server" },
+        { "platform": "YT", "text": "youtube.com/@channel" }
+      ]
+    },
+    "brb": {
+      "statusLabel": "ПЕРЕРЫВ НА СТРИМЕ",
+      "title": "Скоро вернусь",
+      "subtitle": "Стрим возобновится через несколько минут. Не переключайтесь!",
+      "showTimer": true,
+      "timerDuration": 300,
+      "timerDoneText": "Стрим возобновится прямо сейчас!",
+      "showEvents": true,
+      "showSocials": true,
+      "socials": [
+        { "platform": "TG", "text": "t.me/your_channel" },
+        { "platform": "DC", "text": "discord.gg/your_server" },
+        { "platform": "YT", "text": "youtube.com/@channel" }
+      ]
+    },
+    "end": {
+      "statusLabel": "СТРИМ ЗАВЕРШЁН",
+      "title": "Спасибо за просмотр!",
+      "subtitle": "Увидимся в следующий раз",
+      "showTimer": false,
+      "timerDuration": 0,
+      "timerDoneText": "",
+      "showEvents": true,
+      "showSocials": true,
+      "socials": [
+        { "platform": "TG", "text": "t.me/your_channel" },
+        { "platform": "DC", "text": "discord.gg/your_server" },
+        { "platform": "YT", "text": "youtube.com/@channel" }
+      ]
+    }
+  },
+  "layout": [
+    { "id": "default-alerts", "type": "alerts", "x": 30, "y": 4, "w": 40, "h": 20, "z": 4, "visible": true, "config": {} },
+    { "id": "default-recent", "type": "recent", "x": 3, "y": 4, "w": 24, "h": 26, "z": 1, "visible": true, "config": { "maxItems": 5 } },
+    { "id": "default-goal", "type": "goal", "x": 3, "y": 84, "w": 32, "h": 11, "z": 2, "visible": true, "config": { "showPercentage": true } },
+    { "id": "default-chat", "type": "chat", "x": 68, "y": 6, "w": 29, "h": 46, "z": 3, "visible": true, "config": { "maxMessages": 8, "showBadges": true } }
+  ]
+}

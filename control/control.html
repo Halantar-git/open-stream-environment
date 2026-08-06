@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Open Stream Environment — панель управления</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@500;700&family=Rajdhani:wght@500;600;700&family=Titillium+Web:wght@400;600;700&family=Share+Tech+Mono&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="../shared/theme.css" />
+  <link rel="stylesheet" href="../shared/widgets.css" />
+  <link rel="stylesheet" href="control.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="topbar__brand">
+        <span class="topbar__brand-mark"></span>
+        <span class="topbar__brand-name">Open Stream <b>Environment</b></span>
+      </div>
+      <nav class="topbar__tabs" id="tabs">
+        <button class="topbar__tab is-active" data-view="editor">Редактор</button>
+        <button class="topbar__tab" data-view="scenes">Сцены</button>
+        <button class="topbar__tab" data-view="settings">Настройки</button>
+      </nav>
+      <div class="topbar__status" id="statusChips"></div>
+    </header>
+
+    <section class="view" id="view-editor">
+      <aside class="library" id="library">
+        <div class="library__title">Виджеты</div>
+        <div class="library__list" id="libraryList"></div>
+        <div class="library__hint">Перетащите на канвас или нажмите, чтобы добавить</div>
+      </aside>
+
+      <div class="canvas-area">
+        <div class="canvas-wrap" id="canvasWrap">
+          <div class="canvas" id="canvas"></div>
+        </div>
+        <div class="canvas-toolbar">
+          <div class="canvas-toolbar__url" id="obsUrlLabel">http://localhost:8710/overlay/overlay.html</div>
+          <button class="md-button md-button--tonal" id="copyUrlBtn"></button>
+          <label class="canvas-toolbar__grid">
+            Сетка
+            <select id="gridSizeSelect">
+              <option value="0">Выкл</option>
+              <option value="2">2%</option>
+              <option value="5">5%</option>
+              <option value="10">10%</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <aside class="inspector">
+        <div class="inspector__section">
+          <div class="inspector__title">Слои</div>
+          <div class="layers" id="layers"></div>
+        </div>
+        <div class="inspector__section" id="propertiesSection" hidden>
+          <div class="inspector__title" id="propertiesTitle">Свойства</div>
+          <div class="properties" id="properties"></div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="view" id="view-scenes" hidden>
+      <aside class="library" id="scenesNav">
+        <div class="library__title">Сцены</div>
+        <div class="library__list" id="scenesNavList"></div>
+        <div class="library__hint">Каждая сцена — отдельный источник в OBS, показывается вместо игры целиком (не поверх).</div>
+      </aside>
+
+      <div class="canvas-area">
+        <div class="canvas-wrap scenes-preview-wrap">
+          <div class="scenes-preview-scale">
+            <iframe class="scenes-preview-frame" id="scenesPreviewFrame" title="Превью сцены"></iframe>
+          </div>
+        </div>
+        <div class="canvas-toolbar">
+          <div class="canvas-toolbar__url" id="sceneUrlLabel"></div>
+          <button class="md-button md-button--tonal" id="copySceneUrlBtn"></button>
+        </div>
+      </div>
+
+      <aside class="inspector">
+        <div class="inspector__section" id="sceneFormSection">
+          <div class="inspector__title" id="sceneFormTitle">Свойства сцены</div>
+          <div class="properties" id="sceneForm"></div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="view" id="view-settings" hidden>
+      <div class="settings">
+        <div class="settings__card md-card">
+          <h2>Twitch</h2>
+          <p class="settings__desc">
+            Чат подключается анонимно и не требует токена. Для алертов о фоллоу/сабах/чирах нужно
+            зарегистрировать приложение и авторизоваться.
+          </p>
+          <div class="md-field">
+            <label>Канал</label>
+            <input type="text" id="twitchChannel" placeholder="halantar" />
+          </div>
+          <div class="md-field">
+            <label>Client ID</label>
+            <input type="text" id="twitchClientId" placeholder="из dev.twitch.tv/console/apps" />
+          </div>
+          <div class="md-field">
+            <label>Client Secret</label>
+            <input type="password" id="twitchClientSecret" placeholder="••••••••" />
+          </div>
+          <div class="settings__hint">
+            <span>Redirect URI для приложения:</span>
+            <code id="twitchRedirectUri"></code>
+            <button class="md-button md-button--text" data-copy="twitchRedirectUri"></button>
+          </div>
+          <div class="settings__actions">
+            <button class="md-button md-button--text" id="openTwitchConsole">Открыть dev.twitch.tv/console/apps</button>
+            <button class="md-button md-button--filled" id="connectTwitchBtn">Подключить Twitch</button>
+          </div>
+          <div class="settings__statuses">
+            <span class="md-chip" id="chip-twitchChat"><span class="md-chip__dot"></span><span class="md-chip__label">Чат</span></span>
+            <span class="md-chip" id="chip-twitchEvents"><span class="md-chip__dot"></span><span class="md-chip__label">Алерты</span></span>
+          </div>
+        </div>
+
+        <div class="settings__card md-card">
+          <h2>DonationAlerts</h2>
+          <p class="settings__desc">Донаты автоматически увеличивают счётчик цели и запускают алерт.</p>
+          <div class="md-field">
+            <label>Client ID</label>
+            <input type="text" id="daClientId" placeholder="из donationalerts.com/application/clients" />
+          </div>
+          <div class="md-field">
+            <label>Client Secret</label>
+            <input type="password" id="daClientSecret" placeholder="••••••••" />
+          </div>
+          <div class="settings__hint">
+            <span>Redirect URI для приложения:</span>
+            <code id="daRedirectUri"></code>
+            <button class="md-button md-button--text" data-copy="daRedirectUri"></button>
+          </div>
+          <div class="settings__actions">
+            <button class="md-button md-button--text" id="openDaConsole">Открыть donationalerts.com/application/clients</button>
+            <button class="md-button md-button--filled" id="connectDaBtn">Подключить DonationAlerts</button>
+          </div>
+          <div class="settings__statuses">
+            <span class="md-chip" id="chip-donationAlerts"><span class="md-chip__dot"></span><span class="md-chip__label">DonationAlerts</span></span>
+          </div>
+        </div>
+
+        <div class="settings__card md-card">
+          <h2>Приложение</h2>
+          <div class="md-field">
+            <label>Порт локального сервера</label>
+            <input type="text" id="appPort" disabled />
+            <span class="md-field__hint">Чтобы изменить — отредактируйте config/config.json и перезапустите приложение.</span>
+          </div>
+          <div class="md-field">
+            <label>URL оверлея для OBS Browser Source</label>
+            <input type="text" id="appOverlayUrl" disabled />
+          </div>
+          <div class="settings__actions">
+            <button class="md-button md-button--outlined" id="resetLayoutBtn">Сбросить раскладку по умолчанию</button>
+          </div>
+        </div>
+
+        <div class="settings__card md-card">
+          <h2>Оформление</h2>
+          <p class="settings__desc">Тема влияет только на сам оверлей (и его превью на канвасе) — панель управления всегда выглядит одинаково.</p>
+          <div class="theme-grid" id="themeGrid"></div>
+          <div class="settings__actions">
+            <button class="md-button md-button--outlined" id="newThemeBtn">Создать свою тему</button>
+          </div>
+          <div class="theme-editor" id="themeEditor" hidden></div>
+        </div>
+
+        <div class="settings__card md-card">
+          <h2>Экспорт / импорт настроек</h2>
+          <p class="settings__desc">
+            Экспорт сохраняет полный config.json — раскладку, темы, цель, а также токены и ключи Twitch/DonationAlerts.
+            Файл содержит секреты — не выкладывайте его публично.
+          </p>
+          <div class="settings__actions">
+            <button class="md-button md-button--tonal" id="exportConfigBtn"></button>
+            <button class="md-button md-button--outlined" id="importConfigBtn"></button>
+          </div>
+          <div class="settings__hint" id="exportImportStatus" hidden></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="../shared/events.js"></script>
+  <script src="../shared/icons.js"></script>
+  <script src="../shared/widget-catalog.js"></script>
+  <script src="../shared/theme-engine.js"></script>
+  <script src="../shared/themes.js"></script>
+  <script src="../shared/scenes-catalog.js"></script>
+  <script src="control.js"></script>
+</body>
+</html>

@@ -1,0 +1,208 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-body);
+}
+
+/* Scenes fully replace the game view while shown (their own OBS scene),
+   so — unlike the transparent widget overlay — this gets an opaque
+   background matching the active theme's base surface. */
+.scene-wrapper {
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--md-surface-dim);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--md-on-surface);
+}
+
+/* ---- Ambient floating background blobs ---- */
+.bg-shape {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.35;
+  animation: float-shapes 12s infinite alternate ease-in-out;
+}
+.shape-1 { width: 500px; height: 500px; background: var(--md-primary); top: 10%; left: 15%; }
+.shape-2 { width: 600px; height: 600px; background: var(--md-tertiary); bottom: 5%; right: 15%; animation-delay: -4s; }
+.shape-3 { width: 400px; height: 400px; background: var(--md-secondary); bottom: 20%; left: 35%; animation-delay: -8s; }
+
+@keyframes float-shapes {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(60px, 40px) scale(1.15); }
+}
+
+/* ---- Main card ---- */
+.scene-card {
+  position: relative;
+  z-index: 10;
+  background: var(--panel-bg, var(--md-surface-container));
+  backdrop-filter: blur(var(--panel-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--panel-blur, 0px));
+  border: var(--panel-border, 1px solid var(--md-outline-variant));
+  border-radius: var(--panel-radius);
+  clip-path: var(--panel-clip, none);
+  box-shadow: var(--elev-3), var(--panel-glow, 0 0 0 rgba(0, 0, 0, 0));
+  padding: 56px 64px;
+  width: 900px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.status-chip {
+  background: var(--md-secondary-container);
+  padding: 8px 20px;
+  border-radius: var(--shape-full);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.status-dot {
+  width: 10px;
+  height: 10px;
+  background-color: var(--md-primary);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--md-primary);
+  animation: pulse-dot 1.8s infinite;
+  flex-shrink: 0;
+}
+.status-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--md-on-secondary-container);
+  text-transform: uppercase;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.scene-title {
+  font-family: var(--font-display);
+  font-size: 56px;
+  font-weight: 900;
+  color: var(--md-on-surface);
+  letter-spacing: -0.5px;
+  margin-bottom: 8px;
+}
+.scene-subtitle {
+  font-size: 16px;
+  color: var(--md-on-surface-variant);
+  margin-bottom: 36px;
+  max-width: 640px;
+}
+
+/* ---- Timer ---- */
+.timer-box {
+  width: 100%;
+  max-width: 480px;
+  background: var(--md-surface-container-high);
+  border-radius: var(--shape-md);
+  padding: 20px 24px 16px;
+  margin-bottom: 40px;
+}
+.timer-display {
+  font-family: var(--font-mono);
+  font-size: 64px;
+  font-weight: 700;
+  color: var(--md-primary);
+  line-height: 1;
+  margin-bottom: 16px;
+}
+.timer-progress-bg {
+  width: 100%;
+  height: 8px;
+  background: var(--md-surface-container);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.timer-progress-fill {
+  height: 100%;
+  width: 100%;
+  background: var(--md-primary);
+  border-radius: 4px;
+  transition: width 1s linear;
+}
+
+/* ---- Event cards ---- */
+.events-grid {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+  margin-bottom: 40px;
+}
+.event-card {
+  flex: 1;
+  background: var(--md-surface-container-high);
+  border-radius: var(--shape-md);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  min-width: 0;
+}
+.event-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--shape-md);
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.event-icon svg { width: 20px; height: 20px; }
+.event-details { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.event-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: var(--md-on-surface-variant);
+  text-transform: uppercase;
+}
+.event-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--md-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- Socials footer ---- */
+.socials-footer { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.social-pill {
+  background: var(--md-surface-container-high);
+  border-radius: var(--shape-full);
+  padding: 8px 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.pill-icon {
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  font-weight: 900;
+  font-size: 10px;
+  padding: 3px 7px;
+  border-radius: 10px;
+}
+.pill-text { color: var(--md-on-surface); }
+
+[hidden] { display: none !important; }

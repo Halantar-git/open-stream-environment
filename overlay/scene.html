@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Open Stream Environment — scene</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500;700&family=Rajdhani:wght@500;600;700&family=Titillium+Web:wght@400;600;700&family=Share+Tech+Mono&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="/shared/theme.css" />
+  <link rel="stylesheet" href="scene.css" />
+</head>
+<body>
+  <div class="scene-wrapper">
+    <div class="bg-shape shape-1"></div>
+    <div class="bg-shape shape-2"></div>
+    <div class="bg-shape shape-3"></div>
+
+    <main class="scene-card">
+      <div class="status-chip">
+        <span class="status-dot"></span>
+        <span class="status-label" id="statusLabel"></span>
+      </div>
+
+      <h1 class="scene-title" id="sceneTitle"></h1>
+      <p class="scene-subtitle" id="sceneSubtitle"></p>
+
+      <div class="timer-box" id="timerBox">
+        <div class="timer-display" id="timerDisplay">00:00</div>
+        <div class="timer-progress-bg">
+          <div class="timer-progress-fill" id="timerProgress"></div>
+        </div>
+      </div>
+
+      <div class="events-grid" id="eventsGrid">
+        <div class="event-card">
+          <div class="event-icon" data-icon="follow"></div>
+          <div class="event-details">
+            <span class="event-title">Фолловер</span>
+            <span class="event-value" id="evFollower">Пока нет</span>
+          </div>
+        </div>
+        <div class="event-card">
+          <div class="event-icon" data-icon="sub"></div>
+          <div class="event-details">
+            <span class="event-title">Подписчик</span>
+            <span class="event-value" id="evSubscriber">Пока нет</span>
+          </div>
+        </div>
+        <div class="event-card">
+          <div class="event-icon" data-icon="donation"></div>
+          <div class="event-details">
+            <span class="event-title">Топ донат</span>
+            <span class="event-value" id="evTopDonation">Пока нет</span>
+          </div>
+        </div>
+      </div>
+
+      <footer class="socials-footer" id="socialsFooter"></footer>
+    </main>
+  </div>
+
+  <script src="/shared/events.js"></script>
+  <script src="/shared/icons.js"></script>
+  <script src="scene.js"></script>
+</body>
+</html>

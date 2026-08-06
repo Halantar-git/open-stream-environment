@@ -1,0 +1,287 @@
+/*
+  halantar overlay — Material Design 3 token system
+  ---------------------------------------------------
+  Seed concept: "deep-space nebula" — a violet primary (warp core), a cyan
+  secondary (nebula gas) and a magenta tertiary (star flare), laid over an
+  almost-black, faintly violet-tinted surface scale. This is the one place
+  the palette gets a personality beyond stock M3 purple; everything else
+  (shape scale, elevation, state layers, motion) follows M3 conventions
+  exactly so the UI still reads as "Material" rather than a generic dark
+  theme.
+
+  Shared by overlay/overlay.css and control/control.css. In OBS the overlay
+  page renders on a transparent canvas, so widget surfaces get a stronger
+  shadow than a typical M3 app would use — legibility over game footage
+  matters more than subtlety here.
+*/
+
+:root {
+  /* ---- Color roles (dark scheme) ---- */
+  --md-primary: #c6b8ff;
+  --md-on-primary: #2e1a6b;
+  --md-primary-container: #453583;
+  --md-on-primary-container: #e4dbff;
+
+  --md-secondary: #7ee0d6;
+  --md-on-secondary: #003733;
+  --md-secondary-container: #00504a;
+  --md-on-secondary-container: #9afcf0;
+
+  --md-tertiary: #ffb0d8;
+  --md-on-tertiary: #5c1145;
+  --md-tertiary-container: #7a2860;
+  --md-on-tertiary-container: #ffd8eb;
+
+  --md-error: #ffb4ab;
+  --md-on-error: #690005;
+  --md-error-container: #93000a;
+  --md-on-error-container: #ffdad6;
+
+  --md-surface-dim: #0e0b17;
+  --md-surface: #131019;
+  --md-surface-bright: #34303c;
+  --md-surface-container-lowest: #09070f;
+  --md-surface-container-low: #1b1723;
+  --md-surface-container: #1f1b27;
+  --md-surface-container-high: #2a2531;
+  --md-surface-container-highest: #35303c;
+
+  --md-on-surface: #e8e1f0;
+  --md-on-surface-variant: #c9c1d6;
+  --md-outline: #8d8798;
+  --md-outline-variant: #4a4553;
+  --md-shadow: #000000;
+  --md-scrim: #000000;
+
+  /* ---- State layer opacities ---- */
+  --state-hover: 0.08;
+  --state-focus: 0.12;
+  --state-pressed: 0.12;
+  --state-dragged: 0.16;
+
+  /* ---- Shape scale ---- */
+  --shape-xs: 4px;
+  --shape-sm: 8px;
+  --shape-md: 12px;
+  --shape-lg: 16px;
+  --shape-xl: 28px;
+  --shape-full: 999px;
+
+  /* ---- Elevation (broadcast-safe: shadow carries more weight than in a
+     typical app, since widgets sit on arbitrary video, not a surface) ---- */
+  --elev-1: 0 1px 3px rgba(0, 0, 0, 0.55), 0 1px 2px rgba(0, 0, 0, 0.35);
+  --elev-2: 0 3px 8px rgba(0, 0, 0, 0.6), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --elev-3: 0 6px 16px rgba(0, 0, 0, 0.65), 0 2px 6px rgba(0, 0, 0, 0.45);
+
+  /* ---- Motion: M3 easing set ---- */
+  --easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --easing-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+  --easing-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /* ---- Type ----
+     Display face: Space Grotesk — geometric, a little synthetic, carries
+     the "signal from space" feel for names/headlines and big numbers.
+     Body/UI face: Roboto — the M3 default, kept for chat text and labels
+     so the system still reads as Material underneath the accent.
+     Data face: Roboto Mono — donation amounts, goal totals, timers. */
+  --font-display: "Space Grotesk", "Google Sans", "Segoe UI", sans-serif;
+  --font-body: "Roboto", "Segoe UI", sans-serif;
+  --font-mono: "Roboto Mono", "Consolas", monospace;
+
+  /* ---- Panel shape (overridden per-theme at runtime; these are the
+     Nebula defaults so pages still look right before JS applies a theme) ---- */
+  --panel-radius: 24px;
+  --panel-clip: none;
+  --panel-glow: 0 24px 48px rgba(0, 0, 0, 0.45);
+  --panel-bg: rgba(33, 31, 38, 0.82);
+  --panel-blur: 20px;
+  --panel-border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.md-elevation-1 { box-shadow: var(--elev-1); }
+.md-elevation-2 { box-shadow: var(--elev-2); }
+.md-elevation-3 { box-shadow: var(--elev-3); }
+
+.md-card {
+  background: var(--md-surface-container);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-lg);
+  color: var(--md-on-surface);
+}
+
+.md-icon-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--shape-full);
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+.md-linear-progress {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  border-radius: var(--shape-full);
+  background: var(--md-surface-container-highest);
+  overflow: hidden;
+}
+.md-linear-progress__bar {
+  position: absolute;
+  inset: 0;
+  width: 0%;
+  border-radius: var(--shape-full);
+  background: linear-gradient(90deg, var(--md-secondary), var(--md-primary));
+  transition: width 700ms var(--easing-emphasized);
+}
+
+/* Generic M3 filled button, used across control panel. */
+.md-button {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  border: none;
+  border-radius: var(--shape-full);
+  padding: 10px 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 150ms var(--easing-standard), filter 150ms var(--easing-standard);
+}
+.md-button--filled {
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+}
+.md-button--filled:hover { filter: brightness(1.08); }
+.md-button--tonal {
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+}
+.md-button--tonal:hover { filter: brightness(1.1); }
+.md-button--outlined {
+  background: transparent;
+  color: var(--md-on-surface);
+  border: 1px solid var(--md-outline);
+}
+.md-button--outlined:hover { background: rgba(232, 225, 240, var(--state-hover)); }
+.md-button--text {
+  background: transparent;
+  color: var(--md-primary);
+  padding: 8px 12px;
+}
+.md-button--text:hover { background: rgba(198, 184, 255, var(--state-hover)); }
+.md-button:disabled { opacity: 0.38; cursor: not-allowed; filter: none; }
+
+.md-switch {
+  --track-w: 40px;
+  --track-h: 24px;
+  position: relative;
+  width: var(--track-w);
+  height: var(--track-h);
+  border-radius: var(--shape-full);
+  background: var(--md-surface-container-highest);
+  border: 2px solid var(--md-outline);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 150ms var(--easing-standard), border-color 150ms var(--easing-standard);
+}
+.md-switch__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--md-outline);
+  transition: transform 180ms var(--easing-emphasized), background 150ms var(--easing-standard), width 150ms, height 150ms, top 150ms, left 150ms;
+}
+.md-switch.is-on {
+  background: var(--md-primary);
+  border-color: var(--md-primary);
+}
+.md-switch.is-on .md-switch__thumb {
+  background: var(--md-on-primary);
+  width: 20px;
+  height: 20px;
+  top: 0px;
+  left: 0px;
+  transform: translateX(16px);
+}
+
+.md-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px 4px 8px;
+  border-radius: var(--shape-full);
+  border: 1px solid var(--md-outline-variant);
+  color: var(--md-on-surface-variant);
+}
+.md-chip__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--md-outline);
+}
+.md-chip.is-connected { color: var(--md-on-secondary-container); border-color: transparent; background: var(--md-secondary-container); }
+.md-chip.is-connected .md-chip__dot { background: var(--md-secondary); }
+.md-chip.is-error { color: var(--md-on-error-container); border-color: transparent; background: var(--md-error-container); }
+.md-chip.is-error .md-chip__dot { background: var(--md-error); }
+.md-chip.is-pending .md-chip__dot { background: var(--md-tertiary); animation: chip-pulse 1.2s ease-in-out infinite; }
+
+@keyframes chip-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.md-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.md-field label {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--md-on-surface-variant);
+  letter-spacing: 0.2px;
+}
+.md-field input[type="text"],
+.md-field input[type="number"],
+.md-field input[type="password"] {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--md-on-surface);
+  background: var(--md-surface-container-highest);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-sm);
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color 150ms var(--easing-standard);
+  width: 100%;
+}
+.md-field input:focus {
+  border-color: var(--md-primary);
+}
+.md-field .md-field__hint {
+  font-size: 11px;
+  color: var(--md-on-surface-variant);
+  opacity: 0.8;
+}
+
+::selection { background: var(--md-primary); color: var(--md-on-primary); }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--md-surface-container-highest); border-radius: var(--shape-full); border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--md-outline); background-clip: padding-box; }
