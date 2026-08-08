@@ -101,10 +101,10 @@
       "--font-body": '"Roboto", "Segoe UI", sans-serif',
       "--font-mono": '"Roboto Mono", "Consolas", monospace',
     },
-    "star-citizen": {
-      "--font-display": '"Rajdhani", "Segoe UI", sans-serif',
-      "--font-body": '"Titillium Web", "Segoe UI", sans-serif',
-      "--font-mono": '"Share Tech Mono", "Consolas", monospace',
+    orbital: {
+      "--font-display": '"Orbitron", "Segoe UI", sans-serif',
+      "--font-body": '"Rajdhani", "Segoe UI", sans-serif',
+      "--font-mono": '"Orbitron", "Consolas", monospace',
     },
   };
 
@@ -113,19 +113,25 @@
       return {
         "--panel-radius": "2px",
         "--panel-clip": "polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%)",
+        "--panel-decoration": "brackets2",
         "--panel-glow": `0 0 16px ${hexToRgba(primaryHex, 0.22)}, inset 0 0 24px ${hexToRgba(primaryHex, 0.05)}`,
         "--panel-bg": surfaceContainerHex,
         "--panel-blur": "0px",
         "--panel-border": `1px solid ${outlineVariantHex}`,
+        "--alert-enter-easing": "cubic-bezier(0.175, 0.885, 0.32, 1.2)",
+        "--alert-enter-duration": "350ms",
       };
     }
     return {
       "--panel-radius": "24px",
       "--panel-clip": "none",
+      "--panel-decoration": "none",
       "--panel-glow": "0 24px 48px rgba(0,0,0,0.45)",
       "--panel-bg": hexToRgba(surfaceContainerHex, 0.82),
       "--panel-blur": "20px",
       "--panel-border": "1px solid rgba(255, 255, 255, 0.12)",
+      "--alert-enter-easing": "cubic-bezier(0.05, 0.7, 0.1, 1)",
+      "--alert-enter-duration": "480ms",
     };
   }
 

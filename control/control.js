@@ -206,9 +206,10 @@
         return `<div class="widget-alerts-host"><div class="widget-alert" data-kind="follow">
           <div class="widget-alert__icon">${ICONS.follow}</div>
           <div class="widget-alert__body">
-            <div class="widget-alert__kicker">Новый фолловер</div>
+            <div class="widget-alert__status"><span class="widget-alert__dot"></span><span class="widget-alert__kicker">Новый фолловер</span></div>
             <div class="widget-alert__name">nova_viewer</div>
           </div>
+          <div class="widget-alert__lockbar"><div class="widget-alert__lockbar-fill"></div></div>
         </div></div>`;
       case "custom": {
         const mode = config.mode || "text";
@@ -298,8 +299,7 @@
   function applyThemeToCanvas(tokens) {
     if (!tokens) return;
     Object.entries(tokens).forEach(([k, v]) => canvasEl.style.setProperty(k, v));
-    const isAngular = tokens["--panel-clip"] && tokens["--panel-clip"] !== "none";
-    canvasEl.classList.toggle("theme-angular", !!isAngular);
+    canvasEl.dataset.decoration = tokens["--panel-decoration"] || "none";
   }
 
   function applyGridToCanvas() {
@@ -818,8 +818,8 @@
         </div>
         <div class="md-field"><label>Шрифты</label>
           <select id="seedFont">
-            <option value="nebula" ${seeds.fontPreset !== "star-citizen" ? "selected" : ""}>Roboto (Material You)</option>
-            <option value="star-citizen" ${seeds.fontPreset === "star-citizen" ? "selected" : ""}>Rajdhani / Titillium Web</option>
+            <option value="nebula" ${seeds.fontPreset !== "orbital" ? "selected" : ""}>Roboto (Material You)</option>
+            <option value="orbital" ${seeds.fontPreset === "orbital" ? "selected" : ""}>Orbitron / Rajdhani (Orbital)</option>
           </select>
         </div>
       </div>

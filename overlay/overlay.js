@@ -137,11 +137,12 @@
       <div class="widget-alert__spark">${"<span></span>".repeat(6)}</div>
       <div class="widget-alert__icon">${ICONS[alert.kind] || ""}</div>
       <div class="widget-alert__body">
-        <div class="widget-alert__kicker">${kindLabel(alert)}</div>
+        <div class="widget-alert__status"><span class="widget-alert__dot"></span><span class="widget-alert__kicker">${kindLabel(alert)}</span></div>
         <div class="widget-alert__name">${escapeHtml(alert.user || "")}</div>
         ${showAmount ? `<div class="widget-alert__amount">${formatAmount(alert)}</div>` : ""}
         ${showMessage ? `<div class="widget-alert__message">«${escapeHtml(alert.message)}»</div>` : ""}
-      </div>`;
+      </div>
+      <div class="widget-alert__lockbar"><div class="widget-alert__lockbar-fill"></div></div>`;
     return card;
   }
 
@@ -352,8 +353,7 @@
     if (!appearance || !appearance.tokens) return;
     const root = document.documentElement;
     Object.entries(appearance.tokens).forEach(([k, v]) => root.style.setProperty(k, v));
-    const isAngular = appearance.tokens["--panel-clip"] && appearance.tokens["--panel-clip"] !== "none";
-    document.body.classList.toggle("theme-angular", !!isAngular);
+    document.body.dataset.decoration = appearance.tokens["--panel-decoration"] || "none";
     document.body.dataset.theme = appearance.activeThemeId || "";
   }
 

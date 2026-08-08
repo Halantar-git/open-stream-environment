@@ -93,10 +93,13 @@
      Nebula defaults so pages still look right before JS applies a theme) ---- */
   --panel-radius: 24px;
   --panel-clip: none;
+  --panel-decoration: none;
   --panel-glow: 0 24px 48px rgba(0, 0, 0, 0.45);
   --panel-bg: rgba(33, 31, 38, 0.82);
   --panel-blur: 20px;
   --panel-border: 1px solid rgba(255, 255, 255, 0.12);
+  --alert-enter-easing: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --alert-enter-duration: 480ms;
 }
 
 * {

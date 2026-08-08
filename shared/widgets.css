@@ -57,9 +57,22 @@
 }
 .widget-alert__icon svg { width: 55%; height: 55%; }
 .widget-alert__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.widget-alert__status { display: flex; align-items: center; gap: 6px; align-self: flex-start; }
+.widget-alert__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+  flex-shrink: 0;
+  animation: widget-alert-dot-blink 1.5s infinite;
+}
+@keyframes widget-alert-dot-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
 .widget-alert__kicker {
   display: inline-block;
-  align-self: flex-start;
   font-family: var(--font-body);
   font-size: 11px;
   font-weight: 700;
@@ -90,11 +103,40 @@
   font-style: italic;
   font-size: clamp(11px, 3.4cqw, 14px);
   color: var(--md-on-surface-variant);
-  margin-top: 2px;
-  max-width: 32ch;
+  margin-top: 4px;
+  max-width: 34ch;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  border-left: 3px solid var(--accent);
+  background: rgba(0, 0, 0, 0.15);
+  padding: 5px 10px;
+  border-radius: 0 var(--shape-xs) var(--shape-xs) 0;
+}
+.widget-alert__lockbar { display: none; }
+[data-decoration="brackets2"] .widget-alert__lockbar,
+[data-decoration="brackets4"] .widget-alert__lockbar {
+  display: block;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+[data-decoration="brackets2"] .widget-alert__lockbar-fill,
+[data-decoration="brackets4"] .widget-alert__lockbar-fill {
+  width: 100%;
+  height: 100%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  animation: widget-alert-lock-pulse 1.5s infinite linear;
+}
+@keyframes widget-alert-lock-pulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 1; }
+  100% { opacity: 0.4; }
 }
 .widget-alert__spark { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
 .widget-alert__spark span {
@@ -307,14 +349,20 @@
   height: 100%;
 }
 
-/* ---------- Angular (HUD-style) theme decoration ----------
-   Toggled by JS via a `.theme-angular` class on the overlay body or the
-   editor's #canvas — not tied to a specific theme id, so custom themes
-   that pick the "angular" shape mode get the same corner brackets and
-   scanline texture as the built-in Star Citizen theme. */
-.theme-angular .widget-alert,
-.theme-angular .widget-goal,
-.theme-angular .widget-recent {
+/* ---------- HUD-style theme decoration ----------
+   Toggled by JS via a `data-decoration` attribute on the overlay body or
+   the editor's #canvas (values: none | brackets2 | brackets4) — driven by
+   the active theme's --panel-decoration token, not a specific theme id,
+   so custom "angular" themes get the same corner brackets and scanline
+   texture as the built-in Star Citizen theme. */
+[data-decoration="brackets2"] .widget-alert,
+[data-decoration="brackets2"] .widget-goal,
+[data-decoration="brackets2"] .widget-recent,
+[data-decoration="brackets2"] .widget-custom.has-card,
+[data-decoration="brackets4"] .widget-alert,
+[data-decoration="brackets4"] .widget-goal,
+[data-decoration="brackets4"] .widget-recent,
+[data-decoration="brackets4"] .widget-custom.has-card {
   position: relative;
   background-image: repeating-linear-gradient(
     180deg,
@@ -324,12 +372,16 @@
     transparent 3px
   );
 }
-.theme-angular .widget-alert::before,
-.theme-angular .widget-goal::before,
-.theme-angular .widget-recent::before,
-.theme-angular .widget-alert::after,
-.theme-angular .widget-goal::after,
-.theme-angular .widget-recent::after {
+
+/* Two-corner brackets (Star Citizen and angular custom themes) */
+[data-decoration="brackets2"] .widget-alert::before,
+[data-decoration="brackets2"] .widget-goal::before,
+[data-decoration="brackets2"] .widget-recent::before,
+[data-decoration="brackets2"] .widget-custom.has-card::before,
+[data-decoration="brackets2"] .widget-alert::after,
+[data-decoration="brackets2"] .widget-goal::after,
+[data-decoration="brackets2"] .widget-recent::after,
+[data-decoration="brackets2"] .widget-custom.has-card::after {
   content: "";
   position: absolute;
   width: 16px;
@@ -337,21 +389,53 @@
   pointer-events: none;
   opacity: 0.9;
 }
-.theme-angular .widget-alert::before,
-.theme-angular .widget-goal::before,
-.theme-angular .widget-recent::before {
+[data-decoration="brackets2"] .widget-alert::before,
+[data-decoration="brackets2"] .widget-goal::before,
+[data-decoration="brackets2"] .widget-recent::before,
+[data-decoration="brackets2"] .widget-custom.has-card::before {
   top: -1px;
   left: -1px;
   border-top: 2px solid var(--md-primary);
   border-left: 2px solid var(--md-primary);
 }
-.theme-angular .widget-alert::after,
-.theme-angular .widget-goal::after,
-.theme-angular .widget-recent::after {
+[data-decoration="brackets2"] .widget-alert::after,
+[data-decoration="brackets2"] .widget-goal::after,
+[data-decoration="brackets2"] .widget-recent::after,
+[data-decoration="brackets2"] .widget-custom.has-card::after {
   bottom: -1px;
   right: -1px;
   border-bottom: 2px solid var(--md-primary);
   border-right: 2px solid var(--md-primary);
+}
+
+/* Four-corner brackets (Orbital) — a single ::before pseudo-element with
+   8 layered solid-color gradients (2 short bars per corner) so all four
+   corners are covered without needing extra DOM nodes. */
+[data-decoration="brackets4"] .widget-alert::before,
+[data-decoration="brackets4"] .widget-goal::before,
+[data-decoration="brackets4"] .widget-recent::before,
+[data-decoration="brackets4"] .widget-custom.has-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.9;
+  background-image:
+    linear-gradient(var(--md-primary), var(--md-primary)),
+    linear-gradient(var(--md-primary), var(--md-primary)),
+    linear-gradient(var(--md-primary), var(--md-primary)),
+    linear-gradient(var(--md-primary), var(--md-primary)),
+    linear-gradient(var(--md-primary), var(--md-primary)),
+    linear-gradient(var(--md-primary), var(--md-primary)),
+    linear-gradient(var(--md-primary), var(--md-primary)),
+    linear-gradient(var(--md-primary), var(--md-primary));
+  background-repeat: no-repeat;
+  background-size: 14px 3px, 3px 14px, 14px 3px, 3px 14px, 14px 3px, 3px 14px, 14px 3px, 3px 14px;
+  background-position:
+    top -1px left -1px, top -1px left -1px,
+    top -1px right -1px, top -1px right -1px,
+    bottom -1px left -1px, bottom -1px left -1px,
+    bottom -1px right -1px, bottom -1px right -1px;
 }
 
 /* ---------- Stat pill (followers / subscribers / top donation) ---------- */

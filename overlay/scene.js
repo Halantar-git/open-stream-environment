@@ -45,8 +45,7 @@
     if (!appearance || !appearance.tokens) return;
     const root = document.documentElement;
     Object.entries(appearance.tokens).forEach(([k, v]) => root.style.setProperty(k, v));
-    const isAngular = appearance.tokens["--panel-clip"] && appearance.tokens["--panel-clip"] !== "none";
-    document.body.classList.toggle("theme-angular", !!isAngular);
+    document.body.dataset.decoration = appearance.tokens["--panel-decoration"] || "none";
   }
 
   function renderScene(scene) {

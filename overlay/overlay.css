@@ -22,7 +22,7 @@ body {
   filter: blur(6px);
 }
 .widget-alert.alert-enter-active {
-  animation: alert-in 480ms var(--easing-emphasized-decelerate) forwards;
+  animation: alert-in var(--alert-enter-duration, 480ms) var(--alert-enter-easing, var(--easing-emphasized-decelerate)) forwards;
 }
 .widget-alert.alert-exit {
   animation: alert-out 260ms var(--easing-emphasized-accelerate) forwards;

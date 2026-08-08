@@ -233,7 +233,7 @@ class AppState {
       tertiary: seeds.tertiary || "#ffb0d8",
       surfaceSeed: seeds.surfaceSeed || seeds.primary || "#8878c8",
       shapeMode: seeds.shapeMode === "angular" ? "angular" : "rounded",
-      fontPreset: seeds.fontPreset === "star-citizen" ? "star-citizen" : "nebula",
+      fontPreset: seeds.fontPreset === "orbital" ? "orbital" : "nebula",
     };
     const tokens = buildThemeTokens(cleanSeeds);
     const cleanName = String(name || "Моя тема").slice(0, 40);

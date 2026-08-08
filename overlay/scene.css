@@ -40,6 +40,56 @@ body {
   100% { transform: translate(60px, 40px) scale(1.15); }
 }
 
+/* Orbital swaps the soft blur blobs for a technical grid texture */
+.grid-overlay { display: none; }
+[data-decoration="brackets4"] .bg-shape { display: none; }
+[data-decoration="brackets4"] .grid-overlay {
+  display: block;
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--md-outline-variant) 1px, transparent 1px),
+    linear-gradient(90deg, var(--md-outline-variant) 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: 0.12;
+}
+
+/* ---- Corner brackets on the scene card itself ---- */
+[data-decoration="brackets2"] .scene-card,
+[data-decoration="brackets4"] .scene-card {
+  position: relative;
+}
+[data-decoration="brackets2"] .scene-card::before,
+[data-decoration="brackets2"] .scene-card::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  opacity: 0.9;
+}
+[data-decoration="brackets2"] .scene-card::before { top: -1px; left: -1px; border-top: 2px solid var(--md-primary); border-left: 2px solid var(--md-primary); }
+[data-decoration="brackets2"] .scene-card::after { bottom: -1px; right: -1px; border-bottom: 2px solid var(--md-primary); border-right: 2px solid var(--md-primary); }
+[data-decoration="brackets4"] .scene-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.9;
+  background-image:
+    linear-gradient(var(--md-primary), var(--md-primary)), linear-gradient(var(--md-primary), var(--md-primary)),
+    linear-gradient(var(--md-primary), var(--md-primary)), linear-gradient(var(--md-primary), var(--md-primary)),
+    linear-gradient(var(--md-primary), var(--md-primary)), linear-gradient(var(--md-primary), var(--md-primary)),
+    linear-gradient(var(--md-primary), var(--md-primary)), linear-gradient(var(--md-primary), var(--md-primary));
+  background-repeat: no-repeat;
+  background-size: 16px 3px, 3px 16px, 16px 3px, 3px 16px, 16px 3px, 3px 16px, 16px 3px, 3px 16px;
+  background-position:
+    top -1px left -1px, top -1px left -1px,
+    top -1px right -1px, top -1px right -1px,
+    bottom -1px left -1px, bottom -1px left -1px,
+    bottom -1px right -1px, bottom -1px right -1px;
+}
+
 /* ---- Main card ---- */
 .scene-card {
   position: relative;

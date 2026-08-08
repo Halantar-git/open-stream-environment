@@ -6,8 +6,33 @@ const { createServer } = require("./server");
 const { buildTwitchAuthorizeUrl, buildDonationAlertsAuthorizeUrl } = require("./server/oauth");
 const { CONFIG_PATH } = require("./server/state");
 
+const SPLASH_MIN_MS = 3500; // matches the progress-bar animation duration in splash.html
+
 let mainWindow;
+let splashWindow;
 let serverHandle;
+
+function createSplashWindow() {
+  splashWindow = new BrowserWindow({
+    width: 600,
+    height: 400,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    resizable: false,
+    backgroundColor: "#00000000",
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  splashWindow.loadFile(path.join(__dirname, "splash", "splash.html"), {
+    query: { version: app.getVersion() },
+  });
+  splashWindow.on("closed", () => {
+    splashWindow = null;
+  });
+}
 
 function createWindow(port) {
   mainWindow = new BrowserWindow({
@@ -17,6 +42,7 @@ function createWindow(port) {
     minHeight: 700,
     backgroundColor: "#0e0b17",
     autoHideMenuBar: true,
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -27,9 +53,21 @@ function createWindow(port) {
   mainWindow.loadFile(path.join(__dirname, "control", "control.html"), {
     query: { port: String(port) },
   });
+
+  const splashStartedAt = Date.now();
+  mainWindow.once("ready-to-show", () => {
+    const elapsed = Date.now() - splashStartedAt;
+    const remaining = Math.max(0, SPLASH_MIN_MS - elapsed);
+    setTimeout(() => {
+      if (splashWindow) splashWindow.destroy();
+      mainWindow.show();
+    }, remaining);
+  });
 }
 
 app.whenReady().then(() => {
+  createSplashWindow();
+
   serverHandle = createServer();
   const { port } = serverHandle.start();
 
@@ -63,7 +101,7 @@ app.whenReady().then(() => {
   ipcMain.handle("app:export-config", async () => {
     const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
       title: "Экспорт настроек",
-      defaultPath: "halantar-overlay-config.json",
+      defaultPath: "open-stream-environment-config.json",
       filters: [{ name: "JSON", extensions: ["json"] }],
     });
     if (canceled || !filePath) return { ok: false, canceled: true };
