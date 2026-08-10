@@ -1,7 +1,7 @@
 {
   "name": "open-stream-environment",
   "productName": "Open Stream Environment",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Material Design 3 stream overlay + Figma-style drag-and-drop control panel for Twitch/OBS. Overlay served locally as an OBS Browser Source; Twitch chat/follows/subs and DonationAlerts donations drive live alerts.",
   "main": "main.js",
   "private": true,
@@ -26,39 +26,32 @@
     "node": ">=18"
   },
   "build": {
-    "appId": "com.openstreamenvironment.app",
-    "productName": "Open Stream Environment",
-    "files": [
-      "main.js",
-      "preload.js",
-      "splash/**/*",
-      "server/**/*",
-      "control/**/*",
-      "overlay/**/*",
-      "shared/**/*",
-      "config/config.example.json",
-      "assets/**/*",
-      "!node_modules/electron-builder/**"
-    ],
-    "directories": {
-      "output": "release"
-    },
-    "win": {
-      "target": "nsis",
-      "icon": "assets/icons/icon.png"
-    },
-    "mac": {
-      "target": "dmg",
-      "icon": "assets/icons/icon.png",
-      "category": "public.app-category.utilities"
-    },
-    "linux": {
-      "target": "AppImage",
-      "icon": "assets/icons/icon.png",
-      "category": "Utility"
-    },
-    "asarUnpack": [
-      "config/**"
-    ]
-  }
+  "appId": "com.openstreamenvironment.app",
+  "productName": "Open Stream Environment",
+  "files": [
+    "main.js",
+    "preload.js",
+    "splash/**/*",
+    "chatwindow/**/*",
+    "widgeteditor/**/*",
+    "server/**/*",
+    "control/**/*",
+    "overlay/**/*",
+    "shared/**/*",
+    "config/**/*",
+    "assets/**/*"
+  ],
+  "directories": {
+    "output": "release"
+  },
+  "win": {
+    "target": "portable",
+    "icon": "assets/icons/icon.png"
+  },
+  "asar": true,
+  "asarUnpack": [
+    "config/**"
+  ]
+}
+
 }

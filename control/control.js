@@ -171,6 +171,10 @@
     }
   }
 
+  function buildCustomWidgetDocument(cfg) {
+    return `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:transparent;color:#e8e1f0;font-family:sans-serif;}${cfg.css || ""}</style></head><body>${cfg.html || ""}<script>${cfg.js || ""}</script></body></html>`;
+  }
+
   function buildPreviewHtml(inst) {
     const config = inst.config || {};
     switch (inst.type) {
@@ -220,7 +224,8 @@
             : `<div class="widget-custom"></div>`;
         }
         if (mode === "html") {
-          return `<div class="widget-custom${withCard ? " has-card" : ""}"><div class="widget-custom__html">${config.html || ""}</div></div>`;
+          const doc = buildCustomWidgetDocument(config);
+          return `<div class="widget-custom${withCard ? " has-card" : ""}"><iframe class="widget-custom__html" srcdoc="${escapeAttr(doc)}"></iframe></div>`;
         }
         const title = config.textTitle ? `<div class="widget-custom__title">${escapeHtml(config.textTitle)}</div>` : "";
         const colorStyle = config.textColor ? ` style="color:${escapeAttr(config.textColor)}"` : "";
@@ -650,11 +655,9 @@
       host.querySelector("#pImageFit").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { imageFit: e.target.value } } }));
     } else if (mode === "html") {
       host.innerHTML = `
-        <div class="md-field"><label>Свой HTML</label>
-          <textarea id="pCustomHtml" rows="8" style="font-family:var(--font-mono);font-size:12px;background:var(--md-surface-container-highest);color:var(--md-on-surface);border:1px solid var(--md-outline-variant);border-radius:var(--shape-sm);padding:10px;width:100%;resize:vertical">${escapeHtml(config.html || "")}</textarea>
-        </div>
-        <div class="properties__hint">Рендерится как есть — свои теги, стили, дефисы CSS-переменных темы (var(--md-primary) и т.д.) тоже работают.</div>`;
-      host.querySelector("#pCustomHtml").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { html: e.target.value } } }));
+        <div class="properties__hint">HTML, CSS и JS редактируются в отдельном окне — с вкладками и живым превью. JS выполняется по-настоящему (через iframe), можно использовать таймеры, анимации и т.д.</div>
+        <button class="md-button md-button--filled" id="pOpenEditor" style="width:100%;justify-content:center;">Редактировать код</button>`;
+      host.querySelector("#pOpenEditor").addEventListener("click", () => window.desktop?.openWidgetEditor(inst.id));
     } else {
       host.innerHTML = `
         <div class="md-field"><label>Заголовок (необязательно)</label><input type="text" id="pTextTitle" value="${escapeAttr(config.textTitle || "")}"></div>
@@ -1020,6 +1023,10 @@
     copyUrlBtn.textContent = "Скопировано!";
     setTimeout(() => (copyUrlBtn.textContent = "Скопировать URL для OBS"), 1400);
   });
+
+  const openChatWindowBtn = document.getElementById("openChatWindowBtn");
+  openChatWindowBtn.innerHTML = `${ICONS.widgetChat} Чат`;
+  openChatWindowBtn.addEventListener("click", () => window.desktop?.openChatWindow());
 
   // ---- websocket ----
   function handleMessage(msg) {

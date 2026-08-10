@@ -25,7 +25,7 @@
       defaultGeometry: { x: 3, y: 84, w: 32, h: 11 },
       minW: 16,
       minH: 7,
-      defaultConfig: { showPercentage: true },
+      defaultConfig: { showPercentage: false },
     },
     chat: {
       type: "chat",
@@ -65,6 +65,8 @@
         imageUrl: "",
         imageFit: "contain",
         html: "",
+        css: "",
+        js: "",
       },
     },
     stat: {

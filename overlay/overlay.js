@@ -335,16 +335,30 @@
     entry.inner.className = "widget-custom" + (withCard ? " has-card" : "");
 
     if (mode === "image") {
+      entry.customCodeKey = null;
       entry.inner.innerHTML = cfg.imageUrl
         ? `<img class="widget-custom__image" src="${escapeAttr(cfg.imageUrl)}" style="object-fit:${escapeAttr(cfg.imageFit || "contain")}" alt="">`
         : "";
     } else if (mode === "html") {
-      entry.inner.innerHTML = `<div class="widget-custom__html">${cfg.html || ""}</div>`;
+      const key = `${cfg.html || ""}\u0000${cfg.css || ""}\u0000${cfg.js || ""}`;
+      if (entry.customCodeKey !== key) {
+        entry.customCodeKey = key;
+        entry.inner.innerHTML = "";
+        const iframe = document.createElement("iframe");
+        iframe.className = "widget-custom__html";
+        iframe.srcdoc = buildCustomWidgetDocument(cfg);
+        entry.inner.appendChild(iframe);
+      }
     } else {
+      entry.customCodeKey = null;
       const title = cfg.textTitle ? `<div class="widget-custom__title">${escapeHtml(cfg.textTitle)}</div>` : "";
       const colorStyle = cfg.textColor ? ` style="color:${escapeAttr(cfg.textColor)}"` : "";
       entry.inner.innerHTML = `<div class="widget-custom__text" data-align="${escapeAttr(cfg.textAlign || "center")}">${title}<div class="widget-custom__body" data-size="${escapeAttr(cfg.textSize || "medium")}"${colorStyle}>${escapeHtml(cfg.text || "")}</div></div>`;
     }
+  }
+
+  function buildCustomWidgetDocument(cfg) {
+    return `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:transparent;color:#e8e1f0;font-family:sans-serif;}${cfg.css || ""}</style></head><body>${cfg.html || ""}<script>${cfg.js || ""}</script></body></html>`;
   }
 
   // ---------------- theme ----------------

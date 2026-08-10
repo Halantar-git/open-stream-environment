@@ -7,4 +7,6 @@ contextBridge.exposeInMainWorld("desktop", {
   connectDonationAlerts: (creds) => ipcRenderer.invoke("oauth:connect-donationalerts", creds),
   exportConfig: () => ipcRenderer.invoke("app:export-config"),
   importConfig: () => ipcRenderer.invoke("app:import-config"),
+  openChatWindow: () => ipcRenderer.invoke("app:open-chat-window"),
+  openWidgetEditor: (widgetId) => ipcRenderer.invoke("app:open-widget-editor", widgetId),
 });

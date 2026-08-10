@@ -229,3 +229,6 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .library-card.is-active { border-color: var(--md-primary); background: var(--md-primary-container); }
 .library-card.is-active .library-card__label,
 .library-card.is-active .library-card__desc { color: var(--md-on-primary-container); }
+
+.topbar__chat-btn { margin-left: 10px; font-size: 12px; padding: 7px 14px; }
+.topbar__chat-btn svg { width: 14px; height: 14px; }

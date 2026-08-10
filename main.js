@@ -10,6 +10,8 @@ const SPLASH_MIN_MS = 3500; // matches the progress-bar animation duration in sp
 
 let mainWindow;
 let splashWindow;
+let chatWindow = null;
+const widgetEditorWindows = new Map(); // widgetId -> BrowserWindow
 let serverHandle;
 
 function createSplashWindow() {
@@ -65,6 +67,58 @@ function createWindow(port) {
   });
 }
 
+function openChatWindow(port) {
+  if (chatWindow) {
+    chatWindow.focus();
+    return;
+  }
+  chatWindow = new BrowserWindow({
+    width: 380,
+    height: 640,
+    minWidth: 300,
+    minHeight: 320,
+    backgroundColor: "#0e0b17",
+    autoHideMenuBar: true,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  chatWindow.loadFile(path.join(__dirname, "chatwindow", "chat-window.html"), {
+    query: { port: String(port) },
+  });
+  chatWindow.on("closed", () => {
+    chatWindow = null;
+  });
+}
+
+function openWidgetEditorWindow(port, widgetId) {
+  const existing = widgetEditorWindows.get(widgetId);
+  if (existing) {
+    existing.focus();
+    return;
+  }
+  const win = new BrowserWindow({
+    width: 900,
+    height: 680,
+    minWidth: 640,
+    minHeight: 480,
+    backgroundColor: "#0e0b17",
+    autoHideMenuBar: true,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  win.loadFile(path.join(__dirname, "widgeteditor", "widget-editor.html"), {
+    query: { port: String(port), widgetId },
+  });
+  win.on("closed", () => {
+    widgetEditorWindows.delete(widgetId);
+  });
+  widgetEditorWindows.set(widgetId, win);
+}
+
 app.whenReady().then(() => {
   createSplashWindow();
 
@@ -80,6 +134,14 @@ app.whenReady().then(() => {
 
   ipcMain.handle("app:open-external", (_event, url) => {
     shell.openExternal(url);
+  });
+
+  ipcMain.handle("app:open-chat-window", () => {
+    openChatWindow(serverHandle.state.config.port);
+  });
+
+  ipcMain.handle("app:open-widget-editor", (_event, widgetId) => {
+    openWidgetEditorWindow(serverHandle.state.config.port, widgetId);
   });
 
   ipcMain.handle("oauth:connect-twitch", (_event, { clientId, clientSecret, channel }) => {
