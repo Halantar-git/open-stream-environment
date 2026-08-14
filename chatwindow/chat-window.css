@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2026  Halantar
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://gnu.org>.
+ */
+
 html, body {
   margin: 0;
   height: 100%;
@@ -85,3 +102,28 @@ body { display: flex; flex-direction: column; height: 100vh; position: relative;
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--md-surface-container-highest); border-radius: var(--shape-full); }
+
+.chat-header__pin {
+  -webkit-app-region: no-drag;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-left: 8px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  font-size: 16px;
+  cursor: pointer;
+}
+.chat-header__pin:hover { background: var(--md-surface-container-highest); }
+.chat-header__pin.is-active { background: var(--md-primary-container); color: var(--md-on-primary-container); }
+
+.twitch-emote {
+  height: 1.4em;
+  max-height: 28px;
+  vertical-align: middle;
+  margin: 0 1px;
+}

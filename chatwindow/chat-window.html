@@ -1,3 +1,20 @@
+<!--
+  Copyright (C) 2026  Halantar
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <https://gnu.org>.
+-->
+
 <!doctype html>
 <html lang="ru">
 <head>
@@ -11,14 +28,17 @@
 </head>
 <body>
   <header class="chat-header">
-    <span class="chat-header__title">Чат</span>
+    <span class="chat-header__title" data-i18n="chatWindow.title">Чат</span>
     <span class="chat-header__channel" id="channelLabel">—</span>
     <span class="md-chip" id="statusChip"><span class="md-chip__dot"></span><span id="statusLabel">—</span></span>
+    <button class="chat-header__pin" id="pinBtn" title="Закрепить поверх всех окон" aria-pressed="false">📌</button>
   </header>
   <div class="chat-list" id="chatList"></div>
-  <button class="jump-to-latest" id="jumpToLatest" hidden>Новые сообщения ↓</button>
+  <button class="jump-to-latest" id="jumpToLatest" hidden data-i18n="chatWindow.newMessages">Новые сообщения ↓</button>
 
   <script src="../shared/events.js"></script>
+  <script src="../shared/i18n.js"></script>
+  <script src="../shared/twitch-emotes.js"></script>
   <script src="chat-window.js"></script>
 </body>
 </html>

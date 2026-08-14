@@ -1,4 +1,21 @@
 /*
+ * Copyright (C) 2026  Halantar
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://gnu.org>.
+ */
+
+/*
   Visual styles for the four widget types. Loaded by both overlay.html
   (real data, live animation) and control.html (static sample data inside
   the editor canvas), so the editor preview always matches OBS exactly.
@@ -41,6 +58,24 @@
   --accent: var(--md-tertiary);
   --accent-on-container: var(--md-on-tertiary-container);
   --accent-container: var(--md-tertiary-container);
+}
+.widget-alert[data-kind="wheel_start"] {
+  --accent: var(--md-secondary);
+  --accent-on-container: var(--md-on-secondary-container);
+  --accent-container: var(--md-secondary-container);
+}
+.widget-alert[data-kind="wheel_winner"] {
+  --accent: var(--md-tertiary);
+  --accent-on-container: var(--md-on-tertiary-container);
+  --accent-container: var(--md-tertiary-container);
+  box-shadow: var(--elev-3), 0 0 40px var(--md-tertiary);
+}
+.widget-alert[data-kind="wheel_start"] .widget-alert__icon {
+  animation: wheel-icon-spin 1s linear infinite;
+}
+@keyframes wheel-icon-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 .widget-alert__icon {
   width: 25%;
@@ -240,6 +275,13 @@
 .widget-chat__user { font-weight: 700; }
 .widget-chat__colon { color: var(--md-on-surface-variant); }
 .widget-chat__text { color: var(--md-on-surface); word-break: break-word; }
+
+.twitch-emote {
+  height: 1.4em;
+  max-height: 28px;
+  vertical-align: middle;
+  margin: 0 1px;
+}
 
 /* ---------- Recent events ---------- */
 .widget-recent {
@@ -537,4 +579,81 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ---------- Giveaway participants list ---------- */
+.widget-participants {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--md-surface-container) var(--pw-bg-opacity, 82%), transparent);
+  backdrop-filter: blur(var(--panel-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--panel-blur, 0px));
+  border: var(--panel-border, 1px solid var(--md-outline-variant));
+  border-radius: var(--panel-radius);
+  clip-path: var(--panel-clip, none);
+  box-shadow: var(--elev-1), var(--panel-glow, 0 0 0 rgba(0, 0, 0, 0));
+  overflow: hidden;
+  font-family: var(--font-body);
+  font-size: var(--pw-font-size, 16px);
+  color: var(--pw-text, var(--md-on-surface));
+}
+.widget-participants__title {
+  font-family: var(--font-display);
+  font-size: 0.875em;
+  font-weight: 700;
+  color: var(--pw-text, var(--md-on-surface));
+}
+.widget-participants__list {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.375em;
+  overflow-y: auto;
+}
+.widget-participants__chip {
+  padding: 0.2em 0.5em;
+  border-radius: var(--shape-full);
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  font-size: 0.75em;
+}
+.widget-participants__more { font-size: 0.75em; color: var(--pw-text, var(--md-on-surface-variant)); }
+.widget-participants__marquee {
+  overflow: hidden;
+  white-space: nowrap;
+  width: 100%;
+  display: flex;
+}
+.widget-participants__marquee span {
+  display: inline-block;
+  padding-left: 100%;
+  animation: participants-marquee 18s linear infinite;
+  white-space: nowrap;
+}
+@keyframes participants-marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+
+/* ---------- Microphone audio visualizer ---------- */
+.widget-mic {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.widget-mic canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.widget-mic--preview svg {
+  animation: mic-preview-drift 2.4s ease-in-out infinite alternate;
+}
+@keyframes mic-preview-drift {
+  from { transform: translateX(-2.5%); }
+  to { transform: translateX(2.5%); }
 }

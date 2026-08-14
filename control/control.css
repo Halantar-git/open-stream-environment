@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2026  Halantar
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://gnu.org>.
+ */
+
 html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: var(--md-on-surface); font-family: var(--font-body); overflow: hidden; }
 
 #app { display: flex; flex-direction: column; height: 100vh; }
@@ -108,8 +125,8 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .properties__delete .md-button svg { width: 14px; height: 14px; }
 
 /* ---------- Settings ---------- */
-.settings { padding: 28px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; max-width: 640px; margin: 0 auto; width: 100%; }
-.settings__card { padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; }
+.settings { padding: clamp(1rem, 2.5vw, 2rem); overflow-y: auto; display: flex; flex-direction: column; gap: clamp(0.75rem, 1.5vw, 1.25rem); max-width: min(720px, 100%); margin: 0 auto; width: 100%; }
+.settings__card { padding: clamp(1rem, 2vw, 1.5rem); display: flex; flex-direction: column; gap: clamp(0.6rem, 1vw, 0.8rem); }
 .settings__card h2 { margin: 0; font-family: var(--font-display); font-size: 16px; font-weight: 600; }
 .settings__desc { margin: 0; font-size: 13px; color: var(--md-on-surface-variant); line-height: 1.5; }
 .settings__hint { font-size: 12px; color: var(--md-on-surface-variant); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--md-surface-container-highest); padding: 8px 10px; border-radius: var(--shape-sm); }
@@ -232,3 +249,177 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 
 .topbar__chat-btn { margin-left: 10px; font-size: 12px; padding: 7px 14px; }
 .topbar__chat-btn svg { width: 14px; height: 14px; }
+
+.topbar__boosty-btn {
+  margin-left: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 14px;
+  gap: 6px;
+  background: linear-gradient(135deg, #ffc400, #ff4d4d);
+  color: #1a1200;
+  border: 1px solid rgba(255, 196, 0, 0.65);
+  box-shadow: 0 0 14px rgba(255, 196, 0, 0.35);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.topbar__boosty-btn:hover {
+  box-shadow: 0 0 22px rgba(255, 77, 77, 0.55);
+  transform: translateY(-1px);
+}
+.topbar__boosty-btn svg { width: 14px; height: 14px; }
+
+/* ---------- Events history ---------- */
+.events-history__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.events-history__filters {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.events-history__filters .md-button {
+  padding: 4px 10px;
+  font-size: 12px;
+  min-width: 0;
+}
+.events-history__search {
+  flex: 1;
+  min-width: 160px;
+  padding: 6px 10px;
+  border-radius: var(--shape-sm);
+  background: var(--md-surface-container);
+  border: 1px solid var(--md-outline-variant);
+  color: var(--md-on-surface);
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+.events-history__search::placeholder { color: var(--md-on-surface-variant); opacity: 0.7; }
+.events-history__meta {
+  font-size: 11px;
+  color: var(--md-on-surface-variant);
+  opacity: 0.75;
+  margin-bottom: 6px;
+  min-height: 15px;
+}
+.events-history {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.events-history__empty {
+  font-size: 12px;
+  color: var(--md-on-surface-variant);
+  opacity: 0.7;
+  padding: 6px 2px;
+}
+.events-history__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 7px 8px;
+  border-radius: var(--shape-sm);
+  background: var(--md-surface-container);
+  border: 1px solid var(--md-outline-variant);
+  font-size: 12.5px;
+}
+.events-history__type {
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--md-tertiary-container);
+  color: var(--md-on-tertiary-container);
+  font-size: 11px;
+}
+.events-history__type--donation { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+.events-history__type--subscription { background: var(--md-primary-container); color: var(--md-on-primary-container); }
+.events-history__type--follow { background: var(--md-tertiary-container); color: var(--md-on-tertiary-container); }
+.events-history__user { font-weight: 600; color: var(--md-on-surface); }
+.events-history__amount { color: var(--md-primary); font-weight: 600; }
+.events-history__message { color: var(--md-on-surface-variant); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.events-history__time { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--md-on-surface-variant); opacity: 0.75; }
+.events-history__test {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--md-error-container);
+  color: var(--md-on-error-container);
+}
+.events-history__replay {
+  padding: 3px 8px;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+/* ---------- Giveaway / Fortune Wheel ---------- */
+.giveaway-participants {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.giveaway-manual {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.giveaway-manual input {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--md-on-surface);
+  background: var(--md-surface-container-highest);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-sm);
+  padding: 0.6rem 0.8rem;
+  outline: none;
+}
+.giveaway-manual input:focus { border-color: var(--md-primary); }
+.giveaway-participant-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--shape-sm);
+  background: var(--md-surface-container);
+  border: 1px solid var(--md-outline-variant);
+  font-size: 0.875rem;
+}
+.giveaway-participant__name { color: var(--md-on-surface); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.giveaway-participant__remove {
+  background: none;
+  border: none;
+  color: var(--md-error);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  opacity: 0.75;
+}
+.giveaway-participant__remove:hover { opacity: 1; background: rgba(255, 180, 171, 0.14); }
+
+/* ---------- Participants widget settings ---------- */
+.settings__row { display: flex; gap: 12px; }
+.settings__row .md-field { flex: 1; }
+.md-field input[type="range"] { width: 100%; padding: 0; }
+.md-field input[type="color"] { height: 40px; padding: 2px; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1200px) {
+  .settings__actions { gap: 0.5rem; }
+  .events-history__row { font-size: 12px; }
+}
+@media (max-width: 920px) {
+  .settings__actions { flex-direction: column; align-items: stretch; }
+  .giveaway-manual { flex-direction: column; align-items: stretch; }
+  .giveaway-participants { max-height: 200px; }
+  .events-history__replay { padding: 0.4rem 0.6rem; }
+}

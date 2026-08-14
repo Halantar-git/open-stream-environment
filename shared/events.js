@@ -1,4 +1,21 @@
 /*
+ * Copyright (C) 2026  Halantar
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://gnu.org>.
+ */
+
+/*
   Shared vocabulary between server/index.js (Node), control/control.js and
   overlay/overlay.js (browser). Loaded as a plain <script> in the browser
   pages and via require() on the server.
@@ -18,6 +35,15 @@
     SCENES_UPDATE: "scenes_update", // { start, brb, end }
     TOP_DONATION_UPDATE: "top_donation_update", // { user, amount, currency }
     STAT_UPDATE: "stat_update", // { followerCount, subscriberCount }
+    GIVEAWAY_UPDATE: "giveaway_update", // { giveaway }
+    GIVEAWAY_WHEEL: "giveaway_wheel", // { sectors }
+    GIVEAWAY_SPIN: "giveaway_spin", // {}
+    GIVEAWAY_PARTICIPANTS: "giveaway_participants", // { count, participants }
+    OVERLAY_PARTICIPANTS_CONFIG: "overlay_participants_config", // { config }
+    WHEEL_CONFIG: "wheel_config", // { config }
+    WHEEL_SPEED_CONFIG: "wheel_speed_config", // { config }
+    OVERLAY_MIC_CONFIG: "overlay_mic_config", // { config }
+    LOCALES: "locales", // { lang, locales: { ru, en } }
 
     // control -> server commands
     CMD_ADD_WIDGET: "cmd_add_widget", // { type }
@@ -34,6 +60,20 @@
     CMD_SET_EDITOR_PREFS: "cmd_set_editor_prefs", // { gridSize?, snapEnabled? }
     CMD_SET_SCENE_CONFIG: "cmd_set_scene_config", // { sceneId, patch }
     CMD_RESET_TOP_DONATION: "cmd_reset_top_donation",
+    CMD_START_GIVEAWAY: "cmd_start_giveaway", // { command }
+    CMD_STOP_GIVEAWAY: "cmd_stop_giveaway",
+    CMD_SHUFFLE_GIVEAWAY: "cmd_shuffle_giveaway",
+    CMD_SET_GIVEAWAY_ELIMINATION: "cmd_set_giveaway_elimination", // { enabled }
+    CMD_GENERATE_WHEEL: "cmd_generate_wheel",
+    CMD_SPIN_WHEEL: "cmd_spin_wheel",
+    CMD_SET_GIVEAWAY_WINNER: "cmd_set_giveaway_winner", // { username }
+    CMD_ADD_GIVEAWAY_PARTICIPANT: "cmd_add_giveaway_participant", // { username }
+    CMD_REMOVE_GIVEAWAY_PARTICIPANT: "cmd_remove_giveaway_participant", // { username }
+    CMD_SET_PARTICIPANTS_CONFIG: "cmd_set_participants_config", // { config }
+    CMD_SET_WHEEL_CONFIG: "cmd_set_wheel_config", // { config }
+    CMD_SET_WHEEL_SPEED_CONFIG: "cmd_set_wheel_speed_config", // { config }
+    CMD_SET_MIC_CONFIG: "cmd_set_mic_config", // { config }
+    CMD_SET_LANGUAGE: "cmd_set_language", // { lang }
   };
 
   const CONNECTION_SERVICES = ["twitchChat", "twitchEvents", "donationAlerts"];
@@ -44,6 +84,8 @@
     gift_sub: 6000,
     cheer: 6000,
     donation: 7000,
+    wheel_start: 6000,
+    wheel_winner: 8000,
   };
 
   const api = { EVENT_TYPES, CONNECTION_SERVICES, ALERT_DURATIONS_MS };

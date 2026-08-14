@@ -1,4 +1,21 @@
 /*
+ * Copyright (C) 2026  Halantar
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://gnu.org>.
+ */
+
+/*
   Full-screen scenes (as opposed to overlay widgets): separate OBS Browser
   Sources shown between gameplay, not on top of it. Each has its own URL.
   Shared between server/state.js (defaults) and control/control.js (forms).
@@ -8,6 +25,7 @@
     start: { id: "start", label: "Начало стрима", icon: "scenePlay" },
     brb: { id: "brb", label: "Отошёл (BRB)", icon: "sceneBrb" },
     end: { id: "end", label: "Окончание стрима", icon: "sceneEnd" },
+    wheel: { id: "wheel", label: "Колесо Фортуны", icon: "sceneWheel" },
   };
 
   const DEFAULT_SOCIALS = [
@@ -50,6 +68,17 @@
         showEvents: true,
         showSocials: true,
         socials: DEFAULT_SOCIALS.map((s) => ({ ...s })),
+      },
+      wheel: {
+        statusLabel: "РОЗЫГРЫШ",
+        title: "Колесо Фортуны",
+        subtitle: "Победителя определит колесо",
+        showTimer: false,
+        timerDuration: 0,
+        timerDoneText: "",
+        showEvents: false,
+        showSocials: false,
+        socials: [],
       },
     };
   }

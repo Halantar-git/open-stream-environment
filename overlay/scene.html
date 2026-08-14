@@ -1,3 +1,20 @@
+<!--
+  Copyright (C) 2026  Halantar
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <https://gnu.org>.
+-->
+
 <!doctype html>
 <html lang="ru">
 <head>
@@ -6,7 +23,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500;700&family=Rajdhani:wght@500;600;700&family=Orbitron:wght@500;700;900&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500;700&family=Rajdhani:wght@500;600;700&family=Orbitron:wght@500;700;900&family=Press+Start+2P&family=VT323&display=swap"
     rel="stylesheet"
   />
   <link rel="stylesheet" href="/shared/theme.css" />
@@ -39,22 +56,22 @@
         <div class="event-card">
           <div class="event-icon" data-icon="follow"></div>
           <div class="event-details">
-            <span class="event-title">Фолловер</span>
-            <span class="event-value" id="evFollower">Пока нет</span>
+            <span class="event-title" data-i18n="scene.follower">Фолловер</span>
+            <span class="event-value" id="evFollower" data-i18n="scene.notYet">Пока нет</span>
           </div>
         </div>
         <div class="event-card">
           <div class="event-icon" data-icon="sub"></div>
           <div class="event-details">
-            <span class="event-title">Подписчик</span>
-            <span class="event-value" id="evSubscriber">Пока нет</span>
+            <span class="event-title" data-i18n="scene.subscriber">Подписчик</span>
+            <span class="event-value" id="evSubscriber" data-i18n="scene.notYet">Пока нет</span>
           </div>
         </div>
         <div class="event-card">
           <div class="event-icon" data-icon="donation"></div>
           <div class="event-details">
-            <span class="event-title">Топ донат</span>
-            <span class="event-value" id="evTopDonation">Пока нет</span>
+            <span class="event-title" data-i18n="scene.topDonation">Топ донат</span>
+            <span class="event-value" id="evTopDonation" data-i18n="scene.notYet">Пока нет</span>
           </div>
         </div>
       </div>
@@ -64,7 +81,9 @@
   </div>
 
   <script src="/shared/events.js"></script>
+  <script src="/shared/i18n.js"></script>
   <script src="/shared/icons.js"></script>
+  <script src="/shared/scenes-catalog.js"></script>
   <script src="scene.js"></script>
 </body>
 </html>

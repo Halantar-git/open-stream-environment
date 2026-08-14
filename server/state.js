@@ -1,7 +1,25 @@
+/*
+ * Copyright (C) 2026  Halantar
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://gnu.org>.
+ */
+
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 
+const { seal, open } = require("./secret-store");
 const { WIDGET_TYPES } = require("../shared/widget-catalog");
 const { BUILTIN_THEMES } = require("../shared/themes");
 const { buildThemeTokens } = require("../shared/theme-engine");
@@ -16,15 +34,63 @@ function loadConfig() {
     const example = fs.readFileSync(EXAMPLE_PATH, "utf-8");
     fs.writeFileSync(CONFIG_PATH, example);
   }
-  return JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8"));
+  return decryptConfig(JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8")));
 }
 
 function saveConfig(config) {
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+  fs.writeFileSync(CONFIG_PATH, JSON.stringify(encryptConfig(config), null, 2));
+}
+
+function encryptConfig(config) {
+  const twitch = config.twitch || {};
+  const donationAlerts = config.donationAlerts || {};
+  return {
+    ...config,
+    twitch: {
+      ...twitch,
+      clientSecret: seal(twitch.clientSecret),
+      userAccessToken: seal(twitch.userAccessToken),
+      refreshToken: seal(twitch.refreshToken),
+    },
+    donationAlerts: {
+      ...donationAlerts,
+      clientSecret: seal(donationAlerts.clientSecret),
+      accessToken: seal(donationAlerts.accessToken),
+      refreshToken: seal(donationAlerts.refreshToken),
+    },
+  };
+}
+
+function decryptConfig(config) {
+  const twitch = config.twitch || {};
+  const donationAlerts = config.donationAlerts || {};
+  return {
+    ...config,
+    twitch: {
+      ...twitch,
+      clientSecret: open(twitch.clientSecret),
+      userAccessToken: open(twitch.userAccessToken),
+      refreshToken: open(twitch.refreshToken),
+    },
+    donationAlerts: {
+      ...donationAlerts,
+      clientSecret: open(donationAlerts.clientSecret),
+      accessToken: open(donationAlerts.accessToken),
+      refreshToken: open(donationAlerts.refreshToken),
+    },
+  };
 }
 
 function clamp(n, min, max) {
   return Math.min(max, Math.max(min, n));
+}
+
+function fisherYates(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
 }
 
 function defaultAppearance() {
@@ -36,14 +102,26 @@ function defaultEditor() {
 }
 
 class AppState {
-  constructor() {
-    this.config = loadConfig();
-    if (!Array.isArray(this.config.layout)) this.config.layout = [];
+  constructor(db, config) {
+    this.db = db || null;
+    this.config = config || loadConfig();
     if (!this.config.appearance) this.config.appearance = defaultAppearance();
     if (!Array.isArray(this.config.appearance.customThemes)) this.config.appearance.customThemes = [];
     if (!this.config.editor) this.config.editor = defaultEditor();
-    if (!this.config.scenes) this.config.scenes = defaultScenes();
+    const scenesDefaults = defaultScenes();
+    this.config.scenes = this.config.scenes || {};
+    Object.keys(scenesDefaults).forEach((sceneId) => {
+      this.config.scenes[sceneId] = { ...scenesDefaults[sceneId], ...(this.config.scenes[sceneId] || {}) };
+    });
     if (!this.config.topDonation) this.config.topDonation = { user: "", amount: 0, currency: "RUB" };
+
+    if (this.db) {
+      this._layout = this._loadLayoutFromDb();
+      delete this.config.layout;
+    } else {
+      this._layout = Array.isArray(this.config.layout) ? this.config.layout : [];
+    }
+
     this.runtime = {
       connectionStatus: {
         twitchChat: "disconnected",
@@ -52,11 +130,36 @@ class AppState {
       },
       recentEvents: [],
       stats: { followerCount: null, subscriberCount: null },
+      giveaway: {
+        active: false,
+        command: "!go",
+        eliminationMode: false,
+        participants: new Set(),
+        winner: null,
+        pendingWinner: null,
+      },
     };
   }
 
   get layout() {
-    return this.config.layout;
+    return this._layout;
+  }
+
+  _loadLayoutFromDb() {
+    const widgets = this.db.getWidgets();
+    if (Array.isArray(widgets) && widgets.length) return widgets;
+    const legacy = Array.isArray(this.config.layout) ? this.config.layout : [];
+    if (legacy.length) this.db.saveWidgets(legacy);
+    return legacy;
+  }
+
+  _persistLayout() {
+    if (this.db) {
+      this.db.saveWidgets(this._layout);
+    } else {
+      this.config.layout = this._layout;
+      saveConfig(this.config);
+    }
   }
 
   get goal() {
@@ -68,7 +171,7 @@ class AppState {
   addWidget(type) {
     const def = WIDGET_TYPES[type];
     if (!def) return null;
-    const maxZ = this.config.layout.reduce((m, w) => Math.max(m, w.z || 0), 0);
+    const maxZ = this._layout.reduce((m, w) => Math.max(m, w.z || 0), 0);
     const instance = {
       id: crypto.randomUUID(),
       type,
@@ -77,13 +180,13 @@ class AppState {
       visible: true,
       config: { ...def.defaultConfig },
     };
-    this.config.layout.push(instance);
-    saveConfig(this.config);
+    this._layout.push(instance);
+    this._persistLayout();
     return instance;
   }
 
   updateWidget(id, patch = {}) {
-    const widget = this.config.layout.find((w) => w.id === id);
+    const widget = this._layout.find((w) => w.id === id);
     if (!widget) return null;
     const def = WIDGET_TYPES[widget.type] || { minW: 5, minH: 5 };
 
@@ -95,19 +198,19 @@ class AppState {
     if (patch.config && typeof patch.config === "object") {
       widget.config = { ...widget.config, ...patch.config };
     }
-    saveConfig(this.config);
+    this._persistLayout();
     return widget;
   }
 
   removeWidget(id) {
-    const before = this.config.layout.length;
-    this.config.layout = this.config.layout.filter((w) => w.id !== id);
-    saveConfig(this.config);
-    return this.config.layout.length !== before;
+    const before = this._layout.length;
+    this._layout = this._layout.filter((w) => w.id !== id);
+    this._persistLayout();
+    return this._layout.length !== before;
   }
 
   reorderWidget(id, direction) {
-    const sorted = [...this.config.layout].sort((a, b) => (a.z || 0) - (b.z || 0));
+    const sorted = [...this._layout].sort((a, b) => (a.z || 0) - (b.z || 0));
     const idx = sorted.findIndex((w) => w.id === id);
     if (idx === -1) return false;
     const swapIdx = direction === "forward" ? idx + 1 : idx - 1;
@@ -117,7 +220,7 @@ class AppState {
     const za = a.z;
     a.z = b.z;
     b.z = za;
-    saveConfig(this.config);
+    this._persistLayout();
     return true;
   }
 
@@ -141,6 +244,93 @@ class AppState {
   setAppConfig({ twitchChannel }) {
     if (twitchChannel !== undefined) this.config.twitch.channel = String(twitchChannel).trim().toLowerCase();
     saveConfig(this.config);
+  }
+
+  // ---- Giveaway / Fortune Wheel ----
+
+  giveawaySnapshot() {
+    return {
+      active: this.runtime.giveaway.active,
+      command: this.runtime.giveaway.command,
+      eliminationMode: this.runtime.giveaway.eliminationMode,
+      winner: this.runtime.giveaway.winner,
+      count: this.runtime.giveaway.participants.size,
+      participants: [...this.runtime.giveaway.participants],
+    };
+  }
+
+  startGiveaway(command) {
+    this.runtime.giveaway.command = String(command || "!go").trim() || "!go";
+    this.runtime.giveaway.active = true;
+    this.runtime.giveaway.participants = new Set();
+    this.runtime.giveaway.winner = null;
+    this.runtime.giveaway.pendingWinner = null;
+    return this.giveawaySnapshot();
+  }
+
+  stopGiveaway() {
+    this.runtime.giveaway.active = false;
+    return this.giveawaySnapshot();
+  }
+
+  addGiveawayParticipant(username) {
+    const name = String(username || "").trim();
+    if (!name) return null;
+    if (this.runtime.giveaway.participants.has(name)) return null;
+    this.runtime.giveaway.participants.add(name);
+    return this.giveawaySnapshot();
+  }
+
+  removeGiveawayParticipant(username) {
+    const name = String(username || "").trim();
+    if (name) this.runtime.giveaway.participants.delete(name);
+    return this.giveawaySnapshot();
+  }
+
+  handleGiveawayChat(username, message) {
+    const g = this.runtime.giveaway;
+    if (!g.active) return null;
+    const cmd = g.command.trim().toLowerCase();
+    const msg = String(message || "").trim().toLowerCase();
+    if (!cmd || msg !== cmd) return null;
+    return this.addGiveawayParticipant(username);
+  }
+
+  shuffleGiveaway() {
+    const arr = [...this.runtime.giveaway.participants];
+    fisherYates(arr);
+    this.runtime.giveaway.participants = new Set(arr);
+    return this.giveawaySnapshot();
+  }
+
+  setGiveawayEliminationMode(enabled) {
+    this.runtime.giveaway.eliminationMode = !!enabled;
+    return this.giveawaySnapshot();
+  }
+
+  setGiveawayWinner(username) {
+    const name = String(username || "").trim();
+    this.runtime.giveaway.winner = name || null;
+    if (name && this.runtime.giveaway.eliminationMode) {
+      this.runtime.giveaway.participants.delete(name);
+    }
+    return this.giveawaySnapshot();
+  }
+
+  pickRandomWinner() {
+    const participants = [...this.runtime.giveaway.participants];
+    if (!participants.length) return null;
+    const idx = Math.floor(Math.random() * participants.length);
+    const winner = participants[idx];
+    this.runtime.giveaway.pendingWinner = winner;
+    return winner;
+  }
+
+  consumePendingWinner(username) {
+    const name = String(username || "").trim();
+    if (!name || name !== this.runtime.giveaway.pendingWinner) return false;
+    this.runtime.giveaway.pendingWinner = null;
+    return true;
   }
 
   pushRecentEvent(event) {
@@ -313,7 +503,6 @@ class AppState {
       twitch: { ...this.config.twitch, ...(newConfig.twitch || {}) },
       donationAlerts: { ...this.config.donationAlerts, ...(newConfig.donationAlerts || {}) },
       goal: { ...this.config.goal, ...(newConfig.goal || {}) },
-      layout: Array.isArray(newConfig.layout) ? newConfig.layout : this.config.layout,
       appearance: {
         ...defaultAppearance(),
         ...this.config.appearance,
@@ -326,13 +515,20 @@ class AppState {
       scenes: newConfig.scenes ? { ...defaultScenes(), ...newConfig.scenes } : this.config.scenes,
       topDonation: newConfig.topDonation || this.config.topDonation,
     };
+
+    if (Array.isArray(newConfig.layout)) this._layout = newConfig.layout;
+    if (this.db) {
+      this.db.saveWidgets(this._layout);
+    } else {
+      this.config.layout = this._layout;
+    }
     saveConfig(this.config);
   }
 
   snapshot() {
     const theme = this.resolvedTheme();
     return {
-      layout: this.config.layout,
+      layout: this._layout,
       goal: this.config.goal,
       port: this.config.port,
       twitchChannel: this.config.twitch.channel,
@@ -341,6 +537,7 @@ class AppState {
       connectionStatus: this.runtime.connectionStatus,
       recentEvents: this.runtime.recentEvents,
       stats: this.runtime.stats,
+      giveaway: this.giveawaySnapshot(),
       appearance: {
         activeThemeId: this.config.appearance.activeThemeId,
         tokens: theme.tokens,
@@ -353,4 +550,4 @@ class AppState {
   }
 }
 
-module.exports = { AppState, saveConfig, CONFIG_PATH };
+module.exports = { AppState, saveConfig, CONFIG_PATH, fisherYates };

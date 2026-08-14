@@ -1,3 +1,20 @@
+<!--
+  Copyright (C) 2026  Halantar
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <https://gnu.org>.
+-->
+
 <!doctype html>
 <html lang="ru">
 <head>
@@ -12,9 +29,9 @@
 <body>
   <div id="app">
     <header class="editor-header">
-      <span class="editor-header__title">Редактор виджета</span>
+      <span class="editor-header__title" data-i18n="widgetEditor.title">Редактор виджета</span>
       <span class="editor-header__status" id="statusLabel"></span>
-      <button class="md-button md-button--filled" id="saveBtn">Сохранить</button>
+      <button class="md-button md-button--filled" id="saveBtn" data-i18n="widgetEditor.save">Сохранить</button>
     </header>
 
     <div class="editor-body">
@@ -24,14 +41,14 @@
           <button class="editor-tab" data-tab="css">CSS</button>
           <button class="editor-tab" data-tab="js">JS</button>
         </div>
-        <textarea class="editor-textarea" id="codeHtml" spellcheck="false" placeholder="<div>Привет, стрим!</div>"></textarea>
+        <textarea class="editor-textarea" id="codeHtml" spellcheck="false" data-i18n-placeholder="widgetEditor.htmlPlaceholder" placeholder="<div>Привет, стрим!</div>"></textarea>
         <textarea class="editor-textarea" id="codeCss" spellcheck="false" placeholder="div { color: #fff; font-size: 24px; }" hidden></textarea>
-        <textarea class="editor-textarea" id="codeJs" spellcheck="false" placeholder="// выполняется по-настоящему, можно таймеры/анимации
+        <textarea class="editor-textarea" id="codeJs" spellcheck="false" data-i18n-placeholder="widgetEditor.jsPlaceholder" placeholder="// выполняется по-настоящему, можно таймеры/анимации
 console.log('widget loaded');" hidden></textarea>
       </div>
 
       <div class="editor-preview">
-        <div class="editor-preview__label">Превью</div>
+        <div class="editor-preview__label" data-i18n="widgetEditor.preview">Превью</div>
         <div class="editor-preview__frame-wrap">
           <iframe class="editor-preview__frame" id="previewFrame"></iframe>
         </div>
@@ -40,6 +57,7 @@ console.log('widget loaded');" hidden></textarea>
   </div>
 
   <script src="../shared/events.js"></script>
+  <script src="../shared/i18n.js"></script>
   <script src="widget-editor.js"></script>
 </body>
 </html>

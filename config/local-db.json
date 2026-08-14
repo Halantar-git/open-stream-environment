@@ -1,0 +1,754 @@
+{
+  "overlay": {
+    "widgets": [
+      {
+        "id": "default-alerts",
+        "type": "alerts",
+        "x": 36,
+        "y": 4,
+        "w": 30,
+        "h": 14,
+        "z": 4,
+        "visible": true,
+        "config": {}
+      },
+      {
+        "id": "default-recent",
+        "type": "recent",
+        "x": 2,
+        "y": 12,
+        "w": 16,
+        "h": 12,
+        "z": 1,
+        "visible": true,
+        "config": {
+          "maxItems": 4
+        }
+      },
+      {
+        "id": "default-goal",
+        "type": "goal",
+        "x": 2,
+        "y": 2,
+        "w": 16,
+        "h": 8,
+        "z": 2,
+        "visible": true,
+        "config": {
+          "showPercentage": false
+        }
+      },
+      {
+        "id": "default-chat",
+        "type": "chat",
+        "x": 0,
+        "y": 78,
+        "w": 28,
+        "h": 22,
+        "z": 3,
+        "visible": true,
+        "config": {
+          "maxMessages": 8,
+          "showBadges": true
+        }
+      },
+      {
+        "id": "f4ec5bac-710d-498b-a117-080e946a73ed",
+        "type": "stat",
+        "x": 78,
+        "y": 80,
+        "w": 20,
+        "h": 8,
+        "z": 5,
+        "visible": true,
+        "config": {
+          "metric": "followers",
+          "label": ""
+        }
+      },
+      {
+        "id": "90c5d777-0a25-45ca-abb1-ea9d8950d022",
+        "type": "social",
+        "x": 78,
+        "y": 90,
+        "w": 20,
+        "h": 8,
+        "z": 6,
+        "visible": true,
+        "config": {
+          "rotateIntervalSec": 8,
+          "socials": [
+            {
+              "platform": "TG",
+              "text": "t.me/your_channel"
+            },
+            {
+              "platform": "DC",
+              "text": "discord.gg/your_server"
+            },
+            {
+              "platform": "YT",
+              "text": "youtube.com/@channel"
+            }
+          ]
+        }
+      },
+      {
+        "id": "679a09a2-c5f6-48ae-87a3-1d6f6aad5a7b",
+        "type": "participants",
+        "x": 86,
+        "y": 2,
+        "w": 12,
+        "h": 74,
+        "z": 7,
+        "visible": true,
+        "config": {}
+      },
+      {
+        "id": "76f55e6d-7527-4928-95ba-51c1158d27cc",
+        "type": "mic",
+        "x": 4,
+        "y": 64,
+        "w": 10,
+        "h": 4,
+        "z": 8,
+        "visible": true,
+        "config": {}
+      }
+    ]
+  },
+  "sessions": [
+    {
+      "id": "f1b40343-43b6-4468-901d-9c9f8cf0896c",
+      "channel": "halantar",
+      "startedAt": 1786554737115,
+      "endedAt": 1786554815702
+    },
+    {
+      "id": "10908f94-a098-40ed-a5b1-2b40cedea400",
+      "channel": "halantar",
+      "startedAt": 1786554984992,
+      "endedAt": 1786555211120
+    },
+    {
+      "id": "c1f94260-6c34-4031-8b5c-4eada6dec8a2",
+      "channel": "halantar",
+      "startedAt": 1786556258141,
+      "endedAt": 1786556473096
+    },
+    {
+      "id": "30ffeabf-bd58-4e25-a798-fa79ad4d2b6d",
+      "channel": "halantar",
+      "startedAt": 1786557943746,
+      "endedAt": 1786558002414
+    },
+    {
+      "id": "533bcde4-e14b-4938-addf-9f0dfd3591b3",
+      "channel": "halantar",
+      "startedAt": 1786558038330,
+      "endedAt": 1786558129232
+    },
+    {
+      "id": "ce00b485-d1c8-41a6-8c9f-577e9796d3e1",
+      "channel": "halantar",
+      "startedAt": 1786558264690,
+      "endedAt": 1786558273688
+    },
+    {
+      "id": "e97ba92f-47cd-4827-9609-b154d6330062",
+      "channel": "halantar",
+      "startedAt": 1786558850894,
+      "endedAt": 1786558996335
+    },
+    {
+      "id": "6be2dbc2-a3d5-4224-b389-f2b532847966",
+      "channel": "halantar",
+      "startedAt": 1786559285439,
+      "endedAt": 1786559346661
+    },
+    {
+      "id": "c26e879d-5d0b-46fd-b2da-79f52670a796",
+      "channel": "halantar",
+      "startedAt": 1786559827885,
+      "endedAt": 1786559915457
+    },
+    {
+      "id": "a5475530-efea-49b7-8f07-72d35e9531fd",
+      "channel": "halantar",
+      "startedAt": 1786559946488,
+      "endedAt": 1786559987223
+    },
+    {
+      "id": "e91a12e8-5cdf-45db-9db0-05aac73a9cbe",
+      "channel": "halantar",
+      "startedAt": 1786560745109,
+      "endedAt": 1786560834741
+    },
+    {
+      "id": "bbe48264-eca6-46ba-a44c-a4cfce172468",
+      "channel": "halantar",
+      "startedAt": 1786561108027,
+      "endedAt": 1786561222937
+    },
+    {
+      "id": "b9276fcd-5146-45ea-84d1-a10a96902ba1",
+      "channel": "halantar",
+      "startedAt": 1786561554291,
+      "endedAt": 1786561682324
+    },
+    {
+      "id": "7dd0927b-c9e8-4504-a149-9643d4430ba4",
+      "channel": "halantar",
+      "startedAt": 1786562023940,
+      "endedAt": 1786562096130
+    },
+    {
+      "id": "d87838df-820a-490c-8e83-9224095d35be",
+      "channel": "halantar",
+      "startedAt": 1786562656398,
+      "endedAt": 1786563042063
+    },
+    {
+      "id": "00b5d378-144c-4a72-b02d-57478782137c",
+      "channel": "halantar",
+      "startedAt": 1786635860647,
+      "endedAt": 1786635878931
+    },
+    {
+      "id": "dba1ebd4-7781-4011-aaab-aec3b6d7cd0f",
+      "channel": "halantar",
+      "startedAt": 1786636208891,
+      "endedAt": 1786636230958
+    },
+    {
+      "id": "28719f89-a135-46d7-80c2-a9b4fcc88f6d",
+      "channel": "halantar",
+      "startedAt": 1786636390252,
+      "endedAt": 1786636408987
+    },
+    {
+      "id": "c5c88d4f-2e0a-48e2-955b-cf79f9e0f9a6",
+      "channel": "halantar",
+      "startedAt": 1786636584704,
+      "endedAt": 1786636626775
+    },
+    {
+      "id": "f6c288b7-5f13-4fca-bbac-d4f43e9d51b1",
+      "channel": "halantar",
+      "startedAt": 1786636962532,
+      "endedAt": 1786636989050
+    },
+    {
+      "id": "57a6afc2-88aa-4283-b68b-37bfc57fc8fe",
+      "channel": "halantar",
+      "startedAt": 1786637096548,
+      "endedAt": 1786637156182
+    },
+    {
+      "id": "72f17ea0-5c32-4879-9c91-86127973e229",
+      "channel": "halantar",
+      "startedAt": 1786638135313,
+      "endedAt": 1786638191291
+    },
+    {
+      "id": "6042e073-247f-4154-921e-b224c4947eb5",
+      "channel": "halantar",
+      "startedAt": 1786638470584,
+      "endedAt": 1786638503868
+    },
+    {
+      "id": "10fab725-d614-464c-afa0-cab55226b69c",
+      "channel": "halantar",
+      "startedAt": 1786640344419,
+      "endedAt": 1786640514546
+    },
+    {
+      "id": "fe41cc39-d493-4bdd-80d5-5bfb48b574db",
+      "channel": "halantar",
+      "startedAt": 1786641223344,
+      "endedAt": 1786641283869
+    },
+    {
+      "id": "9ee044d1-a05b-442e-b3b3-cdff44889177",
+      "channel": "halantar",
+      "startedAt": 1786641308440,
+      "endedAt": 1786641404324
+    },
+    {
+      "id": "61415ef5-c725-46f2-b698-c54d47625b3e",
+      "channel": "halantar",
+      "startedAt": 1786642176489,
+      "endedAt": 1786642328895
+    },
+    {
+      "id": "4a147bcc-3ed2-42bd-a2bd-fd73bcdcd6d2",
+      "channel": "halantar",
+      "startedAt": 1786642785023,
+      "endedAt": 1786642998836
+    },
+    {
+      "id": "2d09f278-2159-4511-ab03-23186093d6fc",
+      "channel": "halantar",
+      "startedAt": 1786644139434,
+      "endedAt": 1786644579426
+    },
+    {
+      "id": "3730f63b-99e8-490b-8940-c13adbf0e0c2",
+      "channel": "halantar",
+      "startedAt": 1786644944226,
+      "endedAt": 1786645213331
+    },
+    {
+      "id": "1c8295e9-0d7f-4b2b-bdcf-908403523224",
+      "channel": "halantar",
+      "startedAt": 1786645274414,
+      "endedAt": 1786645440316
+    },
+    {
+      "id": "657fc0e9-569f-4454-b2b8-ce6e78cada2a",
+      "channel": "halantar",
+      "startedAt": 1786720280862,
+      "endedAt": 1786720343365
+    },
+    {
+      "id": "414d72ec-645b-43ff-99e5-545a5b4511c8",
+      "channel": "halantar",
+      "startedAt": 1786720447397,
+      "endedAt": 1786720541077
+    },
+    {
+      "id": "411bfad4-59de-4537-a80a-f190d40296b4",
+      "channel": "halantar",
+      "startedAt": 1786721352079,
+      "endedAt": 1786721397835
+    },
+    {
+      "id": "f9c43e91-e567-44f0-bee0-5f6dbeedb060",
+      "channel": "halantar",
+      "startedAt": 1786721968577,
+      "endedAt": 1786722022841
+    },
+    {
+      "id": "9fd1db13-9713-45bf-8f36-1905b7115ca7",
+      "channel": "halantar",
+      "startedAt": 1786722953624,
+      "endedAt": 1786723148976
+    },
+    {
+      "id": "6134a5b5-b7a0-4d23-bb77-c765264932f8",
+      "channel": "halantar",
+      "startedAt": 1786723261299,
+      "endedAt": 1786723342442
+    },
+    {
+      "id": "7032e4a0-4763-47e1-9606-e233ed028381",
+      "channel": "halantar",
+      "startedAt": 1786723353823,
+      "endedAt": 1786723444397
+    },
+    {
+      "id": "98c686fe-1ba1-42b8-82d0-abeede75d9a5",
+      "channel": "halantar",
+      "startedAt": 1786723558926,
+      "endedAt": 1786723578086
+    },
+    {
+      "id": "89e63026-58c3-4f54-bb28-a7318914174e",
+      "channel": "halantar",
+      "startedAt": 1786723875259,
+      "endedAt": 1786723952374
+    },
+    {
+      "id": "30ba9f70-3168-43f8-8b4b-98eadf36be84",
+      "channel": "halantar",
+      "startedAt": 1786725173651,
+      "endedAt": 1786725234522
+    },
+    {
+      "id": "533e50c8-5f5c-417e-81a0-0516fc8436cd",
+      "channel": "halantar",
+      "startedAt": 1786725482617,
+      "endedAt": 1786725557397
+    },
+    {
+      "id": "2dac89b2-09f7-4f15-9d94-477962a43b6f",
+      "channel": "halantar",
+      "startedAt": 1786726158073,
+      "endedAt": 1786726172882
+    },
+    {
+      "id": "500bafc3-388f-4f8b-81b0-73664ef2a8a2",
+      "channel": "halantar",
+      "startedAt": 1786726233846,
+      "endedAt": 1786726293520
+    }
+  ],
+  "chatMessages": [
+    {
+      "id": "fa24b1c4-a4fa-4622-95f6-8d31857f0c83",
+      "sessionId": "10908f94-a098-40ed-a5b1-2b40cedea400",
+      "timestamp": 1786555074517,
+      "user": "StreamElements",
+      "message": "Halantar is now live! Streaming <no game>:",
+      "color": "#5B99FF",
+      "badges": [
+        "bot-badge"
+      ],
+      "emotes": {}
+    },
+    {
+      "id": "bf1c236f-2aff-442c-a3c7-85d0b4de609b",
+      "sessionId": "10908f94-a098-40ed-a5b1-2b40cedea400",
+      "timestamp": 1786555088252,
+      "user": "Halantar",
+      "message": "!go",
+      "color": "#c9c1d6",
+      "badges": [
+        "broadcaster"
+      ],
+      "emotes": {}
+    },
+    {
+      "id": "072cc063-92a9-4327-9d8a-89d31a7823dc",
+      "sessionId": "10908f94-a098-40ed-a5b1-2b40cedea400",
+      "timestamp": 1786555151210,
+      "user": "Halantar",
+      "message": "!go",
+      "color": "#c9c1d6",
+      "badges": [
+        "broadcaster"
+      ],
+      "emotes": {}
+    },
+    {
+      "id": "d4641eab-a398-4168-a467-91b7dd02737b",
+      "sessionId": "10908f94-a098-40ed-a5b1-2b40cedea400",
+      "timestamp": 1786555159267,
+      "user": "Halantar",
+      "message": "!go",
+      "color": "#c9c1d6",
+      "badges": [
+        "broadcaster"
+      ],
+      "emotes": {}
+    },
+    {
+      "id": "4f18cd20-2e66-49ce-bfea-90fd756035dc",
+      "sessionId": "10908f94-a098-40ed-a5b1-2b40cedea400",
+      "timestamp": 1786555195288,
+      "user": "Halantar",
+      "message": "Kreygasm",
+      "color": "#c9c1d6",
+      "badges": [
+        "broadcaster"
+      ],
+      "emotes": {
+        "41": [
+          "0-7"
+        ]
+      }
+    },
+    {
+      "id": "4286161f-a8e2-49fb-991a-63b7ea2cc164",
+      "sessionId": "c1f94260-6c34-4031-8b5c-4eada6dec8a2",
+      "timestamp": 1786556354369,
+      "user": "StreamElements",
+      "message": "Halantar is now live! Streaming <no game>:",
+      "color": "#5B99FF",
+      "badges": [
+        "bot-badge"
+      ],
+      "emotes": {}
+    },
+    {
+      "id": "c1b1615f-eef7-4e8d-b3de-291573c16c99",
+      "sessionId": "c1f94260-6c34-4031-8b5c-4eada6dec8a2",
+      "timestamp": 1786556363575,
+      "user": "Halantar",
+      "message": "!go",
+      "color": "#c9c1d6",
+      "badges": [
+        "broadcaster"
+      ],
+      "emotes": {}
+    }
+  ],
+  "stream_events": [],
+  "overlay_participants_config": {
+    "maxNames": 10,
+    "marquee": false,
+    "fontSize": 16,
+    "textColor": "#e8e1f0",
+    "backgroundOpacity": 100,
+    "x": 5.25,
+    "y": 13
+  },
+  "wheel_config": {
+    "musicVolume": 50
+  },
+  "wheel_speed_config": {
+    "speed": 3,
+    "config": {
+      "speed": 2,
+      "config": {
+        "speed": 2,
+        "config": {
+          "speed": 2,
+          "config": {
+            "speed": 2,
+            "config": {
+              "speed": 2,
+              "config": {
+                "speed": 2,
+                "config": {
+                  "speed": 2,
+                  "config": {
+                    "speed": 2,
+                    "config": {
+                      "speed": 2,
+                      "config": {
+                        "speed": 2,
+                        "config": {
+                          "speed": 2,
+                          "config": {
+                            "speed": 2,
+                            "config": {
+                              "speed": 2,
+                              "config": {
+                                "speed": 2,
+                                "config": {
+                                  "speed": 2,
+                                  "config": {
+                                    "speed": 4,
+                                    "config": {
+                                      "speed": 4,
+                                      "config": {
+                                        "speed": 4,
+                                        "config": {
+                                          "speed": 4,
+                                          "config": {
+                                            "speed": 4,
+                                            "config": {
+                                              "speed": 4,
+                                              "config": {
+                                                "speed": 4,
+                                                "config": {
+                                                  "speed": 5,
+                                                  "config": {
+                                                    "speed": 5,
+                                                    "config": {
+                                                      "speed": 5,
+                                                      "config": {
+                                                        "speed": 5,
+                                                        "config": {
+                                                          "speed": 5,
+                                                          "config": {
+                                                            "speed": 5,
+                                                            "config": {
+                                                              "speed": 5,
+                                                              "config": {
+                                                                "speed": 4,
+                                                                "config": {
+                                                                  "speed": 4,
+                                                                  "config": {
+                                                                    "speed": 4,
+                                                                    "config": {
+                                                                      "speed": 4,
+                                                                      "config": {
+                                                                        "speed": 4,
+                                                                        "config": {
+                                                                          "speed": 4,
+                                                                          "config": {
+                                                                            "speed": 4,
+                                                                            "config": {
+                                                                              "speed": 4,
+                                                                              "config": {
+                                                                                "speed": 4,
+                                                                                "config": {
+                                                                                  "speed": 4,
+                                                                                  "config": {
+                                                                                    "speed": 4,
+                                                                                    "config": {
+                                                                                      "speed": 4,
+                                                                                      "config": {
+                                                                                        "speed": 4,
+                                                                                        "config": {
+                                                                                          "speed": 4,
+                                                                                          "config": {
+                                                                                            "speed": 4,
+                                                                                            "config": {
+                                                                                              "speed": 4,
+                                                                                              "config": {
+                                                                                                "speed": 4,
+                                                                                                "config": {
+                                                                                                  "speed": 4,
+                                                                                                  "config": {
+                                                                                                    "speed": 4,
+                                                                                                    "config": {
+                                                                                                      "speed": 4,
+                                                                                                      "config": {
+                                                                                                        "speed": 4,
+                                                                                                        "config": {
+                                                                                                          "speed": 4,
+                                                                                                          "config": {
+                                                                                                            "speed": 4,
+                                                                                                            "config": {
+                                                                                                              "speed": 4,
+                                                                                                              "config": {
+                                                                                                                "speed": 4,
+                                                                                                                "config": {
+                                                                                                                  "speed": 4,
+                                                                                                                  "config": {
+                                                                                                                    "speed": 4,
+                                                                                                                    "config": {
+                                                                                                                      "speed": 4,
+                                                                                                                      "config": {
+                                                                                                                        "speed": 4,
+                                                                                                                        "config": {
+                                                                                                                          "speed": 4,
+                                                                                                                          "config": {
+                                                                                                                            "speed": 4,
+                                                                                                                            "config": {
+                                                                                                                              "speed": 4,
+                                                                                                                              "config": {
+                                                                                                                                "speed": 4,
+                                                                                                                                "config": {
+                                                                                                                                  "speed": 4,
+                                                                                                                                  "config": {
+                                                                                                                                    "speed": 2,
+                                                                                                                                    "config": {
+                                                                                                                                      "speed": 2,
+                                                                                                                                      "config": {
+                                                                                                                                        "speed": 2,
+                                                                                                                                        "config": {
+                                                                                                                                          "speed": 2,
+                                                                                                                                          "config": {
+                                                                                                                                            "speed": 2,
+                                                                                                                                            "config": {
+                                                                                                                                              "speed": 2,
+                                                                                                                                              "config": {
+                                                                                                                                                "speed": 2,
+                                                                                                                                                "config": {
+                                                                                                                                                  "speed": 2,
+                                                                                                                                                  "config": {
+                                                                                                                                                    "speed": 2,
+                                                                                                                                                    "config": {
+                                                                                                                                                      "speed": 2,
+                                                                                                                                                      "config": {
+                                                                                                                                                        "speed": 2,
+                                                                                                                                                        "config": {
+                                                                                                                                                          "speed": 2,
+                                                                                                                                                          "config": {
+                                                                                                                                                            "speed": 2,
+                                                                                                                                                            "config": {
+                                                                                                                                                              "speed": 2,
+                                                                                                                                                              "config": {
+                                                                                                                                                                "speed": 2,
+                                                                                                                                                                "config": {
+                                                                                                                                                                  "speed": 2,
+                                                                                                                                                                  "config": {
+                                                                                                                                                                    "speed": 2,
+                                                                                                                                                                    "config": {
+                                                                                                                                                                      "speed": 2,
+                                                                                                                                                                      "config": {
+                                                                                                                                                                        "speed": 2,
+                                                                                                                                                                        "config": {
+                                                                                                                                                                          "speed": 2,
+                                                                                                                                                                          "config": {
+                                                                                                                                                                            "speed": 2
+                                                                                                                                                                          }
+                                                                                                                                                                        }
+                                                                                                                                                                      }
+                                                                                                                                                                    }
+                                                                                                                                                                  }
+                                                                                                                                                                }
+                                                                                                                                                              }
+                                                                                                                                                            }
+                                                                                                                                                          }
+                                                                                                                                                        }
+                                                                                                                                                      }
+                                                                                                                                                    }
+                                                                                                                                                  }
+                                                                                                                                                }
+                                                                                                                                              }
+                                                                                                                                            }
+                                                                                                                                          }
+                                                                                                                                        }
+                                                                                                                                      }
+                                                                                                                                    }
+                                                                                                                                  }
+                                                                                                                                }
+                                                                                                                              }
+                                                                                                                            }
+                                                                                                                          }
+                                                                                                                        }
+                                                                                                                      }
+                                                                                                                    }
+                                                                                                                  }
+                                                                                                                }
+                                                                                                              }
+                                                                                                            }
+                                                                                                          }
+                                                                                                        }
+                                                                                                      }
+                                                                                                    }
+                                                                                                  }
+                                                                                                }
+                                                                                              }
+                                                                                            }
+                                                                                          }
+                                                                                        }
+                                                                                      }
+                                                                                    }
+                                                                                  }
+                                                                                }
+                                                                              }
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "language": "ru",
+  "overlay_mic_config": {
+    "sensitivity": 1.5,
+    "lineWidth": 2,
+    "color": "#0060A8",
+    "opacity": 0.9,
+    "visualizer_mode": "bars",
+    "barCount": 32,
+    "barGap": 2
+  }
+}

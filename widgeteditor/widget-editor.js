@@ -1,5 +1,23 @@
+/*
+ * Copyright (C) 2026  Halantar
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://gnu.org>.
+ */
+
 (function () {
   const { EVENT_TYPES } = window.SharedEvents;
+  const t = (key, params) => (window.I18n ? window.I18n.t(key, params) : key);
   const params = new URLSearchParams(location.search);
   const port = params.get("port") || "8710";
   const widgetId = params.get("widgetId");
@@ -7,6 +25,7 @@
   let ws;
   let loaded = false;
   let widgetGone = false;
+  let statusKind = null; // null | "saved" | "removed"
 
   const tabsEl = document.getElementById("tabs");
   const statusLabel = document.getElementById("statusLabel");
@@ -56,15 +75,25 @@
     if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type, payload }));
   }
 
+  function renderStatus() {
+    if (statusKind === "saved") statusLabel.textContent = t("widgetEditor.saved");
+    else if (statusKind === "removed") statusLabel.textContent = t("widgetEditor.removed");
+    else statusLabel.textContent = "";
+  }
+
   saveBtn.addEventListener("click", () => {
     if (widgetGone) return;
     send(EVENT_TYPES.CMD_UPDATE_WIDGET, {
       id: widgetId,
       patch: { config: { mode: "html", html: fields.html.value, css: fields.css.value, js: fields.js.value } },
     });
-    statusLabel.textContent = "Сохранено";
+    statusKind = "saved";
+    renderStatus();
     setTimeout(() => {
-      if (!widgetGone) statusLabel.textContent = "";
+      if (!widgetGone && statusKind === "saved") {
+        statusKind = null;
+        renderStatus();
+      }
     }, 1500);
   });
 
@@ -82,16 +111,25 @@
         populateFrom(widget);
       } else {
         widgetGone = true;
-        statusLabel.textContent = "Виджет удалён";
+        statusKind = "removed";
+        renderStatus();
         saveBtn.disabled = true;
       }
     } else if (msg.type === EVENT_TYPES.LAYOUT_UPDATE) {
       const stillExists = (msg.payload.layout || []).some((w) => w.id === widgetId);
       if (!stillExists && !widgetGone) {
         widgetGone = true;
-        statusLabel.textContent = "Виджет удалён";
+        statusKind = "removed";
+        renderStatus();
         saveBtn.disabled = true;
       }
+    } else if (msg.type === EVENT_TYPES.LOCALES) {
+      if (window.I18n) {
+        window.I18n.setLocales(msg.payload && msg.payload.locales);
+        window.I18n.setLang(msg.payload && msg.payload.lang);
+        window.I18n.apply();
+      }
+      renderStatus();
     }
   }
 

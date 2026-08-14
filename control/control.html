@@ -1,3 +1,20 @@
+<!--
+  Copyright (C) 2026  Halantar
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <https://gnu.org>.
+-->
+
 <!doctype html>
 <html lang="ru">
 <head>
@@ -6,7 +23,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500;700&family=Rajdhani:wght@500;600;700&family=Orbitron:wght@500;700;900&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500;700&family=Rajdhani:wght@500;600;700&family=Orbitron:wght@500;700;900&family=Press+Start+2P&family=VT323&display=swap"
     rel="stylesheet"
   />
   <link rel="stylesheet" href="../shared/theme.css" />
@@ -21,19 +38,20 @@
         <span class="topbar__brand-name">Open Stream <b>Environment</b></span>
       </div>
       <nav class="topbar__tabs" id="tabs">
-        <button class="topbar__tab is-active" data-view="editor">Редактор</button>
-        <button class="topbar__tab" data-view="scenes">Сцены</button>
-        <button class="topbar__tab" data-view="settings">Настройки</button>
+        <button class="topbar__tab is-active" data-view="editor" data-i18n="nav.editor">Редактор</button>
+        <button class="topbar__tab" data-view="scenes" data-i18n="nav.scenes">Сцены</button>
+        <button class="topbar__tab" data-view="settings" data-i18n="nav.settings">Настройки</button>
       </nav>
       <div class="topbar__status" id="statusChips"></div>
+      <button class="md-button md-button--filled topbar__boosty-btn" id="openBoostyBtn" title="Boosty">Поддержать автора</button>
       <button class="md-button md-button--tonal topbar__chat-btn" id="openChatWindowBtn"></button>
     </header>
 
     <section class="view" id="view-editor">
       <aside class="library" id="library">
-        <div class="library__title">Виджеты</div>
+        <div class="library__title" data-i18n="editor.widgets">Виджеты</div>
         <div class="library__list" id="libraryList"></div>
-        <div class="library__hint">Перетащите на канвас или нажмите, чтобы добавить</div>
+        <div class="library__hint" data-i18n="editor.widgetsHint">Перетащите на канвас или нажмите, чтобы добавить</div>
       </aside>
 
       <div class="canvas-area">
@@ -44,9 +62,9 @@
           <div class="canvas-toolbar__url" id="obsUrlLabel">http://localhost:8710/overlay/overlay.html</div>
           <button class="md-button md-button--tonal" id="copyUrlBtn"></button>
           <label class="canvas-toolbar__grid">
-            Сетка
+            <span data-i18n="editor.grid">Сетка</span>
             <select id="gridSizeSelect">
-              <option value="0">Выкл</option>
+              <option value="0" data-i18n="editor.gridOff">Выкл</option>
               <option value="2">2%</option>
               <option value="5">5%</option>
               <option value="10">10%</option>
@@ -57,11 +75,11 @@
 
       <aside class="inspector">
         <div class="inspector__section">
-          <div class="inspector__title">Слои</div>
+          <div class="inspector__title" data-i18n="editor.layers">Слои</div>
           <div class="layers" id="layers"></div>
         </div>
         <div class="inspector__section" id="propertiesSection" hidden>
-          <div class="inspector__title" id="propertiesTitle">Свойства</div>
+          <div class="inspector__title" id="propertiesTitle" data-i18n="editor.properties">Свойства</div>
           <div class="properties" id="properties"></div>
         </div>
       </aside>
@@ -69,9 +87,9 @@
 
     <section class="view" id="view-scenes" hidden>
       <aside class="library" id="scenesNav">
-        <div class="library__title">Сцены</div>
+        <div class="library__title" data-i18n="scenes.title">Сцены</div>
         <div class="library__list" id="scenesNavList"></div>
-        <div class="library__hint">Каждая сцена — отдельный источник в OBS, показывается вместо игры целиком (не поверх).</div>
+        <div class="library__hint" data-i18n="scenes.hint">Каждая сцена — отдельный источник в OBS, показывается вместо игры целиком (не поверх).</div>
       </aside>
 
       <div class="canvas-area">
@@ -88,7 +106,7 @@
 
       <aside class="inspector">
         <div class="inspector__section" id="sceneFormSection">
-          <div class="inspector__title" id="sceneFormTitle">Свойства сцены</div>
+          <div class="inspector__title" id="sceneFormTitle" data-i18n="scenes.properties">Свойства сцены</div>
           <div class="properties" id="sceneForm"></div>
         </div>
       </aside>
@@ -97,57 +115,57 @@
     <section class="view" id="view-settings" hidden>
       <div class="settings">
         <div class="settings__card md-card">
-          <h2>Twitch</h2>
-          <p class="settings__desc">
+          <h2 data-i18n="settings.twitch">Twitch</h2>
+          <p class="settings__desc" data-i18n="settings.twitchDesc">
             Чат подключается анонимно и не требует токена. Для алертов о фоллоу/сабах/чирах нужно
             зарегистрировать приложение и авторизоваться.
           </p>
           <div class="md-field">
-            <label>Канал</label>
+            <label data-i18n="settings.channel">Канал</label>
             <input type="text" id="twitchChannel" placeholder="halantar" />
           </div>
           <div class="md-field">
-            <label>Client ID</label>
-            <input type="text" id="twitchClientId" placeholder="из dev.twitch.tv/console/apps" />
+            <label data-i18n="settings.clientId">Client ID</label>
+            <input type="text" id="twitchClientId" data-i18n-placeholder="settings.clientIdPlaceholder" placeholder="из dev.twitch.tv/console/apps" />
           </div>
           <div class="md-field">
-            <label>Client Secret</label>
+            <label data-i18n="settings.clientSecret">Client Secret</label>
             <input type="password" id="twitchClientSecret" placeholder="••••••••" />
           </div>
           <div class="settings__hint">
-            <span>Redirect URI для приложения:</span>
+            <span data-i18n="settings.redirectUri">Redirect URI для приложения:</span>
             <code id="twitchRedirectUri"></code>
             <button class="md-button md-button--text" data-copy="twitchRedirectUri"></button>
           </div>
           <div class="settings__actions">
-            <button class="md-button md-button--text" id="openTwitchConsole">Открыть dev.twitch.tv/console/apps</button>
-            <button class="md-button md-button--filled" id="connectTwitchBtn">Подключить Twitch</button>
+            <button class="md-button md-button--text" id="openTwitchConsole" data-i18n="settings.openTwitchConsole">Открыть dev.twitch.tv/console/apps</button>
+            <button class="md-button md-button--filled" id="connectTwitchBtn" data-i18n="settings.connectTwitch">Подключить Twitch</button>
           </div>
           <div class="settings__statuses">
-            <span class="md-chip" id="chip-twitchChat"><span class="md-chip__dot"></span><span class="md-chip__label">Чат</span></span>
-            <span class="md-chip" id="chip-twitchEvents"><span class="md-chip__dot"></span><span class="md-chip__label">Алерты</span></span>
+            <span class="md-chip" id="chip-twitchChat"><span class="md-chip__dot"></span><span class="md-chip__label" data-i18n="settings.chat">Чат</span></span>
+            <span class="md-chip" id="chip-twitchEvents"><span class="md-chip__dot"></span><span class="md-chip__label" data-i18n="settings.alerts">Алерты</span></span>
           </div>
         </div>
 
         <div class="settings__card md-card">
-          <h2>DonationAlerts</h2>
-          <p class="settings__desc">Донаты автоматически увеличивают счётчик цели и запускают алерт.</p>
+          <h2 data-i18n="settings.donationAlerts">DonationAlerts</h2>
+          <p class="settings__desc" data-i18n="settings.daDesc">Донаты автоматически увеличивают счётчик цели и запускают алерт.</p>
           <div class="md-field">
-            <label>Client ID</label>
-            <input type="text" id="daClientId" placeholder="из donationalerts.com/application/clients" />
+            <label data-i18n="settings.clientId">Client ID</label>
+            <input type="text" id="daClientId" data-i18n-placeholder="settings.daClientIdPlaceholder" placeholder="из donationalerts.com/application/clients" />
           </div>
           <div class="md-field">
-            <label>Client Secret</label>
+            <label data-i18n="settings.clientSecret">Client Secret</label>
             <input type="password" id="daClientSecret" placeholder="••••••••" />
           </div>
           <div class="settings__hint">
-            <span>Redirect URI для приложения:</span>
+            <span data-i18n="settings.redirectUri">Redirect URI для приложения:</span>
             <code id="daRedirectUri"></code>
             <button class="md-button md-button--text" data-copy="daRedirectUri"></button>
           </div>
           <div class="settings__actions">
-            <button class="md-button md-button--text" id="openDaConsole">Открыть donationalerts.com/application/clients</button>
-            <button class="md-button md-button--filled" id="connectDaBtn">Подключить DonationAlerts</button>
+            <button class="md-button md-button--text" id="openDaConsole" data-i18n="settings.openDaConsole">Открыть donationalerts.com/application/clients</button>
+            <button class="md-button md-button--filled" id="connectDaBtn" data-i18n="settings.connectDa">Подключить DonationAlerts</button>
           </div>
           <div class="settings__statuses">
             <span class="md-chip" id="chip-donationAlerts"><span class="md-chip__dot"></span><span class="md-chip__label">DonationAlerts</span></span>
@@ -155,34 +173,65 @@
         </div>
 
         <div class="settings__card md-card">
-          <h2>Приложение</h2>
+          <h2 data-i18n="settings.app">Приложение</h2>
           <div class="md-field">
-            <label>Порт локального сервера</label>
+            <label data-i18n="settings.port">Порт локального сервера</label>
             <input type="text" id="appPort" disabled />
-            <span class="md-field__hint">Чтобы изменить — отредактируйте config/config.json и перезапустите приложение.</span>
+            <span class="md-field__hint" data-i18n="settings.portHint">Чтобы изменить — отредактируйте config/config.json и перезапустите приложение.</span>
           </div>
           <div class="md-field">
-            <label>URL оверлея для OBS Browser Source</label>
+            <label data-i18n="settings.overlayUrl">URL оверлея для OBS Browser Source</label>
             <input type="text" id="appOverlayUrl" disabled />
           </div>
           <div class="settings__actions">
-            <button class="md-button md-button--outlined" id="resetLayoutBtn">Сбросить раскладку по умолчанию</button>
+            <button class="md-button md-button--outlined" id="resetLayoutBtn" data-i18n="settings.resetLayout">Сбросить раскладку по умолчанию</button>
           </div>
         </div>
 
         <div class="settings__card md-card">
-          <h2>Оформление</h2>
-          <p class="settings__desc">Тема влияет только на сам оверлей (и его превью на канвасе) — панель управления всегда выглядит одинаково.</p>
+          <h2 data-i18n="settings.language">Язык интерфейса</h2>
+          <p class="settings__desc" data-i18n="settings.languageDesc">Язык панели управления, оверлея и сцен.</p>
+          <div class="settings__actions" id="languageSwitcher">
+            <button class="md-button md-button--tonal" data-lang="ru">Русский</button>
+            <button class="md-button md-button--tonal" data-lang="en">English</button>
+          </div>
+        </div>
+
+        <div class="settings__card md-card">
+          <h2 data-i18n="settings.history">История событий</h2>
+          <p class="settings__desc" data-i18n="settings.historyDesc">Последние донаты, подписки и фолловы. Кнопка «Повторить» запускает анимацию в оверлее.</p>
+          <div class="events-history__toolbar">
+            <div class="events-history__filters" id="eventsFilters">
+              <button class="md-button md-button--tonal is-active" data-filter="all" data-i18n="events.all">Все</button>
+              <button class="md-button md-button--tonal" data-filter="donation" data-i18n="events.donation">Донат</button>
+              <button class="md-button md-button--tonal" data-filter="subscription" data-i18n="events.subscription">Подписка</button>
+              <button class="md-button md-button--tonal" data-filter="follow" data-i18n="events.follow">Фоллоу</button>
+              <button class="md-button md-button--tonal" data-filter="cheer" data-i18n="events.cheer">Чир</button>
+            </div>
+            <input class="events-history__search" id="eventsSearch" type="text" data-i18n-placeholder="events.searchPlaceholder" placeholder="Поиск по нику или сообщению" />
+            <button class="md-button md-button--text" id="clearEventsBtn" data-i18n="events.clear">Очистить</button>
+          </div>
+          <div class="events-history__meta" id="eventsMeta"></div>
+          <div class="events-history" id="eventsHistory"></div>
+          <div class="settings__actions">
+            <button class="md-button md-button--tonal" id="refreshEventsBtn" data-i18n="settings.refresh">Обновить</button>
+            <button class="md-button md-button--outlined" id="loadMoreEventsBtn" hidden data-i18n="settings.showMore">Показать ещё</button>
+          </div>
+        </div>
+
+        <div class="settings__card md-card">
+          <h2 data-i18n="settings.appearance">Оформление</h2>
+          <p class="settings__desc" data-i18n="settings.appearanceDesc">Тема влияет только на сам оверлей (и его превью на канвасе) — панель управления всегда выглядит одинаково.</p>
           <div class="theme-grid" id="themeGrid"></div>
           <div class="settings__actions">
-            <button class="md-button md-button--outlined" id="newThemeBtn">Создать свою тему</button>
+            <button class="md-button md-button--outlined" id="newThemeBtn" data-i18n="settings.createTheme">Создать свою тему</button>
           </div>
           <div class="theme-editor" id="themeEditor" hidden></div>
         </div>
 
         <div class="settings__card md-card">
-          <h2>Экспорт / импорт настроек</h2>
-          <p class="settings__desc">
+          <h2 data-i18n="settings.exportImport">Экспорт / импорт настроек</h2>
+          <p class="settings__desc" data-i18n="settings.exportImportDesc">
             Экспорт сохраняет полный config.json — раскладку, темы, цель, а также токены и ключи Twitch/DonationAlerts.
             Файл содержит секреты — не выкладывайте его публично.
           </p>
@@ -197,6 +246,7 @@
   </div>
 
   <script src="../shared/events.js"></script>
+  <script src="../shared/i18n.js"></script>
   <script src="../shared/icons.js"></script>
   <script src="../shared/widget-catalog.js"></script>
   <script src="../shared/theme-engine.js"></script>

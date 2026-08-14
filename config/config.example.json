@@ -79,6 +79,17 @@
         { "platform": "DC", "text": "discord.gg/your_server" },
         { "platform": "YT", "text": "youtube.com/@channel" }
       ]
+    },
+    "wheel": {
+      "statusLabel": "РОЗЫГРЫШ",
+      "title": "Колесо Фортуны",
+      "subtitle": "Победителя определит колесо",
+      "showTimer": false,
+      "timerDuration": 0,
+      "timerDoneText": "",
+      "showEvents": false,
+      "showSocials": false,
+      "socials": []
     }
   },
   "layout": [

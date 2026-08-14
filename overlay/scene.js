@@ -1,6 +1,24 @@
+/*
+ * Copyright (C) 2026  Halantar
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://gnu.org>.
+ */
+
 (function () {
   const { EVENT_TYPES } = window.SharedEvents;
   const { ICONS } = window.SharedIcons;
+  const t = (key, params) => (window.I18n ? window.I18n.t(key, params) : key);
 
   const params = new URLSearchParams(location.search);
   const sceneType = params.get("type") || "brb";
@@ -11,6 +29,7 @@
   let timeLeft = 0;
   let totalDuration = 0;
   let doneText = "";
+  let currentScene = null;
 
   const els = {
     statusLabel: document.getElementById("statusLabel"),
@@ -34,7 +53,8 @@
     return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
   function formatMoney(n) {
-    return Number(n || 0).toLocaleString("ru-RU");
+    const locale = (window.I18n && window.I18n.getLang() === "ru") ? "ru-RU" : "en-US";
+    return Number(n || 0).toLocaleString(locale);
   }
   const CURRENCY_SYMBOLS = { RUB: "₽", USD: "$", EUR: "€", UAH: "₴", KZT: "₸", GBP: "£" };
   function currencySymbol(code) {
@@ -48,11 +68,27 @@
     document.body.dataset.decoration = appearance.tokens["--panel-decoration"] || "none";
   }
 
+  // Scene content lives in config as editable text, but its defaults come from
+  // the (Russian) catalog. Localize the default values, but keep any user edits.
+  function localizedField(field, value) {
+    const defaults = window.SceneCatalog ? window.SceneCatalog.defaultScenes()[sceneType] : null;
+    const def = defaults ? defaults[field] : undefined;
+    if (value === undefined || value === null || value === "" || value === def) {
+      return t("sceneContent." + sceneType + "." + field);
+    }
+    return value;
+  }
+
+  function renderSceneText(scene) {
+    els.statusLabel.textContent = localizedField("statusLabel", scene.statusLabel);
+    els.title.textContent = localizedField("title", scene.title);
+    els.subtitle.textContent = localizedField("subtitle", scene.subtitle);
+  }
+
   function renderScene(scene) {
     if (!scene) return;
-    els.statusLabel.textContent = scene.statusLabel || "";
-    els.title.textContent = scene.title || "";
-    els.subtitle.textContent = scene.subtitle || "";
+    currentScene = scene;
+    renderSceneText(scene);
     els.eventsGrid.hidden = !scene.showEvents;
     els.socialsFooter.hidden = !scene.showSocials;
     els.timerBox.hidden = !scene.showTimer;
@@ -60,7 +96,7 @@
     renderSocials(scene.socials || []);
     renderEvents();
 
-    if (scene.showTimer) startTimer(scene.timerDuration || 0, scene.timerDoneText || "");
+    if (scene.showTimer) startTimer(scene.timerDuration || 0, localizedField("timerDoneText", scene.timerDoneText));
     else stopTimer();
   }
 
@@ -73,9 +109,9 @@
   function renderEvents() {
     const follow = recentEvents.find((e) => e.kind === "follow");
     const sub = recentEvents.find((e) => e.kind === "sub" || e.kind === "gift_sub");
-    els.evFollower.textContent = follow ? follow.user : "Пока нет";
-    els.evSubscriber.textContent = sub ? sub.user : "Пока нет";
-    els.evTopDonation.textContent = topDonation.amount > 0 ? `${topDonation.user} (${formatMoney(topDonation.amount)} ${currencySymbol(topDonation.currency)})` : "Пока нет";
+    els.evFollower.textContent = follow ? follow.user : t("scene.notYet");
+    els.evSubscriber.textContent = sub ? sub.user : t("scene.notYet");
+    els.evTopDonation.textContent = topDonation.amount > 0 ? `${topDonation.user} (${formatMoney(topDonation.amount)} ${currencySymbol(topDonation.currency)})` : t("scene.notYet");
   }
 
   function startTimer(duration, doneMsg) {
@@ -126,6 +162,18 @@
         break;
       case EVENT_TYPES.TOP_DONATION_UPDATE:
         topDonation = msg.payload;
+        renderEvents();
+        break;
+      case EVENT_TYPES.LOCALES:
+        if (window.I18n) {
+          window.I18n.setLocales(msg.payload && msg.payload.locales);
+          window.I18n.setLang(msg.payload && msg.payload.lang);
+          window.I18n.apply();
+        }
+        if (currentScene) {
+          renderSceneText(currentScene);
+          doneText = localizedField("timerDoneText", currentScene.timerDoneText);
+        }
         renderEvents();
         break;
       default:

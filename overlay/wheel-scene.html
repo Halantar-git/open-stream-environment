@@ -19,7 +19,7 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <title>Open Stream Environment — overlay</title>
+  <title>Open Stream Environment — Колесо Фортуны</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -29,9 +29,16 @@
   <link rel="stylesheet" href="/shared/theme.css" />
   <link rel="stylesheet" href="/shared/widgets.css" />
   <link rel="stylesheet" href="overlay.css" />
+  <link rel="stylesheet" href="scene.css" />
 </head>
 <body>
-  <div id="canvas"></div>
+  <div class="scene-wrapper" aria-hidden="true">
+    <div class="bg-shape shape-1"></div>
+    <div class="bg-shape shape-2"></div>
+    <div class="bg-shape shape-3"></div>
+    <div class="grid-overlay"></div>
+  </div>
+
   <div id="wheel" class="wheel" hidden>
     <div class="wheel__stage">
       <div class="wheel__barrel">
@@ -42,10 +49,12 @@
       <div class="wheel__shadow"></div>
     </div>
   </div>
+
+  <div id="wheel-participants" class="wheel-participants" hidden></div>
+  <div id="wheel-result" class="wheel-result" hidden></div>
+
   <script src="/shared/events.js"></script>
   <script src="/shared/i18n.js"></script>
-  <script src="/shared/icons.js"></script>
-  <script src="/shared/twitch-emotes.js"></script>
-  <script src="overlay.js"></script>
+  <script src="wheel-scene.js"></script>
 </body>
 </html>

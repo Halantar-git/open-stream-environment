@@ -1,7 +1,25 @@
+/*
+ * Copyright (C) 2026  Halantar
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://gnu.org>.
+ */
+
 (function () {
   const { EVENT_TYPES } = window.SharedEvents;
   const { ICONS } = window.SharedIcons;
   const { WIDGET_TYPES } = window.WidgetCatalog;
+  const t = (key, params) => (window.I18n ? window.I18n.t(key, params) : key);
 
   const params = new URLSearchParams(location.search);
   const port = params.get("port") || "8710";
@@ -25,6 +43,11 @@
   let topDonation = { user: "", amount: 0, currency: "RUB" };
   let stats = { followerCount: null, subscriberCount: null };
   let activeSceneId = "start";
+  let giveaway = { active: false, command: "!go", eliminationMode: false, winner: null, count: 0, participants: [] };
+  let participantsConfig = { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82 };
+  let wheelConfig = { musicVolume: 50 };
+  let wheelSpeedConfig = { speed: 3 };
+  let micConfig = { sensitivity: 1.5, lineWidth: 2, color: "#0060A8", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2 };
 
   // ---- dom refs ----
   const tabsEl = document.getElementById("tabs");
@@ -64,6 +87,13 @@
   const daRedirectUriEl = document.getElementById("daRedirectUri");
   const appPortInput = document.getElementById("appPort");
   const appOverlayUrlInput = document.getElementById("appOverlayUrl");
+  const eventsHistoryEl = document.getElementById("eventsHistory");
+  const refreshEventsBtn = document.getElementById("refreshEventsBtn");
+  const loadMoreEventsBtn = document.getElementById("loadMoreEventsBtn");
+  const eventsFiltersEl = document.getElementById("eventsFilters");
+  const eventsSearchInput = document.getElementById("eventsSearch");
+  const clearEventsBtn = document.getElementById("clearEventsBtn");
+  const eventsMetaEl = document.getElementById("eventsMeta");
 
   // ---- helpers ----
   function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
@@ -99,6 +129,7 @@
       viewEditor.hidden = view !== "editor";
       viewScenes.hidden = view !== "scenes";
       viewSettings.hidden = view !== "settings";
+      if (view === "settings") renderStreamEvents();
     });
   });
 
@@ -112,8 +143,8 @@
       card.innerHTML = `
         <span class="library-card__icon">${ICONS[def.icon] || ""}</span>
         <span class="library-card__text">
-          <span class="library-card__label">${def.label}</span>
-          <span class="library-card__desc">${def.description}</span>
+          <span class="library-card__label">${t("widgets." + def.type)}</span>
+          <span class="library-card__desc">${t("widgets." + def.type + "Desc")}</span>
         </span>`;
       card.addEventListener("click", () => addWidget(def.type, null));
       card.addEventListener("dragstart", (e) => {
@@ -150,11 +181,13 @@
   }
 
   // ---- canvas preview content (sample data for event-driven widgets, real data for goal) ----
-  const SAMPLE_CHAT = [
-    { user: "nova_viewer", color: "#7ee0d6", message: "го катку!", badges: ["subscriber"] },
-    { user: "star_gazer", color: "#ffb0d8", message: "красивый оверлей 🔥", badges: [] },
-    { user: "orbit_fan", color: "#c6b8ff", message: "хаю хай", badges: ["moderator"] },
-  ];
+  function sampleChat() {
+    return [
+      { user: "nova_viewer", color: "#7ee0d6", message: t("preview.chat1"), badges: ["subscriber"] },
+      { user: "star_gazer", color: "#ffb0d8", message: t("preview.chat2"), badges: [] },
+      { user: "orbit_fan", color: "#c6b8ff", message: t("preview.chat3"), badges: ["moderator"] },
+    ];
+  }
   const SAMPLE_RECENT = [
     { kind: "donation", user: "comet_watcher", amount: 300 },
     { kind: "sub", user: "nova_viewer" },
@@ -164,9 +197,9 @@
   function recentTextPreview(e) {
     const user = `<b>${e.user}</b>`;
     switch (e.kind) {
-      case "donation": return `${user} задонатил ${formatMoney(e.amount)}`;
-      case "sub": return `${user} оформил подписку`;
-      case "follow": return `${user} подписался`;
+      case "donation": return t("preview.recentDonation", { user, amount: formatMoney(e.amount) });
+      case "sub": return t("preview.recentSub", { user });
+      case "follow": return t("preview.recentFollow", { user });
       default: return user;
     }
   }
@@ -182,7 +215,7 @@
         const pct = goal.target ? Math.min(100, Math.round((goal.current / goal.target) * 100)) : 0;
         return `<div class="widget-goal">
           <div class="widget-goal__row">
-            <span class="widget-goal__title">${escapeHtml(goal.title || "Цель")}</span>
+            <span class="widget-goal__title">${escapeHtml(goal.title || t("preview.goalTitle"))}</span>
             <span class="widget-goal__amounts"><b>${formatMoney(goal.current)}</b> / ${formatMoney(goal.target)} ${escapeHtml(currencySymbol(goal.currency))}</span>
           </div>
           <div class="md-linear-progress"><div class="md-linear-progress__bar" style="width:${pct}%"></div></div>
@@ -191,7 +224,7 @@
       }
       case "chat": {
         const max = Math.min(3, config.maxMessages || 8);
-        const rows = SAMPLE_CHAT.slice(0, max)
+        const rows = sampleChat().slice(0, max)
           .map((m) => {
             const badges = config.showBadges === false ? "" : (m.badges || []).map((b) => `<span class="widget-chat__badge">${b.slice(0, 1).toUpperCase()}</span>`).join("");
             return `<div class="widget-chat__msg">${badges}<span class="widget-chat__user" style="color:${m.color}">${m.user}</span><span class="widget-chat__colon">:</span><span class="widget-chat__text">${escapeHtml(m.message)}</span></div>`;
@@ -204,13 +237,13 @@
         const items = SAMPLE_RECENT.slice(0, max)
           .map((e) => `<div class="widget-recent__item"><span class="widget-recent__dot" data-kind="${e.kind}"></span><span>${recentTextPreview(e)}</span></div>`)
           .join("");
-        return `<div class="widget-recent"><div class="widget-recent__title">Последние события</div><div class="widget-recent__list">${items}</div></div>`;
+        return `<div class="widget-recent"><div class="widget-recent__title">${t("preview.recentTitle")}</div><div class="widget-recent__list">${items}</div></div>`;
       }
       case "alerts":
         return `<div class="widget-alerts-host"><div class="widget-alert" data-kind="follow">
           <div class="widget-alert__icon">${ICONS.follow}</div>
           <div class="widget-alert__body">
-            <div class="widget-alert__status"><span class="widget-alert__dot"></span><span class="widget-alert__kicker">Новый фолловер</span></div>
+            <div class="widget-alert__status"><span class="widget-alert__dot"></span><span class="widget-alert__kicker">${t("preview.followKicker")}</span></div>
             <div class="widget-alert__name">nova_viewer</div>
           </div>
           <div class="widget-alert__lockbar"><div class="widget-alert__lockbar-fill"></div></div>
@@ -235,19 +268,45 @@
         const metric = config.metric || "followers";
         const sample =
           metric === "subscribers"
-            ? { icon: ICONS.sub, label: config.label || "Подписчики", value: stats.subscriberCount != null ? formatMoney(stats.subscriberCount) : "—" }
+            ? { icon: ICONS.sub, label: config.label || t("preview.subscribers"), value: stats.subscriberCount != null ? formatMoney(stats.subscriberCount) : "—" }
             : metric === "latestFollower"
-            ? { icon: ICONS.follow, label: config.label || "Последний фолловер", value: "star_gazer" }
+            ? { icon: ICONS.follow, label: config.label || t("preview.latestFollower"), value: "star_gazer" }
             : metric === "latestSubscriber"
-            ? { icon: ICONS.sub, label: config.label || "Последний подписчик", value: "nova_viewer" }
+            ? { icon: ICONS.sub, label: config.label || t("preview.latestSubscriber"), value: "nova_viewer" }
             : metric === "topDonation"
-            ? { icon: ICONS.donation, label: config.label || "Топ донат", value: topDonation.amount > 0 ? `${topDonation.user} (${formatMoney(topDonation.amount)} ${currencySymbol(topDonation.currency)})` : "Пока нет" }
-            : { icon: ICONS.follow, label: config.label || "Фолловеры", value: stats.followerCount != null ? formatMoney(stats.followerCount) : "—" };
+            ? { icon: ICONS.donation, label: config.label || t("preview.topDonation"), value: topDonation.amount > 0 ? `${topDonation.user} (${formatMoney(topDonation.amount)} ${currencySymbol(topDonation.currency)})` : t("scene.notYet") }
+            : { icon: ICONS.follow, label: config.label || t("preview.followers"), value: stats.followerCount != null ? formatMoney(stats.followerCount) : "—" };
         return `<div class="widget-stat"><div class="widget-stat__icon">${sample.icon}</div><div class="widget-stat__info"><span class="widget-stat__label">${escapeHtml(sample.label)}</span><span class="widget-stat__value">${escapeHtml(sample.value)}</span></div></div>`;
       }
       case "social": {
         const s = (config.socials || [])[0] || { platform: "TG", text: "t.me/your_channel" };
         return `<div class="widget-social"><div class="widget-social__content"><span class="widget-social__icon">${escapeHtml(s.platform)}</span><div class="widget-social__info"><span class="widget-social__platform">${escapeHtml(s.platform)}</span><span class="widget-social__handle">${escapeHtml(s.text)}</span></div></div></div>`;
+      }
+      case "participants": {
+        const names = ["viewer_1", "viewer_2", "viewer_3", "viewer_4"].slice(0, Math.max(1, Number(participantsConfig.maxNames) || 10));
+        const chips = names.map((n) => `<span class="widget-participants__chip">${escapeHtml(n)}</span>`).join("");
+        const style = `--pw-font-size:${participantsConfig.fontSize ?? 16}px;--pw-text:${escapeAttr(participantsConfig.textColor || "#e8e1f0")};--pw-bg-opacity:${participantsConfig.backgroundOpacity ?? 82}%;`;
+        return `<div class="widget-participants" style="${style}">
+          <div class="widget-participants__title">${t("wheelScene.participantsTitle", { count: 4 })}</div>
+          <div class="widget-participants__list">${chips}</div>
+        </div>`;
+      }
+      case "mic": {
+        const color = micConfig.color || "#0060A8";
+        const opacity = micConfig.opacity ?? 0.9;
+        const width = 400;
+        const height = 80;
+        const pts = [];
+        for (let x = 0; x <= width; x += 6) {
+          const y = height / 2 + Math.sin(x * 0.045) * 22 + Math.sin(x * 0.012) * 9;
+          pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+        }
+        const d = "M" + pts.join(" L");
+        return `<div class="widget-mic widget-mic--preview">
+          <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="width:100%;height:100%;opacity:${opacity}">
+            <path d="${d}" fill="none" stroke="${escapeAttr(color)}" stroke-width="${micConfig.lineWidth || 2}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+          </svg>
+        </div>`;
       }
       default:
         return "";
@@ -272,7 +331,7 @@
 
         const label = document.createElement("div");
         label.className = "canvas-widget__label";
-        label.textContent = (WIDGET_TYPES[inst.type] || {}).label || inst.type;
+        label.textContent = t("widgets." + inst.type);
         box.appendChild(label);
 
         const content = document.createElement("div");
@@ -444,7 +503,7 @@
   // ---- layers panel ----
   function renderLayers() {
     if (!layout.length) {
-      layersEl.innerHTML = `<div class="layers__empty">Пока нет виджетов — добавьте из библиотеки слева</div>`;
+      layersEl.innerHTML = `<div class="layers__empty">${t("editor.layersEmpty")}</div>`;
       return;
     }
     layersEl.innerHTML = "";
@@ -456,11 +515,11 @@
         row.className = "layer-row" + (inst.id === selectedId ? " is-selected" : "");
         row.innerHTML = `
           <span class="layer-row__icon">${ICONS[def.icon] || ""}</span>
-          <span class="layer-row__label">${def.label || inst.type}</span>
+          <span class="layer-row__label">${t("widgets." + (def.type || inst.type))}</span>
           <span class="layer-row__btns">
-            <button class="layer-row__btn" data-action="forward" title="На передний план">▲</button>
-            <button class="layer-row__btn" data-action="backward" title="На задний план">▼</button>
-            <button class="layer-row__btn" data-action="toggle" title="Показать/скрыть">${ICONS[inst.visible ? "eye" : "eyeOff"]}</button>
+            <button class="layer-row__btn" data-action="forward" title="${t("common.forward")}">▲</button>
+            <button class="layer-row__btn" data-action="backward" title="${t("common.backward")}">▼</button>
+            <button class="layer-row__btn" data-action="toggle" title="${t("common.toggleVisibility")}">${ICONS[inst.visible ? "eye" : "eyeOff"]}</button>
           </span>`;
         row.addEventListener("click", (e) => {
           if (e.target.closest("[data-action]")) return;
@@ -491,81 +550,106 @@
     }
     propertiesSection.hidden = false;
     const def = WIDGET_TYPES[inst.type] || {};
-    propertiesTitle.textContent = def.label || inst.type;
+    propertiesTitle.textContent = t("widgets." + (def.type || inst.type));
     const config = inst.config || {};
 
     let extraHtml = "";
     if (inst.type === "goal") {
       extraHtml = `
-        <div class="md-field"><label>Название цели</label><input type="text" id="pGoalTitle" value="${escapeAttr(goal.title || "")}"></div>
+        <div class="md-field"><label>${t("properties.goalTitle")}</label><input type="text" id="pGoalTitle" value="${escapeAttr(goal.title || "")}"></div>
         <div class="properties__row">
-          <div class="md-field"><label>Собрано</label><input type="number" id="pGoalCurrent" value="${goal.current || 0}"></div>
-          <div class="md-field"><label>Цель</label><input type="number" id="pGoalTarget" value="${goal.target || 0}"></div>
+          <div class="md-field"><label>${t("properties.current")}</label><input type="number" id="pGoalCurrent" value="${goal.current || 0}"></div>
+          <div class="md-field"><label>${t("properties.target")}</label><input type="number" id="pGoalTarget" value="${goal.target || 0}"></div>
         </div>
-        <div class="md-field"><label>Валюта</label><input type="text" id="pGoalCurrency" value="${escapeAttr(goal.currency || "")}"></div>
-        <div class="properties__toggle-row"><label>Показывать %</label>${switchHtml("pShowPercent", !!config.showPercentage)}</div>`;
+        <div class="md-field"><label>${t("properties.currency")}</label><input type="text" id="pGoalCurrency" value="${escapeAttr(goal.currency || "")}"></div>
+        <div class="properties__toggle-row"><label>${t("properties.showPercent")}</label>${switchHtml("pShowPercent", !!config.showPercentage)}</div>`;
     } else if (inst.type === "chat") {
       extraHtml = `
-        <div class="md-field"><label>Макс. сообщений</label><input type="number" id="pMaxMessages" min="1" max="20" value="${config.maxMessages || 8}"></div>
-        <div class="properties__toggle-row"><label>Показывать бейджи</label>${switchHtml("pShowBadges", config.showBadges !== false)}</div>`;
+        <div class="md-field"><label>${t("properties.maxMessages")}</label><input type="number" id="pMaxMessages" min="1" max="20" value="${config.maxMessages || 8}"></div>
+        <div class="properties__toggle-row"><label>${t("properties.showBadges")}</label>${switchHtml("pShowBadges", config.showBadges !== false)}</div>`;
     } else if (inst.type === "recent") {
-      extraHtml = `<div class="md-field"><label>Макс. элементов</label><input type="number" id="pMaxItems" min="1" max="15" value="${config.maxItems || 5}"></div>`;
+      extraHtml = `<div class="md-field"><label>${t("properties.maxItems")}</label><input type="number" id="pMaxItems" min="1" max="15" value="${config.maxItems || 5}"></div>`;
     } else if (inst.type === "alerts") {
       extraHtml = `
-        <div class="properties__hint">Тестовый алерт запустится на реальном оверлее в OBS (и в браузере по ссылке ниже):</div>
+        <div class="properties__hint">${t("properties.testAlertHint")}</div>
         <div class="properties__test-grid">
-          <button class="md-button md-button--tonal" data-test="follow">Фоллоу</button>
-          <button class="md-button md-button--tonal" data-test="sub">Саб</button>
-          <button class="md-button md-button--tonal" data-test="gift_sub">Гифт</button>
-          <button class="md-button md-button--tonal" data-test="cheer">Чир</button>
-          <button class="md-button md-button--tonal" data-test="donation">Донат</button>
+          <button class="md-button md-button--tonal" data-test="follow">${t("properties.testFollow")}</button>
+          <button class="md-button md-button--tonal" data-test="sub">${t("properties.testSub")}</button>
+          <button class="md-button md-button--tonal" data-test="gift_sub">${t("properties.testGift")}</button>
+          <button class="md-button md-button--tonal" data-test="cheer">${t("properties.testCheer")}</button>
+          <button class="md-button md-button--tonal" data-test="donation">${t("properties.testDonation")}</button>
         </div>`;
     } else if (inst.type === "stat") {
       extraHtml = `
-        <div class="md-field"><label>Что показывать</label>
+        <div class="md-field"><label>${t("properties.statMetric")}</label>
           <select id="pStatMetric">
-            <option value="followers" ${(config.metric || "followers") === "followers" ? "selected" : ""}>Фолловеры — число (Twitch)</option>
-            <option value="subscribers" ${config.metric === "subscribers" ? "selected" : ""}>Подписчики — число (Twitch)</option>
-            <option value="latestFollower" ${config.metric === "latestFollower" ? "selected" : ""}>Последний фолловер</option>
-            <option value="latestSubscriber" ${config.metric === "latestSubscriber" ? "selected" : ""}>Последний подписчик</option>
-            <option value="topDonation" ${config.metric === "topDonation" ? "selected" : ""}>Топ донат сессии</option>
+            <option value="followers" ${(config.metric || "followers") === "followers" ? "selected" : ""}>${t("properties.metricFollowers")}</option>
+            <option value="subscribers" ${config.metric === "subscribers" ? "selected" : ""}>${t("properties.metricSubscribers")}</option>
+            <option value="latestFollower" ${config.metric === "latestFollower" ? "selected" : ""}>${t("properties.metricLatestFollower")}</option>
+            <option value="latestSubscriber" ${config.metric === "latestSubscriber" ? "selected" : ""}>${t("properties.metricLatestSubscriber")}</option>
+            <option value="topDonation" ${config.metric === "topDonation" ? "selected" : ""}>${t("properties.metricTopDonation")}</option>
           </select>
         </div>
-        <div class="md-field"><label>Подпись (необязательно)</label><input type="text" id="pStatLabel" value="${escapeAttr(config.label || "")}"></div>
-        <div class="properties__hint">Фолловеры/подписчики берутся из Twitch — нужно подключить алерты в Настройках.</div>`;
+        <div class="md-field"><label>${t("properties.statLabel")}</label><input type="text" id="pStatLabel" value="${escapeAttr(config.label || "")}"></div>
+        <div class="properties__hint">${t("properties.statHint")}</div>`;
     } else if (inst.type === "social") {
       extraHtml = `
-        <div class="md-field"><label>Смена каждые, сек</label><input type="number" id="pRotateSec" min="2" value="${config.rotateIntervalSec || 8}"></div>
+        <div class="md-field"><label>${t("properties.rotateSec")}</label><input type="number" id="pRotateSec" min="2" value="${config.rotateIntervalSec || 8}"></div>
         <div class="md-field">
-          <label>Соцсети</label>
+          <label>${t("properties.socials")}</label>
           <div class="scene-socials-list" id="pSocialsList"></div>
-          <button class="md-button md-button--text" id="pAddSocial" style="align-self:flex-start;margin-top:4px;">+ Добавить</button>
+          <button class="md-button md-button--text" id="pAddSocial" style="align-self:flex-start;margin-top:4px;">+ ${t("properties.addSocial")}</button>
         </div>`;
+    } else if (inst.type === "participants") {
+      extraHtml = `
+        <div class="properties__row">
+          <div class="md-field"><label>${t("properties.showNames")}</label><input type="number" id="pPwMaxNames" min="1" max="200" value="${participantsConfig.maxNames ?? 10}"></div>
+          <div class="md-field"><label>${t("properties.fontSize")}</label><input type="number" id="pPwFontSize" min="10" max="48" value="${participantsConfig.fontSize ?? 16}"></div>
+        </div>
+        <div class="md-field"><label>${t("properties.textColor")}</label><input type="color" id="pPwTextColor" value="${escapeAttr(participantsConfig.textColor || "#e8e1f0")}"></div>
+        <div class="md-field"><label>${t("properties.backgroundOpacity")}: <span id="pPwBgOpacityValue">${participantsConfig.backgroundOpacity ?? 82}%</span></label><input type="range" id="pPwBgOpacity" min="0" max="100" value="${participantsConfig.backgroundOpacity ?? 82}"></div>
+        <div class="properties__toggle-row"><label>${t("properties.marquee")}</label>${switchHtml("pPwMarquee", !!participantsConfig.marquee)}</div>`;
+    } else if (inst.type === "mic") {
+      const mode = micConfig.visualizer_mode || "sine";
+      extraHtml = `
+        <div class="md-field"><label>${t("mic.mode")}</label>
+          <select id="pMicMode">
+            <option value="sine" ${mode === "sine" ? "selected" : ""}>${t("mic.modeSine")}</option>
+            <option value="bars" ${mode === "bars" ? "selected" : ""}>${t("mic.modeBars")}</option>
+            <option value="ring" ${mode === "ring" ? "selected" : ""}>${t("mic.modeRing")}</option>
+          </select>
+        </div>
+        <div class="md-field"><label>${t("mic.sensitivity")}: <span id="pMicSensitivityValue">${micConfig.sensitivity ?? 1.5}</span></label><input type="range" id="pMicSensitivity" min="0.2" max="6" step="0.1" value="${micConfig.sensitivity ?? 1.5}"></div>
+        <div class="md-field"><label>${t("mic.lineWidth")}: <span id="pMicLineWidthValue">${micConfig.lineWidth ?? 2}</span></label><input type="range" id="pMicLineWidth" min="1" max="12" step="0.5" value="${micConfig.lineWidth ?? 2}"></div>
+        <div class="md-field"><label>${t("mic.barCount")}: <span id="pMicBarCountValue">${micConfig.barCount ?? 32}</span></label><input type="range" id="pMicBarCount" min="10" max="64" step="1" value="${micConfig.barCount ?? 32}"></div>
+        <div class="md-field"><label>${t("mic.barGap")}: <span id="pMicBarGapValue">${micConfig.barGap ?? 2}</span></label><input type="range" id="pMicBarGap" min="0" max="12" step="0.5" value="${micConfig.barGap ?? 2}"></div>
+        <div class="md-field"><label>${t("mic.color")}</label><input type="color" id="pMicColor" value="${escapeAttr(micConfig.color || "#0060A8")}"></div>
+        <div class="md-field"><label>${t("mic.opacity")}: <span id="pMicOpacityValue">${Math.round((micConfig.opacity ?? 0.9) * 100)}%</span></label><input type="range" id="pMicOpacity" min="5" max="100" step="1" value="${Math.round((micConfig.opacity ?? 0.9) * 100)}"></div>`;
     } else if (inst.type === "custom") {
       const mode = config.mode || "text";
       extraHtml = `
-        <div class="md-field"><label>Тип содержимого</label>
+        <div class="md-field"><label>${t("properties.customMode")}</label>
           <select id="pCustomMode">
-            <option value="text" ${mode === "text" ? "selected" : ""}>Текст</option>
-            <option value="image" ${mode === "image" ? "selected" : ""}>Изображение</option>
-            <option value="html" ${mode === "html" ? "selected" : ""}>Свой HTML</option>
+            <option value="text" ${mode === "text" ? "selected" : ""}>${t("properties.modeText")}</option>
+            <option value="image" ${mode === "image" ? "selected" : ""}>${t("properties.modeImage")}</option>
+            <option value="html" ${mode === "html" ? "selected" : ""}>${t("properties.modeHtml")}</option>
           </select>
         </div>
         <div id="pCustomFields"></div>`;
     }
 
     propertiesEl.innerHTML = `
-      <div class="properties__toggle-row"><label>Видимость</label>${switchHtml("pVisible", inst.visible)}</div>
+      <div class="properties__toggle-row"><label>${t("properties.visibility")}</label>${switchHtml("pVisible", inst.visible)}</div>
       <div class="properties__row">
-        <div class="md-field"><label>X %</label><input type="number" id="pX" value="${round1(inst.x)}"></div>
-        <div class="md-field"><label>Y %</label><input type="number" id="pY" value="${round1(inst.y)}"></div>
+        <div class="md-field"><label>${t("properties.x")}</label><input type="number" id="pX" value="${round1(inst.x)}"></div>
+        <div class="md-field"><label>${t("properties.y")}</label><input type="number" id="pY" value="${round1(inst.y)}"></div>
       </div>
       <div class="properties__row">
-        <div class="md-field"><label>Ширина %</label><input type="number" id="pW" value="${round1(inst.w)}"></div>
-        <div class="md-field"><label>Высота %</label><input type="number" id="pH" value="${round1(inst.h)}"></div>
+        <div class="md-field"><label>${t("properties.width")}</label><input type="number" id="pW" value="${round1(inst.w)}"></div>
+        <div class="md-field"><label>${t("properties.height")}</label><input type="number" id="pH" value="${round1(inst.h)}"></div>
       </div>
       ${extraHtml}
-      <div class="properties__delete"><button class="md-button md-button--text" id="pDeleteBtn">${ICONS.trash} Удалить</button></div>`;
+      <div class="properties__delete"><button class="md-button md-button--text" id="pDeleteBtn">${ICONS.trash} ${t("common.remove")}</button></div>`;
 
     [["pX", "x"], ["pY", "y"], ["pW", "w"], ["pH", "h"]].forEach(([id, key]) => {
       propertiesEl.querySelector("#" + id).addEventListener("change", (e) => {
@@ -596,6 +680,50 @@
       propertiesEl.querySelector("#pAddSocial").addEventListener("click", () => {
         send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { socials: [...(config.socials || []), { platform: "", text: "" }] } } });
       });
+    } else if (inst.type === "participants") {
+      propertiesEl.querySelector("#pPwMaxNames").addEventListener("change", (e) => sendParticipantsConfig({ maxNames: Number(e.target.value) || 10 }));
+      propertiesEl.querySelector("#pPwFontSize").addEventListener("change", (e) => sendParticipantsConfig({ fontSize: Number(e.target.value) || 16 }));
+      propertiesEl.querySelector("#pPwTextColor").addEventListener("input", (e) => sendParticipantsConfig({ textColor: e.target.value }));
+      propertiesEl.querySelector("#pPwBgOpacity").addEventListener("input", (e) => {
+        const v = Number(e.target.value);
+        const label = propertiesEl.querySelector("#pPwBgOpacityValue");
+        if (label) label.textContent = `${v}%`;
+        sendParticipantsConfig({ backgroundOpacity: v });
+      });
+      wireSwitch(propertiesEl.querySelector("#pPwMarquee"), (on) => sendParticipantsConfig({ marquee: on }));
+    } else if (inst.type === "mic") {
+      propertiesEl.querySelector("#pMicSensitivity").addEventListener("input", (e) => {
+        const v = Number(e.target.value);
+        const label = propertiesEl.querySelector("#pMicSensitivityValue");
+        if (label) label.textContent = v.toFixed(1);
+        sendMicConfig({ sensitivity: v });
+      });
+      propertiesEl.querySelector("#pMicLineWidth").addEventListener("input", (e) => {
+        const v = Number(e.target.value);
+        const label = propertiesEl.querySelector("#pMicLineWidthValue");
+        if (label) label.textContent = v.toFixed(1);
+        sendMicConfig({ lineWidth: v });
+      });
+      propertiesEl.querySelector("#pMicColor").addEventListener("input", (e) => sendMicConfig({ color: e.target.value }));
+      propertiesEl.querySelector("#pMicOpacity").addEventListener("input", (e) => {
+        const v = Number(e.target.value);
+        const label = propertiesEl.querySelector("#pMicOpacityValue");
+        if (label) label.textContent = `${v}%`;
+        sendMicConfig({ opacity: v / 100 });
+      });
+      propertiesEl.querySelector("#pMicMode").addEventListener("change", (e) => sendMicConfig({ visualizer_mode: e.target.value }));
+      propertiesEl.querySelector("#pMicBarCount").addEventListener("input", (e) => {
+        const v = Math.round(Number(e.target.value));
+        const label = propertiesEl.querySelector("#pMicBarCountValue");
+        if (label) label.textContent = String(v);
+        sendMicConfig({ barCount: v });
+      });
+      propertiesEl.querySelector("#pMicBarGap").addEventListener("input", (e) => {
+        const v = Number(e.target.value);
+        const label = propertiesEl.querySelector("#pMicBarGapValue");
+        if (label) label.textContent = v.toFixed(1);
+        sendMicConfig({ barGap: v });
+      });
     } else if (inst.type === "custom") {
       wireCustomWidgetFields(inst, config);
       document.getElementById("pCustomMode").addEventListener("change", (e) => {
@@ -604,7 +732,7 @@
     }
 
     document.getElementById("pDeleteBtn").addEventListener("click", () => {
-      if (!confirm(`Удалить виджет «${def.label || inst.type}»?`)) return;
+      if (!confirm(t("common.deleteWidgetConfirm", { name: t("widgets." + (def.type || inst.type)) }))) return;
       send(EVENT_TYPES.CMD_REMOVE_WIDGET, { id: inst.id });
       selectedId = null;
     });
@@ -618,7 +746,7 @@
       <div class="scene-social-row">
         <input type="text" class="platform" data-idx="${i}" data-field="platform" value="${escapeAttr(s.platform)}" maxlength="4">
         <input type="text" class="text" data-idx="${i}" data-field="text" value="${escapeAttr(s.text)}">
-        <button class="layer-row__btn" data-action="remove-social" data-idx="${i}" title="Удалить">${ICONS.trash}</button>
+        <button class="layer-row__btn" data-action="remove-social" data-idx="${i}" title="${t("common.remove")}">${ICONS.trash}</button>
       </div>`
       )
       .join("");
@@ -644,41 +772,41 @@
     const host = document.getElementById("pCustomFields");
     if (mode === "image") {
       host.innerHTML = `
-        <div class="md-field"><label>URL изображения</label><input type="text" id="pImageUrl" value="${escapeAttr(config.imageUrl || "")}" placeholder="https://..."></div>
-        <div class="md-field"><label>Вписывание</label>
+        <div class="md-field"><label>${t("custom.imageUrl")}</label><input type="text" id="pImageUrl" value="${escapeAttr(config.imageUrl || "")}" placeholder="https://..."></div>
+        <div class="md-field"><label>${t("custom.imageFit")}</label>
           <select id="pImageFit">
-            <option value="contain" ${config.imageFit !== "cover" ? "selected" : ""}>Целиком (contain)</option>
-            <option value="cover" ${config.imageFit === "cover" ? "selected" : ""}>Заполнить (cover)</option>
+            <option value="contain" ${config.imageFit !== "cover" ? "selected" : ""}>${t("custom.fitContain")}</option>
+            <option value="cover" ${config.imageFit === "cover" ? "selected" : ""}>${t("custom.fitCover")}</option>
           </select>
         </div>`;
       host.querySelector("#pImageUrl").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { imageUrl: e.target.value.trim() } } }));
       host.querySelector("#pImageFit").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { imageFit: e.target.value } } }));
     } else if (mode === "html") {
       host.innerHTML = `
-        <div class="properties__hint">HTML, CSS и JS редактируются в отдельном окне — с вкладками и живым превью. JS выполняется по-настоящему (через iframe), можно использовать таймеры, анимации и т.д.</div>
-        <button class="md-button md-button--filled" id="pOpenEditor" style="width:100%;justify-content:center;">Редактировать код</button>`;
+        <div class="properties__hint">${t("custom.htmlHint")}</div>
+        <button class="md-button md-button--filled" id="pOpenEditor" style="width:100%;justify-content:center;">${t("custom.editCode")}</button>`;
       host.querySelector("#pOpenEditor").addEventListener("click", () => window.desktop?.openWidgetEditor(inst.id));
     } else {
       host.innerHTML = `
-        <div class="md-field"><label>Заголовок (необязательно)</label><input type="text" id="pTextTitle" value="${escapeAttr(config.textTitle || "")}"></div>
-        <div class="md-field"><label>Текст</label><input type="text" id="pTextBody" value="${escapeAttr(config.text || "")}"></div>
+        <div class="md-field"><label>${t("custom.textTitle")}</label><input type="text" id="pTextTitle" value="${escapeAttr(config.textTitle || "")}"></div>
+        <div class="md-field"><label>${t("custom.textBody")}</label><input type="text" id="pTextBody" value="${escapeAttr(config.text || "")}"></div>
         <div class="properties__row">
-          <div class="md-field"><label>Выравнивание</label>
+          <div class="md-field"><label>${t("custom.textAlign")}</label>
             <select id="pTextAlign">
-              <option value="left" ${config.textAlign === "left" ? "selected" : ""}>Слева</option>
-              <option value="center" ${config.textAlign !== "left" && config.textAlign !== "right" ? "selected" : ""}>По центру</option>
-              <option value="right" ${config.textAlign === "right" ? "selected" : ""}>Справа</option>
+              <option value="left" ${config.textAlign === "left" ? "selected" : ""}>${t("custom.alignLeft")}</option>
+              <option value="center" ${config.textAlign !== "left" && config.textAlign !== "right" ? "selected" : ""}>${t("custom.alignCenter")}</option>
+              <option value="right" ${config.textAlign === "right" ? "selected" : ""}>${t("custom.alignRight")}</option>
             </select>
           </div>
-          <div class="md-field"><label>Размер</label>
+          <div class="md-field"><label>${t("custom.textSize")}</label>
             <select id="pTextSize">
-              <option value="small" ${config.textSize === "small" ? "selected" : ""}>Малый</option>
-              <option value="medium" ${config.textSize !== "small" && config.textSize !== "large" ? "selected" : ""}>Средний</option>
-              <option value="large" ${config.textSize === "large" ? "selected" : ""}>Крупный</option>
+              <option value="small" ${config.textSize === "small" ? "selected" : ""}>${t("custom.sizeSmall")}</option>
+              <option value="medium" ${config.textSize !== "small" && config.textSize !== "large" ? "selected" : ""}>${t("custom.sizeMedium")}</option>
+              <option value="large" ${config.textSize === "large" ? "selected" : ""}>${t("custom.sizeLarge")}</option>
             </select>
           </div>
         </div>
-        <div class="properties__toggle-row"><label>Фон-карточка</label>${switchHtml("pShowBg", config.showBackground !== false)}</div>`;
+        <div class="properties__toggle-row"><label>${t("custom.showBg")}</label>${switchHtml("pShowBg", config.showBackground !== false)}</div>`;
       host.querySelector("#pTextTitle").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { textTitle: e.target.value } } }));
       host.querySelector("#pTextBody").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { text: e.target.value } } }));
       host.querySelector("#pTextAlign").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { textAlign: e.target.value } } }));
@@ -688,8 +816,10 @@
   }
 
   // ---- status chips ----
-  const STATUS_LABEL = { twitchChat: "Twitch чат", twitchEvents: "Twitch алерты", donationAlerts: "DonationAlerts" };
-  const STATUS_TEXT = { connected: "подключено", connecting: "подключение…", disconnected: "отключено", error: "ошибка", not_configured: "не настроено" };
+  const STATUS_LABEL = (service) =>
+    ({ twitchChat: t("status.twitchChat"), twitchEvents: t("status.twitchEvents"), donationAlerts: t("status.donationAlerts") }[service] || service);
+  const STATUS_TEXT = (status) =>
+    ({ connected: t("status.connected"), connecting: t("status.connecting"), disconnected: t("status.disconnected"), error: t("status.error"), not_configured: t("status.notConfigured") }[status] || status);
 
   function statusClass(status) {
     if (status === "connected") return "is-connected";
@@ -700,7 +830,7 @@
 
   function renderStatusChips() {
     statusChipsEl.innerHTML = Object.entries(connectionStatus)
-      .map(([service, status]) => `<span class="md-chip ${statusClass(status)}"><span class="md-chip__dot"></span>${STATUS_LABEL[service] || service}</span>`)
+      .map(([service, status]) => `<span class="md-chip ${statusClass(status)}"><span class="md-chip__dot"></span>${STATUS_LABEL(service)}</span>`)
       .join("");
   }
 
@@ -710,7 +840,7 @@
       if (!el) return;
       const status = connectionStatus[service];
       el.className = "md-chip " + statusClass(status);
-      el.querySelector(".md-chip__label").textContent = `${STATUS_LABEL[service]}: ${STATUS_TEXT[status] || status || "—"}`;
+      el.querySelector(".md-chip__label").textContent = `${STATUS_LABEL(service)}: ${STATUS_TEXT(status)}`;
     });
   }
 
@@ -745,11 +875,200 @@
   document.getElementById("openTwitchConsole").addEventListener("click", () => window.desktop?.openExternal("https://dev.twitch.tv/console/apps"));
   document.getElementById("openDaConsole").addEventListener("click", () => window.desktop?.openExternal("https://www.donationalerts.com/application/clients"));
   document.getElementById("resetLayoutBtn").addEventListener("click", () => {
-    if (!confirm("Удалить текущую раскладку и восстановить виджеты по умолчанию?")) return;
+    if (!confirm(t("common.resetLayoutConfirm"))) return;
     layout.forEach((w) => send(EVENT_TYPES.CMD_REMOVE_WIDGET, { id: w.id }));
     ["recent", "alerts", "goal", "chat"].forEach((type) => send(EVENT_TYPES.CMD_ADD_WIDGET, { type }));
     selectedId = null;
   });
+
+  // ---- events history ----
+  const EVENTS_TYPE_LABEL = (type) =>
+    ({ donation: t("events.donation"), subscription: t("events.subscription"), follow: t("events.follow"), cheer: t("events.cheer") }[type] || type);
+  const EVENTS_PAGE_SIZE = 20;
+  let eventsOffset = 0;
+  let eventsTotal = 0;
+  let eventsFilter = "all";
+  let eventsSearch = "";
+  let eventsSearchTimer = null;
+
+  function formatEventTime(ts) {
+    const locale = (window.I18n && window.I18n.getLang() === "ru") ? "ru-RU" : "en-US";
+    const d = new Date(ts);
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) {
+      return d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+    }
+    return d.toLocaleString(locale, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  }
+
+  function renderEventRow(ev) {
+    const amount = typeof ev.amount === "number" ? `${formatMoney(ev.amount)} ${currencySymbol(ev.currency)}` : "";
+    const testBadge = ev.is_test ? '<span class="events-history__test">' + t("events.test") + '</span>' : "";
+    return `
+      <div class="events-history__row">
+        <span class="events-history__type events-history__type--${escapeAttr(ev.type)}">${escapeHtml(EVENTS_TYPE_LABEL(ev.type))}</span>
+        <span class="events-history__user">${escapeHtml(ev.username)}</span>
+        ${amount ? `<span class="events-history__amount">${escapeHtml(amount)}</span>` : ""}
+        ${ev.message ? `<span class="events-history__message">${escapeHtml(ev.message)}</span>` : ""}
+        <span class="events-history__time">${formatEventTime(ev.timestamp)}</span>
+        ${testBadge}
+        <button class="md-button md-button--text events-history__replay" data-replay-id="${escapeAttr(ev.id)}">${t("events.replay")}</button>
+      </div>`;
+  }
+
+  async function renderStreamEvents(reset = true) {
+    if (!window.desktop?.db?.getStreamEvents) return;
+
+    if (reset) {
+      eventsOffset = 0;
+      eventsTotal = 0;
+      eventsHistoryEl.innerHTML = '<div class="events-history__empty">' + t("events.loading") + '</div>';
+      eventsMetaEl.textContent = "";
+      loadMoreEventsBtn.hidden = true;
+    }
+
+    try {
+      const result = await window.desktop.db.getStreamEvents({
+        limit: EVENTS_PAGE_SIZE,
+        offset: eventsOffset,
+        type: eventsFilter === "all" ? undefined : eventsFilter,
+        search: eventsSearch,
+      });
+      const items = (result && result.items) || [];
+      eventsTotal = (result && result.total) || 0;
+
+      if (reset) {
+        eventsHistoryEl.innerHTML = "";
+        eventsMetaEl.textContent = t("events.totalCount", { count: eventsTotal });
+      }
+
+      if (!items.length && reset) {
+        eventsHistoryEl.innerHTML = '<div class="events-history__empty">' + t("events.empty") + '</div>';
+        return;
+      }
+
+      items.forEach((ev) => eventsHistoryEl.insertAdjacentHTML("beforeend", renderEventRow(ev)));
+      eventsOffset += items.length;
+
+      const hasMore = eventsOffset < eventsTotal;
+      loadMoreEventsBtn.hidden = !hasMore;
+      if (hasMore) loadMoreEventsBtn.textContent = t("events.showMore", { current: eventsOffset, total: eventsTotal });
+    } catch (err) {
+      if (reset) {
+        eventsHistoryEl.innerHTML = '<div class="events-history__empty">' + t("events.loadError") + '</div>';
+        eventsMetaEl.textContent = "";
+      }
+    }
+  }
+
+  refreshEventsBtn.addEventListener("click", () => renderStreamEvents(true));
+  loadMoreEventsBtn.addEventListener("click", () => renderStreamEvents(false));
+
+  function updateEventsFilterButtons() {
+    eventsFiltersEl.querySelectorAll("[data-filter]").forEach((btn) => {
+      btn.classList.toggle("is-active", btn.dataset.filter === eventsFilter);
+    });
+  }
+
+  eventsFiltersEl.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-filter]");
+    if (!btn) return;
+    eventsFilter = btn.dataset.filter;
+    updateEventsFilterButtons();
+    renderStreamEvents(true);
+  });
+
+  eventsSearchInput.addEventListener("input", () => {
+    clearTimeout(eventsSearchTimer);
+    eventsSearchTimer = setTimeout(() => {
+      eventsSearch = eventsSearchInput.value.trim();
+      renderStreamEvents(true);
+    }, 300);
+  });
+
+  clearEventsBtn.addEventListener("click", async () => {
+    if (!confirm(t("events.clearConfirm"))) return;
+    await window.desktop?.db?.clearStreamEvents?.();
+    renderStreamEvents(true);
+  });
+
+  eventsHistoryEl.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-replay-id]");
+    if (!btn) return;
+    await window.desktop?.replayEvent?.(btn.dataset.replayId);
+  });
+
+  renderStreamEvents(true);
+
+  // ---- giveaway / fortune wheel ----
+  function renderGiveaway() {
+    const commandEl = document.getElementById("giveawayCommand");
+    if (!commandEl) return; // wheel scene form not currently rendered
+    if (document.activeElement !== commandEl) {
+      commandEl.value = giveaway.command || "!go";
+    }
+    const countEl = document.getElementById("giveawayCount");
+    const chipEl = document.getElementById("giveawayChip");
+    const listEl = document.getElementById("giveawayParticipants");
+    const eliminationEl = document.getElementById("giveawayElimination");
+    if (countEl) countEl.textContent = `${t("giveaway.participants")}: ${giveaway.count}`;
+    if (chipEl) chipEl.className = "md-chip " + (giveaway.active ? "is-pending" : "");
+
+    const items = giveaway.participants || [];
+    if (listEl) {
+      listEl.innerHTML = items.length
+        ? items.map((u) => `
+            <div class="giveaway-participant-row">
+              <span class="giveaway-participant__name">${escapeHtml(u)}</span>
+              <button class="giveaway-participant__remove" data-remove-name="${escapeAttr(u)}" title="${t("giveaway.removeParticipant")}">✕</button>
+            </div>`).join("")
+        : '<div class="events-history__empty">' + t("giveaway.noParticipants") + '</div>';
+    }
+
+    if (eliminationEl && eliminationEl.classList.contains("is-on") !== !!giveaway.eliminationMode) {
+      eliminationEl.classList.toggle("is-on", !!giveaway.eliminationMode);
+    }
+  }
+
+  function wireGiveawayControls() {
+    document.getElementById("startGiveawayBtn")?.addEventListener("click", () => {
+      const commandEl = document.getElementById("giveawayCommand");
+      send(EVENT_TYPES.CMD_START_GIVEAWAY, { command: commandEl ? commandEl.value.trim() : "!go" });
+    });
+    document.getElementById("stopGiveawayBtn")?.addEventListener("click", () => send(EVENT_TYPES.CMD_STOP_GIVEAWAY, {}));
+    document.getElementById("shuffleGiveawayBtn")?.addEventListener("click", () => send(EVENT_TYPES.CMD_SHUFFLE_GIVEAWAY, {}));
+    document.getElementById("generateWheelBtn")?.addEventListener("click", () => send(EVENT_TYPES.CMD_GENERATE_WHEEL, {}));
+    document.getElementById("spinWheelBtn")?.addEventListener("click", () => send(EVENT_TYPES.CMD_SPIN_WHEEL, {}));
+    const eliminationEl = document.getElementById("giveawayElimination");
+    if (eliminationEl) wireSwitch(eliminationEl, (on) => send(EVENT_TYPES.CMD_SET_GIVEAWAY_ELIMINATION, { enabled: on }));
+
+    document.getElementById("addParticipantBtn")?.addEventListener("click", () => {
+      const input = document.getElementById("giveawayManualName");
+      if (!input) return;
+      const name = input.value.trim();
+      if (!name) return;
+      send(EVENT_TYPES.CMD_ADD_GIVEAWAY_PARTICIPANT, { username: name });
+      input.value = "";
+    });
+
+    document.getElementById("giveawayParticipants")?.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-remove-name]");
+      if (!btn) return;
+      send(EVENT_TYPES.CMD_REMOVE_GIVEAWAY_PARTICIPANT, { username: btn.dataset.removeName });
+    });
+  }
+
+  // ---- participants widget settings ----
+  function sendParticipantsConfig(patch) {
+    participantsConfig = { ...participantsConfig, ...patch };
+    send(EVENT_TYPES.CMD_SET_PARTICIPANTS_CONFIG, { config: participantsConfig });
+  }
+
+  // ---- microphone visualizer widget settings ----
+  function sendMicConfig(patch) {
+    micConfig = { ...micConfig, ...patch };
+    send(EVENT_TYPES.CMD_SET_MIC_CONFIG, { config: micConfig });
+  }
 
   // ---- appearance: theme picker + custom theme editor ----
 
@@ -774,8 +1093,8 @@
             theme.builtin
               ? ""
               : `<span class="layer-row__btns">
-                  <button class="theme-swatch__btn" data-action="edit" title="Изменить">✎</button>
-                  <button class="theme-swatch__btn" data-action="delete" title="Удалить">${ICONS.trash}</button>
+                  <button class="theme-swatch__btn" data-action="edit" title="${t("common.edit")}">✎</button>
+                  <button class="theme-swatch__btn" data-action="delete" title="${t("common.remove")}">${ICONS.trash}</button>
                 </span>`
           }
         </div>`;
@@ -790,7 +1109,7 @@
         });
         card.querySelector('[data-action="delete"]').addEventListener("click", (e) => {
           e.stopPropagation();
-          if (confirm(`Удалить тему «${theme.name}»?`)) send(EVENT_TYPES.CMD_DELETE_CUSTOM_THEME, { id: theme.id });
+          if (confirm(t("common.deleteThemeConfirm", { name: theme.name }))) send(EVENT_TYPES.CMD_DELETE_CUSTOM_THEME, { id: theme.id });
         });
       }
       themeGridEl.appendChild(card);
@@ -805,21 +1124,21 @@
 
     themeEditorEl.hidden = false;
     themeEditorEl.innerHTML = `
-      <div class="md-field"><label>Название темы</label><input type="text" id="themeName" value="${escapeAttr(theme ? theme.name : "Моя тема")}"></div>
+      <div class="md-field"><label>${t("themeEditor.themeName")}</label><input type="text" id="themeName" value="${escapeAttr(theme ? theme.name : t("themeEditor.myTheme"))}"></div>
       <div class="theme-editor__colors">
-        <div class="theme-editor__color"><label>Основной</label><input type="color" id="seedPrimary" value="${seeds.primary}"></div>
-        <div class="theme-editor__color"><label>Второй</label><input type="color" id="seedSecondary" value="${seeds.secondary}"></div>
-        <div class="theme-editor__color"><label>Третий</label><input type="color" id="seedTertiary" value="${seeds.tertiary}"></div>
-        <div class="theme-editor__color"><label>Фон</label><input type="color" id="seedSurface" value="${seeds.surfaceSeed}"></div>
+        <div class="theme-editor__color"><label>${t("themeEditor.primary")}</label><input type="color" id="seedPrimary" value="${seeds.primary}"></div>
+        <div class="theme-editor__color"><label>${t("themeEditor.secondary")}</label><input type="color" id="seedSecondary" value="${seeds.secondary}"></div>
+        <div class="theme-editor__color"><label>${t("themeEditor.tertiary")}</label><input type="color" id="seedTertiary" value="${seeds.tertiary}"></div>
+        <div class="theme-editor__color"><label>${t("themeEditor.surface")}</label><input type="color" id="seedSurface" value="${seeds.surfaceSeed}"></div>
       </div>
       <div class="theme-editor__row">
-        <div class="md-field"><label>Форма панелей</label>
+        <div class="md-field"><label>${t("themeEditor.shape")}</label>
           <select id="seedShape">
-            <option value="rounded" ${seeds.shapeMode !== "angular" ? "selected" : ""}>Скруглённая</option>
-            <option value="angular" ${seeds.shapeMode === "angular" ? "selected" : ""}>Угловатая (HUD)</option>
+            <option value="rounded" ${seeds.shapeMode !== "angular" ? "selected" : ""}>${t("themeEditor.rounded")}</option>
+            <option value="angular" ${seeds.shapeMode === "angular" ? "selected" : ""}>${t("themeEditor.angular")}</option>
           </select>
         </div>
-        <div class="md-field"><label>Шрифты</label>
+        <div class="md-field"><label>${t("themeEditor.fonts")}</label>
           <select id="seedFont">
             <option value="nebula" ${seeds.fontPreset !== "orbital" ? "selected" : ""}>Roboto (Material You)</option>
             <option value="orbital" ${seeds.fontPreset === "orbital" ? "selected" : ""}>Orbitron / Rajdhani (Orbital)</option>
@@ -827,8 +1146,8 @@
         </div>
       </div>
       <div class="settings__actions">
-        <button class="md-button md-button--filled" id="saveThemeBtn">Сохранить тему</button>
-        <button class="md-button md-button--text" id="cancelThemeBtn">Отмена</button>
+        <button class="md-button md-button--filled" id="saveThemeBtn">${t("themeEditor.save")}</button>
+        <button class="md-button md-button--text" id="cancelThemeBtn">${t("themeEditor.cancel")}</button>
       </div>`;
 
     const previewFromForm = () => {
@@ -849,7 +1168,7 @@
       const liveSeeds = previewFromForm();
       send(EVENT_TYPES.CMD_SAVE_CUSTOM_THEME, {
         id: editingThemeId,
-        name: document.getElementById("themeName").value.trim() || "Моя тема",
+        name: document.getElementById("themeName").value.trim() || t("themeEditor.myTheme"),
         seeds: liveSeeds,
       });
       closeThemeEditor();
@@ -876,32 +1195,33 @@
     exportImportStatus.style.color = isError ? "var(--md-error)" : "";
   }
 
-  exportConfigBtn.textContent = "Экспортировать в файл";
+  exportConfigBtn.textContent = t("settings.export");
   exportConfigBtn.addEventListener("click", async () => {
     const res = await window.desktop?.exportConfig();
     if (!res) return;
     if (res.canceled) return;
-    if (res.ok) showExportImportStatus(`Сохранено: ${res.filePath}`, false);
-    else showExportImportStatus(`Не удалось экспортировать: ${res.error}`, true);
+    if (res.ok) showExportImportStatus(t("settings.exportSaved", { path: res.filePath }), false);
+    else showExportImportStatus(t("settings.exportFailed", { error: res.error }), true);
   });
 
-  importConfigBtn.textContent = "Импортировать из файла";
+  importConfigBtn.textContent = t("settings.import");
   importConfigBtn.addEventListener("click", async () => {
-    if (!confirm("Импорт заменит текущие раскладку, темы, цель и настройки подключений. Продолжить?")) return;
+    if (!confirm(t("settings.importConfirm"))) return;
     const res = await window.desktop?.importConfig();
     if (!res) return;
     if (res.canceled) return;
     if (res.ok) {
-      showExportImportStatus("Настройки импортированы", false);
+      showExportImportStatus(t("settings.imported"), false);
       selectedId = null;
     } else {
-      showExportImportStatus(`Не удалось импортировать: ${res.error}`, true);
+      showExportImportStatus(t("settings.importFailed", { error: res.error }), true);
     }
   });
 
   // ---- scenes ----
 
   function sceneUrl(id) {
+    if (id === "wheel") return `http://localhost:${port}/overlay/wheel-scene.html`;
     return `http://localhost:${port}/overlay/scene.html?type=${id}`;
   }
 
@@ -910,7 +1230,7 @@
     Object.values(SceneCatalog.SCENE_DEFS).forEach((def) => {
       const card = document.createElement("div");
       card.className = "library-card" + (def.id === activeSceneId ? " is-active" : "");
-      card.innerHTML = `<span class="library-card__icon">${ICONS[def.icon] || ""}</span><span class="library-card__text"><span class="library-card__label">${def.label}</span></span>`;
+      card.innerHTML = `<span class="library-card__icon">${ICONS[def.icon] || ""}</span><span class="library-card__text"><span class="library-card__label">${t("scene." + def.id + "Label")}</span></span>`;
       card.addEventListener("click", () => selectScene(def.id));
       scenesNavListEl.appendChild(card);
     });
@@ -933,25 +1253,99 @@
     const scene = scenes[activeSceneId];
     if (!scene) return;
     const def = SceneCatalog.SCENE_DEFS[activeSceneId];
-    sceneFormTitle.textContent = def.label;
+    sceneFormTitle.textContent = t("scene." + def.id + "Label");
+
+    if (activeSceneId === "wheel") {
+      sceneFormEl.innerHTML = `
+        <div class="md-field"><label>${t("giveaway.command")}</label><input type="text" id="giveawayCommand" placeholder="!go" value="${escapeAttr(giveaway.command || "!go")}"></div>
+        <div class="settings__statuses"><span class="md-chip" id="giveawayChip"><span class="md-chip__dot"></span><span id="giveawayCount">${t("giveaway.participants")}: ${giveaway.count}</span></span></div>
+        <div class="properties__test-grid">
+          <button class="md-button md-button--filled" id="startGiveawayBtn">${t("giveaway.start")}</button>
+          <button class="md-button md-button--outlined" id="stopGiveawayBtn">${t("giveaway.stop")}</button>
+          <button class="md-button md-button--tonal" id="shuffleGiveawayBtn">${t("giveaway.shuffle")}</button>
+          <button class="md-button md-button--tonal" id="generateWheelBtn">${t("giveaway.generateWheel")}</button>
+          <button class="md-button md-button--filled" id="spinWheelBtn">${t("giveaway.spinWheel")}</button>
+        </div>
+        <div class="properties__toggle-row"><label>${t("giveaway.eliminationMode")}</label>${switchHtml("giveawayElimination", !!giveaway.eliminationMode)}</div>
+        <div class="giveaway-manual">
+          <input type="text" id="giveawayManualName" placeholder="${t("giveaway.participantPlaceholder")}" />
+        </div>
+        <button class="md-button md-button--tonal" id="addParticipantBtn" title="${t("giveaway.addParticipant")}">+ ${t("giveaway.addParticipant")}</button>
+        <div class="giveaway-participants" id="giveawayParticipants"></div>
+
+        <div class="inspector__title" style="margin-top:10px;">${t("giveaway.participantsWidgetTitle")}</div>
+        <div class="properties__row">
+          <div class="md-field"><label>${t("giveaway.showNames")}</label><input type="number" id="wsMaxNames" min="1" max="200" value="${participantsConfig.maxNames ?? 10}"></div>
+          <div class="md-field"><label>${t("giveaway.fontSize")} (px)</label><input type="number" id="wsFontSize" min="10" max="48" value="${participantsConfig.fontSize ?? 16}"></div>
+        </div>
+        <div class="md-field"><label>${t("giveaway.textColor")}</label><input type="color" id="wsTextColor" value="${escapeAttr(participantsConfig.textColor || "#e8e1f0")}"></div>
+        <div class="md-field"><label>${t("giveaway.backgroundOpacity")}: <span id="wsBgOpacityValue">${participantsConfig.backgroundOpacity ?? 82}%</span></label><input type="range" id="wsBgOpacity" min="0" max="100" value="${participantsConfig.backgroundOpacity ?? 82}"></div>
+        <div class="properties__row">
+          <div class="md-field"><label>X: <span id="wsXValue">${participantsConfig.x ?? 1.25}%</span></label><input type="range" id="wsX" min="0" max="100" step="0.25" value="${participantsConfig.x ?? 1.25}"></div>
+          <div class="md-field"><label>Y: <span id="wsYValue">${participantsConfig.y ?? 50}%</span></label><input type="range" id="wsY" min="0" max="100" step="0.25" value="${participantsConfig.y ?? 50}"></div>
+        </div>
+        <div class="properties__toggle-row"><label>${t("giveaway.marquee")}</label>${switchHtml("wsMarquee", !!participantsConfig.marquee)}</div>
+
+        <div class="inspector__title" style="margin-top:10px;">${t("giveaway.wheelSettings")}</div>
+        <div class="md-field"><label>${t("giveaway.musicVolume")}: <span id="wsMusicVolumeValue">${wheelConfig.musicVolume ?? 50}%</span></label><input type="range" id="wsMusicVolume" min="0" max="100" value="${wheelConfig.musicVolume ?? 50}"></div>
+        <div class="md-field"><label>${t("giveaway.spinSpeed")}: <span id="wsSpeedValue">${wheelSpeedConfig.speed ?? 3}</span></label><input type="range" id="wsSpeed" min="1" max="5" value="${wheelSpeedConfig.speed ?? 3}"></div>
+      `;
+
+      renderGiveaway();
+      wireGiveawayControls();
+
+      sceneFormEl.querySelector("#wsMaxNames").addEventListener("change", (e) => sendParticipantsConfig({ maxNames: Number(e.target.value) || 10 }));
+      sceneFormEl.querySelector("#wsFontSize").addEventListener("change", (e) => sendParticipantsConfig({ fontSize: Number(e.target.value) || 16 }));
+      sceneFormEl.querySelector("#wsTextColor").addEventListener("input", (e) => sendParticipantsConfig({ textColor: e.target.value }));
+      sceneFormEl.querySelector("#wsBgOpacity").addEventListener("input", (e) => {
+        const v = Number(e.target.value);
+        sceneFormEl.querySelector("#wsBgOpacityValue").textContent = `${v}%`;
+        sendParticipantsConfig({ backgroundOpacity: v });
+      });
+      sceneFormEl.querySelector("#wsX").addEventListener("input", (e) => {
+        const v = Number(e.target.value);
+        sceneFormEl.querySelector("#wsXValue").textContent = `${v}%`;
+        sendParticipantsConfig({ x: v });
+      });
+      sceneFormEl.querySelector("#wsY").addEventListener("input", (e) => {
+        const v = Number(e.target.value);
+        sceneFormEl.querySelector("#wsYValue").textContent = `${v}%`;
+        sendParticipantsConfig({ y: v });
+      });
+      wireSwitch(sceneFormEl.querySelector("#wsMarquee"), (on) => sendParticipantsConfig({ marquee: on }));
+
+      sceneFormEl.querySelector("#wsMusicVolume").addEventListener("input", (e) => {
+        const v = Number(e.target.value);
+        sceneFormEl.querySelector("#wsMusicVolumeValue").textContent = `${v}%`;
+        wheelConfig = { ...wheelConfig, musicVolume: v };
+        send(EVENT_TYPES.CMD_SET_WHEEL_CONFIG, { config: wheelConfig });
+      });
+      sceneFormEl.querySelector("#wsSpeed").addEventListener("input", (e) => {
+        const v = Number(e.target.value);
+        sceneFormEl.querySelector("#wsSpeedValue").textContent = `${v}`;
+        wheelSpeedConfig = { ...wheelSpeedConfig, speed: v };
+        send(EVENT_TYPES.CMD_SET_WHEEL_SPEED_CONFIG, { config: wheelSpeedConfig });
+      });
+      return;
+    }
 
     sceneFormEl.innerHTML = `
-      <div class="md-field"><label>Статус-плашка</label><input type="text" id="sStatusLabel" value="${escapeAttr(scene.statusLabel)}"></div>
-      <div class="md-field"><label>Заголовок</label><input type="text" id="sTitle" value="${escapeAttr(scene.title)}"></div>
-      <div class="md-field"><label>Подзаголовок</label><input type="text" id="sSubtitle" value="${escapeAttr(scene.subtitle)}"></div>
-      <div class="properties__toggle-row"><label>Таймер</label>${switchHtml("sShowTimer", scene.showTimer)}</div>
-      <div class="md-field"><label>Длительность таймера, сек</label><input type="number" id="sTimerDuration" min="0" value="${scene.timerDuration}"></div>
-      <div class="md-field"><label>Текст по окончании таймера</label><input type="text" id="sTimerDoneText" value="${escapeAttr(scene.timerDoneText || "")}"></div>
-      <div class="properties__toggle-row"><label>Последние события</label>${switchHtml("sShowEvents", scene.showEvents)}</div>
-      <div class="properties__toggle-row"><label>Соцсети</label>${switchHtml("sShowSocials", scene.showSocials)}</div>
+      <div class="md-field"><label>${t("sceneForm.statusBadge")}</label><input type="text" id="sStatusLabel" value="${escapeAttr(scene.statusLabel)}"></div>
+      <div class="md-field"><label>${t("sceneForm.title")}</label><input type="text" id="sTitle" value="${escapeAttr(scene.title)}"></div>
+      <div class="md-field"><label>${t("sceneForm.subtitle")}</label><input type="text" id="sSubtitle" value="${escapeAttr(scene.subtitle)}"></div>
+      <div class="properties__toggle-row"><label>${t("sceneForm.timer")}</label>${switchHtml("sShowTimer", scene.showTimer)}</div>
+      <div class="md-field"><label>${t("sceneForm.timerDuration")}</label><input type="number" id="sTimerDuration" min="0" value="${scene.timerDuration}"></div>
+      <div class="md-field"><label>${t("sceneForm.timerDoneText")}</label><input type="text" id="sTimerDoneText" value="${escapeAttr(scene.timerDoneText || "")}"></div>
+      <div class="properties__toggle-row"><label>${t("sceneForm.recentEvents")}</label>${switchHtml("sShowEvents", scene.showEvents)}</div>
+      <div class="properties__toggle-row"><label>${t("sceneForm.socials")}</label>${switchHtml("sShowSocials", scene.showSocials)}</div>
       <div class="md-field">
-        <label>Соцсети</label>
+        <label>${t("sceneForm.socials")}</label>
         <div class="scene-socials-list" id="sSocialsList"></div>
-        <button class="md-button md-button--text" id="sAddSocial" style="align-self:flex-start;margin-top:4px;">+ Добавить</button>
+        <button class="md-button md-button--text" id="sAddSocial" style="align-self:flex-start;margin-top:4px;">+ ${t("sceneForm.addSocial")}</button>
       </div>
-      <div class="inspector__title" style="margin-top:4px;">Топ донат сессии</div>
-      <div class="properties__hint">${topDonation.amount > 0 ? `${escapeHtml(topDonation.user)} — ${formatMoney(topDonation.amount)} ${escapeHtml(currencySymbol(topDonation.currency))}` : "Пока нет донатов"}</div>
-      <button class="md-button md-button--outlined" id="sResetTopDonation">Сбросить топ донат</button>
+      <div class="inspector__title" style="margin-top:4px;">${t("sceneForm.topDonation")}</div>
+      <div class="properties__hint">${topDonation.amount > 0 ? `${escapeHtml(topDonation.user)} — ${formatMoney(topDonation.amount)} ${escapeHtml(currencySymbol(topDonation.currency))}` : t("sceneForm.noDonations")}</div>
+      <button class="md-button md-button--outlined" id="sResetTopDonation">${t("sceneForm.resetTopDonation")}</button>
     `;
 
     renderSocialsList(scene.socials || []);
@@ -968,7 +1362,7 @@
       sendSceneUpdate({ socials: [...(scene.socials || []), { platform: "", text: "" }] });
     });
     sceneFormEl.querySelector("#sResetTopDonation").addEventListener("click", () => {
-      if (confirm("Сбросить топ донат сессии?")) send(EVENT_TYPES.CMD_RESET_TOP_DONATION, {});
+      if (confirm(t("sceneForm.resetTopDonationConfirm"))) send(EVENT_TYPES.CMD_RESET_TOP_DONATION, {});
     });
   }
 
@@ -980,7 +1374,7 @@
       <div class="scene-social-row">
         <input type="text" class="platform" data-idx="${i}" data-field="platform" value="${escapeAttr(s.platform)}" maxlength="4">
         <input type="text" class="text" data-idx="${i}" data-field="text" value="${escapeAttr(s.text)}">
-        <button class="layer-row__btn" data-action="remove-social" data-idx="${i}" title="Удалить">${ICONS.trash}</button>
+        <button class="layer-row__btn" data-action="remove-social" data-idx="${i}" title="${t("common.remove")}">${ICONS.trash}</button>
       </div>`
       )
       .join("");
@@ -999,34 +1393,48 @@
     });
   }
 
-  copySceneUrlBtn.textContent = "Скопировать URL для OBS";
+  copySceneUrlBtn.textContent = t("scenes.copyUrl");
   copySceneUrlBtn.addEventListener("click", () => {
     navigator.clipboard.writeText(sceneUrl(activeSceneId));
-    copySceneUrlBtn.textContent = "Скопировано!";
-    setTimeout(() => (copySceneUrlBtn.textContent = "Скопировать URL для OBS"), 1400);
+    copySceneUrlBtn.textContent = t("scenes.copied");
+    setTimeout(() => (copySceneUrlBtn.textContent = t("scenes.copyUrl")), 1400);
   });
 
   document.querySelectorAll("[data-copy]").forEach((btn) => {
-    btn.textContent = "Копировать";
+    btn.textContent = t("common.copy");
     btn.addEventListener("click", () => {
       const target = document.getElementById(btn.dataset.copy);
       navigator.clipboard.writeText(target.textContent);
-      btn.textContent = "Скопировано!";
-      setTimeout(() => (btn.textContent = "Копировать"), 1400);
+      btn.textContent = t("editor.copied");
+      setTimeout(() => (btn.textContent = t("common.copy")), 1400);
     });
   });
 
   obsUrlLabel.textContent = overlayUrl;
-  copyUrlBtn.textContent = "Скопировать URL для OBS";
+  copyUrlBtn.textContent = t("editor.copyUrl");
   copyUrlBtn.addEventListener("click", () => {
     navigator.clipboard.writeText(overlayUrl);
-    copyUrlBtn.textContent = "Скопировано!";
-    setTimeout(() => (copyUrlBtn.textContent = "Скопировать URL для OBS"), 1400);
+    copyUrlBtn.textContent = t("editor.copied");
+    setTimeout(() => (copyUrlBtn.textContent = t("editor.copyUrl")), 1400);
   });
 
   const openChatWindowBtn = document.getElementById("openChatWindowBtn");
-  openChatWindowBtn.innerHTML = `${ICONS.widgetChat} Чат`;
+  openChatWindowBtn.innerHTML = `${ICONS.widgetChat} ${t("editor.chat")}`;
   openChatWindowBtn.addEventListener("click", () => window.desktop?.openChatWindow());
+
+  const openBoostyBtn = document.getElementById("openBoostyBtn");
+  if (openBoostyBtn) {
+    openBoostyBtn.innerHTML = `${ICONS.heart} ${t("boosty.support")}`;
+    openBoostyBtn.addEventListener("click", () => window.desktop?.openExternal("https://boosty.to/halantar/donate"));
+  }
+
+  document.querySelectorAll("#languageSwitcher [data-lang]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const lang = btn.dataset.lang;
+      if (window.desktop && window.desktop.changeLanguage) window.desktop.changeLanguage(lang);
+      else send(EVENT_TYPES.CMD_SET_LANGUAGE, { lang });
+    });
+  });
 
   // ---- websocket ----
   function handleMessage(msg) {
@@ -1043,6 +1451,7 @@
         scenes = msg.payload.scenes || scenes;
         topDonation = msg.payload.topDonation || topDonation;
         stats = msg.payload.stats || stats;
+        giveaway = msg.payload.giveaway || giveaway;
         gridSizeSelect.value = String(editorPrefs.gridSize || 0);
         applyThemeToCanvas(appearance.tokens);
         applyGridToCanvas();
@@ -1054,6 +1463,7 @@
         renderStatusChips();
         updateSettingsChips();
         populateSettings();
+        renderGiveaway();
         selectScene(activeSceneId);
         break;
       case EVENT_TYPES.LAYOUT_UPDATE:
@@ -1083,6 +1493,29 @@
         stats = msg.payload;
         renderCanvas();
         break;
+      case EVENT_TYPES.GIVEAWAY_UPDATE:
+        giveaway = msg.payload.giveaway || giveaway;
+        renderGiveaway();
+        break;
+      case EVENT_TYPES.OVERLAY_PARTICIPANTS_CONFIG:
+        participantsConfig = (msg.payload && msg.payload.config) || participantsConfig;
+        renderCanvas();
+        renderProperties();
+        if (activeSceneId === "wheel") renderSceneForm();
+        break;
+      case EVENT_TYPES.WHEEL_CONFIG:
+        wheelConfig = (msg.payload && msg.payload.config) || wheelConfig;
+        if (activeSceneId === "wheel") renderSceneForm();
+        break;
+      case EVENT_TYPES.WHEEL_SPEED_CONFIG:
+        wheelSpeedConfig = (msg.payload && msg.payload.config) || wheelSpeedConfig;
+        if (activeSceneId === "wheel") renderSceneForm();
+        break;
+      case EVENT_TYPES.OVERLAY_MIC_CONFIG:
+        micConfig = (msg.payload && msg.payload.config) || micConfig;
+        renderCanvas();
+        renderProperties();
+        break;
       case EVENT_TYPES.GOAL_UPDATE:
         goal = msg.payload;
         renderCanvas();
@@ -1093,9 +1526,49 @@
         renderStatusChips();
         updateSettingsChips();
         break;
+      case EVENT_TYPES.LOCALES:
+        applyLocales(msg.payload && msg.payload.lang, msg.payload && msg.payload.locales);
+        break;
       default:
         break; // ALERT / CHAT_MESSAGE / RECENT_EVENT are for the overlay, not the editor
     }
+  }
+
+  function updateLanguageButtons() {
+    const lang = window.I18n ? window.I18n.getLang() : "en";
+    document.querySelectorAll("#languageSwitcher [data-lang]").forEach((btn) => {
+      const active = btn.dataset.lang === lang;
+      btn.classList.toggle("md-button--filled", active);
+      btn.classList.toggle("md-button--tonal", !active);
+    });
+  }
+
+  function applyLocales(lang, locales) {
+    if (window.I18n) {
+      window.I18n.setLocales(locales);
+      window.I18n.setLang(lang);
+      window.I18n.apply();
+    }
+    updateLanguageButtons();
+    renderLibrary();
+    renderScenesNav();
+    renderCanvas();
+    renderLayers();
+    renderProperties();
+    renderSceneForm();
+    renderGiveaway();
+    renderStatusChips();
+    updateSettingsChips();
+    updateEventsFilterButtons();
+    renderStreamEvents(true);
+    copyUrlBtn.textContent = t("editor.copyUrl");
+    copySceneUrlBtn.textContent = t("scenes.copyUrl");
+    exportConfigBtn.textContent = t("settings.export");
+    importConfigBtn.textContent = t("settings.import");
+    const chatBtn = document.getElementById("openChatWindowBtn");
+    if (chatBtn) chatBtn.innerHTML = `${ICONS.widgetChat} ${t("editor.chat")}`;
+    const boostyBtn = document.getElementById("openBoostyBtn");
+    if (boostyBtn) boostyBtn.innerHTML = `${ICONS.heart} ${t("boosty.support")}`;
   }
 
   function handleLayoutUpdate(newLayout) {

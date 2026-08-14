@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2026  Halantar
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://gnu.org>.
+ */
+
 const path = require("path");
 const http = require("http");
 const express = require("express");
@@ -11,10 +28,15 @@ const { startTwitchChat } = require("./integrations/twitch-chat");
 const { startTwitchEvents } = require("./integrations/twitch-eventsub");
 const { startDonationAlerts } = require("./integrations/donationalerts");
 
+const LOCALES = {
+  ru: require("../shared/locales/ru.json"),
+  en: require("../shared/locales/en.json"),
+};
+
 const bus = new EventEmitter();
 
-function createServer() {
-  const state = new AppState();
+function createServer({ db } = {}) {
+  const state = new AppState(db);
   const app = express();
   const server = http.createServer(app);
   const wss = new WebSocketServer({ server, path: "/ws" });
@@ -27,12 +49,48 @@ function createServer() {
   let twitchChatCtrl = null;
   let twitchEventsCtrl = null;
   let donationAlertsCtrl = null;
+  let currentSession = null;
+  let autoSpinTimer = null;
+  let language = db ? db.getLanguage() : "en";
 
   function broadcast(type, payload) {
     const message = JSON.stringify({ type, payload });
     wss.clients.forEach((client) => {
       if (client.readyState === 1) client.send(message);
     });
+  }
+
+  function setLanguage(code) {
+    language = code === "ru" ? "ru" : "en";
+    if (db) db.saveLanguage(language);
+    broadcast(EVENT_TYPES.LOCALES, { lang: language, locales: LOCALES });
+    return language;
+  }
+
+  function broadcastGiveaway(giveaway) {
+    broadcast(EVENT_TYPES.GIVEAWAY_UPDATE, { giveaway });
+    broadcast(EVENT_TYPES.GIVEAWAY_PARTICIPANTS, {
+      count: giveaway.count,
+      participants: giveaway.participants,
+    });
+  }
+
+  function clearAutoSpin() {
+    clearTimeout(autoSpinTimer);
+    autoSpinTimer = null;
+  }
+
+  function scheduleAutoSpin() {
+    clearAutoSpin();
+    autoSpinTimer = setTimeout(() => {
+      autoSpinTimer = null;
+      // Re-sync the wheel sectors right before the next spin so the already
+      // eliminated participant disappears from the barrel without yanking the
+      // arrow away from the winner while the result alert is still on screen.
+      broadcast(EVENT_TYPES.GIVEAWAY_WHEEL, { sectors: state.giveawaySnapshot().participants });
+      const winner = state.pickRandomWinner();
+      if (winner) broadcast(EVENT_TYPES.GIVEAWAY_SPIN, { winner });
+    }, 1800);
   }
 
   function restartTwitchChat() {
@@ -52,7 +110,7 @@ function createServer() {
   function restartDonationAlerts() {
     if (donationAlertsCtrl) donationAlertsCtrl.stop();
     if (state.config.donationAlerts.accessToken) {
-      donationAlertsCtrl = startDonationAlerts({ bus, config: state.config });
+      donationAlertsCtrl = startDonationAlerts({ bus, state });
     } else {
       bus.emit("connection_status", { service: "donationAlerts", status: "not_configured" });
     }
@@ -75,7 +133,14 @@ function createServer() {
   });
 
   wss.on("connection", (socket) => {
+    socket.send(JSON.stringify({ type: EVENT_TYPES.LOCALES, payload: { lang: language, locales: LOCALES } }));
     socket.send(JSON.stringify({ type: EVENT_TYPES.STATE, payload: state.snapshot() }));
+    if (db) {
+      socket.send(JSON.stringify({ type: EVENT_TYPES.OVERLAY_PARTICIPANTS_CONFIG, payload: { config: db.getParticipantsConfig() } }));
+      socket.send(JSON.stringify({ type: EVENT_TYPES.WHEEL_CONFIG, payload: { config: db.getWheelConfig() } }));
+      socket.send(JSON.stringify({ type: EVENT_TYPES.WHEEL_SPEED_CONFIG, payload: { config: db.getWheelSpeedConfig() } }));
+      socket.send(JSON.stringify({ type: EVENT_TYPES.OVERLAY_MIC_CONFIG, payload: { config: db.getMicConfig() } }));
+    }
 
     socket.on("message", (raw) => {
       let msg;
@@ -152,7 +217,7 @@ function createServer() {
         break;
       }
       case EVENT_TYPES.CMD_TEST_ALERT: {
-        bus.emit("alert", buildTestAlert(msg.payload && msg.payload.kind));
+        bus.emit("alert", { ...buildTestAlert(msg.payload && msg.payload.kind), isTest: true });
         break;
       }
       case EVENT_TYPES.CMD_TEST_CHAT: {
@@ -161,7 +226,101 @@ function createServer() {
           color: "#7ee0d6",
           badges: ["moderator"],
           message: (msg.payload && msg.payload.message) || "Привет из тестового сообщения!",
+          isTest: true,
         });
+        break;
+      }
+      case EVENT_TYPES.CMD_START_GIVEAWAY: {
+        clearAutoSpin();
+        const giveaway = state.startGiveaway(msg.payload && msg.payload.command);
+        broadcastGiveaway(giveaway);
+        bus.emit("alert", {
+          kind: "wheel_start",
+          command: giveaway.command,
+        });
+        break;
+      }
+      case EVENT_TYPES.CMD_STOP_GIVEAWAY: {
+        clearAutoSpin();
+        broadcastGiveaway(state.stopGiveaway());
+        break;
+      }
+      case EVENT_TYPES.CMD_SHUFFLE_GIVEAWAY: {
+        broadcastGiveaway(state.shuffleGiveaway());
+        break;
+      }
+      case EVENT_TYPES.CMD_SET_GIVEAWAY_ELIMINATION: {
+        broadcastGiveaway(state.setGiveawayEliminationMode(msg.payload && msg.payload.enabled));
+        break;
+      }
+      case EVENT_TYPES.CMD_GENERATE_WHEEL: {
+        broadcast(EVENT_TYPES.GIVEAWAY_WHEEL, { sectors: state.giveawaySnapshot().participants });
+        break;
+      }
+      case EVENT_TYPES.CMD_SPIN_WHEEL: {
+        broadcast(EVENT_TYPES.GIVEAWAY_WHEEL, { sectors: state.giveawaySnapshot().participants });
+        const winner = state.pickRandomWinner();
+        broadcast(EVENT_TYPES.GIVEAWAY_SPIN, { winner });
+        break;
+      }
+      case EVENT_TYPES.CMD_SET_GIVEAWAY_WINNER: {
+        const username = msg.payload && msg.payload.username;
+        if (!state.consumePendingWinner(username)) break;
+        const giveaway = state.setGiveawayWinner(username);
+        const isFinalWinner = !!giveaway.eliminationMode && giveaway.count === 0;
+        const isElimination = !!giveaway.eliminationMode && !isFinalWinner;
+        broadcastGiveaway(giveaway);
+        // The wheel keeps showing the winner under the marker until the next
+        // spin re-syncs sectors; resetting here would move the arrow to a
+        // different participant while the elimination alert is still visible.
+        const alert = {
+          kind: "wheel_winner",
+          user: giveaway.winner,
+          isElimination,
+          isFinalWinner,
+        };
+        if (isElimination) {
+          alert.durationMs = 3000;
+          scheduleAutoSpin();
+        }
+        bus.emit("alert", alert);
+        break;
+      }
+      case EVENT_TYPES.CMD_ADD_GIVEAWAY_PARTICIPANT: {
+        const giveaway = state.addGiveawayParticipant(msg.payload && msg.payload.username);
+        if (giveaway) broadcastGiveaway(giveaway);
+        break;
+      }
+      case EVENT_TYPES.CMD_REMOVE_GIVEAWAY_PARTICIPANT: {
+        broadcastGiveaway(state.removeGiveawayParticipant(msg.payload && msg.payload.username));
+        break;
+      }
+      case EVENT_TYPES.CMD_SET_PARTICIPANTS_CONFIG: {
+        const patch = (msg.payload && msg.payload.config) || {};
+        const config = db ? db.saveParticipantsConfig(patch) : patch;
+        broadcast(EVENT_TYPES.OVERLAY_PARTICIPANTS_CONFIG, { config });
+        break;
+      }
+      case EVENT_TYPES.CMD_SET_WHEEL_CONFIG: {
+        const patch = (msg.payload && msg.payload.config) || {};
+        const config = db ? db.saveWheelConfig(patch) : patch;
+        broadcast(EVENT_TYPES.WHEEL_CONFIG, { config });
+        break;
+      }
+      case EVENT_TYPES.CMD_SET_WHEEL_SPEED_CONFIG: {
+        const patch = (msg.payload && msg.payload.config) || {};
+        const config = db ? db.saveWheelSpeedConfig(patch) : patch;
+        broadcast(EVENT_TYPES.WHEEL_SPEED_CONFIG, { config });
+        break;
+      }
+      case EVENT_TYPES.CMD_SET_MIC_CONFIG: {
+        const patch = (msg.payload && msg.payload.config) || {};
+        const config = db ? db.saveMicConfig(patch) : patch;
+        broadcast(EVENT_TYPES.OVERLAY_MIC_CONFIG, { config });
+        break;
+      }
+      case EVENT_TYPES.CMD_SET_LANGUAGE: {
+        setLanguage(msg.payload && msg.payload.lang);
         break;
       }
       default:
@@ -177,8 +336,16 @@ function createServer() {
   bus.on("alert", (alert) => {
     const withDuration = { durationMs: ALERT_DURATIONS_MS[alert.kind] || 5000, ...alert };
     broadcast(EVENT_TYPES.ALERT, withDuration);
-    state.pushRecentEvent({ kind: alert.kind, user: alert.user, amount: alert.amount ?? alert.count, message: alert.message });
-    broadcast(EVENT_TYPES.RECENT_EVENT, state.runtime.recentEvents[0]);
+
+    const isWheelAlert = alert.kind === "wheel_start" || alert.kind === "wheel_winner";
+    if (!isWheelAlert) {
+      state.pushRecentEvent({ kind: alert.kind, user: alert.user, amount: alert.amount ?? alert.count, message: alert.message });
+      broadcast(EVENT_TYPES.RECENT_EVENT, state.runtime.recentEvents[0]);
+
+      if (db) {
+        db.appendStreamEvent(toStreamEvent(alert, !!alert.isTest));
+      }
+    }
 
     if (alert.kind === "donation" && typeof alert.amount === "number") {
       const goal = state.addToGoal(alert.amount);
@@ -190,6 +357,14 @@ function createServer() {
 
   bus.on("chat_message", (chatMessage) => {
     broadcast(EVENT_TYPES.CHAT_MESSAGE, chatMessage);
+    if (db && currentSession && !chatMessage.isTest) {
+      db.appendChat({ ...chatMessage, sessionId: currentSession.id });
+    }
+
+    if (!chatMessage.isTest) {
+      const giveaway = state.handleGiveawayChat(chatMessage.user, chatMessage.message);
+      if (giveaway) broadcastGiveaway(giveaway);
+    }
   });
 
   bus.on("connection_status", ({ service, status }) => {
@@ -222,6 +397,10 @@ function createServer() {
     restartTwitchEvents();
     restartDonationAlerts();
 
+    if (db) {
+      currentSession = db.startSession(state.config.twitch.channel);
+    }
+
     return { port };
   }
 
@@ -233,6 +412,42 @@ function createServer() {
     broadcast(EVENT_TYPES.STATE, state.snapshot());
   }
 
+  function stop() {
+    clearAutoSpin();
+    if (currentSession) {
+      if (db) db.endSession(currentSession.id);
+      currentSession = null;
+    }
+    if (twitchChatCtrl) twitchChatCtrl.stop();
+    if (twitchEventsCtrl) twitchEventsCtrl.stop();
+    if (donationAlertsCtrl) donationAlertsCtrl.stop();
+    wss.close();
+    server.close();
+  }
+
+  function getStreamEvents(opts = {}) {
+    if (!db) return [];
+    return db.getStreamEvents(opts);
+  }
+
+  function replayEvent(id) {
+    if (!db) return null;
+    const record = db.getStreamEventById(id);
+    if (!record) return null;
+    const alert = {
+      kind: record.kind || record.type,
+      user: record.username,
+      amount: record.amount,
+      currency: record.currency,
+      message: record.message,
+      count: record.count,
+      tier: record.tier,
+    };
+    const withDuration = { durationMs: ALERT_DURATIONS_MS[alert.kind] || 5000, ...alert };
+    broadcast(EVENT_TYPES.ALERT, withDuration);
+    return record;
+  }
+
   return {
     app,
     server,
@@ -240,11 +455,15 @@ function createServer() {
     state,
     bus,
     start,
+    stop,
     broadcast,
     restartTwitchChat,
     restartTwitchEvents,
     restartDonationAlerts,
     importConfig,
+    getStreamEvents,
+    replayEvent,
+    setLanguage,
   };
 }
 
@@ -264,6 +483,28 @@ function buildTestAlert(kind = "follow") {
     default:
       return { kind: "follow", user };
   }
+}
+
+function eventTypeForKind(kind) {
+  if (kind === "follow") return "follow";
+  if (kind === "sub" || kind === "gift_sub") return "subscription";
+  if (kind === "donation") return "donation";
+  return kind || "unknown";
+}
+
+function toStreamEvent(alert, isTest) {
+  return {
+    timestamp: Date.now(),
+    type: eventTypeForKind(alert.kind),
+    kind: alert.kind,
+    username: alert.user || "Аноним",
+    amount: typeof alert.amount === "number" ? alert.amount : null,
+    currency: alert.currency || null,
+    message: alert.message || "",
+    is_test: !!isTest,
+    count: typeof alert.count === "number" ? alert.count : null,
+    tier: alert.tier || null,
+  };
 }
 
 module.exports = { createServer };
