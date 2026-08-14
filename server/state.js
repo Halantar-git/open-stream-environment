@@ -24,21 +24,19 @@ const { WIDGET_TYPES } = require("../shared/widget-catalog");
 const { BUILTIN_THEMES } = require("../shared/themes");
 const { buildThemeTokens } = require("../shared/theme-engine");
 const { defaultScenes } = require("../shared/scenes-catalog");
-
-const CONFIG_DIR = path.join(__dirname, "..", "config");
-const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
-const EXAMPLE_PATH = path.join(CONFIG_DIR, "config.example.json");
+const { getConfigPath, getExamplePath } = require("./storage-paths");
 
 function loadConfig() {
-  if (!fs.existsSync(CONFIG_PATH)) {
-    const example = fs.readFileSync(EXAMPLE_PATH, "utf-8");
-    fs.writeFileSync(CONFIG_PATH, example);
+  const configPath = getConfigPath();
+  if (!fs.existsSync(configPath)) {
+    const example = fs.readFileSync(getExamplePath(), "utf-8");
+    fs.writeFileSync(configPath, example);
   }
-  return decryptConfig(JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8")));
+  return decryptConfig(JSON.parse(fs.readFileSync(configPath, "utf-8")));
 }
 
 function saveConfig(config) {
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(encryptConfig(config), null, 2));
+  fs.writeFileSync(getConfigPath(), JSON.stringify(encryptConfig(config), null, 2));
 }
 
 function encryptConfig(config) {
@@ -550,4 +548,4 @@ class AppState {
   }
 }
 
-module.exports = { AppState, saveConfig, CONFIG_PATH, fisherYates };
+module.exports = { AppState, saveConfig, fisherYates };

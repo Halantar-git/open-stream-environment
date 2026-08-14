@@ -22,6 +22,7 @@ const { app, BrowserWindow, ipcMain, shell, dialog, globalShortcut } = require("
 const { createServer } = require("./server");
 const { buildTwitchAuthorizeUrl, buildDonationAlertsAuthorizeUrl } = require("./server/oauth");
 const { createDatabase } = require("./server/db");
+const { configureStorage } = require("./server/storage-paths");
 
 const SPLASH_MIN_MS = 3500; // matches the progress-bar animation duration in splash.html
 
@@ -31,6 +32,26 @@ let chatWindow = null;
 const widgetEditorWindows = new Map(); // widgetId -> BrowserWindow
 let serverHandle;
 let gameMode = false;
+
+function resolveConfigDir() {
+  if (app.isPackaged) {
+    // Портативная сборка electron-builder выставляет каталог exe, чтобы
+    // настройки переносились вместе с приложением.
+    const portableDir = process.env.PORTABLE_EXECUTABLE_DIR;
+    if (portableDir) {
+      try {
+        fs.mkdirSync(portableDir, { recursive: true });
+        return portableDir;
+      } catch {
+        // Read-only носитель и т.п. — падаем на userData.
+      }
+    }
+    return app.getPath("userData");
+  }
+
+  // В dev-режиме (npm start) пишем рядом с исходниками, как и раньше.
+  return path.join(__dirname, "config");
+}
 
 function createSplashWindow() {
   splashWindow = new BrowserWindow({
@@ -179,6 +200,7 @@ function registerGlobalHotkeys() {
 }
 
 app.whenReady().then(() => {
+  configureStorage({ configDir: resolveConfigDir() });
   createSplashWindow();
 
   const db = createDatabase();

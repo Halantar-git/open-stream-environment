@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "express": "^4.19.2",
-    "lowdb": "^3.0.0",
+    "lowdb": "^1.0.0",
     "tmi.js": "^1.8.5",
     "ws": "^8.18.0"
   },
@@ -42,18 +42,39 @@
       "overlay/**/*",
       "shared/**/*",
       "config/**/*",
-      "assets/**/*"
+      "assets/**/*",
+      "!config/config.json",
+      "!config/local-db.json"
     ],
     "directories": {
       "output": "release"
     },
     "win": {
-      "target": "portable",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
       "icon": "assets/icons/icon.png"
     },
-    "asar": true,
-    "asarUnpack": [
-      "config/**"
-    ]
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Open Stream Environment",
+      "artifactName": "${productName}-${version}-setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
+    },
+    "asar": true
   }
 }

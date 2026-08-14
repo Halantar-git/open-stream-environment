@@ -15,14 +15,11 @@
  * along with this program.  If not, see <https://gnu.org>.
  */
 
-const path = require("path");
 const crypto = require("crypto");
 const low = require("lowdb");
 const FileSync = require("lowdb/adapters/FileSync");
 
-// Локальная БД живёт рядом с config.json. Директория config/** уже
-// распаковывается из asar (asarUnpack), поэтому сюда можно безопасно писать.
-const DB_PATH = path.join(__dirname, "..", "config", "local-db.json");
+const { getDbPath } = require("./storage-paths");
 
 function defaultData() {
   return {
@@ -67,7 +64,7 @@ function defaultData() {
   };
 }
 
-function createDatabase(dbPath = DB_PATH) {
+function createDatabase(dbPath = getDbPath()) {
   const adapter = new FileSync(dbPath);
   const db = low(adapter);
   db.defaults(defaultData()).write();
@@ -294,4 +291,4 @@ function createDatabase(dbPath = DB_PATH) {
   };
 }
 
-module.exports = { createDatabase, DB_PATH, defaultData };
+module.exports = { createDatabase, defaultData };

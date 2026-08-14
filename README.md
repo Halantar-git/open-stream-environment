@@ -257,13 +257,21 @@ URL для OBS показан внизу превью на вкладке «Сц
 ## Сборка приложения
 
 ```bash
-npm run dist        # инсталлятор для вашей ОС в release/
-npm run dist:dir     # без упаковки в инсталлятор, просто папка с exe/app
+npm run dist        # Windows: NSIS-установщик + портативный exe в release/
+npm run dist:dir     # без упаковки, просто папка с exe (win-unpacked/)
 ```
 
-Конфигурация сборки — в `package.json` → `build`. Иконка лежит в
+Конфигурация сборки — в `package.json` → `build`. На выходе для Windows
+получаются два артефакта:
+
+- `Open Stream Environment-<версия>-setup.exe` — инсталлятор (NSIS);
+- `Open Stream Environment-<версия>-portable.exe` — портативная версия.
+
+Настройки (`config.json`) и локальная база (`local-db.json`) хранятся в
+`%APPDATA%\Open Stream Environment` (для инсталлятора) или в каталоге рядом
+с `-portable.exe` (для портативной версии). Иконка лежит в
 `assets/icons/icon.png` (1024×1024), electron-builder сам сгенерирует из неё
-`.ico`/`.icns`. Замените файл на свою иконку при желании — исходник
+`.ico`. Замените файл на свою иконку при желании — исходник
 (`icon-source.svg`) можно отредактировать и перерастрировать.
 
 ## Структура проекта
