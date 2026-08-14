@@ -31,7 +31,10 @@ let splashWindow;
 let chatWindow = null;
 const widgetEditorWindows = new Map(); // widgetId -> BrowserWindow
 let serverHandle;
+let db;
 let gameMode = false;
+let chatPinned = true; // выбор пользователя кнопкой 📌
+let quitting = false;
 
 function resolveConfigDir() {
   if (app.isPackaged) {
@@ -106,6 +109,43 @@ function createWindow(port) {
       mainWindow.show();
     }, remaining);
   });
+
+  mainWindow.on("close", (event) => {
+    if (quitting) return;
+    event.preventDefault();
+
+    const isRu = db && db.getLanguage() === "ru";
+    const texts = isRu
+      ? {
+          title: "Выход из Open Stream Environment",
+          message: "Закрыть приложение?",
+          detail: "Сервер оверлея и подключения Twitch/DonationAlerts будут остановлены.",
+          confirm: "Выйти",
+          cancel: "Отмена",
+        }
+      : {
+          title: "Quit Open Stream Environment",
+          message: "Close the application?",
+          detail: "The overlay server and Twitch/DonationAlerts connections will be stopped.",
+          confirm: "Quit",
+          cancel: "Cancel",
+        };
+
+    const choice = dialog.showMessageBoxSync(mainWindow, {
+      type: "question",
+      buttons: [texts.confirm, texts.cancel],
+      defaultId: 0,
+      cancelId: 1,
+      title: texts.title,
+      message: texts.message,
+      detail: texts.detail,
+    });
+
+    if (choice === 0) {
+      quitting = true;
+      app.quit();
+    }
+  });
 }
 
 function openChatWindow(port) {
@@ -129,6 +169,7 @@ function openChatWindow(port) {
       spellcheck: false,
     },
   });
+  chatPinned = true;
   applyPerformanceDefaults(chatWindow, 30);
   chatWindow.loadFile(path.join(__dirname, "chatwindow", "chat-window.html"), {
     query: { port: String(port) },
@@ -170,6 +211,19 @@ function applyPerformanceDefaults(win, fps) {
   if (fps) win.webContents.setFrameRate(fps);
 }
 
+function applyChatAlwaysOnTop() {
+  if (chatWindow && !chatWindow.isDestroyed()) {
+    // В игровом режиме чат всегда поверх; иначе — по выбору пользователя.
+    chatWindow.setAlwaysOnTop(chatPinned || gameMode);
+  }
+}
+
+function sendChatAlwaysOnTopState() {
+  if (chatWindow && !chatWindow.isDestroyed()) {
+    chatWindow.webContents.send("app:chat-always-on-top-changed", chatPinned);
+  }
+}
+
 function toggleGameMode() {
   gameMode = !gameMode;
 
@@ -179,7 +233,7 @@ function toggleGameMode() {
   }
 
   if (chatWindow) {
-    chatWindow.setAlwaysOnTop(gameMode);
+    applyChatAlwaysOnTop();
     chatWindow.webContents.setFrameRate(gameMode ? 30 : 60);
   }
 
@@ -191,9 +245,9 @@ function toggleGameMode() {
 function registerGlobalHotkeys() {
   globalShortcut.register("CommandOrControl+Shift+C", () => {
     if (!chatWindow) return;
-    chatWindow.isAlwaysOnTop()
-      ? chatWindow.setAlwaysOnTop(false)
-      : chatWindow.setAlwaysOnTop(true);
+    chatPinned = !chatPinned;
+    applyChatAlwaysOnTop();
+    sendChatAlwaysOnTopState();
   });
 
   globalShortcut.register("CommandOrControl+Shift+G", toggleGameMode);
@@ -203,7 +257,7 @@ app.whenReady().then(() => {
   configureStorage({ configDir: resolveConfigDir() });
   createSplashWindow();
 
-  const db = createDatabase();
+  db = createDatabase();
 
   serverHandle = createServer({ db });
   const { port } = serverHandle.start();
@@ -225,14 +279,15 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle("app:get-chat-always-on-top", () => {
-    return !!chatWindow && chatWindow.isAlwaysOnTop();
+    return chatPinned;
   });
 
   ipcMain.handle("app:toggle-chat-always-on-top", () => {
     if (!chatWindow) return false;
-    const next = !chatWindow.isAlwaysOnTop();
-    chatWindow.setAlwaysOnTop(next);
-    return next;
+    chatPinned = !chatPinned;
+    applyChatAlwaysOnTop();
+    sendChatAlwaysOnTopState();
+    return chatPinned;
   });
 
   ipcMain.handle("app:change-language", (_event, lang) => {
@@ -304,6 +359,7 @@ app.whenReady().then(() => {
 });
 
 app.on("before-quit", () => {
+  quitting = true;
   if (serverHandle) serverHandle.stop();
   globalShortcut.unregisterAll();
 });

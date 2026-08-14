@@ -64,6 +64,9 @@
   }
   if (pinBtn && window.chatDesktop) {
     window.chatDesktop.getAlwaysOnTop().then(syncPinState).catch(() => {});
+    if (typeof window.chatDesktop.onAlwaysOnTopChanged === "function") {
+      window.chatDesktop.onAlwaysOnTopChanged(syncPinState);
+    }
     pinBtn.addEventListener("click", () => {
       window.chatDesktop.toggleAlwaysOnTop().then(syncPinState).catch(() => {});
     });

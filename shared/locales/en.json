@@ -45,7 +45,7 @@
     "connectDa": "Connect DonationAlerts",
     "app": "Application",
     "port": "Local server port",
-    "portHint": "To change it, edit config/config.json and restart the app.",
+    "portHint": "The port is stored in config.json; to change it, edit the file and restart the app.",
     "overlayUrl": "Overlay URL for OBS Browser Source",
     "resetLayout": "Reset layout to default",
     "history": "Event history",

@@ -20,4 +20,10 @@ const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("chatDesktop", {
   getAlwaysOnTop: () => ipcRenderer.invoke("app:get-chat-always-on-top"),
   toggleAlwaysOnTop: () => ipcRenderer.invoke("app:toggle-chat-always-on-top"),
+  onAlwaysOnTopChanged: (callback) => {
+    if (typeof callback !== "function") return () => {};
+    const listener = (_event, pinned) => callback(!!pinned);
+    ipcRenderer.on("app:chat-always-on-top-changed", listener);
+    return () => ipcRenderer.removeListener("app:chat-always-on-top-changed", listener);
+  },
 });
