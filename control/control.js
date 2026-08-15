@@ -34,6 +34,11 @@
   let twitchChannel = "";
   let twitchClientId = "";
   let daClientId = "";
+  let youtubeClientId = "";
+  let youtubeVideoId = "";
+  let twitchEnabled = true;
+  let donationAlertsEnabled = true;
+  let youtubeEnabled = true;
   let selectedId = null;
   let pendingAdd = null; // { knownIds:Set, dropXY:{x,y}|null }
   let appearance = { activeThemeId: "nebula", tokens: {}, themes: [] };
@@ -85,6 +90,13 @@
   const daClientIdInput = document.getElementById("daClientId");
   const daClientSecretInput = document.getElementById("daClientSecret");
   const daRedirectUriEl = document.getElementById("daRedirectUri");
+  const youtubeClientIdInput = document.getElementById("youtubeClientId");
+  const youtubeClientSecretInput = document.getElementById("youtubeClientSecret");
+  const youtubeRedirectUriEl = document.getElementById("youtubeRedirectUri");
+  const youtubeVideoIdInput = document.getElementById("youtubeVideoId");
+  const twitchEnabledSwitch = document.getElementById("twitchEnabledSwitch");
+  const donationAlertsEnabledSwitch = document.getElementById("donationAlertsEnabledSwitch");
+  const youtubeEnabledSwitch = document.getElementById("youtubeEnabledSwitch");
   const appPortInput = document.getElementById("appPort");
   const appOverlayUrlInput = document.getElementById("appOverlayUrl");
   const eventsHistoryEl = document.getElementById("eventsHistory");
@@ -822,9 +834,9 @@
 
   // ---- status chips ----
   const STATUS_LABEL = (service) =>
-    ({ twitchChat: t("status.twitchChat"), twitchEvents: t("status.twitchEvents"), donationAlerts: t("status.donationAlerts") }[service] || service);
+    ({ twitchChat: t("status.twitchChat"), twitchEvents: t("status.twitchEvents"), donationAlerts: t("status.donationAlerts"), youtube: t("status.youtube") }[service] || service);
   const STATUS_TEXT = (status) =>
-    ({ connected: t("status.connected"), connecting: t("status.connecting"), disconnected: t("status.disconnected"), error: t("status.error"), not_configured: t("status.notConfigured") }[status] || status);
+    ({ connected: t("status.connected"), connecting: t("status.connecting"), disconnected: t("status.disconnected"), error: t("status.error"), not_configured: t("status.notConfigured"), disabled: t("status.disabled") }[status] || status);
 
   function statusClass(status) {
     if (status === "connected") return "is-connected";
@@ -840,7 +852,7 @@
   }
 
   function updateSettingsChips() {
-    ["twitchChat", "twitchEvents", "donationAlerts"].forEach((service) => {
+    ["twitchChat", "twitchEvents", "donationAlerts", "youtube"].forEach((service) => {
       const el = document.getElementById("chip-" + service);
       if (!el) return;
       const status = connectionStatus[service];
@@ -854,14 +866,21 @@
     twitchChannelInput.value = twitchChannel || "";
     twitchClientIdInput.value = twitchClientId || "";
     daClientIdInput.value = daClientId || "";
+    youtubeClientIdInput.value = youtubeClientId || "";
+    youtubeVideoIdInput.value = youtubeVideoId || "";
     appPortInput.value = port;
     appOverlayUrlInput.value = overlayUrl;
     twitchRedirectUriEl.textContent = `http://localhost:${port}/oauth/twitch/callback`;
     daRedirectUriEl.textContent = `http://localhost:${port}/oauth/donationalerts/callback`;
+    youtubeRedirectUriEl.textContent = `http://localhost:${port}/oauth/youtube/callback`;
   }
 
   twitchChannelInput.addEventListener("change", () => {
     send(EVENT_TYPES.CMD_SET_APP_CONFIG, { twitchChannel: twitchChannelInput.value.trim() });
+  });
+
+  youtubeVideoIdInput.addEventListener("change", () => {
+    send(EVENT_TYPES.CMD_SET_YOUTUBE_VIDEO_ID, { videoId: youtubeVideoIdInput.value.trim() });
   });
 
   document.getElementById("connectTwitchBtn").addEventListener("click", () => {
@@ -877,8 +896,36 @@
       clientSecret: daClientSecretInput.value.trim(),
     });
   });
+  document.getElementById("connectYoutubeBtn").addEventListener("click", () => {
+    window.desktop?.connectYoutube({
+      clientId: youtubeClientIdInput.value.trim(),
+      clientSecret: youtubeClientSecretInput.value.trim(),
+    });
+  });
   document.getElementById("openTwitchConsole").addEventListener("click", () => window.desktop?.openExternal("https://dev.twitch.tv/console/apps"));
   document.getElementById("openDaConsole").addEventListener("click", () => window.desktop?.openExternal("https://www.donationalerts.com/application/clients"));
+  document.getElementById("openYoutubeConsole").addEventListener("click", () => window.desktop?.openExternal("https://console.cloud.google.com/apis/credentials"));
+
+  function setSwitchState(el, on) {
+    if (!el) return;
+    el.classList.toggle("is-on", on);
+    el.setAttribute("aria-checked", String(on));
+  }
+
+  function syncIntegrationSwitches() {
+    setSwitchState(twitchEnabledSwitch, twitchEnabled);
+    setSwitchState(donationAlertsEnabledSwitch, donationAlertsEnabled);
+    setSwitchState(youtubeEnabledSwitch, youtubeEnabled);
+  }
+
+  [[twitchEnabledSwitch, "twitch"], [donationAlertsEnabledSwitch, "donationAlerts"], [youtubeEnabledSwitch, "youtube"]].forEach(([el, service]) => {
+    if (!el) return;
+    el.addEventListener("click", () => {
+      const on = !el.classList.contains("is-on");
+      setSwitchState(el, on);
+      send(EVENT_TYPES.CMD_SET_INTEGRATION_ENABLED, { service, enabled: on });
+    });
+  });
   document.getElementById("resetLayoutBtn").addEventListener("click", () => {
     if (!confirm(t("common.resetLayoutConfirm"))) return;
     layout.forEach((w) => send(EVENT_TYPES.CMD_REMOVE_WIDGET, { id: w.id }));
@@ -1537,6 +1584,11 @@
         twitchChannel = msg.payload.twitchChannel;
         twitchClientId = msg.payload.twitchClientId;
         daClientId = msg.payload.donationAlertsClientId;
+        youtubeClientId = msg.payload.youtubeClientId;
+        youtubeVideoId = msg.payload.youtubeVideoId;
+        twitchEnabled = msg.payload.twitchEnabled !== false;
+        donationAlertsEnabled = msg.payload.donationAlertsEnabled !== false;
+        youtubeEnabled = msg.payload.youtubeEnabled !== false;
         connectionStatus = msg.payload.connectionStatus || {};
         appearance = msg.payload.appearance || appearance;
         editorPrefs = msg.payload.editor || editorPrefs;
@@ -1555,6 +1607,7 @@
         renderStatusChips();
         updateSettingsChips();
         populateSettings();
+        syncIntegrationSwitches();
         renderGiveaway();
         selectScene(activeSceneId);
         break;

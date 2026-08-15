@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld("desktop", {
   openExternal: (url) => ipcRenderer.invoke("app:open-external", url),
   connectTwitch: (creds) => ipcRenderer.invoke("oauth:connect-twitch", creds),
   connectDonationAlerts: (creds) => ipcRenderer.invoke("oauth:connect-donationalerts", creds),
+  connectYoutube: (creds) => ipcRenderer.invoke("oauth:connect-youtube", creds),
   exportConfig: () => ipcRenderer.invoke("app:export-config"),
   importConfig: () => ipcRenderer.invoke("app:import-config"),
   openChatWindow: () => ipcRenderer.invoke("app:open-chat-window"),

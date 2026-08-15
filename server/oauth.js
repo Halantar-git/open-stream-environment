@@ -65,6 +65,20 @@ function buildDonationAlertsAuthorizeUrl(config, port) {
   return `https://www.donationalerts.com/oauth/authorize?${params.toString()}`;
 }
 
+function buildYoutubeAuthorizeUrl(config, port) {
+  const state = makeState("youtube");
+  const params = new URLSearchParams({
+    client_id: config.youtube.clientId,
+    redirect_uri: redirectUri(port, "youtube"),
+    response_type: "code",
+    scope: "https://www.googleapis.com/auth/youtube.readonly",
+    access_type: "offline",
+    prompt: "consent",
+    state,
+  });
+  return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+}
+
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
@@ -196,6 +210,47 @@ function mountOAuthRoutes(app, { state, hooks }) {
       res.status(500).send(resultPage("DonationAlerts: не удалось подключиться", err.message || String(err), false));
     }
   });
+
+  app.get("/oauth/youtube/callback", async (req, res) => {
+    const { code, state: returnedState, error, error_description } = req.query;
+    if (error) {
+      res.status(400).send(resultPage("YouTube: ошибка авторизации", String(error_description || error), false));
+      return;
+    }
+    if (!consumeState(returnedState, "youtube")) {
+      res.status(400).send(resultPage("YouTube: недействительный запрос", "state не совпадает, попробуйте подключиться заново.", false));
+      return;
+    }
+    try {
+      const port = state.config.port;
+      const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: state.config.youtube.clientId,
+          client_secret: state.config.youtube.clientSecret,
+          code: String(code),
+          grant_type: "authorization_code",
+          redirect_uri: redirectUri(port, "youtube"),
+        }),
+      });
+      const tokenJson = await tokenRes.json();
+      if (!tokenRes.ok) {
+        console.error("[oauth/youtube] token exchange failed:", tokenRes.status, JSON.stringify(tokenJson));
+        throw new Error(JSON.stringify(tokenJson, null, 2));
+      }
+
+      state.saveYoutubeTokens({
+        accessToken: tokenJson.access_token,
+        refreshToken: tokenJson.refresh_token,
+      });
+
+      res.send(resultPage("YouTube подключён", "Можно закрыть эту вкладку и вернуться в приложение.", true));
+      hooks.onYoutubeConnected();
+    } catch (err) {
+      res.status(500).send(resultPage("YouTube: не удалось подключиться", err.message || String(err), false));
+    }
+  });
 }
 
-module.exports = { mountOAuthRoutes, buildTwitchAuthorizeUrl, buildDonationAlertsAuthorizeUrl, redirectUri };
+module.exports = { mountOAuthRoutes, buildTwitchAuthorizeUrl, buildDonationAlertsAuthorizeUrl, buildYoutubeAuthorizeUrl, redirectUri };

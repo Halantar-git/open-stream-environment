@@ -429,6 +429,30 @@
       "channel": "halantar",
       "startedAt": 1786783248989,
       "endedAt": 1786783258958
+    },
+    {
+      "id": "8ef6ed7b-598c-4c28-8f8e-c1de3f2fb841",
+      "channel": "halantar",
+      "startedAt": 1786788569788,
+      "endedAt": 1786790846294
+    },
+    {
+      "id": "b4c1dcbe-bee3-4ed7-84ac-cb3013e88ea8",
+      "channel": "halantar",
+      "startedAt": 1786791085818,
+      "endedAt": 1786792179378
+    },
+    {
+      "id": "c47e1a22-f6ac-4c52-bb59-3836a32dee80",
+      "channel": "halantar",
+      "startedAt": 1786792369956,
+      "endedAt": 1786792409664
+    },
+    {
+      "id": "a4b1122a-3102-488c-ba7d-81996dd2395d",
+      "channel": "halantar",
+      "startedAt": 1786792867743,
+      "endedAt": 1786793016680
     }
   ],
   "chatMessages": [
@@ -521,34 +545,7 @@
       "emotes": {}
     }
   ],
-  "stream_events": [
-    {
-      "id": "e2c4f7a8-24a0-4870-8c85-fc0b501ab1df",
-      "timestamp": 1786780360765,
-      "type": "donation",
-      "kind": "donation",
-      "username": "Аноним",
-      "amount": 0,
-      "currency": "RUB",
-      "message": "",
-      "is_test": false,
-      "count": null,
-      "tier": null
-    },
-    {
-      "id": "9956883a-20a9-448a-922f-d1ea32d36dcd",
-      "timestamp": 1786783250130,
-      "type": "donation",
-      "kind": "donation",
-      "username": "Аноним",
-      "amount": 0,
-      "currency": "RUB",
-      "message": "",
-      "is_test": false,
-      "count": null,
-      "tier": null
-    }
-  ],
+  "stream_events": [],
   "overlay_participants_config": {
     "maxNames": 10,
     "marquee": false,

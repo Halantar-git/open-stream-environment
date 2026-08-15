@@ -7,6 +7,17 @@
 где PATCH — исправления, MINOR — новая функциональность без слома
 совместимости, MAJOR — несовместимые изменения (пока не было).
 
+## [1.9.5] — 2026-08-15
+
+### Added
+- Интеграция YouTube Live (чат + события) через YouTube Data API v3: OAuth,
+  поллинг `liveChatMessages` с соблюдением `pollingIntervalMillis`, поиск
+  `liveChatId` по активному эфиру и fallback через `videos.list`; события
+  Super Chat / Super Sticker и новых участников попадают в алерты, сообщения —
+  в чат.
+- Переключатели включения/отключения интеграций (Twitch, DonationAlerts,
+  YouTube) в настройках с сохранением выбора в конфиге.
+
 ## [1.9.4] — 2026-08-15
 
 ### Changed

@@ -125,7 +125,10 @@
     <section class="view" id="view-settings" hidden>
       <div class="settings">
         <div class="settings__card md-card">
-          <h2 data-i18n="settings.twitch">Twitch</h2>
+          <div class="settings__card-head">
+            <h2 data-i18n="settings.twitch">Twitch</h2>
+            <div class="md-switch is-on" id="twitchEnabledSwitch" role="switch" aria-checked="true" data-i18n-title="settings.integrationSwitch"><div class="md-switch__thumb"></div></div>
+          </div>
           <p class="settings__desc" data-i18n="settings.twitchDesc">
             Чат подключается анонимно и не требует токена. Для алертов о фоллоу/сабах/чирах нужно
             зарегистрировать приложение и авторизоваться.
@@ -158,7 +161,10 @@
         </div>
 
         <div class="settings__card md-card">
-          <h2 data-i18n="settings.donationAlerts">DonationAlerts</h2>
+          <div class="settings__card-head">
+            <h2 data-i18n="settings.donationAlerts">DonationAlerts</h2>
+            <div class="md-switch is-on" id="donationAlertsEnabledSwitch" role="switch" aria-checked="true" data-i18n-title="settings.integrationSwitch"><div class="md-switch__thumb"></div></div>
+          </div>
           <p class="settings__desc" data-i18n="settings.daDesc">Донаты автоматически увеличивают счётчик цели и запускают алерт.</p>
           <div class="md-field">
             <label data-i18n="settings.clientId">Client ID</label>
@@ -179,6 +185,38 @@
           </div>
           <div class="settings__statuses">
             <span class="md-chip" id="chip-donationAlerts"><span class="md-chip__dot"></span><span class="md-chip__label">DonationAlerts</span></span>
+          </div>
+        </div>
+
+        <div class="settings__card md-card">
+          <div class="settings__card-head">
+            <h2 data-i18n="settings.youtube">YouTube</h2>
+            <div class="md-switch is-on" id="youtubeEnabledSwitch" role="switch" aria-checked="true" data-i18n-title="settings.integrationSwitch"><div class="md-switch__thumb"></div></div>
+          </div>
+          <p class="settings__desc" data-i18n="settings.youtubeDesc">Чат и события прямого эфира (Super Chat, новые участники) через YouTube Data API.</p>
+          <div class="md-field">
+            <label data-i18n="settings.clientId">Client ID</label>
+            <input type="text" id="youtubeClientId" data-i18n-placeholder="settings.youtubeClientIdPlaceholder" placeholder="из console.cloud.google.com" />
+          </div>
+          <div class="md-field">
+            <label data-i18n="settings.clientSecret">Client Secret</label>
+            <input type="password" id="youtubeClientSecret" placeholder="••••••••" />
+          </div>
+          <div class="md-field">
+            <label data-i18n="settings.youtubeVideoId">Video ID (фоллбек)</label>
+            <input type="text" id="youtubeVideoId" data-i18n-placeholder="settings.youtubeVideoIdPlaceholder" placeholder="ID видео/стрима для поиска live-чата" />
+          </div>
+          <div class="settings__hint">
+            <span data-i18n="settings.redirectUri">Redirect URI для приложения:</span>
+            <code id="youtubeRedirectUri"></code>
+            <button class="md-button md-button--text" data-copy="youtubeRedirectUri"></button>
+          </div>
+          <div class="settings__actions">
+            <button class="md-button md-button--text" id="openYoutubeConsole" data-i18n="settings.openYoutubeConsole">Открыть console.cloud.google.com</button>
+            <button class="md-button md-button--filled" id="connectYoutubeBtn" data-i18n="settings.connectYoutube">Подключить YouTube</button>
+          </div>
+          <div class="settings__statuses">
+            <span class="md-chip" id="chip-youtube"><span class="md-chip__dot"></span><span class="md-chip__label" data-i18n="settings.youtube">YouTube</span></span>
           </div>
         </div>
 

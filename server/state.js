@@ -42,6 +42,7 @@ function saveConfig(config) {
 function encryptConfig(config) {
   const twitch = config.twitch || {};
   const donationAlerts = config.donationAlerts || {};
+  const youtube = config.youtube || {};
   return {
     ...config,
     twitch: {
@@ -56,12 +57,19 @@ function encryptConfig(config) {
       accessToken: seal(donationAlerts.accessToken),
       refreshToken: seal(donationAlerts.refreshToken),
     },
+    youtube: {
+      ...youtube,
+      clientSecret: seal(youtube.clientSecret),
+      accessToken: seal(youtube.accessToken),
+      refreshToken: seal(youtube.refreshToken),
+    },
   };
 }
 
 function decryptConfig(config) {
   const twitch = config.twitch || {};
   const donationAlerts = config.donationAlerts || {};
+  const youtube = config.youtube || {};
   return {
     ...config,
     twitch: {
@@ -75,6 +83,12 @@ function decryptConfig(config) {
       clientSecret: open(donationAlerts.clientSecret),
       accessToken: open(donationAlerts.accessToken),
       refreshToken: open(donationAlerts.refreshToken),
+    },
+    youtube: {
+      ...youtube,
+      clientSecret: open(youtube.clientSecret),
+      accessToken: open(youtube.accessToken),
+      refreshToken: open(youtube.refreshToken),
     },
   };
 }
@@ -112,6 +126,10 @@ class AppState {
       this.config.scenes[sceneId] = { ...scenesDefaults[sceneId], ...(this.config.scenes[sceneId] || {}) };
     });
     if (!this.config.topDonation) this.config.topDonation = { user: "", amount: 0, currency: "RUB" };
+    this.config.youtube = { clientId: "", clientSecret: "", accessToken: "", refreshToken: "", videoId: "", ...(this.config.youtube || {}) };
+    if (this.config.twitch.enabled === undefined) this.config.twitch.enabled = true;
+    if (this.config.donationAlerts.enabled === undefined) this.config.donationAlerts.enabled = true;
+    if (this.config.youtube.enabled === undefined) this.config.youtube.enabled = true;
 
     if (this.db) {
       this._layout = this._loadLayoutFromDb();
@@ -125,6 +143,7 @@ class AppState {
         twitchChat: "disconnected",
         twitchEvents: this.config.twitch.userAccessToken ? "connecting" : "not_configured",
         donationAlerts: this.config.donationAlerts.accessToken ? "connecting" : "not_configured",
+        youtube: this.config.youtube.accessToken ? "connecting" : "not_configured",
       },
       recentEvents: [],
       stats: { followerCount: null, subscriberCount: null },
@@ -391,6 +410,32 @@ class AppState {
     saveConfig(this.config);
   }
 
+  saveYoutubeApp({ clientId, clientSecret }) {
+    if (clientId !== undefined) this.config.youtube.clientId = String(clientId).trim();
+    if (clientSecret !== undefined) this.config.youtube.clientSecret = String(clientSecret).trim();
+    saveConfig(this.config);
+  }
+
+  saveYoutubeTokens({ accessToken, refreshToken }) {
+    if (accessToken !== undefined) this.config.youtube.accessToken = accessToken;
+    if (refreshToken !== undefined) this.config.youtube.refreshToken = refreshToken;
+    saveConfig(this.config);
+  }
+
+  setYoutubeVideoId(videoId) {
+    this.config.youtube.videoId = String(videoId || "").trim();
+    saveConfig(this.config);
+    return this.config.youtube.videoId;
+  }
+
+  setIntegrationEnabled(service, enabled) {
+    const key = { twitch: "twitch", donationAlerts: "donationAlerts", youtube: "youtube" }[service];
+    if (!key) return;
+    this.config[key].enabled = !!enabled;
+    saveConfig(this.config);
+    return this.config[key].enabled;
+  }
+
   // ---- Appearance / themes ----
 
   findCustomTheme(id) {
@@ -509,6 +554,7 @@ class AppState {
       port: typeof newConfig.port === "number" ? newConfig.port : this.config.port,
       twitch: { ...this.config.twitch, ...(newConfig.twitch || {}) },
       donationAlerts: { ...this.config.donationAlerts, ...(newConfig.donationAlerts || {}) },
+      youtube: { ...this.config.youtube, ...(newConfig.youtube || {}) },
       goal: { ...this.config.goal, ...(newConfig.goal || {}) },
       appearance: {
         ...defaultAppearance(),
@@ -541,6 +587,11 @@ class AppState {
       twitchChannel: this.config.twitch.channel,
       twitchClientId: this.config.twitch.clientId,
       donationAlertsClientId: this.config.donationAlerts.clientId,
+      youtubeClientId: this.config.youtube.clientId,
+      youtubeVideoId: this.config.youtube.videoId,
+      twitchEnabled: this.config.twitch.enabled,
+      donationAlertsEnabled: this.config.donationAlerts.enabled,
+      youtubeEnabled: this.config.youtube.enabled,
       connectionStatus: this.runtime.connectionStatus,
       recentEvents: this.runtime.recentEvents,
       stats: this.runtime.stats,

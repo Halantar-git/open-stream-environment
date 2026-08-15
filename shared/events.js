@@ -75,9 +75,11 @@
     CMD_SET_WHEEL_SPEED_CONFIG: "cmd_set_wheel_speed_config", // { config }
     CMD_SET_MIC_CONFIG: "cmd_set_mic_config", // { config }
     CMD_SET_LANGUAGE: "cmd_set_language", // { lang }
+    CMD_SET_YOUTUBE_VIDEO_ID: "cmd_set_youtube_video_id", // { videoId }
+    CMD_SET_INTEGRATION_ENABLED: "cmd_set_integration_enabled", // { service, enabled }
   };
 
-  const CONNECTION_SERVICES = ["twitchChat", "twitchEvents", "donationAlerts"];
+  const CONNECTION_SERVICES = ["twitchChat", "twitchEvents", "donationAlerts", "youtube"];
 
   const ALERT_DURATIONS_MS = {
     follow: 5000,

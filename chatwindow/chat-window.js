@@ -97,7 +97,7 @@
   }
 
   function statusText(status) {
-    return ({ connected: t("status.connected"), connecting: t("status.connecting"), disconnected: t("status.disconnected"), error: t("status.error"), not_configured: t("status.notConfigured") }[status] || status || "—");
+    return ({ connected: t("status.connected"), connecting: t("status.connecting"), disconnected: t("status.disconnected"), error: t("status.error"), not_configured: t("status.notConfigured"), disabled: t("status.disabled") }[status] || status || "—");
   }
   function statusClass(status) {
     if (status === "connected") return "is-connected";

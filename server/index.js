@@ -24,10 +24,11 @@ const { EventEmitter } = require("events");
 const { AppState } = require("./state");
 const { EVENT_TYPES, ALERT_DURATIONS_MS } = require("../shared/events");
 const { createLogger } = require("./logger");
-const { mountOAuthRoutes, buildTwitchAuthorizeUrl, buildDonationAlertsAuthorizeUrl } = require("./oauth");
+const { mountOAuthRoutes, buildTwitchAuthorizeUrl, buildDonationAlertsAuthorizeUrl, buildYoutubeAuthorizeUrl } = require("./oauth");
 const { startTwitchChat } = require("./integrations/twitch-chat");
 const { startTwitchEvents } = require("./integrations/twitch-eventsub");
 const { startDonationAlerts } = require("./integrations/donationalerts");
+const { startYoutube } = require("./integrations/youtube-live");
 
 const LOCALES = {
   ru: require("../shared/locales/ru.json"),
@@ -50,6 +51,7 @@ function createServer({ db } = {}) {
   let twitchChatCtrl = null;
   let twitchEventsCtrl = null;
   let donationAlertsCtrl = null;
+  let youtubeCtrl = null;
   let currentSession = null;
   let autoSpinTimer = null;
   let isSpinning = false;
@@ -102,11 +104,21 @@ function createServer({ db } = {}) {
 
   function restartTwitchChat() {
     if (twitchChatCtrl) twitchChatCtrl.stop();
+    twitchChatCtrl = null;
+    if (!state.config.twitch.enabled) {
+      bus.emit("connection_status", { service: "twitchChat", status: "disabled" });
+      return;
+    }
     twitchChatCtrl = startTwitchChat({ bus, channel: state.config.twitch.channel });
   }
 
   function restartTwitchEvents() {
     if (twitchEventsCtrl) twitchEventsCtrl.stop();
+    twitchEventsCtrl = null;
+    if (!state.config.twitch.enabled) {
+      bus.emit("connection_status", { service: "twitchEvents", status: "disabled" });
+      return;
+    }
     if (state.config.twitch.userAccessToken && state.config.twitch.broadcasterId) {
       twitchEventsCtrl = startTwitchEvents({ bus, state });
     } else {
@@ -116,10 +128,29 @@ function createServer({ db } = {}) {
 
   function restartDonationAlerts() {
     if (donationAlertsCtrl) donationAlertsCtrl.stop();
+    donationAlertsCtrl = null;
+    if (!state.config.donationAlerts.enabled) {
+      bus.emit("connection_status", { service: "donationAlerts", status: "disabled" });
+      return;
+    }
     if (state.config.donationAlerts.accessToken) {
       donationAlertsCtrl = startDonationAlerts({ bus, state });
     } else {
       bus.emit("connection_status", { service: "donationAlerts", status: "not_configured" });
+    }
+  }
+
+  function restartYoutube() {
+    if (youtubeCtrl) youtubeCtrl.stop();
+    youtubeCtrl = null;
+    if (!state.config.youtube.enabled) {
+      bus.emit("connection_status", { service: "youtube", status: "disabled" });
+      return;
+    }
+    if (state.config.youtube.accessToken) {
+      youtubeCtrl = startYoutube({ bus, state });
+    } else {
+      bus.emit("connection_status", { service: "youtube", status: "not_configured" });
     }
   }
 
@@ -128,6 +159,7 @@ function createServer({ db } = {}) {
     hooks: {
       onTwitchConnected: restartTwitchEvents,
       onDonationAlertsConnected: restartDonationAlerts,
+      onYoutubeConnected: restartYoutube,
     },
   });
 
@@ -136,6 +168,7 @@ function createServer({ db } = {}) {
     res.json({
       twitch: buildTwitchAuthorizeUrl(state.config, state.config.port),
       donationAlerts: buildDonationAlertsAuthorizeUrl(state.config, state.config.port),
+      youtube: buildYoutubeAuthorizeUrl(state.config, state.config.port),
     });
   });
 
@@ -337,6 +370,24 @@ function createServer({ db } = {}) {
         setLanguage(msg.payload && msg.payload.lang);
         break;
       }
+      case EVENT_TYPES.CMD_SET_YOUTUBE_VIDEO_ID: {
+        state.setYoutubeVideoId(msg.payload && msg.payload.videoId);
+        break;
+      }
+      case EVENT_TYPES.CMD_SET_INTEGRATION_ENABLED: {
+        const { service, enabled } = msg.payload || {};
+        state.setIntegrationEnabled(service, enabled);
+        if (service === "twitch") {
+          restartTwitchChat();
+          restartTwitchEvents();
+        } else if (service === "donationAlerts") {
+          restartDonationAlerts();
+        } else if (service === "youtube") {
+          restartYoutube();
+        }
+        broadcast(EVENT_TYPES.STATE, state.snapshot());
+        break;
+      }
       default:
         break;
     }
@@ -414,6 +465,7 @@ function createServer({ db } = {}) {
     restartTwitchChat();
     restartTwitchEvents();
     restartDonationAlerts();
+    restartYoutube();
 
     if (db) {
       currentSession = db.startSession(state.config.twitch.channel);
@@ -427,6 +479,7 @@ function createServer({ db } = {}) {
     restartTwitchChat();
     restartTwitchEvents();
     restartDonationAlerts();
+    restartYoutube();
     broadcast(EVENT_TYPES.STATE, state.snapshot());
   }
 
@@ -440,6 +493,7 @@ function createServer({ db } = {}) {
     if (twitchChatCtrl) twitchChatCtrl.stop();
     if (twitchEventsCtrl) twitchEventsCtrl.stop();
     if (donationAlertsCtrl) donationAlertsCtrl.stop();
+    if (youtubeCtrl) youtubeCtrl.stop();
     wss.close();
     server.close();
   }

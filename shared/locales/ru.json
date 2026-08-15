@@ -48,6 +48,13 @@
     "daDesc": "Донаты автоматически увеличивают счётчик цели и запускают алерт.",
     "openDaConsole": "Открыть donationalerts.com/application/clients",
     "connectDa": "Подключить DonationAlerts",
+    "youtube": "YouTube",
+    "youtubeDesc": "Чат и события прямого эфира (Super Chat, новые участники) через YouTube Data API.",
+    "youtubeClientIdPlaceholder": "из console.cloud.google.com",
+    "openYoutubeConsole": "Открыть console.cloud.google.com",
+    "connectYoutube": "Подключить YouTube",
+    "youtubeVideoId": "Video ID (фоллбек)",
+    "youtubeVideoIdPlaceholder": "ID видео/стрима для поиска live-чата",
     "app": "Приложение",
     "port": "Порт локального сервера",
     "portHint": "Порт хранится в config.json; чтобы изменить — отредактируйте файл и перезапустите приложение.",
@@ -72,6 +79,7 @@
     "importConfirm": "Импорт заменит текущие раскладку, темы, цель и настройки подключений. Продолжить?",
     "imported": "Настройки импортированы",
     "importFailed": "Не удалось импортировать: {{error}}",
+    "integrationSwitch": "Включить / отключить интеграцию",
     "ru": "Русский",
     "en": "English"
   },
@@ -257,11 +265,13 @@
     "twitchChat": "Twitch чат",
     "twitchEvents": "Twitch алерты",
     "donationAlerts": "DonationAlerts",
+    "youtube": "YouTube",
     "connected": "подключено",
     "connecting": "подключение…",
     "disconnected": "отключено",
     "error": "ошибка",
-    "notConfigured": "не настроено"
+    "notConfigured": "не настроено",
+    "disabled": "выключено"
   },
   "custom": {
     "imageUrl": "URL изображения",

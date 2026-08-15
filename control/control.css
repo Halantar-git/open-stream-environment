@@ -127,6 +127,7 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 /* ---------- Settings ---------- */
 .settings { padding: clamp(1rem, 2.5vw, 2rem); overflow-y: auto; display: flex; flex-direction: column; gap: clamp(0.75rem, 1.5vw, 1.25rem); max-width: min(720px, 100%); margin: 0 auto; width: 100%; }
 .settings__card { padding: clamp(1rem, 2vw, 1.5rem); display: flex; flex-direction: column; gap: clamp(0.6rem, 1vw, 0.8rem); }
+.settings__card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .settings__card h2 { margin: 0; font-family: var(--font-display); font-size: 16px; font-weight: 600; }
 .settings__desc { margin: 0; font-size: 13px; color: var(--md-on-surface-variant); line-height: 1.5; }
 .settings__hint { font-size: 12px; color: var(--md-on-surface-variant); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--md-surface-container-highest); padding: 8px 10px; border-radius: var(--shape-sm); }
@@ -492,6 +493,7 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .terminal-line[data-service="twitch-chat"] .terminal-line__service { color: #a371f7; }
 .terminal-line[data-service="twitch-eventsub"] .terminal-line__service { color: #79c0ff; }
 .terminal-line[data-service="donationalerts"] .terminal-line__service { color: #7ee0d6; }
+.terminal-line[data-service="youtube"] .terminal-line__service { color: #ff7b72; }
 
 /* ---------- Participants widget settings ---------- */
 .settings__row { display: flex; gap: 12px; }

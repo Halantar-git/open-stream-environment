@@ -48,6 +48,13 @@
     "daDesc": "Donations automatically increase the goal counter and trigger an alert.",
     "openDaConsole": "Open donationalerts.com/application/clients",
     "connectDa": "Connect DonationAlerts",
+    "youtube": "YouTube",
+    "youtubeDesc": "Live chat and live events (Super Chat, new members) via the YouTube Data API.",
+    "youtubeClientIdPlaceholder": "from console.cloud.google.com",
+    "openYoutubeConsole": "Open console.cloud.google.com",
+    "connectYoutube": "Connect YouTube",
+    "youtubeVideoId": "Video ID (fallback)",
+    "youtubeVideoIdPlaceholder": "Video/stream ID for live chat lookup",
     "app": "Application",
     "port": "Local server port",
     "portHint": "The port is stored in config.json; to change it, edit the file and restart the app.",
@@ -72,6 +79,7 @@
     "importConfirm": "Import will replace the current layout, themes, goal and connection settings. Continue?",
     "imported": "Settings imported",
     "importFailed": "Import failed: {{error}}",
+    "integrationSwitch": "Enable / disable integration",
     "ru": "Русский",
     "en": "English"
   },
@@ -257,11 +265,13 @@
     "twitchChat": "Twitch chat",
     "twitchEvents": "Twitch alerts",
     "donationAlerts": "DonationAlerts",
+    "youtube": "YouTube",
     "connected": "connected",
     "connecting": "connecting…",
     "disconnected": "disconnected",
     "error": "error",
-    "notConfigured": "not configured"
+    "notConfigured": "not configured",
+    "disabled": "disabled"
   },
   "custom": {
     "imageUrl": "Image URL",

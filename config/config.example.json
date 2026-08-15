@@ -6,14 +6,24 @@
     "clientSecret": "",
     "userAccessToken": "",
     "refreshToken": "",
-    "broadcasterId": ""
+    "broadcasterId": "",
+    "enabled": true
   },
   "donationAlerts": {
     "clientId": "",
     "clientSecret": "",
     "accessToken": "",
     "refreshToken": "",
-    "userId": ""
+    "userId": "",
+    "enabled": true
+  },
+  "youtube": {
+    "clientId": "",
+    "clientSecret": "",
+    "accessToken": "",
+    "refreshToken": "",
+    "videoId": "",
+    "enabled": true
   },
   "goal": {
     "title": "Донат-цель",

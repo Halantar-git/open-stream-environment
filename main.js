@@ -20,7 +20,7 @@ const fs = require("fs");
 const { app, BrowserWindow, ipcMain, shell, dialog, globalShortcut } = require("electron");
 
 const { createServer } = require("./server");
-const { buildTwitchAuthorizeUrl, buildDonationAlertsAuthorizeUrl } = require("./server/oauth");
+const { buildTwitchAuthorizeUrl, buildDonationAlertsAuthorizeUrl, buildYoutubeAuthorizeUrl } = require("./server/oauth");
 const { createDatabase } = require("./server/db");
 const { configureStorage } = require("./server/storage-paths");
 
@@ -317,6 +317,12 @@ app.whenReady().then(() => {
   ipcMain.handle("oauth:connect-donationalerts", (_event, { clientId, clientSecret }) => {
     serverHandle.state.saveDonationAlertsApp({ clientId, clientSecret });
     const url = buildDonationAlertsAuthorizeUrl(serverHandle.state.config, serverHandle.state.config.port);
+    shell.openExternal(url);
+  });
+
+  ipcMain.handle("oauth:connect-youtube", (_event, { clientId, clientSecret }) => {
+    serverHandle.state.saveYoutubeApp({ clientId, clientSecret });
+    const url = buildYoutubeAuthorizeUrl(serverHandle.state.config, serverHandle.state.config.port);
     shell.openExternal(url);
   });
 
