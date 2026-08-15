@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OSE — настройки кнопки</title>
+  <style>
+    :root {
+      --bg: #0e0b17;
+      --surface: #1b1e21;
+      --text: #eceff1;
+      --muted: #9aa0a6;
+      --accent: #f39c12;
+      --border: #2c3e50;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 16px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      font-size: 13px;
+    }
+    label { display: block; color: var(--muted); margin-bottom: 6px; }
+    select {
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font: inherit;
+    }
+    .hint { margin-top: 10px; color: var(--muted); font-size: 11px; }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <p>Загрузка…</p>
+  </div>
+
+  <script>
+    let ws = null;
+    let context = null;
+    let currentSettings = {};
+    let options = null;
+
+    function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, inInfo, inActionInfo) {
+      ws = new WebSocket("ws://127.0.0.1:" + inPort);
+
+      ws.onopen = function () {
+        ws.send(JSON.stringify({ event: inRegisterEvent, uuid: inPluginUUID }));
+      };
+
+      ws.onmessage = function (ev) {
+        let msg;
+        try {
+          msg = JSON.parse(ev.data);
+        } catch {
+          return;
+        }
+        if (msg.event === "didReceiveSettings") {
+          currentSettings = (msg.payload && msg.payload.settings) || {};
+          render();
+        } else if (msg.event === "sendToPropertyInspector") {
+          options = msg.payload || {};
+          render();
+        }
+      };
+
+      try {
+        const info = JSON.parse(inActionInfo || "{}");
+        context = info.action || null;
+      } catch {
+        context = null;
+      }
+    }
+
+    function save(patch) {
+      currentSettings = Object.assign({}, currentSettings, patch);
+      if (ws && context) {
+        ws.send(JSON.stringify({ event: "setSettings", context, payload: currentSettings }));
+      }
+    }
+
+    function makeSelect(value, items, onchange) {
+      const select = document.createElement("select");
+      items.forEach(function (item) {
+        const opt = document.createElement("option");
+        opt.value = item.id;
+        opt.textContent = item.label || item.id;
+        if (item.id === value) opt.selected = true;
+        select.appendChild(opt);
+      });
+      select.addEventListener("change", function () {
+        onchange(select.value);
+      });
+      return select;
+    }
+
+    function label(text) {
+      const el = document.createElement("label");
+      el.textContent = text;
+      return el;
+    }
+
+    function hint(text) {
+      const el = document.createElement("div");
+      el.className = "hint";
+      el.textContent = text;
+      return el;
+    }
+
+    function render() {
+      const root = document.getElementById("root");
+      root.innerHTML = "";
+
+      const scenes = (options && options.scenes) || [];
+      root.appendChild(label("Сцена"));
+      root.appendChild(makeSelect(currentSettings.scene || "start", scenes, function (v) {
+        save({ scene: v });
+      }));
+      root.appendChild(hint("Кнопка подсвечивается, когда сцена активна."));
+    }
+  </script>
+</body>
+</html>

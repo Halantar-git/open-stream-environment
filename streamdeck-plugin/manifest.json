@@ -1,0 +1,28 @@
+{
+  "Name": "Open Stream Environment",
+  "Category": "Open Stream Environment",
+  "Author": "Halanar",
+  "Description": "Переключение сцен OSE: старт, BRB, Колесо, Разговор и окончание стрима.",
+  "Icon": "assets/plugin",
+  "Version": "1.0.0",
+  "CodePath": "app.js",
+  "SDKVersion": 2,
+  "OS": [
+    { "Platform": "windows", "MinimumVersion": "10" },
+    { "Platform": "mac", "MinimumVersion": "10.15" }
+  ],
+  "Software": { "MinimumVersion": "6.4" },
+  "Actions": [
+    {
+      "UUID": "com.openstreamenvironment.streamdeck.scene",
+      "Name": "Сцена",
+      "Icon": "assets/scene",
+      "PropertyInspectorPath": "pi/settings.html",
+      "Controllers": ["Keypad"],
+      "States": [
+        { "Image": "assets/scene", "TitleAlignment": "middle", "Title": "Сцена" },
+        { "Image": "assets/scene-active", "TitleAlignment": "middle", "Title": "Сцена" }
+      ]
+    }
+  ]
+}

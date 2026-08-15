@@ -43,6 +43,7 @@ function encryptConfig(config) {
   const twitch = config.twitch || {};
   const donationAlerts = config.donationAlerts || {};
   const youtube = config.youtube || {};
+  const obs = config.obs || {};
   return {
     ...config,
     twitch: {
@@ -63,6 +64,10 @@ function encryptConfig(config) {
       accessToken: seal(youtube.accessToken),
       refreshToken: seal(youtube.refreshToken),
     },
+    obs: {
+      ...obs,
+      password: seal(obs.password),
+    },
   };
 }
 
@@ -70,6 +75,7 @@ function decryptConfig(config) {
   const twitch = config.twitch || {};
   const donationAlerts = config.donationAlerts || {};
   const youtube = config.youtube || {};
+  const obs = config.obs || {};
   return {
     ...config,
     twitch: {
@@ -89,6 +95,10 @@ function decryptConfig(config) {
       clientSecret: open(youtube.clientSecret),
       accessToken: open(youtube.accessToken),
       refreshToken: open(youtube.refreshToken),
+    },
+    obs: {
+      ...obs,
+      password: open(obs.password),
     },
   };
 }
@@ -127,6 +137,35 @@ class AppState {
     });
     if (!this.config.topDonation) this.config.topDonation = { user: "", amount: 0, currency: "RUB" };
     this.config.youtube = { clientId: "", clientSecret: "", accessToken: "", refreshToken: "", videoId: "", ...(this.config.youtube || {}) };
+    this.config.obs = {
+      enabled: false,
+      host: "127.0.0.1",
+      port: 4455,
+      password: "",
+      ...(this.config.obs || {}),
+      sceneMap: { main: "", start: "", brb: "", talk: "", end: "", wheel: "", ...((this.config.obs && this.config.obs.sceneMap) || {}) },
+      customCommands: Array.isArray(this.config.obs && this.config.obs.customCommands) ? this.config.obs.customCommands : [],
+      cameraAngles: Array.isArray(this.config.obs && this.config.obs.cameraAngles) ? this.config.obs.cameraAngles : [],
+      cameraFilters: Array.isArray(this.config.obs && this.config.obs.cameraFilters) ? this.config.obs.cameraFilters : [],
+    };
+    const sb = this.config.soundboard || {};
+    this.config.soundboard = {
+      enabled: sb.enabled !== false,
+      volume: typeof sb.volume === "number" ? sb.volume : 0.8,
+      queueMode: !!sb.queueMode,
+      sounds: Array.isArray(sb.sounds) ? sb.sounds : [],
+    };
+    const sd = this.config.streamdeck || {};
+    this.config.streamdeck = {
+      icons: {
+        start: "",
+        brb: "",
+        wheel: "",
+        talk: "",
+        end: "",
+        ...(sd.icons || {}),
+      },
+    };
     if (this.config.twitch.enabled === undefined) this.config.twitch.enabled = true;
     if (this.config.donationAlerts.enabled === undefined) this.config.donationAlerts.enabled = true;
     if (this.config.youtube.enabled === undefined) this.config.youtube.enabled = true;
@@ -144,9 +183,14 @@ class AppState {
         twitchEvents: this.config.twitch.userAccessToken ? "connecting" : "not_configured",
         donationAlerts: this.config.donationAlerts.accessToken ? "connecting" : "not_configured",
         youtube: this.config.youtube.accessToken ? "connecting" : "not_configured",
+        obs: "not_configured",
       },
       recentEvents: [],
       stats: { followerCount: null, subscriberCount: null },
+      deathCount: 0,
+      activeScene: "main",
+      activeCameraAngle: null,
+      activeFilters: new Set(),
       giveaway: {
         active: false,
         command: "!go",
@@ -259,9 +303,111 @@ class AppState {
     return this.config.goal;
   }
 
-  setAppConfig({ twitchChannel }) {
+  setAppConfig({ twitchChannel, port }) {
     if (twitchChannel !== undefined) this.config.twitch.channel = String(twitchChannel).trim().toLowerCase();
+    if (port !== undefined) this.config.port = Math.max(1024, Math.min(65535, Number(port) || 8710));
     saveConfig(this.config);
+  }
+
+  setObsConfig(patch = {}) {
+    if (patch.host !== undefined) this.config.obs.host = String(patch.host).trim();
+    if (patch.port !== undefined) this.config.obs.port = Number(patch.port) || 4455;
+    if (patch.password !== undefined) this.config.obs.password = String(patch.password);
+    if (patch.sceneMap && typeof patch.sceneMap === "object") {
+      this.config.obs.sceneMap = { ...this.config.obs.sceneMap, ...patch.sceneMap };
+    }
+    if (Array.isArray(patch.customCommands)) {
+      this.config.obs.customCommands = patch.customCommands.slice(0, 50).map((c) => ({
+        id: String(c.id || "").trim(),
+        label: String(c.label || "").trim(),
+        requestType: String(c.requestType || "").trim(),
+        requestData: c.requestData && typeof c.requestData === "object" ? c.requestData : {},
+      }));
+    }
+    if (Array.isArray(patch.cameraAngles)) {
+      this.config.obs.cameraAngles = patch.cameraAngles.slice(0, 30).map((a) => ({
+        id: String(a.id || "").trim(),
+        label: String(a.label || "").trim(),
+        twitchRewardTitle: String(a.twitchRewardTitle || "").trim(),
+        sceneName: String(a.sceneName || "").trim(),
+        cameraSource: String(a.cameraSource || "").trim(),
+      }));
+    }
+    if (Array.isArray(patch.cameraFilters)) {
+      this.config.obs.cameraFilters = patch.cameraFilters.slice(0, 50).map((f) => ({
+        id: String(f.id || "").trim(),
+        label: String(f.label || "").trim(),
+        twitchRewardTitle: String(f.twitchRewardTitle || "").trim(),
+        sourceName: String(f.sourceName || "").trim(),
+        filterName: String(f.filterName || "").trim(),
+        durationSec: Math.max(0, Number(f.durationSec) || 0),
+      }));
+    }
+    saveConfig(this.config);
+    return this.config.obs;
+  }
+
+  setSoundboardConfig(patch = {}) {
+    if (patch.enabled !== undefined) this.config.soundboard.enabled = !!patch.enabled;
+    if (patch.volume !== undefined) this.config.soundboard.volume = clamp(Number(patch.volume) || 0, 0, 1);
+    if (patch.queueMode !== undefined) this.config.soundboard.queueMode = !!patch.queueMode;
+    if (Array.isArray(patch.sounds)) {
+      this.config.soundboard.sounds = patch.sounds.slice(0, 50).map((s) => ({
+        id: String(s.id || "").trim(),
+        rewardTitle: String(s.rewardTitle || "").trim(),
+        rewardId: String(s.rewardId || "").trim(),
+        audioFile: String(s.audioFile || "").trim(),
+        imageFile: String(s.imageFile || "").trim(),
+        title: String(s.title || s.rewardTitle || "").trim(),
+      }));
+    }
+    saveConfig(this.config);
+    return this.config.soundboard;
+  }
+
+  setStreamDeckConfig(patch = {}) {
+    if (patch.icons && typeof patch.icons === "object") {
+      const next = { ...this.config.streamdeck.icons, ...patch.icons };
+      Object.keys(next).forEach((key) => {
+        next[key] = String(next[key] || "").trim();
+      });
+      this.config.streamdeck.icons = next;
+    }
+    saveConfig(this.config);
+    return this.config.streamdeck;
+  }
+
+  // ---- Death counter (remote quick action) ----
+
+  adjustDeathCount(delta) {
+    this.runtime.deathCount = Math.max(0, (this.runtime.deathCount || 0) + (Number(delta) || 0));
+    return { count: this.runtime.deathCount };
+  }
+
+  resetDeathCount() {
+    this.runtime.deathCount = 0;
+    return { count: 0 };
+  }
+
+  setActiveScene(scene) {
+    this.runtime.activeScene = String(scene || "main");
+    return this.runtime.activeScene;
+  }
+
+  setActiveCameraAngle(angleId) {
+    this.runtime.activeCameraAngle = angleId ? String(angleId) : null;
+    return this.runtime.activeCameraAngle;
+  }
+
+  setActiveFilter(filterId, active) {
+    if (!filterId) return this.getActiveFilters();
+    if (active) this.runtime.activeFilters.add(String(filterId));
+    else this.runtime.activeFilters.delete(String(filterId));
+    return this.getActiveFilters();
+  }
+
+  getActiveFilters() {
+    return [...this.runtime.activeFilters];
   }
 
   // ---- Giveaway / Fortune Wheel ----
@@ -304,6 +450,21 @@ class AppState {
   removeGiveawayParticipant(username) {
     const name = String(username || "").trim();
     if (name) this.runtime.giveaway.participants.delete(name);
+    return this.giveawaySnapshot();
+  }
+
+  clearGiveawayParticipants() {
+    this.runtime.giveaway.participants = new Set();
+    this.runtime.giveaway.winner = null;
+    this.runtime.giveaway.isFinalWinner = false;
+    this.runtime.giveaway.pendingWinner = null;
+    return this.giveawaySnapshot();
+  }
+
+  clearGiveawayResult() {
+    this.runtime.giveaway.winner = null;
+    this.runtime.giveaway.isFinalWinner = false;
+    this.runtime.giveaway.pendingWinner = null;
     return this.giveawaySnapshot();
   }
 
@@ -429,7 +590,7 @@ class AppState {
   }
 
   setIntegrationEnabled(service, enabled) {
-    const key = { twitch: "twitch", donationAlerts: "donationAlerts", youtube: "youtube" }[service];
+    const key = { twitch: "twitch", donationAlerts: "donationAlerts", youtube: "youtube", obs: "obs" }[service];
     if (!key) return;
     this.config[key].enabled = !!enabled;
     saveConfig(this.config);
@@ -555,6 +716,7 @@ class AppState {
       twitch: { ...this.config.twitch, ...(newConfig.twitch || {}) },
       donationAlerts: { ...this.config.donationAlerts, ...(newConfig.donationAlerts || {}) },
       youtube: { ...this.config.youtube, ...(newConfig.youtube || {}) },
+      obs: { ...this.config.obs, ...(newConfig.obs || {}) },
       goal: { ...this.config.goal, ...(newConfig.goal || {}) },
       appearance: {
         ...defaultAppearance(),
@@ -592,9 +754,16 @@ class AppState {
       twitchEnabled: this.config.twitch.enabled,
       donationAlertsEnabled: this.config.donationAlerts.enabled,
       youtubeEnabled: this.config.youtube.enabled,
+      obs: this.config.obs,
+      soundboard: this.config.soundboard,
+      streamdeck: this.config.streamdeck,
       connectionStatus: this.runtime.connectionStatus,
       recentEvents: this.runtime.recentEvents,
       stats: this.runtime.stats,
+      deathCount: this.runtime.deathCount,
+      activeScene: this.runtime.activeScene,
+      activeCameraAngle: this.runtime.activeCameraAngle,
+      activeFilters: this.getActiveFilters(),
       giveaway: this.giveawaySnapshot(),
       appearance: {
         activeThemeId: this.config.appearance.activeThemeId,

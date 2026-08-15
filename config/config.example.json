@@ -25,6 +25,38 @@
     "videoId": "",
     "enabled": true
   },
+  "obs": {
+    "enabled": false,
+    "host": "127.0.0.1",
+    "port": 4455,
+    "password": "",
+    "customCommands": [],
+    "cameraAngles": [],
+    "cameraFilters": [],
+    "sceneMap": {
+      "main": "",
+      "start": "",
+      "brb": "",
+      "talk": "",
+      "end": "",
+      "wheel": ""
+    }
+  },
+  "soundboard": {
+    "enabled": true,
+    "volume": 0.8,
+    "queueMode": false,
+    "sounds": []
+  },
+  "streamdeck": {
+    "icons": {
+      "start": "",
+      "brb": "",
+      "wheel": "",
+      "talk": "",
+      "end": ""
+    }
+  },
   "goal": {
     "title": "Донат-цель",
     "current": 0,

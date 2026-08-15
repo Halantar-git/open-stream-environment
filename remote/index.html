@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Web Remote — Open Stream Environment</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="/shared/events.js"></script>
+  <script src="/shared/i18n.js"></script>
+</head>
+<body>
+  <header class="remote-header">
+    <div class="remote-header__brand">
+      <div class="remote-header__title">Open Stream Environment</div>
+      <div class="remote-header__subtitle">Web Remote</div>
+    </div>
+    <div class="remote-header__status">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText" data-i18n="remote.connecting">Подключение…</span>
+    </div>
+  </header>
+
+  <main class="remote-main">
+    <section class="grid-section">
+      <h2 class="grid-section__title" data-i18n="remote.scenes">Сцены</h2>
+      <div class="action-grid action-grid--scenes" id="sceneGrid"></div>
+    </section>
+
+    <section class="grid-section">
+      <h2 class="grid-section__title" data-i18n="remote.wheel">Колесо Фортуны</h2>
+      <div class="action-grid" id="wheelGrid"></div>
+
+      <div class="remote-settings">
+        <div class="remote-field">
+          <label class="remote-field__label" for="wheelCommand" data-i18n="giveaway.command">Команда розыгрыша</label>
+          <input class="remote-input" id="wheelCommand" type="text" placeholder="!go" autocomplete="off" />
+        </div>
+
+        <div class="remote-field remote-field--inline">
+          <span class="remote-field__label" data-i18n="giveaway.eliminationMode">Режим выбывания</span>
+          <button class="remote-switch" id="wheelElimination" role="switch" aria-checked="false"></button>
+        </div>
+
+        <div class="remote-field">
+          <label class="remote-field__label" for="wsMaxNames" data-i18n="giveaway.showNames">Показывать имён</label>
+          <input class="remote-input" id="wsMaxNames" type="number" min="1" max="200" inputmode="numeric" />
+        </div>
+
+        <div class="remote-field">
+          <label class="remote-field__label" for="wsFontSize" data-i18n="giveaway.fontSize">Размер текста (px)</label>
+          <input class="remote-input" id="wsFontSize" type="number" min="10" max="48" inputmode="numeric" />
+        </div>
+
+        <div class="remote-field">
+          <label class="remote-field__label" for="wsTextColor" data-i18n="giveaway.textColor">Цвет текста</label>
+          <input class="remote-input remote-input--color" id="wsTextColor" type="color" />
+        </div>
+
+        <div class="remote-field">
+          <label class="remote-field__label" for="wsBgOpacity"><span data-i18n="giveaway.backgroundOpacity">Прозрачность фона</span>: <span id="wsBgOpacityValue">82%</span></label>
+          <input class="remote-range" id="wsBgOpacity" type="range" min="0" max="100" />
+        </div>
+
+        <div class="remote-field remote-field--inline">
+          <span class="remote-field__label" data-i18n="giveaway.marquee">Бегущая строка</span>
+          <button class="remote-switch" id="wsMarquee" role="switch" aria-checked="false"></button>
+        </div>
+
+        <div class="remote-field">
+          <label class="remote-field__label" for="wsMusicVolume"><span data-i18n="giveaway.musicVolume">Громкость музыки</span>: <span id="wsMusicVolumeValue">50%</span></label>
+          <input class="remote-range" id="wsMusicVolume" type="range" min="0" max="100" />
+        </div>
+
+        <div class="remote-field">
+          <label class="remote-field__label" for="wsSpeed"><span data-i18n="giveaway.spinSpeed">Скорость вращения</span>: <span id="wsSpeedValue">3</span></label>
+          <input class="remote-range" id="wsSpeed" type="range" min="1" max="5" step="1" />
+        </div>
+      </div>
+    </section>
+
+    <section class="grid-section">
+      <h2 class="grid-section__title" data-i18n="remote.deathCounter">Счётчик смертей</h2>
+      <div class="death-counter">
+        <span class="death-counter__value" id="deathValue">0</span>
+        <div class="action-grid action-grid--inline">
+          <button class="action-btn" data-action="DEATH_INCREMENT" data-i18n="remote.deathIncrement">+1</button>
+          <button class="action-btn" data-action="DEATH_DECREMENT" data-i18n="remote.deathDecrement">−1</button>
+          <button class="action-btn action-btn--danger" data-action="DEATH_RESET" data-i18n="remote.deathReset">Сброс</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid-section">
+      <h2 class="grid-section__title" data-i18n="remote.testAlerts">Тестовые алерты</h2>
+      <div class="action-grid" id="alertGrid"></div>
+    </section>
+
+    <section class="grid-section">
+      <h2 class="grid-section__title" data-i18n="remote.obsCommands">OBS команды</h2>
+      <div class="action-grid" id="obsCommandGrid"></div>
+    </section>
+
+    <section class="grid-section">
+      <h2 class="grid-section__title" data-i18n="remote.cameras">Камеры</h2>
+      <div class="action-grid action-grid--cameras" id="cameraGrid"></div>
+    </section>
+
+    <section class="grid-section">
+      <h2 class="grid-section__title" data-i18n="remote.filters">Эффекты</h2>
+      <div class="action-grid action-grid--filters" id="filterGrid"></div>
+    </section>
+
+    <section class="grid-section">
+      <h2 class="grid-section__title" data-i18n="remote.theme">Тема оверлея</h2>
+      <div class="action-grid action-grid--themes" id="themeGrid"></div>
+    </section>
+  </main>
+
+  <script src="remote.js"></script>
+</body>
+</html>

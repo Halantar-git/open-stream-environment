@@ -15,6 +15,7 @@
     "copyUrl": "Copy OBS URL",
     "copied": "Copied!",
     "chat": "Chat",
+    "testChat": "Test chat",
     "terminal": "Logs"
   },
   "boosty": {
@@ -57,7 +58,8 @@
     "youtubeVideoIdPlaceholder": "Video/stream ID for live chat lookup",
     "app": "Application",
     "port": "Local server port",
-    "portHint": "The port is stored in config.json; to change it, edit the file and restart the app.",
+    "portHint": "Restart the app after saving.",
+    "savePort": "Save",
     "overlayUrl": "Overlay URL for OBS Browser Source",
     "resetLayout": "Reset layout to default",
     "history": "Event history",
@@ -80,6 +82,52 @@
     "imported": "Settings imported",
     "importFailed": "Import failed: {{error}}",
     "integrationSwitch": "Enable / disable integration",
+    "obs": "OBS WebSocket",
+    "obsDesc": "Connect to OBS WebSocket (OBS 28+, Tools → WebSocket Server Settings) to switch scenes from the remote.",
+    "obsHost": "Host",
+    "obsPort": "Port",
+    "obsPassword": "Password",
+    "obsSceneMapping": "Scene mapping: remote logical name → OBS scene name.",
+    "obsCommands": "Custom OBS commands (RAW Requests, obs-websocket v5).",
+    "addObsCommand": "+ Add command",
+    "obsCommandLabel": "Name",
+    "obsCommandRequestType": "RequestType (e.g. ToggleInputMute)",
+    "soundboard": "Soundboard",
+    "soundboardDesc": "Play sounds and animations for Twitch channel points: reward → audio file + image/GIF.",
+    "soundboardVolume": "Volume",
+    "soundboardQueue": "Queue sounds (one at a time)",
+    "addSound": "+ Add sound",
+    "soundReward": "Twitch reward name",
+    "streamdeck": "Stream Deck",
+    "streamdeckDesc": "Custom icons for the Elgato Stream Deck plugin buttons. The file (PNG/JPG/GIF/WebP) is copied to media/ and applied over the default plugin icon.",
+    "streamdeckIconScene": "Scene icon",
+    "streamdeckIconSoundboard": "Soundboard icon",
+    "streamdeckIconCounter": "Counter icon",
+    "streamdeckIconWheel": "Wheel icon",
+    "streamdeckIconStart": "Start icon",
+    "streamdeckIconBrb": "BRB icon",
+    "streamdeckIconTalk": "Talk icon",
+    "streamdeckIconEnd": "End icon",
+    "chooseFile": "Choose file",
+    "run": "Run",
+    "test": "Test",
+    "remoteHint": "Web Remote — open from your phone on the same Wi-Fi network",
+    "cameraAngles": "Camera angles (Multicam)",
+    "cameraAnglesDesc": "Permanently switch the active camera via Twitch points or manually (no timer).",
+    "addCameraAngle": "+ Add angle",
+    "cameraAngleLabel": "Angle name",
+    "cameraAngleReward": "Twitch reward name",
+    "cameraAngleScene": "OBS scene",
+    "cameraAngleSource": "Camera source",
+    "activateNow": "Enable now",
+    "cameraFilters": "Camera Effects & Filters",
+    "cameraFiltersDesc": "Toggle OBS filters (B&W, blur, pixelate, chroma key) via Twitch points or manually. Duration 0 = toggle.",
+    "addCameraFilter": "+ Add effect",
+    "cameraFilterLabel": "Effect name",
+    "cameraFilterReward": "Twitch reward name",
+    "cameraFilterSource": "OBS source",
+    "cameraFilterFilter": "OBS filter name",
+    "cameraFilterDuration": "Duration (sec)",
     "ru": "Русский",
     "en": "English"
   },
@@ -107,17 +155,17 @@
     "spinSpeed": "Spin speed"
   },
   "alert": {
-    "follow": "New follower",
-    "sub": "New subscription",
-    "giftSub": "Gifted {{count}} subscriptions",
-    "cheer": "Cheer with bits",
-    "donation": "New donation",
+    "follow": "Follower",
+    "sub": "Subscription",
+    "giftSub": "Gift: {{count}}",
+    "cheer": "Cheer",
+    "donation": "Donation",
     "wheelStart": "Giveaway",
     "wheelWinner": "Fortune Wheel",
-    "wheelStartMessage": "Participant collection started! Type {{command}}",
+    "wheelStartMessage": "Giveaway open! {{command}}",
     "cheerBits": "{{amount}} bits",
     "eliminated": "❌ Eliminated: {{name}}",
-    "finalWinner": "🎉 Grand Giveaway Winner: {{name}}!",
+    "finalWinner": "🎉 Winner: {{name}}!",
     "winner": "🏆 Winner: {{name}}!"
   },
   "wheelScene": {
@@ -149,7 +197,9 @@
     "participants": "Giveaway participants",
     "participantsDesc": "Viewer list on the overlay",
     "mic": "Microphone visualizer",
-    "micDesc": "Animated sound wave"
+    "micDesc": "Animated sound wave",
+    "death": "Death Counter",
+    "deathDesc": "Big death counter for challenge streams"
   },
   "mic": {
     "mode": "Visualization mode",
@@ -231,7 +281,9 @@
     "x": "X %",
     "y": "Y %",
     "width": "Width %",
-    "height": "Height %"
+    "height": "Height %",
+    "deathLabel": "Label",
+    "deathColor": "Number color"
   },
   "preview": {
     "goalTitle": "Goal",
@@ -247,7 +299,8 @@
     "recentFollow": "{{user}} followed",
     "chat1": "let's play!",
     "chat2": "nice overlay 🔥",
-    "chat3": "hey hey"
+    "chat3": "hey hey",
+    "death": "Deaths"
   },
   "chatWindow": {
     "title": "Chat",
@@ -322,6 +375,7 @@
     "copy": "Copy",
     "edit": "Edit",
     "remove": "Remove",
+    "close": "Close",
     "forward": "Bring forward",
     "backward": "Send backward",
     "toggleVisibility": "Show/hide",
@@ -337,7 +391,9 @@
     "startLabel": "Stream start",
     "brbLabel": "Away (BRB)",
     "endLabel": "Stream end",
-    "wheelLabel": "Fortune Wheel"
+    "wheelLabel": "Fortune Wheel",
+    "mainLabel": "Main",
+    "talkLabel": "Just Chatting"
   },
   "sceneContent": {
     "start": {
@@ -357,6 +413,38 @@
       "title": "Thanks for watching!",
       "subtitle": "See you next time",
       "timerDoneText": ""
+    },
+    "talk": {
+      "statusLabel": "JUST CHATTING",
+      "title": "Chatting with viewers",
+      "subtitle": "Ask your questions in chat!",
+      "timerDoneText": ""
     }
+  },
+  "remote": {
+    "connecting": "Connecting…",
+    "connected": "Connected",
+    "reconnecting": "Reconnecting…",
+    "scenes": "Scenes",
+    "wheel": "Fortune Wheel",
+    "deathCounter": "Death counter",
+    "testAlerts": "Test alerts",
+    "obsCommands": "OBS commands",
+    "theme": "Overlay theme",
+    "wheelStart": "Start giveaway",
+    "wheelStop": "Stop",
+    "wheelSpin": "Spin",
+    "wheelGenerate": "Generate wheel",
+    "wheelResetParticipants": "Reset participants",
+    "wheelClearResult": "Clear result",
+    "deathIncrement": "+1",
+    "deathDecrement": "−1",
+    "deathReset": "Reset",
+    "noThemes": "No themes available",
+    "noCommands": "No commands",
+    "cameras": "Cameras",
+    "noCameras": "No camera angles",
+    "filters": "Effects",
+    "noFilters": "No effects"
   }
 }

@@ -40,6 +40,7 @@
     widgetSocial: `<svg viewBox="0 0 24 24" ${stroke}><rect x="3" y="7" width="18" height="10" rx="5"/><circle cx="8" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg>`,
     widgetParticipants: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="9" cy="8" r="3"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.5c2.8.3 4.8 2.3 4.8 4.5"/></svg>`,
     widgetMic: `<svg viewBox="0 0 24 24" ${stroke}><path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 12h2"/></svg>`,
+    widgetDeath: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 3a8 8 0 0 0-8 8c0 2.6 1.1 4.3 2.4 5.6V19a1 1 0 0 0 1 1h2.6v-2h4v2H16a1 1 0 0 0 1-1v-2.4C18.9 15.3 20 13.6 20 11a8 8 0 0 0-8-8z"/><circle cx="9" cy="10.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="10.5" r="1.3" fill="currentColor" stroke="none"/><path d="M9 14h6"/></svg>`,
     palette: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.9 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.7-1.6 1.6-1.6H16a4 4 0 0 0 4-4c0-4.4-3.6-8.2-8-8.2z"/><circle cx="7.5" cy="10.5" r="1.2" fill="currentColor"/><circle cx="11" cy="7" r="1.2" fill="currentColor"/><circle cx="15.5" cy="8" r="1.2" fill="currentColor"/></svg>`,
     download: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 4v11m0 0-4-4m4 4 4-4M5 18h14"/></svg>`,
     upload: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 20V9m0 0-4 4m4-4 4 4M5 4h14"/></svg>`,
@@ -48,6 +49,7 @@
     sceneBrb: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="12" r="9"/><path d="M8 12h8M8 9h5M8 15h5"/></svg>`,
     sceneEnd: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="12" r="9"/><rect x="9" y="9" width="6" height="6" fill="currentColor" stroke="none"/></svg>`,
     sceneWheel: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M12 3v6M12 15v6M3 12h6M15 12h6M5.6 5.6l4.2 4.2M14.2 14.2l4.2 4.2M18.4 5.6l-4.2 4.2M9.8 14.2l-4.2 4.2"/></svg>`,
+    sceneTalk: `<svg viewBox="0 0 24 24" ${stroke}><path d="M4 5h16v11H8l-4 4V5z"/><path d="M8 9h8M8 12h5"/></svg>`,
     // editor chrome icons
     trash: `<svg viewBox="0 0 24 24" ${stroke}><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>`,
     eye: `<svg viewBox="0 0 24 24" ${stroke}><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>`,

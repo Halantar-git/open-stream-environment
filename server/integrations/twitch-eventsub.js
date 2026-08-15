@@ -40,6 +40,7 @@ const SUBSCRIPTIONS = [
   { type: "channel.subscribe", version: "1", condition: (id) => ({ broadcaster_user_id: id }) },
   { type: "channel.subscription.gift", version: "1", condition: (id) => ({ broadcaster_user_id: id }) },
   { type: "channel.cheer", version: "1", condition: (id) => ({ broadcaster_user_id: id }) },
+  { type: "channel.channel_points_custom_reward_redemption.add", version: "1", condition: (id) => ({ broadcaster_user_id: id }) },
 ];
 
 const TOKEN_URL = "https://id.twitch.tv/oauth2/token";
@@ -47,6 +48,23 @@ const RECONNECT_DELAY_MS = 3000;
 const AUTH_RECONNECT_DELAY_MS = 15000;
 const KEEPALIVE_TIMEOUT_MS = 35000; // keepalive_timeout_seconds=30 + buffer
 const KEEPALIVE_CHECK_MS = 5000;
+
+// Ищет ракурс камеры по названию награды Twitch (без учёта регистра и пробелов).
+function matchCameraAngle(angles, rewardTitle) {
+  const title = String(rewardTitle || "").trim().toLowerCase();
+  if (!title) return null;
+  return (Array.isArray(angles) ? angles : []).find(
+    (a) => a.twitchRewardTitle && a.twitchRewardTitle.trim().toLowerCase() === title
+  ) || null;
+}
+
+function matchCameraFilter(filters, rewardTitle) {
+  const title = String(rewardTitle || "").trim().toLowerCase();
+  if (!title) return null;
+  return (Array.isArray(filters) ? filters : []).find(
+    (f) => f.twitchRewardTitle && f.twitchRewardTitle.trim().toLowerCase() === title
+  ) || null;
+}
 
 function startTwitchEvents({ bus, state }) {
   const logger = createLogger(bus, "twitch-eventsub");
@@ -231,7 +249,7 @@ function startTwitchEvents({ bus, state }) {
         connect(reconnectUrl);
         if (old) setTimeout(() => { try { old.close(); } catch {} }, 5000);
       } else if (type === "notification") {
-        handleNotification(msg.payload, bus);
+        handleNotification(msg.payload, bus, state);
       }
       // session_keepalive: no action needed; lastMessageAt is refreshed above.
     });
@@ -285,7 +303,7 @@ async function fetchInitialStats(twitchConfig, accessToken, bus) {
   if (Object.keys(snapshot).length) bus.emit("stat_snapshot", snapshot);
 }
 
-function handleNotification(payload, bus) {
+function handleNotification(payload, bus, state) {
   const type = payload.subscription.type;
   const event = payload.event;
   switch (type) {
@@ -314,9 +332,39 @@ function handleNotification(payload, bus) {
         amount: event.bits,
       });
       break;
+    case "channel.channel_points_custom_reward_redemption.add": {
+      const rewardTitle = (event.reward && event.reward.title) || "";
+      const rewardId = (event.reward && event.reward.id) || "";
+      const user = event.user_name || "Зритель";
+      const sounds = (state.config.soundboard && state.config.soundboard.sounds) || [];
+      const sound = sounds.find((s) =>
+        (s.rewardId && s.rewardId === rewardId) ||
+        (s.rewardTitle && rewardTitle && s.rewardTitle.toLowerCase() === rewardTitle.toLowerCase())
+      );
+      if (sound) {
+        bus.emit("soundboard_play", {
+          soundId: sound.id,
+          title: sound.title || sound.rewardTitle || sound.id,
+          user,
+          audioFile: sound.audioFile,
+          imageFile: sound.imageFile,
+        });
+      }
+
+      const angle = matchCameraAngle((state.config.obs && state.config.obs.cameraAngles) || [], rewardTitle);
+      if (angle) {
+        bus.emit("camera_angle_request", { angleId: angle.id, user });
+      }
+
+      const filter = matchCameraFilter((state.config.obs && state.config.obs.cameraFilters) || [], rewardTitle);
+      if (filter) {
+        bus.emit("camera_filter_request", { filterId: filter.id, user });
+      }
+      break;
+    }
     default:
       break;
   }
 }
 
-module.exports = { startTwitchEvents };
+module.exports = { startTwitchEvents, matchCameraAngle, matchCameraFilter };

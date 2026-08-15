@@ -45,6 +45,11 @@
     OVERLAY_MIC_CONFIG: "overlay_mic_config", // { config }
     LOCALES: "locales", // { lang, locales: { ru, en } }
     TERMINAL_LOG: "terminal_log", // { timestamp, service, level, message, data }
+    REMOTE_ACTION: "remote_action", // { action, payload } — remote quick action (command + broadcast)
+    DEATH_COUNT_UPDATE: "death_count_update", // { count }
+    CAMERA_ANGLE_UPDATE: "camera_angle_update", // { activeCameraAngle }
+    CAMERA_FILTER_UPDATE: "camera_filter_update", // { filterId, active }
+    SOUNDBOARD_PLAY: "soundboard_play", // { soundId, title, user, audioFile, imageFile }
 
     // control -> server commands
     CMD_ADD_WIDGET: "cmd_add_widget", // { type }
@@ -77,9 +82,16 @@
     CMD_SET_LANGUAGE: "cmd_set_language", // { lang }
     CMD_SET_YOUTUBE_VIDEO_ID: "cmd_set_youtube_video_id", // { videoId }
     CMD_SET_INTEGRATION_ENABLED: "cmd_set_integration_enabled", // { service, enabled }
+    CMD_SET_OBS_CONFIG: "cmd_set_obs_config", // { host?, port?, password?, sceneMap? }
+    CMD_SET_SOUNDBOARD_CONFIG: "cmd_set_soundboard_config", // { config }
+    CMD_TEST_SOUNDBOARD: "cmd_test_soundboard", // { soundId }
+    CMD_SET_STREAMDECK_CONFIG: "cmd_set_streamdeck_config", // { config }
+    CMD_RUN_OBS_COMMAND: "cmd_run_obs_command", // { id }
+    CMD_SET_CAMERA_ANGLE: "cmd_set_camera_angle", // { angleId }
+    CMD_TRIGGER_CAMERA_FILTER: "cmd_trigger_camera_filter", // { filterId }
   };
 
-  const CONNECTION_SERVICES = ["twitchChat", "twitchEvents", "donationAlerts", "youtube"];
+  const CONNECTION_SERVICES = ["twitchChat", "twitchEvents", "donationAlerts", "youtube", "obs"];
 
   const ALERT_DURATIONS_MS = {
     follow: 5000,

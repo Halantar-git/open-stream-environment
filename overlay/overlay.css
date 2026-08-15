@@ -252,3 +252,57 @@ body {
   60% { opacity: 1; filter: blur(0); }
   100% { opacity: 1; transform: translateX(-50%) scale(1); }
 }
+
+/* ---------- Soundboard popup ---------- */
+.soundboard-host {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  pointer-events: none;
+}
+.soundboard-popup {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: min(720px, 80%);
+  padding: 16px 24px;
+  background: var(--panel-bg, var(--md-surface-container));
+  backdrop-filter: blur(var(--panel-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--panel-blur, 0px));
+  border: var(--panel-border, 1px solid var(--md-outline-variant));
+  border-radius: var(--panel-radius, 16px);
+  box-shadow: var(--elev-3, 0 12px 32px rgba(0,0,0,0.4)), var(--panel-glow, 0 0 0 rgba(0,0,0,0));
+  animation: soundboard-pop 4.5s cubic-bezier(0.05, 0.7, 0.1, 1) forwards;
+}
+.soundboard-popup__media {
+  width: 68px;
+  height: 68px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  overflow: hidden;
+  font-size: 36px;
+  background: var(--md-primary-container);
+}
+.soundboard-popup__media img { width: 100%; height: 100%; object-fit: contain; }
+.soundboard-popup__text {
+  font-family: var(--font-body);
+  font-size: clamp(15px, 3cqw, 22px);
+  font-weight: 600;
+  color: var(--md-on-surface);
+  line-height: 1.2;
+}
+@keyframes soundboard-pop {
+  0% { opacity: 0; transform: translateY(28px) scale(0.8); }
+  9% { opacity: 1; transform: translateY(0) scale(1.06); }
+  14% { transform: scale(1); }
+  78% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-14px) scale(0.98); }
+}

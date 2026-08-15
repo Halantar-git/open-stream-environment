@@ -24,6 +24,7 @@
   const SCENE_DEFS = {
     start: { id: "start", label: "Начало стрима", icon: "scenePlay" },
     brb: { id: "brb", label: "Отошёл (BRB)", icon: "sceneBrb" },
+    talk: { id: "talk", label: "Разговор", icon: "sceneTalk" },
     end: { id: "end", label: "Окончание стрима", icon: "sceneEnd" },
     wheel: { id: "wheel", label: "Колесо Фортуны", icon: "sceneWheel" },
   };
@@ -54,6 +55,17 @@
         showTimer: true,
         timerDuration: 300,
         timerDoneText: "Стрим возобновится прямо сейчас!",
+        showEvents: true,
+        showSocials: true,
+        socials: DEFAULT_SOCIALS.map((s) => ({ ...s })),
+      },
+      talk: {
+        statusLabel: "ОБЩАЕМСЯ",
+        title: "Разговор со зрителями",
+        subtitle: "Задавайте вопросы в чате!",
+        showTimer: false,
+        timerDuration: 0,
+        timerDoneText: "",
         showEvents: true,
         showSocials: true,
         socials: DEFAULT_SOCIALS.map((s) => ({ ...s })),

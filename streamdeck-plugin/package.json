@@ -1,0 +1,13 @@
+{
+  "name": "open-stream-environment-streamdeck",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Elgato Stream Deck plugin for Open Stream Environment",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

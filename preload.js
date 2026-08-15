@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld("desktop", {
   openChatWindow: () => ipcRenderer.invoke("app:open-chat-window"),
   changeLanguage: (lang) => ipcRenderer.invoke("app:change-language", lang),
   openWidgetEditor: (widgetId) => ipcRenderer.invoke("app:open-widget-editor", widgetId),
+  pickSoundFile: (kind) => ipcRenderer.invoke("app:pick-sound-file", kind),
   replayEvent: (id) => ipcRenderer.invoke("trigger-event-replay", id),
   db: {
     getSessions: () => ipcRenderer.invoke("db:get-sessions"),

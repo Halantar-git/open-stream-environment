@@ -15,8 +15,21 @@
  * along with this program.  If not, see <https://gnu.org>.
  */
 
-(function () {
-  const { EVENT_TYPES } = window.SharedEvents;
+/*
+  Control panel entry point.
+
+  Orchestrates the ES modules under ./modules and keeps the view logic that
+  is not a standalone concern: settings, events history, scenes, themes,
+  giveaway, export/import and the WebSocket message router.
+ */
+
+import { initLoggerPanel } from "./modules/logger-panel.js";
+import { initWsClient } from "./modules/ws-client.js";
+import { createStateManager } from "./modules/state-manager.js";
+import { initPropertiesPanel } from "./modules/properties-panel.js";
+import { initCanvasEditor } from "./modules/canvas-editor.js";
+
+const { EVENT_TYPES } = window.SharedEvents;
   const { ICONS } = window.SharedIcons;
   const { WIDGET_TYPES } = window.WidgetCatalog;
   const t = (key, params) => (window.I18n ? window.I18n.t(key, params) : key);
@@ -26,33 +39,11 @@
   const wsUrl = `ws://localhost:${port}/ws`;
   const overlayUrl = `http://localhost:${port}/overlay/overlay.html`;
 
+  const wsClient = initWsClient({ url: wsUrl, t, onMessage: handleMessage });
+  const send = wsClient.send;
+
   // ---- state ----
-  let ws;
-  let layout = [];
-  let goal = { title: "Цель", current: 0, target: 1, currency: "RUB" };
-  let connectionStatus = {};
-  let twitchChannel = "";
-  let twitchClientId = "";
-  let daClientId = "";
-  let youtubeClientId = "";
-  let youtubeVideoId = "";
-  let twitchEnabled = true;
-  let donationAlertsEnabled = true;
-  let youtubeEnabled = true;
-  let selectedId = null;
-  let pendingAdd = null; // { knownIds:Set, dropXY:{x,y}|null }
-  let appearance = { activeThemeId: "nebula", tokens: {}, themes: [] };
-  let editorPrefs = { gridSize: 5, snapEnabled: true };
-  let editingThemeId = null; // theme currently open in the editor form, or null for "new"
-  let scenes = {};
-  let topDonation = { user: "", amount: 0, currency: "RUB" };
-  let stats = { followerCount: null, subscriberCount: null };
-  let activeSceneId = "start";
-  let giveaway = { active: false, command: "!go", eliminationMode: false, winner: null, count: 0, participants: [] };
-  let participantsConfig = { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82 };
-  let wheelConfig = { musicVolume: 50 };
-  let wheelSpeedConfig = { speed: 3 };
-  let micConfig = { sensitivity: 1.5, lineWidth: 2, color: "#0060A8", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2 };
+  const state = createStateManager();
 
   // ---- dom refs ----
   const tabsEl = document.getElementById("tabs");
@@ -60,15 +51,10 @@
   const viewScenes = document.getElementById("view-scenes");
   const viewSettings = document.getElementById("view-settings");
   const libraryListEl = document.getElementById("libraryList");
-  const canvasWrapEl = document.getElementById("canvasWrap");
-  const canvasEl = document.getElementById("canvas");
-  const layersEl = document.getElementById("layers");
-  const propertiesSection = document.getElementById("propertiesSection");
-  const propertiesTitle = document.getElementById("propertiesTitle");
-  const propertiesEl = document.getElementById("properties");
-  const statusChipsEl = document.getElementById("statusChips");
   const obsUrlLabel = document.getElementById("obsUrlLabel");
   const copyUrlBtn = document.getElementById("copyUrlBtn");
+  const remoteUrlHint = document.getElementById("remoteUrlHint");
+  const remoteUrlText = document.getElementById("remoteUrlText");
   const gridSizeSelect = document.getElementById("gridSizeSelect");
   const themeGridEl = document.getElementById("themeGrid");
   const themeEditorEl = document.getElementById("themeEditor");
@@ -97,7 +83,35 @@
   const twitchEnabledSwitch = document.getElementById("twitchEnabledSwitch");
   const donationAlertsEnabledSwitch = document.getElementById("donationAlertsEnabledSwitch");
   const youtubeEnabledSwitch = document.getElementById("youtubeEnabledSwitch");
+  const obsEnabledSwitch = document.getElementById("obsEnabledSwitch");
+  const obsHostInput = document.getElementById("obsHost");
+  const obsPortInput = document.getElementById("obsPort");
+  const obsPasswordInput = document.getElementById("obsPassword");
+  const obsSceneMainInput = document.getElementById("obsSceneMain");
+  const obsSceneStartInput = document.getElementById("obsSceneStart");
+  const obsSceneBrbInput = document.getElementById("obsSceneBrb");
+  const obsSceneTalkInput = document.getElementById("obsSceneTalk");
+  const obsSceneEndInput = document.getElementById("obsSceneEnd");
+  const obsSceneWheelInput = document.getElementById("obsSceneWheel");
+  const obsCommandsList = document.getElementById("obsCommandsList");
+  const addObsCommandBtn = document.getElementById("addObsCommandBtn");
+  const cameraAnglesList = document.getElementById("cameraAnglesList");
+  const addCameraAngleBtn = document.getElementById("addCameraAngleBtn");
+  const cameraFiltersList = document.getElementById("cameraFiltersList");
+  const addCameraFilterBtn = document.getElementById("addCameraFilterBtn");
+  const soundboardEnabledSwitch = document.getElementById("soundboardEnabledSwitch");
+  const soundboardVolume = document.getElementById("soundboardVolume");
+  const soundboardVolumeValue = document.getElementById("soundboardVolumeValue");
+  const soundboardQueueSwitch = document.getElementById("soundboardQueueSwitch");
+  const soundboardList = document.getElementById("soundboardList");
+  const addSoundBtn = document.getElementById("addSoundBtn");
+  const streamdeckIconStart = document.getElementById("streamdeckIconStart");
+  const streamdeckIconBrb = document.getElementById("streamdeckIconBrb");
+  const streamdeckIconWheel = document.getElementById("streamdeckIconWheel");
+  const streamdeckIconTalk = document.getElementById("streamdeckIconTalk");
+  const streamdeckIconEnd = document.getElementById("streamdeckIconEnd");
   const appPortInput = document.getElementById("appPort");
+  const savePortBtn = document.getElementById("savePortBtn");
   const appOverlayUrlInput = document.getElementById("appOverlayUrl");
   const eventsHistoryEl = document.getElementById("eventsHistory");
   const refreshEventsBtn = document.getElementById("refreshEventsBtn");
@@ -106,11 +120,6 @@
   const eventsSearchInput = document.getElementById("eventsSearch");
   const clearEventsBtn = document.getElementById("clearEventsBtn");
   const eventsMetaEl = document.getElementById("eventsMeta");
-  const toggleTerminalBtn = document.getElementById("toggleTerminalBtn");
-  const terminalPanel = document.getElementById("terminalPanel");
-  const terminalBody = document.getElementById("terminalBody");
-  const terminalClearBtn = document.getElementById("terminalClearBtn");
-  const terminalCloseBtn = document.getElementById("terminalCloseBtn");
 
   // ---- helpers ----
   function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
@@ -122,9 +131,6 @@
   function formatMoney(n) { return Number(n || 0).toLocaleString("ru-RU"); }
   const CURRENCY_SYMBOLS = { RUB: "₽", USD: "$", EUR: "€", UAH: "₴", KZT: "₸", GBP: "£" };
   function currencySymbol(code) { return CURRENCY_SYMBOLS[String(code || "").toUpperCase()] || code || ""; }
-  function send(type, payload) {
-    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type, payload }));
-  }
   function switchHtml(id, on) {
     return `<div class="md-switch${on ? " is-on" : ""}" id="${id}"><div class="md-switch__thumb"></div></div>`;
   }
@@ -163,7 +169,7 @@
           <span class="library-card__label">${t("widgets." + def.type)}</span>
           <span class="library-card__desc">${t("widgets." + def.type + "Desc")}</span>
         </span>`;
-      card.addEventListener("click", () => addWidget(def.type, null));
+      card.addEventListener("click", () => canvasEditor.addWidget(def.type, null));
       card.addEventListener("dragstart", (e) => {
         e.dataTransfer.setData("text/widget-type", def.type);
         e.dataTransfer.effectAllowed = "copy";
@@ -172,702 +178,37 @@
     });
   }
 
-  canvasWrapEl.addEventListener("dragover", (e) => {
-    if (!e.dataTransfer.types.includes("text/widget-type")) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
-    canvasWrapEl.classList.add("is-drop-target");
-  });
-  canvasWrapEl.addEventListener("dragleave", (e) => {
-    if (e.target === canvasWrapEl) canvasWrapEl.classList.remove("is-drop-target");
-  });
-  canvasWrapEl.addEventListener("drop", (e) => {
-    e.preventDefault();
-    canvasWrapEl.classList.remove("is-drop-target");
-    const type = e.dataTransfer.getData("text/widget-type");
-    if (!type) return;
-    const rect = canvasEl.getBoundingClientRect();
-    const xPct = clamp(((e.clientX - rect.left) / rect.width) * 100, 0, 100);
-    const yPct = clamp(((e.clientY - rect.top) / rect.height) * 100, 0, 100);
-    addWidget(type, { x: xPct, y: yPct });
-  });
-
-  function addWidget(type, dropXY) {
-    pendingAdd = { knownIds: new Set(layout.map((w) => w.id)), dropXY };
-    send(EVENT_TYPES.CMD_ADD_WIDGET, { type });
-  }
-
-  // ---- canvas preview content (sample data for event-driven widgets, real data for goal) ----
-  function sampleChat() {
-    return [
-      { user: "nova_viewer", color: "#7ee0d6", message: t("preview.chat1"), badges: ["subscriber"] },
-      { user: "star_gazer", color: "#ffb0d8", message: t("preview.chat2"), badges: [] },
-      { user: "orbit_fan", color: "#c6b8ff", message: t("preview.chat3"), badges: ["moderator"] },
-    ];
-  }
-  const SAMPLE_RECENT = [
-    { kind: "donation", user: "comet_watcher", amount: 300 },
-    { kind: "sub", user: "nova_viewer" },
-    { kind: "follow", user: "star_gazer" },
-  ];
-
-  function recentTextPreview(e) {
-    const user = `<b>${e.user}</b>`;
-    switch (e.kind) {
-      case "donation": return t("preview.recentDonation", { user, amount: formatMoney(e.amount) });
-      case "sub": return t("preview.recentSub", { user });
-      case "follow": return t("preview.recentFollow", { user });
-      default: return user;
-    }
-  }
-
-  function buildCustomWidgetDocument(cfg) {
-    return `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:transparent;color:#e8e1f0;font-family:sans-serif;}${cfg.css || ""}</style></head><body>${cfg.html || ""}<script>${cfg.js || ""}</script></body></html>`;
-  }
-
-  function buildPreviewHtml(inst) {
-    const config = inst.config || {};
-    switch (inst.type) {
-      case "goal": {
-        const pct = goal.target ? Math.min(100, Math.round((goal.current / goal.target) * 100)) : 0;
-        return `<div class="widget-goal">
-          <div class="widget-goal__row">
-            <span class="widget-goal__title">${escapeHtml(goal.title || t("preview.goalTitle"))}</span>
-            <span class="widget-goal__amounts"><b>${formatMoney(goal.current)}</b> / ${formatMoney(goal.target)} ${escapeHtml(currencySymbol(goal.currency))}</span>
-          </div>
-          <div class="md-linear-progress"><div class="md-linear-progress__bar" style="width:${pct}%"></div></div>
-          ${config.showPercentage ? `<div class="widget-goal__percent">${pct}%</div>` : ""}
-        </div>`;
-      }
-      case "chat": {
-        const max = Math.min(3, config.maxMessages || 8);
-        const rows = sampleChat().slice(0, max)
-          .map((m) => {
-            const badges = config.showBadges === false ? "" : (m.badges || []).map((b) => `<span class="widget-chat__badge">${b.slice(0, 1).toUpperCase()}</span>`).join("");
-            return `<div class="widget-chat__msg">${badges}<span class="widget-chat__user" style="color:${m.color}">${m.user}</span><span class="widget-chat__colon">:</span><span class="widget-chat__text">${escapeHtml(m.message)}</span></div>`;
-          })
-          .join("");
-        return `<div class="widget-chat">${rows}</div>`;
-      }
-      case "recent": {
-        const max = Math.min(3, config.maxItems || 5);
-        const items = SAMPLE_RECENT.slice(0, max)
-          .map((e) => `<div class="widget-recent__item"><span class="widget-recent__dot" data-kind="${e.kind}"></span><span>${recentTextPreview(e)}</span></div>`)
-          .join("");
-        return `<div class="widget-recent"><div class="widget-recent__title">${t("preview.recentTitle")}</div><div class="widget-recent__list">${items}</div></div>`;
-      }
-      case "alerts":
-        return `<div class="widget-alerts-host"><div class="widget-alert" data-kind="follow">
-          <div class="widget-alert__icon">${ICONS.follow}</div>
-          <div class="widget-alert__body">
-            <div class="widget-alert__status"><span class="widget-alert__dot"></span><span class="widget-alert__kicker">${t("preview.followKicker")}</span></div>
-            <div class="widget-alert__name">nova_viewer</div>
-          </div>
-          <div class="widget-alert__lockbar"><div class="widget-alert__lockbar-fill"></div></div>
-        </div></div>`;
-      case "custom": {
-        const mode = config.mode || "text";
-        const withCard = mode !== "image" && config.showBackground !== false;
-        if (mode === "image") {
-          return config.imageUrl
-            ? `<div class="widget-custom"><img class="widget-custom__image" src="${escapeAttr(config.imageUrl)}" style="object-fit:${escapeAttr(config.imageFit || "contain")}" alt=""></div>`
-            : `<div class="widget-custom"></div>`;
-        }
-        if (mode === "html") {
-          const doc = buildCustomWidgetDocument(config);
-          return `<div class="widget-custom${withCard ? " has-card" : ""}"><iframe class="widget-custom__html" srcdoc="${escapeAttr(doc)}"></iframe></div>`;
-        }
-        const title = config.textTitle ? `<div class="widget-custom__title">${escapeHtml(config.textTitle)}</div>` : "";
-        const colorStyle = config.textColor ? ` style="color:${escapeAttr(config.textColor)}"` : "";
-        return `<div class="widget-custom${withCard ? " has-card" : ""}"><div class="widget-custom__text" data-align="${escapeAttr(config.textAlign || "center")}">${title}<div class="widget-custom__body" data-size="${escapeAttr(config.textSize || "medium")}"${colorStyle}>${escapeHtml(config.text || "")}</div></div></div>`;
-      }
-      case "stat": {
-        const metric = config.metric || "followers";
-        const sample =
-          metric === "subscribers"
-            ? { icon: ICONS.sub, label: config.label || t("preview.subscribers"), value: stats.subscriberCount != null ? formatMoney(stats.subscriberCount) : "—" }
-            : metric === "latestFollower"
-            ? { icon: ICONS.follow, label: config.label || t("preview.latestFollower"), value: "star_gazer" }
-            : metric === "latestSubscriber"
-            ? { icon: ICONS.sub, label: config.label || t("preview.latestSubscriber"), value: "nova_viewer" }
-            : metric === "topDonation"
-            ? { icon: ICONS.donation, label: config.label || t("preview.topDonation"), value: topDonation.amount > 0 ? `${topDonation.user} (${formatMoney(topDonation.amount)} ${currencySymbol(topDonation.currency)})` : t("scene.notYet") }
-            : { icon: ICONS.follow, label: config.label || t("preview.followers"), value: stats.followerCount != null ? formatMoney(stats.followerCount) : "—" };
-        return `<div class="widget-stat"><div class="widget-stat__icon">${sample.icon}</div><div class="widget-stat__info"><span class="widget-stat__label">${escapeHtml(sample.label)}</span><span class="widget-stat__value">${escapeHtml(sample.value)}</span></div></div>`;
-      }
-      case "social": {
-        const s = (config.socials || [])[0] || { platform: "TG", text: "t.me/your_channel" };
-        return `<div class="widget-social"><div class="widget-social__content"><span class="widget-social__icon">${escapeHtml(s.platform)}</span><div class="widget-social__info"><span class="widget-social__platform">${escapeHtml(s.platform)}</span><span class="widget-social__handle">${escapeHtml(s.text)}</span></div></div></div>`;
-      }
-      case "participants": {
-        const names = ["viewer_1", "viewer_2", "viewer_3", "viewer_4"].slice(0, Math.max(1, Number(participantsConfig.maxNames) || 10));
-        const chips = names.map((n) => `<span class="widget-participants__chip">${escapeHtml(n)}</span>`).join("");
-        const style = `--pw-font-size:${participantsConfig.fontSize ?? 16}px;--pw-text:${escapeAttr(participantsConfig.textColor || "#e8e1f0")};--pw-bg-opacity:${participantsConfig.backgroundOpacity ?? 82}%;`;
-        return `<div class="widget-participants" style="${style}">
-          <div class="widget-participants__title">${t("wheelScene.participantsTitle", { count: 4 })}</div>
-          <div class="widget-participants__list">${chips}</div>
-        </div>`;
-      }
-      case "mic": {
-        const color = micConfig.color || "#0060A8";
-        const opacity = micConfig.opacity ?? 0.9;
-        const width = 400;
-        const height = 80;
-        const pts = [];
-        for (let x = 0; x <= width; x += 6) {
-          const y = height / 2 + Math.sin(x * 0.045) * 22 + Math.sin(x * 0.012) * 9;
-          pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
-        }
-        const d = "M" + pts.join(" L");
-        return `<div class="widget-mic widget-mic--preview">
-          <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="width:100%;height:100%;opacity:${opacity}">
-            <path d="${d}" fill="none" stroke="${escapeAttr(color)}" stroke-width="${micConfig.lineWidth || 2}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
-          </svg>
-        </div>`;
-      }
-      default:
-        return "";
-    }
-  }
-
-  // ---- canvas render + drag/resize ----
-  function renderCanvas() {
-    canvasEl.innerHTML = "";
-    [...layout]
-      .sort((a, b) => (a.z || 0) - (b.z || 0))
-      .forEach((inst) => {
-        const box = document.createElement("div");
-        box.className = "canvas-widget" + (inst.id === selectedId ? " is-selected" : "");
-        box.dataset.id = inst.id;
-        box.style.left = inst.x + "%";
-        box.style.top = inst.y + "%";
-        box.style.width = inst.w + "%";
-        box.style.height = inst.h + "%";
-        box.style.zIndex = inst.z || 0;
-        box.style.opacity = inst.visible ? "1" : "0.35";
-
-        const label = document.createElement("div");
-        label.className = "canvas-widget__label";
-        label.textContent = t("widgets." + inst.type);
-        box.appendChild(label);
-
-        const content = document.createElement("div");
-        content.className = "canvas-widget__content";
-        content.innerHTML = buildPreviewHtml(inst);
-        box.appendChild(content);
-
-        canvasEl.appendChild(box);
-        attachDragHandlers(box, inst);
-        attachResizeHandlers(box, inst);
-      });
-  }
-
-  function applySelectionClasses() {
-    canvasEl.querySelectorAll(".canvas-widget").forEach((el) => {
-      el.classList.toggle("is-selected", el.dataset.id === selectedId);
-    });
-  }
-
-  function selectWidget(id) {
-    selectedId = id;
-    applySelectionClasses();
-    renderLayers();
-    renderProperties();
-  }
-
-  // ---- theme + grid (canvas preview only — app chrome stays fixed Nebula) ----
-
-  function applyThemeToCanvas(tokens) {
-    if (!tokens) return;
-    Object.entries(tokens).forEach(([k, v]) => canvasEl.style.setProperty(k, v));
-    canvasEl.dataset.decoration = tokens["--panel-decoration"] || "none";
-  }
-
-  function applyGridToCanvas() {
-    const size = editorPrefs.gridSize || 0;
-    canvasEl.classList.toggle("show-grid", size > 0);
-    if (size > 0) {
-      canvasEl.style.setProperty("--grid-x", (size / 100) * 960 + "px");
-      canvasEl.style.setProperty("--grid-y", (size / 100) * 540 + "px");
-    }
-  }
-
-  function snapValue(v) {
-    const size = editorPrefs.gridSize;
-    if (!editorPrefs.snapEnabled || !size) return v;
-    return Math.round(v / size) * size;
-  }
-
-  gridSizeSelect.addEventListener("change", () => {
-    const size = Number(gridSizeSelect.value);
-    send(EVENT_TYPES.CMD_SET_EDITOR_PREFS, { gridSize: size, snapEnabled: size > 0 });
-  });
-
-  function attachDragHandlers(boxEl, inst) {
-    boxEl.addEventListener("pointerdown", (e) => {
-      if (e.target.closest(".resize-handle")) return;
-      e.preventDefault();
-      selectWidget(inst.id);
-      const canvasRect = canvasEl.getBoundingClientRect();
-      const startX = e.clientX;
-      const startY = e.clientY;
-      const cur = layout.find((w) => w.id === inst.id) || inst;
-      const startXPct = cur.x;
-      const startYPct = cur.y;
-      let moved = false;
-      boxEl.classList.add("is-dragging");
-      boxEl.setPointerCapture(e.pointerId);
-
-      function onMove(ev) {
-        const dx = ev.clientX - startX;
-        const dy = ev.clientY - startY;
-        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) moved = true;
-        const dxPct = (dx / canvasRect.width) * 100;
-        const dyPct = (dy / canvasRect.height) * 100;
-        const nx = snapValue(clamp(startXPct + dxPct, 0, 100 - cur.w));
-        const ny = snapValue(clamp(startYPct + dyPct, 0, 100 - cur.h));
-        boxEl.style.left = nx + "%";
-        boxEl.style.top = ny + "%";
-        boxEl.dataset.pendingX = nx;
-        boxEl.dataset.pendingY = ny;
-      }
-      function onUp() {
-        boxEl.removeEventListener("pointermove", onMove);
-        boxEl.removeEventListener("pointerup", onUp);
-        boxEl.classList.remove("is-dragging");
-        if (moved) {
-          send(EVENT_TYPES.CMD_UPDATE_WIDGET, {
-            id: inst.id,
-            patch: { x: round1(parseFloat(boxEl.dataset.pendingX)), y: round1(parseFloat(boxEl.dataset.pendingY)) },
-          });
-        }
-      }
-      boxEl.addEventListener("pointermove", onMove);
-      boxEl.addEventListener("pointerup", onUp);
-    });
-  }
-
-  function attachResizeHandlers(boxEl, inst) {
-    ["nw", "ne", "sw", "se"].forEach((pos) => {
-      const handle = document.createElement("div");
-      handle.className = "resize-handle";
-      handle.dataset.h = pos;
-      boxEl.appendChild(handle);
-
-      handle.addEventListener("pointerdown", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        selectWidget(inst.id);
-        const canvasRect = canvasEl.getBoundingClientRect();
-        const startX = e.clientX;
-        const startY = e.clientY;
-        const cur = layout.find((w) => w.id === inst.id) || inst;
-        const start = { x: cur.x, y: cur.y, w: cur.w, h: cur.h };
-        const def = WIDGET_TYPES[inst.type] || { minW: 5, minH: 5 };
-        handle.setPointerCapture(e.pointerId);
-
-        function onMove(ev) {
-          const dxPct = ((ev.clientX - startX) / canvasRect.width) * 100;
-          const dyPct = ((ev.clientY - startY) / canvasRect.height) * 100;
-          let { x, y, w, h } = start;
-          if (pos.includes("e")) w = start.w + dxPct;
-          if (pos.includes("s")) h = start.h + dyPct;
-          if (pos.includes("w")) { w = start.w - dxPct; x = start.x + dxPct; }
-          if (pos.includes("n")) { h = start.h - dyPct; y = start.y + dyPct; }
-          w = Math.max(def.minW, w);
-          h = Math.max(def.minH, h);
-          x = clamp(x, 0, 100 - w);
-          y = clamp(y, 0, 100 - h);
-          w = snapValue(w);
-          h = snapValue(h);
-          x = snapValue(x);
-          y = snapValue(y);
-          boxEl.style.left = x + "%";
-          boxEl.style.top = y + "%";
-          boxEl.style.width = w + "%";
-          boxEl.style.height = h + "%";
-          boxEl.dataset.pendingGeo = JSON.stringify({ x, y, w, h });
-        }
-        function onUp() {
-          handle.removeEventListener("pointermove", onMove);
-          handle.removeEventListener("pointerup", onUp);
-          if (boxEl.dataset.pendingGeo) {
-            const geo = JSON.parse(boxEl.dataset.pendingGeo);
-            send(EVENT_TYPES.CMD_UPDATE_WIDGET, {
-              id: inst.id,
-              patch: { x: round1(geo.x), y: round1(geo.y), w: round1(geo.w), h: round1(geo.h) },
-            });
-            delete boxEl.dataset.pendingGeo;
-          }
-        }
-        handle.addEventListener("pointermove", onMove);
-        handle.addEventListener("pointerup", onUp);
-      });
-    });
-  }
-
-  canvasEl.addEventListener("pointerdown", (e) => {
-    if (e.target === canvasEl) selectWidget(null);
-  });
-
-  document.addEventListener("keydown", (e) => {
-    if ((e.key === "Delete" || e.key === "Backspace") && selectedId && document.activeElement.tagName !== "INPUT") {
-      send(EVENT_TYPES.CMD_REMOVE_WIDGET, { id: selectedId });
-      selectedId = null;
-    }
-  });
-
-  // ---- layers panel ----
-  function renderLayers() {
-    if (!layout.length) {
-      layersEl.innerHTML = `<div class="layers__empty">${t("editor.layersEmpty")}</div>`;
-      return;
-    }
-    layersEl.innerHTML = "";
-    [...layout]
-      .sort((a, b) => (b.z || 0) - (a.z || 0))
-      .forEach((inst) => {
-        const def = WIDGET_TYPES[inst.type] || {};
-        const row = document.createElement("div");
-        row.className = "layer-row" + (inst.id === selectedId ? " is-selected" : "");
-        row.innerHTML = `
-          <span class="layer-row__icon">${ICONS[def.icon] || ""}</span>
-          <span class="layer-row__label">${t("widgets." + (def.type || inst.type))}</span>
-          <span class="layer-row__btns">
-            <button class="layer-row__btn" data-action="forward" title="${t("common.forward")}">▲</button>
-            <button class="layer-row__btn" data-action="backward" title="${t("common.backward")}">▼</button>
-            <button class="layer-row__btn" data-action="toggle" title="${t("common.toggleVisibility")}">${ICONS[inst.visible ? "eye" : "eyeOff"]}</button>
-          </span>`;
-        row.addEventListener("click", (e) => {
-          if (e.target.closest("[data-action]")) return;
-          selectWidget(inst.id);
-        });
-        row.querySelector('[data-action="toggle"]').addEventListener("click", (e) => {
-          e.stopPropagation();
-          send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { visible: !inst.visible } });
-        });
-        row.querySelector('[data-action="forward"]').addEventListener("click", (e) => {
-          e.stopPropagation();
-          send(EVENT_TYPES.CMD_REORDER_WIDGET, { id: inst.id, direction: "forward" });
-        });
-        row.querySelector('[data-action="backward"]').addEventListener("click", (e) => {
-          e.stopPropagation();
-          send(EVENT_TYPES.CMD_REORDER_WIDGET, { id: inst.id, direction: "backward" });
-        });
-        layersEl.appendChild(row);
-      });
-  }
-
-  // ---- properties panel ----
-  function renderProperties() {
-    const inst = layout.find((w) => w.id === selectedId);
-    if (!inst) {
-      propertiesSection.hidden = true;
-      return;
-    }
-    propertiesSection.hidden = false;
-    const def = WIDGET_TYPES[inst.type] || {};
-    propertiesTitle.textContent = t("widgets." + (def.type || inst.type));
-    const config = inst.config || {};
-
-    let extraHtml = "";
-    if (inst.type === "goal") {
-      extraHtml = `
-        <div class="md-field"><label>${t("properties.goalTitle")}</label><input type="text" id="pGoalTitle" value="${escapeAttr(goal.title || "")}"></div>
-        <div class="properties__row">
-          <div class="md-field"><label>${t("properties.current")}</label><input type="number" id="pGoalCurrent" value="${goal.current || 0}"></div>
-          <div class="md-field"><label>${t("properties.target")}</label><input type="number" id="pGoalTarget" value="${goal.target || 0}"></div>
-        </div>
-        <div class="md-field"><label>${t("properties.currency")}</label><input type="text" id="pGoalCurrency" value="${escapeAttr(goal.currency || "")}"></div>
-        <div class="properties__toggle-row"><label>${t("properties.showPercent")}</label>${switchHtml("pShowPercent", !!config.showPercentage)}</div>`;
-    } else if (inst.type === "chat") {
-      extraHtml = `
-        <div class="md-field"><label>${t("properties.maxMessages")}</label><input type="number" id="pMaxMessages" min="1" max="20" value="${config.maxMessages || 8}"></div>
-        <div class="properties__toggle-row"><label>${t("properties.showBadges")}</label>${switchHtml("pShowBadges", config.showBadges !== false)}</div>`;
-    } else if (inst.type === "recent") {
-      extraHtml = `<div class="md-field"><label>${t("properties.maxItems")}</label><input type="number" id="pMaxItems" min="1" max="15" value="${config.maxItems || 5}"></div>`;
-    } else if (inst.type === "alerts") {
-      extraHtml = `
-        <div class="properties__hint">${t("properties.testAlertHint")}</div>
-        <div class="properties__test-grid">
-          <button class="md-button md-button--tonal" data-test="follow">${t("properties.testFollow")}</button>
-          <button class="md-button md-button--tonal" data-test="sub">${t("properties.testSub")}</button>
-          <button class="md-button md-button--tonal" data-test="gift_sub">${t("properties.testGift")}</button>
-          <button class="md-button md-button--tonal" data-test="cheer">${t("properties.testCheer")}</button>
-          <button class="md-button md-button--tonal" data-test="donation">${t("properties.testDonation")}</button>
-        </div>`;
-    } else if (inst.type === "stat") {
-      extraHtml = `
-        <div class="md-field"><label>${t("properties.statMetric")}</label>
-          <select id="pStatMetric">
-            <option value="followers" ${(config.metric || "followers") === "followers" ? "selected" : ""}>${t("properties.metricFollowers")}</option>
-            <option value="subscribers" ${config.metric === "subscribers" ? "selected" : ""}>${t("properties.metricSubscribers")}</option>
-            <option value="latestFollower" ${config.metric === "latestFollower" ? "selected" : ""}>${t("properties.metricLatestFollower")}</option>
-            <option value="latestSubscriber" ${config.metric === "latestSubscriber" ? "selected" : ""}>${t("properties.metricLatestSubscriber")}</option>
-            <option value="topDonation" ${config.metric === "topDonation" ? "selected" : ""}>${t("properties.metricTopDonation")}</option>
-          </select>
-        </div>
-        <div class="md-field"><label>${t("properties.statLabel")}</label><input type="text" id="pStatLabel" value="${escapeAttr(config.label || "")}"></div>
-        <div class="properties__hint">${t("properties.statHint")}</div>`;
-    } else if (inst.type === "social") {
-      extraHtml = `
-        <div class="md-field"><label>${t("properties.rotateSec")}</label><input type="number" id="pRotateSec" min="2" value="${config.rotateIntervalSec || 8}"></div>
-        <div class="md-field">
-          <label>${t("properties.socials")}</label>
-          <div class="scene-socials-list" id="pSocialsList"></div>
-          <button class="md-button md-button--text" id="pAddSocial" style="align-self:flex-start;margin-top:4px;">+ ${t("properties.addSocial")}</button>
-        </div>`;
-    } else if (inst.type === "participants") {
-      extraHtml = `
-        <div class="properties__row">
-          <div class="md-field"><label>${t("properties.showNames")}</label><input type="number" id="pPwMaxNames" min="1" max="200" value="${participantsConfig.maxNames ?? 10}"></div>
-          <div class="md-field"><label>${t("properties.fontSize")}</label><input type="number" id="pPwFontSize" min="10" max="48" value="${participantsConfig.fontSize ?? 16}"></div>
-        </div>
-        <div class="md-field"><label>${t("properties.textColor")}</label><input type="color" id="pPwTextColor" value="${escapeAttr(participantsConfig.textColor || "#e8e1f0")}"></div>
-        <div class="md-field"><label>${t("properties.backgroundOpacity")}: <span id="pPwBgOpacityValue">${participantsConfig.backgroundOpacity ?? 82}%</span></label><input type="range" id="pPwBgOpacity" min="0" max="100" value="${participantsConfig.backgroundOpacity ?? 82}"></div>
-        <div class="properties__toggle-row"><label>${t("properties.marquee")}</label>${switchHtml("pPwMarquee", !!participantsConfig.marquee)}</div>`;
-    } else if (inst.type === "mic") {
-      const mode = micConfig.visualizer_mode || "sine";
-      extraHtml = `
-        <div class="md-field"><label>${t("mic.mode")}</label>
-          <select id="pMicMode">
-            <option value="sine" ${mode === "sine" ? "selected" : ""}>${t("mic.modeSine")}</option>
-            <option value="bars" ${mode === "bars" ? "selected" : ""}>${t("mic.modeBars")}</option>
-            <option value="ring" ${mode === "ring" ? "selected" : ""}>${t("mic.modeRing")}</option>
-          </select>
-        </div>
-        <div class="md-field"><label>${t("mic.sensitivity")}: <span id="pMicSensitivityValue">${micConfig.sensitivity ?? 1.5}</span></label><input type="range" id="pMicSensitivity" min="0.2" max="6" step="0.1" value="${micConfig.sensitivity ?? 1.5}"></div>
-        <div class="md-field"><label>${t("mic.lineWidth")}: <span id="pMicLineWidthValue">${micConfig.lineWidth ?? 2}</span></label><input type="range" id="pMicLineWidth" min="1" max="12" step="0.5" value="${micConfig.lineWidth ?? 2}"></div>
-        <div class="md-field"><label>${t("mic.barCount")}: <span id="pMicBarCountValue">${micConfig.barCount ?? 32}</span></label><input type="range" id="pMicBarCount" min="10" max="64" step="1" value="${micConfig.barCount ?? 32}"></div>
-        <div class="md-field"><label>${t("mic.barGap")}: <span id="pMicBarGapValue">${micConfig.barGap ?? 2}</span></label><input type="range" id="pMicBarGap" min="0" max="12" step="0.5" value="${micConfig.barGap ?? 2}"></div>
-        <div class="md-field"><label>${t("mic.color")}</label><input type="color" id="pMicColor" value="${escapeAttr(micConfig.color || "#0060A8")}"></div>
-        <div class="md-field"><label>${t("mic.opacity")}: <span id="pMicOpacityValue">${Math.round((micConfig.opacity ?? 0.9) * 100)}%</span></label><input type="range" id="pMicOpacity" min="5" max="100" step="1" value="${Math.round((micConfig.opacity ?? 0.9) * 100)}"></div>`;
-    } else if (inst.type === "custom") {
-      const mode = config.mode || "text";
-      extraHtml = `
-        <div class="md-field"><label>${t("properties.customMode")}</label>
-          <select id="pCustomMode">
-            <option value="text" ${mode === "text" ? "selected" : ""}>${t("properties.modeText")}</option>
-            <option value="image" ${mode === "image" ? "selected" : ""}>${t("properties.modeImage")}</option>
-            <option value="html" ${mode === "html" ? "selected" : ""}>${t("properties.modeHtml")}</option>
-          </select>
-        </div>
-        <div id="pCustomFields"></div>`;
-    }
-
-    propertiesEl.innerHTML = `
-      <div class="properties__toggle-row"><label>${t("properties.visibility")}</label>${switchHtml("pVisible", inst.visible)}</div>
-      <div class="properties__row">
-        <div class="md-field"><label>${t("properties.x")}</label><input type="number" id="pX" value="${round1(inst.x)}"></div>
-        <div class="md-field"><label>${t("properties.y")}</label><input type="number" id="pY" value="${round1(inst.y)}"></div>
-      </div>
-      <div class="properties__row">
-        <div class="md-field"><label>${t("properties.width")}</label><input type="number" id="pW" value="${round1(inst.w)}"></div>
-        <div class="md-field"><label>${t("properties.height")}</label><input type="number" id="pH" value="${round1(inst.h)}"></div>
-      </div>
-      ${extraHtml}
-      <div class="properties__delete"><button class="md-button md-button--text" id="pDeleteBtn">${ICONS.trash} ${t("common.remove")}</button></div>`;
-
-    [["pX", "x"], ["pY", "y"], ["pW", "w"], ["pH", "h"]].forEach(([id, key]) => {
-      propertiesEl.querySelector("#" + id).addEventListener("change", (e) => {
-        send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { [key]: Number(e.target.value) } });
-      });
-    });
-    wireSwitch(propertiesEl.querySelector("#pVisible"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { visible: on } }));
-
-    if (inst.type === "goal") {
-      propertiesEl.querySelector("#pGoalTitle").addEventListener("change", (e) => send(EVENT_TYPES.CMD_SET_GOAL, { title: e.target.value }));
-      propertiesEl.querySelector("#pGoalCurrent").addEventListener("change", (e) => send(EVENT_TYPES.CMD_SET_GOAL, { current: Number(e.target.value) }));
-      propertiesEl.querySelector("#pGoalTarget").addEventListener("change", (e) => send(EVENT_TYPES.CMD_SET_GOAL, { target: Number(e.target.value) }));
-      propertiesEl.querySelector("#pGoalCurrency").addEventListener("change", (e) => send(EVENT_TYPES.CMD_SET_GOAL, { currency: e.target.value }));
-      wireSwitch(propertiesEl.querySelector("#pShowPercent"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showPercentage: on } } }));
-    } else if (inst.type === "chat") {
-      propertiesEl.querySelector("#pMaxMessages").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { maxMessages: Number(e.target.value) } } }));
-      wireSwitch(propertiesEl.querySelector("#pShowBadges"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showBadges: on } } }));
-    } else if (inst.type === "recent") {
-      propertiesEl.querySelector("#pMaxItems").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { maxItems: Number(e.target.value) } } }));
-    } else if (inst.type === "alerts") {
-      propertiesEl.querySelectorAll("[data-test]").forEach((btn) => btn.addEventListener("click", () => send(EVENT_TYPES.CMD_TEST_ALERT, { kind: btn.dataset.test })));
-    } else if (inst.type === "stat") {
-      propertiesEl.querySelector("#pStatMetric").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { metric: e.target.value } } }));
-      propertiesEl.querySelector("#pStatLabel").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { label: e.target.value } } }));
-    } else if (inst.type === "social") {
-      propertiesEl.querySelector("#pRotateSec").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { rotateIntervalSec: Number(e.target.value) } } }));
-      wireWidgetSocialsList(inst, config.socials || []);
-      propertiesEl.querySelector("#pAddSocial").addEventListener("click", () => {
-        send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { socials: [...(config.socials || []), { platform: "", text: "" }] } } });
-      });
-    } else if (inst.type === "participants") {
-      propertiesEl.querySelector("#pPwMaxNames").addEventListener("change", (e) => sendParticipantsConfig({ maxNames: Number(e.target.value) || 10 }));
-      propertiesEl.querySelector("#pPwFontSize").addEventListener("change", (e) => sendParticipantsConfig({ fontSize: Number(e.target.value) || 16 }));
-      propertiesEl.querySelector("#pPwTextColor").addEventListener("input", (e) => sendParticipantsConfig({ textColor: e.target.value }));
-      propertiesEl.querySelector("#pPwBgOpacity").addEventListener("input", (e) => {
-        const v = Number(e.target.value);
-        const label = propertiesEl.querySelector("#pPwBgOpacityValue");
-        if (label) label.textContent = `${v}%`;
-        sendParticipantsConfig({ backgroundOpacity: v });
-      });
-      wireSwitch(propertiesEl.querySelector("#pPwMarquee"), (on) => sendParticipantsConfig({ marquee: on }));
-    } else if (inst.type === "mic") {
-      propertiesEl.querySelector("#pMicSensitivity").addEventListener("input", (e) => {
-        const v = Number(e.target.value);
-        const label = propertiesEl.querySelector("#pMicSensitivityValue");
-        if (label) label.textContent = v.toFixed(1);
-        sendMicConfig({ sensitivity: v });
-      });
-      propertiesEl.querySelector("#pMicLineWidth").addEventListener("input", (e) => {
-        const v = Number(e.target.value);
-        const label = propertiesEl.querySelector("#pMicLineWidthValue");
-        if (label) label.textContent = v.toFixed(1);
-        sendMicConfig({ lineWidth: v });
-      });
-      propertiesEl.querySelector("#pMicColor").addEventListener("input", (e) => sendMicConfig({ color: e.target.value }));
-      propertiesEl.querySelector("#pMicOpacity").addEventListener("input", (e) => {
-        const v = Number(e.target.value);
-        const label = propertiesEl.querySelector("#pMicOpacityValue");
-        if (label) label.textContent = `${v}%`;
-        sendMicConfig({ opacity: v / 100 });
-      });
-      propertiesEl.querySelector("#pMicMode").addEventListener("change", (e) => sendMicConfig({ visualizer_mode: e.target.value }));
-      propertiesEl.querySelector("#pMicBarCount").addEventListener("input", (e) => {
-        const v = Math.round(Number(e.target.value));
-        const label = propertiesEl.querySelector("#pMicBarCountValue");
-        if (label) label.textContent = String(v);
-        sendMicConfig({ barCount: v });
-      });
-      propertiesEl.querySelector("#pMicBarGap").addEventListener("input", (e) => {
-        const v = Number(e.target.value);
-        const label = propertiesEl.querySelector("#pMicBarGapValue");
-        if (label) label.textContent = v.toFixed(1);
-        sendMicConfig({ barGap: v });
-      });
-    } else if (inst.type === "custom") {
-      wireCustomWidgetFields(inst, config);
-      document.getElementById("pCustomMode").addEventListener("change", (e) => {
-        send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { mode: e.target.value } } });
-      });
-    }
-
-    document.getElementById("pDeleteBtn").addEventListener("click", () => {
-      if (!confirm(t("common.deleteWidgetConfirm", { name: t("widgets." + (def.type || inst.type)) }))) return;
-      send(EVENT_TYPES.CMD_REMOVE_WIDGET, { id: inst.id });
-      selectedId = null;
-    });
-  }
-
-  function wireWidgetSocialsList(inst, socials) {
-    const host = document.getElementById("pSocialsList");
-    host.innerHTML = socials
-      .map(
-        (s, i) => `
-      <div class="scene-social-row">
-        <input type="text" class="platform" data-idx="${i}" data-field="platform" value="${escapeAttr(s.platform)}" maxlength="4">
-        <input type="text" class="text" data-idx="${i}" data-field="text" value="${escapeAttr(s.text)}">
-        <button class="layer-row__btn" data-action="remove-social" data-idx="${i}" title="${t("common.remove")}">${ICONS.trash}</button>
-      </div>`
-      )
-      .join("");
-    host.querySelectorAll("input").forEach((inp) => {
-      inp.addEventListener("change", () => {
-        const idx = Number(inp.dataset.idx);
-        const field = inp.dataset.field;
-        const newSocials = socials.map((s, i) => (i === idx ? { ...s, [field]: inp.value } : s));
-        send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { socials: newSocials } } });
-      });
-    });
-    host.querySelectorAll('[data-action="remove-social"]').forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const idx = Number(btn.dataset.idx);
-        const newSocials = socials.filter((_, i) => i !== idx);
-        send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { socials: newSocials } } });
-      });
-    });
-  }
-
-  function wireCustomWidgetFields(inst, config) {
-    const mode = config.mode || "text";
-    const host = document.getElementById("pCustomFields");
-    if (mode === "image") {
-      host.innerHTML = `
-        <div class="md-field"><label>${t("custom.imageUrl")}</label><input type="text" id="pImageUrl" value="${escapeAttr(config.imageUrl || "")}" placeholder="https://..."></div>
-        <div class="md-field"><label>${t("custom.imageFit")}</label>
-          <select id="pImageFit">
-            <option value="contain" ${config.imageFit !== "cover" ? "selected" : ""}>${t("custom.fitContain")}</option>
-            <option value="cover" ${config.imageFit === "cover" ? "selected" : ""}>${t("custom.fitCover")}</option>
-          </select>
-        </div>`;
-      host.querySelector("#pImageUrl").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { imageUrl: e.target.value.trim() } } }));
-      host.querySelector("#pImageFit").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { imageFit: e.target.value } } }));
-    } else if (mode === "html") {
-      host.innerHTML = `
-        <div class="properties__hint">${t("custom.htmlHint")}</div>
-        <button class="md-button md-button--filled" id="pOpenEditor" style="width:100%;justify-content:center;">${t("custom.editCode")}</button>`;
-      host.querySelector("#pOpenEditor").addEventListener("click", () => window.desktop?.openWidgetEditor(inst.id));
-    } else {
-      host.innerHTML = `
-        <div class="md-field"><label>${t("custom.textTitle")}</label><input type="text" id="pTextTitle" value="${escapeAttr(config.textTitle || "")}"></div>
-        <div class="md-field"><label>${t("custom.textBody")}</label><input type="text" id="pTextBody" value="${escapeAttr(config.text || "")}"></div>
-        <div class="properties__row">
-          <div class="md-field"><label>${t("custom.textAlign")}</label>
-            <select id="pTextAlign">
-              <option value="left" ${config.textAlign === "left" ? "selected" : ""}>${t("custom.alignLeft")}</option>
-              <option value="center" ${config.textAlign !== "left" && config.textAlign !== "right" ? "selected" : ""}>${t("custom.alignCenter")}</option>
-              <option value="right" ${config.textAlign === "right" ? "selected" : ""}>${t("custom.alignRight")}</option>
-            </select>
-          </div>
-          <div class="md-field"><label>${t("custom.textSize")}</label>
-            <select id="pTextSize">
-              <option value="small" ${config.textSize === "small" ? "selected" : ""}>${t("custom.sizeSmall")}</option>
-              <option value="medium" ${config.textSize !== "small" && config.textSize !== "large" ? "selected" : ""}>${t("custom.sizeMedium")}</option>
-              <option value="large" ${config.textSize === "large" ? "selected" : ""}>${t("custom.sizeLarge")}</option>
-            </select>
-          </div>
-        </div>
-        <div class="properties__toggle-row"><label>${t("custom.showBg")}</label>${switchHtml("pShowBg", config.showBackground !== false)}</div>`;
-      host.querySelector("#pTextTitle").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { textTitle: e.target.value } } }));
-      host.querySelector("#pTextBody").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { text: e.target.value } } }));
-      host.querySelector("#pTextAlign").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { textAlign: e.target.value } } }));
-      host.querySelector("#pTextSize").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { textSize: e.target.value } } }));
-      wireSwitch(host.querySelector("#pShowBg"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showBackground: on } } }));
-    }
-  }
-
-  // ---- status chips ----
-  const STATUS_LABEL = (service) =>
-    ({ twitchChat: t("status.twitchChat"), twitchEvents: t("status.twitchEvents"), donationAlerts: t("status.donationAlerts"), youtube: t("status.youtube") }[service] || service);
-  const STATUS_TEXT = (status) =>
-    ({ connected: t("status.connected"), connecting: t("status.connecting"), disconnected: t("status.disconnected"), error: t("status.error"), not_configured: t("status.notConfigured"), disabled: t("status.disabled") }[status] || status);
-
-  function statusClass(status) {
-    if (status === "connected") return "is-connected";
-    if (status === "error") return "is-error";
-    if (status === "connecting") return "is-pending";
-    return "";
-  }
-
-  function renderStatusChips() {
-    statusChipsEl.innerHTML = Object.entries(connectionStatus)
-      .map(([service, status]) => `<span class="md-chip ${statusClass(status)}"><span class="md-chip__dot"></span>${STATUS_LABEL(service)}</span>`)
-      .join("");
-  }
-
-  function updateSettingsChips() {
-    ["twitchChat", "twitchEvents", "donationAlerts", "youtube"].forEach((service) => {
-      const el = document.getElementById("chip-" + service);
-      if (!el) return;
-      const status = connectionStatus[service];
-      el.className = "md-chip " + statusClass(status);
-      el.querySelector(".md-chip__label").textContent = `${STATUS_LABEL(service)}: ${STATUS_TEXT(status)}`;
-    });
-  }
-
   // ---- settings view ----
   function populateSettings() {
-    twitchChannelInput.value = twitchChannel || "";
-    twitchClientIdInput.value = twitchClientId || "";
-    daClientIdInput.value = daClientId || "";
-    youtubeClientIdInput.value = youtubeClientId || "";
-    youtubeVideoIdInput.value = youtubeVideoId || "";
+    twitchChannelInput.value = state.twitchChannel || "";
+    twitchClientIdInput.value = state.twitchClientId || "";
+    daClientIdInput.value = state.daClientId || "";
+    youtubeClientIdInput.value = state.youtubeClientId || "";
+    youtubeVideoIdInput.value = state.youtubeVideoId || "";
+    if (state.obs) {
+      obsHostInput.value = state.obs.host || "";
+      obsPortInput.value = state.obs.port || 4455;
+      obsPasswordInput.value = state.obs.password || "";
+      const sm = state.obs.sceneMap || {};
+      obsSceneMainInput.value = sm.main || "";
+      obsSceneStartInput.value = sm.start || "";
+      obsSceneBrbInput.value = sm.brb || "";
+      obsSceneTalkInput.value = sm.talk || "";
+      obsSceneEndInput.value = sm.end || "";
+      obsSceneWheelInput.value = sm.wheel || "";
+    }
+    renderObsCommands();
+    renderCameraAngles();
+    renderCameraFilters();
+    if (state.soundboard) {
+      setSwitchState(soundboardEnabledSwitch, !!state.soundboard.enabled);
+      setSwitchState(soundboardQueueSwitch, !!state.soundboard.queueMode);
+      const vol = Math.round((state.soundboard.volume ?? 0.8) * 100);
+      soundboardVolume.value = vol;
+      soundboardVolumeValue.textContent = `${vol}%`;
+      renderSoundboard();
+    }
+    renderStreamDeckIcons();
     appPortInput.value = port;
     appOverlayUrlInput.value = overlayUrl;
     twitchRedirectUriEl.textContent = `http://localhost:${port}/oauth/twitch/callback`;
@@ -879,9 +220,342 @@
     send(EVENT_TYPES.CMD_SET_APP_CONFIG, { twitchChannel: twitchChannelInput.value.trim() });
   });
 
+  savePortBtn.addEventListener("click", () => {
+    const port = Number(appPortInput.value);
+    if (!port || port < 1024 || port > 65535) return;
+    send(EVENT_TYPES.CMD_SET_APP_CONFIG, { port });
+  });
+
   youtubeVideoIdInput.addEventListener("change", () => {
     send(EVENT_TYPES.CMD_SET_YOUTUBE_VIDEO_ID, { videoId: youtubeVideoIdInput.value.trim() });
   });
+
+  function sendObsConfig(patch) {
+    send(EVENT_TYPES.CMD_SET_OBS_CONFIG, patch);
+  }
+  obsHostInput.addEventListener("change", () => sendObsConfig({ host: obsHostInput.value.trim() }));
+  obsPortInput.addEventListener("change", () => sendObsConfig({ port: Number(obsPortInput.value) || 4455 }));
+  obsPasswordInput.addEventListener("change", () => sendObsConfig({ password: obsPasswordInput.value }));
+  obsSceneMainInput.addEventListener("change", () => sendObsConfig({ sceneMap: { main: obsSceneMainInput.value.trim() } }));
+  obsSceneStartInput.addEventListener("change", () => sendObsConfig({ sceneMap: { start: obsSceneStartInput.value.trim() } }));
+  obsSceneBrbInput.addEventListener("change", () => sendObsConfig({ sceneMap: { brb: obsSceneBrbInput.value.trim() } }));
+  obsSceneTalkInput.addEventListener("change", () => sendObsConfig({ sceneMap: { talk: obsSceneTalkInput.value.trim() } }));
+  obsSceneEndInput.addEventListener("change", () => sendObsConfig({ sceneMap: { end: obsSceneEndInput.value.trim() } }));
+  obsSceneWheelInput.addEventListener("change", () => sendObsConfig({ sceneMap: { wheel: obsSceneWheelInput.value.trim() } }));
+
+  function updateObsCommand(id, patch) {
+    const commands = (state.obs.customCommands || []).map((c) => (c.id === id ? { ...c, ...patch } : c));
+    sendObsConfig({ customCommands: commands });
+  }
+
+  function renderObsCommandItem(cmd) {
+    const row = document.createElement("div");
+    row.className = "obs-command-item";
+
+    const label = document.createElement("input");
+    label.type = "text";
+    label.placeholder = t("settings.obsCommandLabel");
+    label.value = cmd.label || "";
+    label.addEventListener("change", () => updateObsCommand(cmd.id, { label: label.value }));
+
+    const requestType = document.createElement("input");
+    requestType.type = "text";
+    requestType.placeholder = t("settings.obsCommandRequestType");
+    requestType.value = cmd.requestType || "";
+    requestType.addEventListener("change", () => updateObsCommand(cmd.id, { requestType: requestType.value }));
+
+    const data = document.createElement("input");
+    data.type = "text";
+    data.placeholder = '{"inputName":"Mic/Aux"}';
+    const dataJson = JSON.stringify(cmd.requestData || {});
+    data.value = dataJson === "{}" ? "" : dataJson;
+    data.addEventListener("change", () => {
+      let parsed = {};
+      try { parsed = JSON.parse(data.value || "{}"); } catch { parsed = {}; }
+      updateObsCommand(cmd.id, { requestData: parsed });
+    });
+
+    const test = document.createElement("button");
+    test.className = "md-button md-button--tonal";
+    test.textContent = "▶";
+    test.title = t("settings.run");
+    test.addEventListener("click", () => send(EVENT_TYPES.CMD_RUN_OBS_COMMAND, { id: cmd.id }));
+
+    const remove = document.createElement("button");
+    remove.className = "md-button md-button--text";
+    remove.textContent = "✕";
+    remove.title = t("common.remove");
+    remove.addEventListener("click", () => {
+      const commands = (state.obs.customCommands || []).filter((c) => c.id !== cmd.id);
+      sendObsConfig({ customCommands: commands });
+    });
+
+    row.append(label, requestType, data, test, remove);
+    return row;
+  }
+
+  function renderObsCommands() {
+    obsCommandsList.innerHTML = "";
+    (state.obs.customCommands || []).forEach((cmd) => {
+      obsCommandsList.appendChild(renderObsCommandItem(cmd));
+    });
+  }
+
+  function updateCameraAngle(id, patch) {
+    const cameraAngles = (state.obs.cameraAngles || []).map((a) => (a.id === id ? { ...a, ...patch } : a));
+    sendObsConfig({ cameraAngles });
+  }
+
+  function renderCameraAngleItem(angle) {
+    const row = document.createElement("div");
+    row.className = "camera-angle-item" + (angle.id === state.activeCameraAngle ? " is-active" : "");
+
+    const label = document.createElement("input");
+    label.type = "text";
+    label.placeholder = t("settings.cameraAngleLabel");
+    label.value = angle.label || "";
+    label.addEventListener("change", () => updateCameraAngle(angle.id, { label: label.value }));
+
+    const reward = document.createElement("input");
+    reward.type = "text";
+    reward.placeholder = t("settings.cameraAngleReward");
+    reward.value = angle.twitchRewardTitle || "";
+    reward.addEventListener("change", () => updateCameraAngle(angle.id, { twitchRewardTitle: reward.value }));
+
+    const scene = document.createElement("input");
+    scene.type = "text";
+    scene.placeholder = t("settings.cameraAngleScene");
+    scene.value = angle.sceneName || "";
+    scene.addEventListener("change", () => updateCameraAngle(angle.id, { sceneName: scene.value }));
+
+    const source = document.createElement("input");
+    source.type = "text";
+    source.placeholder = t("settings.cameraAngleSource");
+    source.value = angle.cameraSource || "";
+    source.addEventListener("change", () => updateCameraAngle(angle.id, { cameraSource: source.value }));
+
+    const activate = document.createElement("button");
+    activate.className = "md-button md-button--tonal";
+    activate.textContent = "▶";
+    activate.title = t("settings.activateNow");
+    activate.addEventListener("click", () => send(EVENT_TYPES.CMD_SET_CAMERA_ANGLE, { angleId: angle.id }));
+
+    const remove = document.createElement("button");
+    remove.className = "md-button md-button--text";
+    remove.textContent = "✕";
+    remove.title = t("common.remove");
+    remove.addEventListener("click", () => {
+      const cameraAngles = (state.obs.cameraAngles || []).filter((a) => a.id !== angle.id);
+      sendObsConfig({ cameraAngles });
+    });
+
+    row.append(label, reward, scene, source, activate, remove);
+    return row;
+  }
+
+  function renderCameraAngles() {
+    cameraAnglesList.innerHTML = "";
+    (state.obs.cameraAngles || []).forEach((angle) => {
+      cameraAnglesList.appendChild(renderCameraAngleItem(angle));
+    });
+  }
+
+  addCameraAngleBtn.addEventListener("click", () => {
+    const cameraAngles = [...(state.obs.cameraAngles || []), { id: "cam_" + Date.now(), label: "", twitchRewardTitle: "", sceneName: "", cameraSource: "" }];
+    sendObsConfig({ cameraAngles });
+  });
+
+  function updateCameraFilter(id, patch) {
+    const cameraFilters = (state.obs.cameraFilters || []).map((f) => (f.id === id ? { ...f, ...patch } : f));
+    sendObsConfig({ cameraFilters });
+  }
+
+  function renderCameraFilterItem(filter) {
+    const row = document.createElement("div");
+    row.className = "camera-filter-item" + ((state.activeFilters || []).includes(filter.id) ? " is-active" : "");
+
+    const label = document.createElement("input");
+    label.type = "text";
+    label.placeholder = t("settings.cameraFilterLabel");
+    label.value = filter.label || "";
+    label.addEventListener("change", () => updateCameraFilter(filter.id, { label: label.value }));
+
+    const reward = document.createElement("input");
+    reward.type = "text";
+    reward.placeholder = t("settings.cameraFilterReward");
+    reward.value = filter.twitchRewardTitle || "";
+    reward.addEventListener("change", () => updateCameraFilter(filter.id, { twitchRewardTitle: reward.value }));
+
+    const source = document.createElement("input");
+    source.type = "text";
+    source.placeholder = t("settings.cameraFilterSource");
+    source.value = filter.sourceName || "";
+    source.addEventListener("change", () => updateCameraFilter(filter.id, { sourceName: source.value }));
+
+    const filterName = document.createElement("input");
+    filterName.type = "text";
+    filterName.placeholder = t("settings.cameraFilterFilter");
+    filterName.value = filter.filterName || "";
+    filterName.addEventListener("change", () => updateCameraFilter(filter.id, { filterName: filterName.value }));
+
+    const duration = document.createElement("input");
+    duration.type = "number";
+    duration.min = "0";
+    duration.placeholder = t("settings.cameraFilterDuration");
+    duration.value = filter.durationSec || 0;
+    duration.addEventListener("change", () => updateCameraFilter(filter.id, { durationSec: Math.max(0, Number(duration.value) || 0) }));
+
+    const test = document.createElement("button");
+    test.className = "md-button md-button--tonal";
+    test.textContent = "▶";
+    test.title = t("settings.test");
+    test.addEventListener("click", () => send(EVENT_TYPES.CMD_TRIGGER_CAMERA_FILTER, { filterId: filter.id }));
+
+    const remove = document.createElement("button");
+    remove.className = "md-button md-button--text";
+    remove.textContent = "✕";
+    remove.title = t("common.remove");
+    remove.addEventListener("click", () => {
+      const cameraFilters = (state.obs.cameraFilters || []).filter((f) => f.id !== filter.id);
+      sendObsConfig({ cameraFilters });
+    });
+
+    row.append(label, reward, source, filterName, duration, test, remove);
+    return row;
+  }
+
+  function renderCameraFilters() {
+    cameraFiltersList.innerHTML = "";
+    (state.obs.cameraFilters || []).forEach((filter) => {
+      cameraFiltersList.appendChild(renderCameraFilterItem(filter));
+    });
+  }
+
+  addCameraFilterBtn.addEventListener("click", () => {
+    const cameraFilters = [...(state.obs.cameraFilters || []), { id: "f_" + Date.now(), label: "", twitchRewardTitle: "", sourceName: "", filterName: "", durationSec: 0 }];
+    sendObsConfig({ cameraFilters });
+  });
+
+  addObsCommandBtn.addEventListener("click", () => {
+    const commands = [...(state.obs.customCommands || []), { id: "cmd_" + Date.now(), label: "", requestType: "", requestData: {} }];
+    sendObsConfig({ customCommands: commands });
+  });
+
+  function sendSoundboardConfig(patch) {
+    send(EVENT_TYPES.CMD_SET_SOUNDBOARD_CONFIG, { config: patch });
+  }
+
+  function sendStreamDeckConfig(patch) {
+    send(EVENT_TYPES.CMD_SET_STREAMDECK_CONFIG, { config: patch });
+  }
+
+  function makeStreamDeckIconField(container, key, placeholder) {
+    const icons = (state.streamdeck && state.streamdeck.icons) || {};
+    const field = makeSoundFileInput(icons[key] || "", placeholder, "image", (v) => {
+      sendStreamDeckConfig({ icons: { [key]: v } });
+    });
+    container.innerHTML = "";
+    container.appendChild(field);
+  }
+
+  function renderStreamDeckIcons() {
+    makeStreamDeckIconField(streamdeckIconStart, "start", "media/...png");
+    makeStreamDeckIconField(streamdeckIconBrb, "brb", "media/...png");
+    makeStreamDeckIconField(streamdeckIconWheel, "wheel", "media/...png");
+    makeStreamDeckIconField(streamdeckIconTalk, "talk", "media/...png");
+    makeStreamDeckIconField(streamdeckIconEnd, "end", "media/...png");
+  }
+
+  function makeSoundFileInput(value, placeholder, kind, onChange) {
+    const wrap = document.createElement("div");
+    wrap.className = "sb-file";
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = placeholder;
+    input.value = value;
+    input.addEventListener("change", () => onChange(input.value));
+
+    const browse = document.createElement("button");
+    browse.className = "md-button md-button--text";
+    browse.textContent = "📁";
+    browse.title = t("settings.chooseFile");
+    browse.addEventListener("click", async () => {
+      if (!window.desktop || !window.desktop.pickSoundFile) return;
+      const res = await window.desktop.pickSoundFile(kind);
+      if (res && res.ok && res.relativePath) {
+        input.value = res.relativePath;
+        onChange(res.relativePath);
+      }
+    });
+
+    wrap.append(input, browse);
+    return wrap;
+  }
+
+  function renderSoundboardItem(sound) {
+    const row = document.createElement("div");
+    row.className = "soundboard-item";
+
+    const reward = document.createElement("input");
+    reward.type = "text";
+    reward.placeholder = t("settings.soundReward");
+    reward.value = sound.rewardTitle || "";
+    reward.addEventListener("change", () => {
+      const sounds = (state.soundboard.sounds || []).map((s) => (s.id === sound.id ? { ...s, rewardTitle: reward.value } : s));
+      sendSoundboardConfig({ sounds });
+    });
+
+    const audioWrap = makeSoundFileInput(sound.audioFile || "", "media/...mp3", "audio", (v) => {
+      const sounds = (state.soundboard.sounds || []).map((s) => (s.id === sound.id ? { ...s, audioFile: v } : s));
+      sendSoundboardConfig({ sounds });
+    });
+
+    const imageWrap = makeSoundFileInput(sound.imageFile || "", "media/...gif", "image", (v) => {
+      const sounds = (state.soundboard.sounds || []).map((s) => (s.id === sound.id ? { ...s, imageFile: v } : s));
+      sendSoundboardConfig({ sounds });
+    });
+
+    const test = document.createElement("button");
+    test.className = "md-button md-button--tonal";
+    test.textContent = "▶";
+    test.title = t("settings.test");
+    test.addEventListener("click", () => send(EVENT_TYPES.CMD_TEST_SOUNDBOARD, { soundId: sound.id }));
+
+    const remove = document.createElement("button");
+    remove.className = "md-button md-button--text";
+    remove.textContent = "✕";
+    remove.title = t("common.remove");
+    remove.addEventListener("click", () => {
+      const sounds = (state.soundboard.sounds || []).filter((s) => s.id !== sound.id);
+      sendSoundboardConfig({ sounds });
+    });
+
+    row.append(reward, audioWrap, imageWrap, test, remove);
+    return row;
+  }
+
+  function renderSoundboard() {
+    soundboardList.innerHTML = "";
+    (state.soundboard.sounds || []).forEach((sound) => {
+      soundboardList.appendChild(renderSoundboardItem(sound));
+    });
+  }
+
+  addSoundBtn.addEventListener("click", () => {
+    const sounds = [...(state.soundboard.sounds || []), { id: "sound_" + Date.now(), rewardTitle: "", rewardId: "", audioFile: "", imageFile: "", title: "" }];
+    sendSoundboardConfig({ sounds });
+  });
+
+  soundboardVolume.addEventListener("input", (e) => {
+    soundboardVolumeValue.textContent = `${e.target.value}%`;
+  });
+  soundboardVolume.addEventListener("change", (e) => {
+    sendSoundboardConfig({ volume: Number(e.target.value) / 100 });
+  });
+
+  wireSwitch(soundboardQueueSwitch, (on) => sendSoundboardConfig({ queueMode: on }));
+  wireSwitch(soundboardEnabledSwitch, (on) => sendSoundboardConfig({ enabled: on }));
 
   document.getElementById("connectTwitchBtn").addEventListener("click", () => {
     window.desktop?.connectTwitch({
@@ -913,12 +587,13 @@
   }
 
   function syncIntegrationSwitches() {
-    setSwitchState(twitchEnabledSwitch, twitchEnabled);
-    setSwitchState(donationAlertsEnabledSwitch, donationAlertsEnabled);
-    setSwitchState(youtubeEnabledSwitch, youtubeEnabled);
+    setSwitchState(twitchEnabledSwitch, state.twitchEnabled);
+    setSwitchState(donationAlertsEnabledSwitch, state.donationAlertsEnabled);
+    setSwitchState(youtubeEnabledSwitch, state.youtubeEnabled);
+    setSwitchState(obsEnabledSwitch, state.obs ? !!state.obs.enabled : false);
   }
 
-  [[twitchEnabledSwitch, "twitch"], [donationAlertsEnabledSwitch, "donationAlerts"], [youtubeEnabledSwitch, "youtube"]].forEach(([el, service]) => {
+  [[twitchEnabledSwitch, "twitch"], [donationAlertsEnabledSwitch, "donationAlerts"], [youtubeEnabledSwitch, "youtube"], [obsEnabledSwitch, "obs"]].forEach(([el, service]) => {
     if (!el) return;
     el.addEventListener("click", () => {
       const on = !el.classList.contains("is-on");
@@ -928,9 +603,9 @@
   });
   document.getElementById("resetLayoutBtn").addEventListener("click", () => {
     if (!confirm(t("common.resetLayoutConfirm"))) return;
-    layout.forEach((w) => send(EVENT_TYPES.CMD_REMOVE_WIDGET, { id: w.id }));
+    state.layout.forEach((w) => send(EVENT_TYPES.CMD_REMOVE_WIDGET, { id: w.id }));
     ["recent", "alerts", "goal", "chat"].forEach((type) => send(EVENT_TYPES.CMD_ADD_WIDGET, { type }));
-    selectedId = null;
+    state.selectedId = null;
   });
 
   // ---- events history ----
@@ -1057,16 +732,16 @@
     const commandEl = document.getElementById("giveawayCommand");
     if (!commandEl) return; // wheel scene form not currently rendered
     if (document.activeElement !== commandEl) {
-      commandEl.value = giveaway.command || "!go";
+      commandEl.value = state.giveaway.command || "!go";
     }
     const countEl = document.getElementById("giveawayCount");
     const chipEl = document.getElementById("giveawayChip");
     const listEl = document.getElementById("giveawayParticipants");
     const eliminationEl = document.getElementById("giveawayElimination");
-    if (countEl) countEl.textContent = `${t("giveaway.participants")}: ${giveaway.count}`;
-    if (chipEl) chipEl.className = "md-chip " + (giveaway.active ? "is-pending" : "");
+    if (countEl) countEl.textContent = `${t("giveaway.participants")}: ${state.giveaway.count}`;
+    if (chipEl) chipEl.className = "md-chip " + (state.giveaway.active ? "is-pending" : "");
 
-    const items = giveaway.participants || [];
+    const items = state.giveaway.participants || [];
     if (listEl) {
       listEl.innerHTML = items.length
         ? items.map((u) => `
@@ -1077,8 +752,8 @@
         : '<div class="events-history__empty">' + t("giveaway.noParticipants") + '</div>';
     }
 
-    if (eliminationEl && eliminationEl.classList.contains("is-on") !== !!giveaway.eliminationMode) {
-      eliminationEl.classList.toggle("is-on", !!giveaway.eliminationMode);
+    if (eliminationEl && eliminationEl.classList.contains("is-on") !== !!state.giveaway.eliminationMode) {
+      eliminationEl.classList.toggle("is-on", !!state.giveaway.eliminationMode);
     }
   }
 
@@ -1112,23 +787,56 @@
 
   // ---- participants widget settings ----
   function sendParticipantsConfig(patch) {
-    participantsConfig = { ...participantsConfig, ...patch };
-    send(EVENT_TYPES.CMD_SET_PARTICIPANTS_CONFIG, { config: participantsConfig });
+    state.participantsConfig = { ...state.participantsConfig, ...patch };
+    send(EVENT_TYPES.CMD_SET_PARTICIPANTS_CONFIG, { config: state.participantsConfig });
   }
 
   // ---- microphone visualizer widget settings ----
   function sendMicConfig(patch) {
-    micConfig = { ...micConfig, ...patch };
-    send(EVENT_TYPES.CMD_SET_MIC_CONFIG, { config: micConfig });
+    state.micConfig = { ...state.micConfig, ...patch };
+    send(EVENT_TYPES.CMD_SET_MIC_CONFIG, { config: state.micConfig });
   }
+
+  // ---- properties panel (extracted module) ----
+  const propertiesPanel = initPropertiesPanel({
+    state,
+    t,
+    ICONS,
+    WIDGET_TYPES,
+    EVENT_TYPES,
+    send,
+    switchHtml,
+    wireSwitch,
+    escapeAttr,
+    round1,
+    sendParticipantsConfig,
+    sendMicConfig,
+  });
+
+  // ---- canvas editor (extracted module) ----
+  const canvasEditor = initCanvasEditor({
+    state,
+    t,
+    ICONS,
+    WIDGET_TYPES,
+    EVENT_TYPES,
+    send,
+    clamp,
+    round1,
+    escapeHtml,
+    escapeAttr,
+    formatMoney,
+    currencySymbol,
+    onSelectionChange: () => propertiesPanel.render(),
+  });
 
   // ---- appearance: theme picker + custom theme editor ----
 
   function renderThemeGrid() {
     themeGridEl.innerHTML = "";
-    (appearance.themes || []).forEach((theme) => {
+    (state.appearance.themes || []).forEach((theme) => {
       const card = document.createElement("div");
-      card.className = "theme-swatch" + (theme.id === appearance.activeThemeId ? " is-active" : "");
+      card.className = "theme-swatch" + (theme.id === state.appearance.activeThemeId ? " is-active" : "");
       const dotColors = theme.builtin
         ? BuiltinThemes.BUILTIN_THEMES[theme.id].tokens
         : null;
@@ -1169,7 +877,7 @@
   }
 
   function openThemeEditor(theme) {
-    editingThemeId = theme ? theme.id : null;
+    state.editingThemeId = theme ? theme.id : null;
     const seeds = theme && theme.seeds
       ? theme.seeds
       : { primary: "#c6b8ff", secondary: "#7ee0d6", tertiary: "#ffb0d8", surfaceSeed: "#8878c8", shapeMode: "rounded", fontPreset: "nebula" };
@@ -1211,7 +919,7 @@
         shapeMode: document.getElementById("seedShape").value,
         fontPreset: document.getElementById("seedFont").value,
       };
-      applyThemeToCanvas(ThemeEngine.buildThemeTokens(liveSeeds));
+      canvasEditor.applyThemeToCanvas(ThemeEngine.buildThemeTokens(liveSeeds));
       return liveSeeds;
     };
     themeEditorEl.querySelectorAll("input, select").forEach((el) => el.addEventListener("input", previewFromForm));
@@ -1219,7 +927,7 @@
     document.getElementById("saveThemeBtn").addEventListener("click", () => {
       const liveSeeds = previewFromForm();
       send(EVENT_TYPES.CMD_SAVE_CUSTOM_THEME, {
-        id: editingThemeId,
+        id: state.editingThemeId,
         name: document.getElementById("themeName").value.trim() || t("themeEditor.myTheme"),
         seeds: liveSeeds,
       });
@@ -1231,10 +939,10 @@
   }
 
   function closeThemeEditor() {
-    editingThemeId = null;
+    state.editingThemeId = null;
     themeEditorEl.hidden = true;
     themeEditorEl.innerHTML = "";
-    applyThemeToCanvas(appearance.tokens); // revert live-preview back to the actually active theme
+    canvasEditor.applyThemeToCanvas(state.appearance.tokens); // revert live-preview back to the actually active theme
   }
 
   newThemeBtn.addEventListener("click", () => openThemeEditor(null));
@@ -1264,7 +972,7 @@
     if (res.canceled) return;
     if (res.ok) {
       showExportImportStatus(t("settings.imported"), false);
-      selectedId = null;
+      state.selectedId = null;
     } else {
       showExportImportStatus(t("settings.importFailed", { error: res.error }), true);
     }
@@ -1281,7 +989,7 @@
     scenesNavListEl.innerHTML = "";
     Object.values(SceneCatalog.SCENE_DEFS).forEach((def) => {
       const card = document.createElement("div");
-      card.className = "library-card" + (def.id === activeSceneId ? " is-active" : "");
+      card.className = "library-card" + (def.id === state.activeSceneId ? " is-active" : "");
       card.innerHTML = `<span class="library-card__icon">${ICONS[def.icon] || ""}</span><span class="library-card__text"><span class="library-card__label">${t("scene." + def.id + "Label")}</span></span>`;
       card.addEventListener("click", () => selectScene(def.id));
       scenesNavListEl.appendChild(card);
@@ -1289,7 +997,7 @@
   }
 
   function selectScene(id) {
-    activeSceneId = id;
+    state.activeSceneId = id;
     const url = sceneUrl(id);
     if (scenesPreviewFrame.src !== url) scenesPreviewFrame.src = url;
     sceneUrlLabel.textContent = url;
@@ -1298,19 +1006,19 @@
   }
 
   function sendSceneUpdate(patch) {
-    send(EVENT_TYPES.CMD_SET_SCENE_CONFIG, { sceneId: activeSceneId, patch });
+    send(EVENT_TYPES.CMD_SET_SCENE_CONFIG, { sceneId: state.activeSceneId, patch });
   }
 
   function renderSceneForm() {
-    const scene = scenes[activeSceneId];
+    const scene = state.scenes[state.activeSceneId];
     if (!scene) return;
-    const def = SceneCatalog.SCENE_DEFS[activeSceneId];
+    const def = SceneCatalog.SCENE_DEFS[state.activeSceneId];
     sceneFormTitle.textContent = t("scene." + def.id + "Label");
 
-    if (activeSceneId === "wheel") {
+    if (state.activeSceneId === "wheel") {
       sceneFormEl.innerHTML = `
-        <div class="md-field"><label>${t("giveaway.command")}</label><input type="text" id="giveawayCommand" placeholder="!go" value="${escapeAttr(giveaway.command || "!go")}"></div>
-        <div class="settings__statuses"><span class="md-chip" id="giveawayChip"><span class="md-chip__dot"></span><span id="giveawayCount">${t("giveaway.participants")}: ${giveaway.count}</span></span></div>
+        <div class="md-field"><label>${t("giveaway.command")}</label><input type="text" id="giveawayCommand" placeholder="!go" value="${escapeAttr(state.giveaway.command || "!go")}"></div>
+        <div class="settings__statuses"><span class="md-chip" id="giveawayChip"><span class="md-chip__dot"></span><span id="giveawayCount">${t("giveaway.participants")}: ${state.giveaway.count}</span></span></div>
         <div class="properties__test-grid">
           <button class="md-button md-button--filled" id="startGiveawayBtn">${t("giveaway.start")}</button>
           <button class="md-button md-button--outlined" id="stopGiveawayBtn">${t("giveaway.stop")}</button>
@@ -1318,7 +1026,7 @@
           <button class="md-button md-button--tonal" id="generateWheelBtn">${t("giveaway.generateWheel")}</button>
           <button class="md-button md-button--filled" id="spinWheelBtn">${t("giveaway.spinWheel")}</button>
         </div>
-        <div class="properties__toggle-row"><label>${t("giveaway.eliminationMode")}</label>${switchHtml("giveawayElimination", !!giveaway.eliminationMode)}</div>
+        <div class="properties__toggle-row"><label>${t("giveaway.eliminationMode")}</label>${switchHtml("giveawayElimination", !!state.giveaway.eliminationMode)}</div>
         <div class="giveaway-manual">
           <input type="text" id="giveawayManualName" placeholder="${t("giveaway.participantPlaceholder")}" />
         </div>
@@ -1327,20 +1035,20 @@
 
         <div class="inspector__title" style="margin-top:10px;">${t("giveaway.participantsWidgetTitle")}</div>
         <div class="properties__row">
-          <div class="md-field"><label>${t("giveaway.showNames")}</label><input type="number" id="wsMaxNames" min="1" max="200" value="${participantsConfig.maxNames ?? 10}"></div>
-          <div class="md-field"><label>${t("giveaway.fontSize")} (px)</label><input type="number" id="wsFontSize" min="10" max="48" value="${participantsConfig.fontSize ?? 16}"></div>
+          <div class="md-field"><label>${t("giveaway.showNames")}</label><input type="number" id="wsMaxNames" min="1" max="200" value="${state.participantsConfig.maxNames ?? 10}"></div>
+          <div class="md-field"><label>${t("giveaway.fontSize")} (px)</label><input type="number" id="wsFontSize" min="10" max="48" value="${state.participantsConfig.fontSize ?? 16}"></div>
         </div>
-        <div class="md-field"><label>${t("giveaway.textColor")}</label><input type="color" id="wsTextColor" value="${escapeAttr(participantsConfig.textColor || "#e8e1f0")}"></div>
-        <div class="md-field"><label>${t("giveaway.backgroundOpacity")}: <span id="wsBgOpacityValue">${participantsConfig.backgroundOpacity ?? 82}%</span></label><input type="range" id="wsBgOpacity" min="0" max="100" value="${participantsConfig.backgroundOpacity ?? 82}"></div>
+        <div class="md-field"><label>${t("giveaway.textColor")}</label><input type="color" id="wsTextColor" value="${escapeAttr(state.participantsConfig.textColor || "#e8e1f0")}"></div>
+        <div class="md-field"><label>${t("giveaway.backgroundOpacity")}: <span id="wsBgOpacityValue">${state.participantsConfig.backgroundOpacity ?? 82}%</span></label><input type="range" id="wsBgOpacity" min="0" max="100" value="${state.participantsConfig.backgroundOpacity ?? 82}"></div>
         <div class="properties__row">
-          <div class="md-field"><label>X: <span id="wsXValue">${participantsConfig.x ?? 1.25}%</span></label><input type="range" id="wsX" min="0" max="100" step="0.25" value="${participantsConfig.x ?? 1.25}"></div>
-          <div class="md-field"><label>Y: <span id="wsYValue">${participantsConfig.y ?? 50}%</span></label><input type="range" id="wsY" min="0" max="100" step="0.25" value="${participantsConfig.y ?? 50}"></div>
+          <div class="md-field"><label>X: <span id="wsXValue">${state.participantsConfig.x ?? 1.25}%</span></label><input type="range" id="wsX" min="0" max="100" step="0.25" value="${state.participantsConfig.x ?? 1.25}"></div>
+          <div class="md-field"><label>Y: <span id="wsYValue">${state.participantsConfig.y ?? 50}%</span></label><input type="range" id="wsY" min="0" max="100" step="0.25" value="${state.participantsConfig.y ?? 50}"></div>
         </div>
-        <div class="properties__toggle-row"><label>${t("giveaway.marquee")}</label>${switchHtml("wsMarquee", !!participantsConfig.marquee)}</div>
+        <div class="properties__toggle-row"><label>${t("giveaway.marquee")}</label>${switchHtml("wsMarquee", !!state.participantsConfig.marquee)}</div>
 
         <div class="inspector__title" style="margin-top:10px;">${t("giveaway.wheelSettings")}</div>
-        <div class="md-field"><label>${t("giveaway.musicVolume")}: <span id="wsMusicVolumeValue">${wheelConfig.musicVolume ?? 50}%</span></label><input type="range" id="wsMusicVolume" min="0" max="100" value="${wheelConfig.musicVolume ?? 50}"></div>
-        <div class="md-field"><label>${t("giveaway.spinSpeed")}: <span id="wsSpeedValue">${wheelSpeedConfig.speed ?? 3}</span></label><input type="range" id="wsSpeed" min="1" max="5" value="${wheelSpeedConfig.speed ?? 3}"></div>
+        <div class="md-field"><label>${t("giveaway.musicVolume")}: <span id="wsMusicVolumeValue">${state.wheelConfig.musicVolume ?? 50}%</span></label><input type="range" id="wsMusicVolume" min="0" max="100" value="${state.wheelConfig.musicVolume ?? 50}"></div>
+        <div class="md-field"><label>${t("giveaway.spinSpeed")}: <span id="wsSpeedValue">${state.wheelSpeedConfig.speed ?? 3}</span></label><input type="range" id="wsSpeed" min="1" max="5" value="${state.wheelSpeedConfig.speed ?? 3}"></div>
       `;
 
       renderGiveaway();
@@ -1369,14 +1077,14 @@
       sceneFormEl.querySelector("#wsMusicVolume").addEventListener("input", (e) => {
         const v = Number(e.target.value);
         sceneFormEl.querySelector("#wsMusicVolumeValue").textContent = `${v}%`;
-        wheelConfig = { ...wheelConfig, musicVolume: v };
-        send(EVENT_TYPES.CMD_SET_WHEEL_CONFIG, { config: wheelConfig });
+        state.wheelConfig = { ...state.wheelConfig, musicVolume: v };
+        send(EVENT_TYPES.CMD_SET_WHEEL_CONFIG, { config: state.wheelConfig });
       });
       sceneFormEl.querySelector("#wsSpeed").addEventListener("input", (e) => {
         const v = Number(e.target.value);
         sceneFormEl.querySelector("#wsSpeedValue").textContent = `${v}`;
-        wheelSpeedConfig = { ...wheelSpeedConfig, speed: v };
-        send(EVENT_TYPES.CMD_SET_WHEEL_SPEED_CONFIG, { config: wheelSpeedConfig });
+        state.wheelSpeedConfig = { ...state.wheelSpeedConfig, speed: v };
+        send(EVENT_TYPES.CMD_SET_WHEEL_SPEED_CONFIG, { config: state.wheelSpeedConfig });
       });
       return;
     }
@@ -1396,7 +1104,7 @@
         <button class="md-button md-button--text" id="sAddSocial" style="align-self:flex-start;margin-top:4px;">+ ${t("sceneForm.addSocial")}</button>
       </div>
       <div class="inspector__title" style="margin-top:4px;">${t("sceneForm.topDonation")}</div>
-      <div class="properties__hint">${topDonation.amount > 0 ? `${escapeHtml(topDonation.user)} — ${formatMoney(topDonation.amount)} ${escapeHtml(currencySymbol(topDonation.currency))}` : t("sceneForm.noDonations")}</div>
+      <div class="properties__hint">${state.topDonation.amount > 0 ? `${escapeHtml(state.topDonation.user)} — ${formatMoney(state.topDonation.amount)} ${escapeHtml(currencySymbol(state.topDonation.currency))}` : t("sceneForm.noDonations")}</div>
       <button class="md-button md-button--outlined" id="sResetTopDonation">${t("sceneForm.resetTopDonation")}</button>
     `;
 
@@ -1447,7 +1155,7 @@
 
   copySceneUrlBtn.textContent = t("scenes.copyUrl");
   copySceneUrlBtn.addEventListener("click", () => {
-    navigator.clipboard.writeText(sceneUrl(activeSceneId));
+    navigator.clipboard.writeText(sceneUrl(state.activeSceneId));
     copySceneUrlBtn.textContent = t("scenes.copied");
     setTimeout(() => (copySceneUrlBtn.textContent = t("scenes.copyUrl")), 1400);
   });
@@ -1470,9 +1178,23 @@
     setTimeout(() => (copyUrlBtn.textContent = t("editor.copyUrl")), 1400);
   });
 
+  remoteUrlHint.addEventListener("click", () => {
+    const url = remoteUrlText.textContent;
+    if (!url || url === "—") return;
+    navigator.clipboard.writeText(url);
+    remoteUrlText.textContent = t("editor.copied");
+    setTimeout(() => (remoteUrlText.textContent = url), 1400);
+  });
+
   const openChatWindowBtn = document.getElementById("openChatWindowBtn");
   openChatWindowBtn.innerHTML = `${ICONS.widgetChat} ${t("editor.chat")}`;
   openChatWindowBtn.addEventListener("click", () => window.desktop?.openChatWindow());
+
+  const testChatBtn = document.getElementById("testChatBtn");
+  if (testChatBtn) {
+    testChatBtn.innerHTML = `${ICONS.widgetChat} ${t("editor.testChat")}`;
+    testChatBtn.addEventListener("click", () => send(EVENT_TYPES.CMD_TEST_CHAT, { count: 6 }));
+  }
 
   const openBoostyBtn = document.getElementById("openBoostyBtn");
   if (openBoostyBtn) {
@@ -1488,194 +1210,111 @@
     });
   });
 
-  // ---- terminal ----
-  const TERMINAL_MAX_LINES = 500;
-  let terminalAtBottom = true;
-
-  function formatTerminalTime(ts) {
-    const d = new Date(Number(ts) || Date.now());
-    return d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  }
-
-  function serializeTerminalData(data) {
-    if (data === null || data === undefined) return "";
-    if (typeof data === "string") return data;
-    try {
-      const s = JSON.stringify(data);
-      return s && s !== "{}" ? s : "";
-    } catch {
-      return String(data);
-    }
-  }
-
-  function appendTerminalLine(entry) {
-    if (!terminalBody || !entry) return;
-
-    const line = document.createElement("div");
-    line.className = `terminal-line terminal-line--${entry.level || "info"}`;
-    line.dataset.service = entry.service || "server";
-
-    const time = document.createElement("span");
-    time.className = "terminal-line__time";
-    time.textContent = formatTerminalTime(entry.timestamp);
-
-    const service = document.createElement("span");
-    service.className = "terminal-line__service";
-    service.textContent = entry.service || "server";
-
-    const level = document.createElement("span");
-    level.className = "terminal-line__level";
-    level.textContent = String(entry.level || "info").toUpperCase();
-
-    const message = document.createElement("span");
-    message.className = "terminal-line__message";
-    message.textContent = entry.message || "";
-
-    line.append(time, service, level, message);
-
-    const dataStr = serializeTerminalData(entry.data);
-    if (dataStr) {
-      const data = document.createElement("span");
-      data.className = "terminal-line__data";
-      data.textContent = dataStr;
-      line.appendChild(document.createTextNode(" "));
-      line.appendChild(data);
-    }
-
-    terminalBody.appendChild(line);
-    while (terminalBody.children.length > TERMINAL_MAX_LINES) {
-      terminalBody.removeChild(terminalBody.firstChild);
-    }
-
-    if (terminalAtBottom) {
-      terminalBody.scrollTop = terminalBody.scrollHeight;
-    }
-  }
-
-  function setTerminalOpen(open) {
-    if (!terminalPanel || !toggleTerminalBtn) return;
-    terminalPanel.hidden = !open;
-    toggleTerminalBtn.classList.toggle("is-active", open);
-    if (open && terminalBody) terminalBody.scrollTop = terminalBody.scrollHeight;
-  }
-
-  function toggleTerminal() {
-    setTerminalOpen(terminalPanel && terminalPanel.hidden);
-  }
-
-  if (toggleTerminalBtn) {
-    toggleTerminalBtn.innerHTML = `${ICONS.terminal} ${t("editor.terminal")}`;
-    toggleTerminalBtn.addEventListener("click", toggleTerminal);
-  }
-  if (terminalCloseBtn) terminalCloseBtn.addEventListener("click", () => setTerminalOpen(false));
-  if (terminalClearBtn) terminalClearBtn.addEventListener("click", () => { if (terminalBody) terminalBody.innerHTML = ""; });
-  if (terminalBody) {
-    terminalBody.addEventListener("scroll", () => {
-      terminalAtBottom = terminalBody.scrollHeight - terminalBody.scrollTop - terminalBody.clientHeight < 40;
-    });
-  }
+  const loggerPanel = initLoggerPanel({ t, ICONS });
 
   // ---- websocket ----
   function handleMessage(msg) {
     switch (msg.type) {
       case EVENT_TYPES.STATE:
-        layout = msg.payload.layout || [];
-        goal = msg.payload.goal;
-        twitchChannel = msg.payload.twitchChannel;
-        twitchClientId = msg.payload.twitchClientId;
-        daClientId = msg.payload.donationAlertsClientId;
-        youtubeClientId = msg.payload.youtubeClientId;
-        youtubeVideoId = msg.payload.youtubeVideoId;
-        twitchEnabled = msg.payload.twitchEnabled !== false;
-        donationAlertsEnabled = msg.payload.donationAlertsEnabled !== false;
-        youtubeEnabled = msg.payload.youtubeEnabled !== false;
-        connectionStatus = msg.payload.connectionStatus || {};
-        appearance = msg.payload.appearance || appearance;
-        editorPrefs = msg.payload.editor || editorPrefs;
-        scenes = msg.payload.scenes || scenes;
-        topDonation = msg.payload.topDonation || topDonation;
-        stats = msg.payload.stats || stats;
-        giveaway = msg.payload.giveaway || giveaway;
-        gridSizeSelect.value = String(editorPrefs.gridSize || 0);
-        applyThemeToCanvas(appearance.tokens);
-        applyGridToCanvas();
+        state.applySnapshot(msg.payload);
+        if (msg.payload.remoteUrl) {
+          remoteUrlText.textContent = msg.payload.remoteUrl;
+          remoteUrlHint.hidden = false;
+        }
+        wsClient.setStatuses(msg.payload.connectionStatus);
+        gridSizeSelect.value = String(state.editorPrefs.gridSize || 0);
+        canvasEditor.applyThemeToCanvas(state.appearance.tokens);
+        canvasEditor.applyGridToCanvas();
         renderThemeGrid();
         renderLibrary();
-        renderCanvas();
-        renderLayers();
-        renderProperties();
-        renderStatusChips();
-        updateSettingsChips();
+        canvasEditor.renderCanvas();
+        canvasEditor.renderLayers();
+        propertiesPanel.render();
         populateSettings();
         syncIntegrationSwitches();
         renderGiveaway();
-        selectScene(activeSceneId);
+        selectScene(state.activeSceneId);
         break;
       case EVENT_TYPES.LAYOUT_UPDATE:
         handleLayoutUpdate(msg.payload.layout || []);
         break;
       case EVENT_TYPES.THEME_UPDATE:
-        appearance = msg.payload;
-        if (!editingThemeId) applyThemeToCanvas(appearance.tokens);
+        state.appearance = msg.payload;
+        if (!state.editingThemeId) canvasEditor.applyThemeToCanvas(state.appearance.tokens);
         renderThemeGrid();
-        renderCanvas();
+        canvasEditor.renderCanvas();
         break;
       case EVENT_TYPES.EDITOR_PREFS_UPDATE:
-        editorPrefs = msg.payload;
-        gridSizeSelect.value = String(editorPrefs.gridSize || 0);
-        applyGridToCanvas();
+        state.editorPrefs = msg.payload;
+        gridSizeSelect.value = String(state.editorPrefs.gridSize || 0);
+        canvasEditor.applyGridToCanvas();
         break;
       case EVENT_TYPES.SCENES_UPDATE:
-        scenes = msg.payload;
+        state.scenes = msg.payload;
         renderSceneForm();
         break;
       case EVENT_TYPES.TOP_DONATION_UPDATE:
-        topDonation = msg.payload;
+        state.topDonation = msg.payload;
         renderSceneForm();
-        renderCanvas();
+        canvasEditor.renderCanvas();
         break;
       case EVENT_TYPES.STAT_UPDATE:
-        stats = msg.payload;
-        renderCanvas();
+        state.stats = msg.payload;
+        canvasEditor.renderCanvas();
+        break;
+      case EVENT_TYPES.DEATH_COUNT_UPDATE:
+        state.deathCount = (msg.payload && msg.payload.count) || 0;
+        canvasEditor.renderCanvas();
+        break;
+      case EVENT_TYPES.CAMERA_ANGLE_UPDATE:
+        state.activeCameraAngle = (msg.payload && msg.payload.activeCameraAngle) || null;
+        renderCameraAngles();
+        break;
+      case EVENT_TYPES.CAMERA_FILTER_UPDATE:
+        if (msg.payload && msg.payload.filterId) {
+          const set = new Set(state.activeFilters || []);
+          if (msg.payload.active) set.add(msg.payload.filterId);
+          else set.delete(msg.payload.filterId);
+          state.activeFilters = [...set];
+        }
+        renderCameraFilters();
         break;
       case EVENT_TYPES.GIVEAWAY_UPDATE:
-        giveaway = msg.payload.giveaway || giveaway;
+        state.giveaway = msg.payload.giveaway || state.giveaway;
         renderGiveaway();
         break;
       case EVENT_TYPES.OVERLAY_PARTICIPANTS_CONFIG:
-        participantsConfig = (msg.payload && msg.payload.config) || participantsConfig;
-        renderCanvas();
-        renderProperties();
-        if (activeSceneId === "wheel") renderSceneForm();
+        state.participantsConfig = (msg.payload && msg.payload.config) || state.participantsConfig;
+        canvasEditor.renderCanvas();
+        propertiesPanel.render();
+        if (state.activeSceneId === "wheel") renderSceneForm();
         break;
       case EVENT_TYPES.WHEEL_CONFIG:
-        wheelConfig = (msg.payload && msg.payload.config) || wheelConfig;
-        if (activeSceneId === "wheel") renderSceneForm();
+        state.wheelConfig = (msg.payload && msg.payload.config) || state.wheelConfig;
+        if (state.activeSceneId === "wheel") renderSceneForm();
         break;
       case EVENT_TYPES.WHEEL_SPEED_CONFIG:
-        wheelSpeedConfig = (msg.payload && msg.payload.config) || wheelSpeedConfig;
-        if (activeSceneId === "wheel") renderSceneForm();
+        state.wheelSpeedConfig = (msg.payload && msg.payload.config) || state.wheelSpeedConfig;
+        if (state.activeSceneId === "wheel") renderSceneForm();
         break;
       case EVENT_TYPES.OVERLAY_MIC_CONFIG:
-        micConfig = (msg.payload && msg.payload.config) || micConfig;
-        renderCanvas();
-        renderProperties();
+        state.micConfig = (msg.payload && msg.payload.config) || state.micConfig;
+        canvasEditor.renderCanvas();
+        propertiesPanel.render();
         break;
       case EVENT_TYPES.GOAL_UPDATE:
-        goal = msg.payload;
-        renderCanvas();
-        renderProperties();
+        state.goal = msg.payload;
+        canvasEditor.renderCanvas();
+        propertiesPanel.render();
         break;
       case EVENT_TYPES.CONNECTION_STATUS:
-        connectionStatus[msg.payload.service] = msg.payload.status;
-        renderStatusChips();
-        updateSettingsChips();
+        wsClient.updateStatus(msg.payload.service, msg.payload.status);
         break;
       case EVENT_TYPES.LOCALES:
         applyLocales(msg.payload && msg.payload.lang, msg.payload && msg.payload.locales);
         break;
       case EVENT_TYPES.TERMINAL_LOG:
-        appendTerminalLine(msg.payload);
+        loggerPanel.append(msg.payload);
         break;
       default:
         break; // ALERT / CHAT_MESSAGE / RECENT_EVENT are for the overlay, not the editor
@@ -1700,13 +1339,12 @@
     updateLanguageButtons();
     renderLibrary();
     renderScenesNav();
-    renderCanvas();
-    renderLayers();
-    renderProperties();
+    canvasEditor.renderCanvas();
+    canvasEditor.renderLayers();
+    propertiesPanel.render();
     renderSceneForm();
     renderGiveaway();
-    renderStatusChips();
-    updateSettingsChips();
+    wsClient.refreshStatusChips();
     updateEventsFilterButtons();
     renderStreamEvents(true);
     copyUrlBtn.textContent = t("editor.copyUrl");
@@ -1715,43 +1353,29 @@
     importConfigBtn.textContent = t("settings.import");
     const chatBtn = document.getElementById("openChatWindowBtn");
     if (chatBtn) chatBtn.innerHTML = `${ICONS.widgetChat} ${t("editor.chat")}`;
-    if (toggleTerminalBtn) toggleTerminalBtn.innerHTML = `${ICONS.terminal} ${t("editor.terminal")}`;
+    const testChatBtn = document.getElementById("testChatBtn");
+    if (testChatBtn) testChatBtn.innerHTML = `${ICONS.widgetChat} ${t("editor.testChat")}`;
+    loggerPanel.refreshLabel();
     const boostyBtn = document.getElementById("openBoostyBtn");
     if (boostyBtn) boostyBtn.innerHTML = `${ICONS.heart} ${t("boosty.support")}`;
   }
 
   function handleLayoutUpdate(newLayout) {
-    layout = newLayout;
-    if (pendingAdd) {
-      const newItem = layout.find((w) => !pendingAdd.knownIds.has(w.id));
+    state.layout = newLayout;
+    if (state.pendingAdd) {
+      const newItem = state.layout.find((w) => !state.pendingAdd.knownIds.has(w.id));
       if (newItem) {
-        if (pendingAdd.dropXY) {
-          const x = clamp(pendingAdd.dropXY.x - newItem.w / 2, 0, 100 - newItem.w);
-          const y = clamp(pendingAdd.dropXY.y - newItem.h / 2, 0, 100 - newItem.h);
+        if (state.pendingAdd.dropXY) {
+          const x = clamp(state.pendingAdd.dropXY.x - newItem.w / 2, 0, 100 - newItem.w);
+          const y = clamp(state.pendingAdd.dropXY.y - newItem.h / 2, 0, 100 - newItem.h);
           send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: newItem.id, patch: { x: round1(x), y: round1(y) } });
         }
-        selectedId = newItem.id;
+        state.selectedId = newItem.id;
       }
-      pendingAdd = null;
+      state.pendingAdd = null;
     }
-    if (selectedId && !layout.find((w) => w.id === selectedId)) selectedId = null;
-    renderCanvas();
-    renderLayers();
-    renderProperties();
+    if (state.selectedId && !state.layout.find((w) => w.id === state.selectedId)) state.selectedId = null;
+    canvasEditor.renderCanvas();
+    canvasEditor.renderLayers();
+    propertiesPanel.render();
   }
-
-  function connect() {
-    ws = new WebSocket(wsUrl);
-    ws.onmessage = (ev) => {
-      try {
-        handleMessage(JSON.parse(ev.data));
-      } catch {
-        /* ignore malformed frame */
-      }
-    };
-    ws.onclose = () => setTimeout(connect, 2000);
-    ws.onerror = () => ws.close();
-  }
-
-  connect();
-})();

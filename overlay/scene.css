@@ -107,6 +107,23 @@ body {
     bottom -1px right -1px, bottom -1px right -1px;
 }
 
+/* Drake industrial: hazard stripe along the scene card bottom edge */
+[data-decoration="hazard"] .scene-card::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--md-primary) 0 12px,
+    #121517 12px 24px
+  );
+  opacity: 0.8;
+}
+
 /* ---- Main card ---- */
 .scene-card {
   position: relative;
@@ -273,3 +290,144 @@ body {
 .pill-text { color: var(--md-on-surface); }
 
 [hidden] { display: none !important; }
+
+/* ---- Just Chatting scene: large chat feed ---- */
+.scene-chat {
+  position: relative;
+  z-index: 10;
+  width: min(1080px, 92vw);
+  height: 88vh;
+  margin-left: auto;
+  margin-right: clamp(24px, 5vw, 80px);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-bg, var(--md-surface-container));
+  backdrop-filter: blur(var(--panel-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--panel-blur, 0px));
+  border: var(--panel-border, 1px solid var(--md-outline-variant));
+  border-radius: var(--panel-radius);
+  clip-path: var(--panel-clip, none);
+  box-shadow: var(--elev-3), var(--panel-glow, 0 0 0 rgba(0, 0, 0, 0));
+  overflow: hidden;
+}
+
+.scene-chat__header {
+  padding: 18px 26px;
+  border-bottom: 1px solid var(--md-outline-variant);
+  display: flex;
+  align-items: center;
+}
+
+.scene-chat__title {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--md-on-surface);
+  letter-spacing: 0.2px;
+}
+
+.scene-chat__list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.scene-chat__msg {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: 18px;
+  line-height: 1.35;
+  animation: chat-in 220ms ease both;
+}
+
+.scene-chat__badge {
+  align-self: center;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  letter-spacing: 0.4px;
+}
+
+.scene-chat__user {
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.scene-chat__colon {
+  color: var(--md-on-surface-variant);
+}
+
+.scene-chat__text {
+  color: var(--md-on-surface);
+  word-break: break-word;
+}
+
+@keyframes chat-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Just Chatting scene: alerts ---- */
+.scene-alerts {
+  position: fixed;
+  top: 24px;
+  right: clamp(24px, 5vw, 80px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.scene-alert {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 300px;
+  max-width: min(560px, 90vw);
+  padding: 14px 20px;
+  background: var(--md-surface-container);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-md);
+  box-shadow: var(--elev-3);
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+.scene-alert--in { opacity: 1; transform: translateY(0); }
+.scene-alert--out { opacity: 0; transform: translateY(-10px); }
+
+.scene-alert__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.scene-alert__icon svg { width: 22px; height: 22px; }
+
+.scene-alert__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.scene-alert__kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: var(--md-on-surface-variant);
+  text-transform: uppercase;
+}
+.scene-alert__name { font-size: 17px; font-weight: 700; color: var(--md-on-surface); }
+.scene-alert__amount { font-size: 15px; font-weight: 600; color: var(--md-primary); }
+.scene-alert__message { font-size: 13px; color: var(--md-on-surface-variant); }

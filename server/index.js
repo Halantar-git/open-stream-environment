@@ -16,12 +16,14 @@
  */
 
 const path = require("path");
+const os = require("os");
 const http = require("http");
 const express = require("express");
 const { WebSocketServer } = require("ws");
 const { EventEmitter } = require("events");
 
 const { AppState } = require("./state");
+const { getUserMediaDir } = require("./storage-paths");
 const { EVENT_TYPES, ALERT_DURATIONS_MS } = require("../shared/events");
 const { createLogger } = require("./logger");
 const { mountOAuthRoutes, buildTwitchAuthorizeUrl, buildDonationAlertsAuthorizeUrl, buildYoutubeAuthorizeUrl } = require("./oauth");
@@ -29,6 +31,7 @@ const { startTwitchChat } = require("./integrations/twitch-chat");
 const { startTwitchEvents } = require("./integrations/twitch-eventsub");
 const { startDonationAlerts } = require("./integrations/donationalerts");
 const { startYoutube } = require("./integrations/youtube-live");
+const { startObsWebSocket } = require("./integrations/obs-websocket");
 
 const LOCALES = {
   ru: require("../shared/locales/ru.json"),
@@ -36,6 +39,16 @@ const LOCALES = {
 };
 
 const bus = new EventEmitter();
+
+function getLocalIp() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name] || []) {
+      if (iface.family === "IPv4" && !iface.internal) return iface.address;
+    }
+  }
+  return "127.0.0.1";
+}
 
 function createServer({ db } = {}) {
   const state = new AppState(db);
@@ -47,16 +60,24 @@ function createServer({ db } = {}) {
   app.use("/overlay", express.static(path.join(__dirname, "..", "overlay")));
   app.use("/shared", express.static(path.join(__dirname, "..", "shared")));
   app.use("/assets", express.static(path.join(__dirname, "..", "assets")));
+  app.use("/media", express.static(getUserMediaDir()));
+  app.use("/remote", express.static(path.join(__dirname, "..", "remote")));
 
   let twitchChatCtrl = null;
   let twitchEventsCtrl = null;
   let donationAlertsCtrl = null;
   let youtubeCtrl = null;
+  let obsCtrl = null;
   let currentSession = null;
   let autoSpinTimer = null;
   let isSpinning = false;
   let language = db ? db.getLanguage() : "en";
   const serverLog = createLogger(bus, "server");
+  const remoteUrl = `http://${getLocalIp()}:${state.config.port || 8710}/remote`;
+
+  function stateSnapshot() {
+    return { ...state.snapshot(), remoteUrl };
+  }
 
   function broadcast(type, payload) {
     const message = JSON.stringify({ type, payload });
@@ -154,6 +175,79 @@ function createServer({ db } = {}) {
     }
   }
 
+  function restartObs() {
+    if (obsCtrl) obsCtrl.stop();
+    obsCtrl = null;
+    if (!state.config.obs.enabled) {
+      bus.emit("connection_status", { service: "obs", status: "disabled" });
+      return;
+    }
+    if (state.config.obs.host && state.config.obs.port) {
+      obsCtrl = startObsWebSocket({ bus, config: state.config });
+    } else {
+      bus.emit("connection_status", { service: "obs", status: "not_configured" });
+    }
+  }
+
+  function runObsCommand(id) {
+    const cmd = (state.config.obs.customCommands || []).find((c) => c.id === id);
+    if (!cmd) return false;
+    if (!obsCtrl) {
+      serverLog.warn("OBS command skipped (OBS not connected)", { id });
+      return false;
+    }
+    obsCtrl.sendRawRequest(cmd.requestType, cmd.requestData || {}).catch((err) =>
+      serverLog.warn("OBS raw command failed", { id, message: err.message })
+    );
+    return true;
+  }
+
+  // Play a configured Soundboard sound on the overlay. Shared by the control
+  // panel test button and external triggers (Web Remote / Stream Deck).
+  function triggerSoundboardSound(soundId, user) {
+    const sound = (state.config.soundboard.sounds || []).find((s) => s.id === soundId);
+    if (!sound) {
+      serverLog.warn("soundboard trigger skipped (unknown sound)", { soundId });
+      return false;
+    }
+    bus.emit("soundboard_play", {
+      soundId: sound.id,
+      title: sound.title || sound.rewardTitle || sound.id,
+      user: user || "Stream Deck",
+      audioFile: sound.audioFile,
+      imageFile: sound.imageFile,
+    });
+    return true;
+  }
+
+  // Permanent camera-angle switch (no timer). Delegates the OBS work to the
+  // obs-websocket module and returns immediately; the result is broadcast back
+  // via the `camera_angle_changed` bus event.
+  function setCameraAngle(angleId) {
+    if (!obsCtrl) {
+      serverLog.warn("camera angle skipped (OBS not connected)", { angleId });
+      return false;
+    }
+    obsCtrl.setCameraAngle(angleId).catch((err) =>
+      serverLog.warn("camera angle failed", { angleId, message: err.message })
+    );
+    return true;
+  }
+
+  // Camera filter (OBS source filter toggle, timed or permanent). Delegates to
+  // the obs-websocket module; active state is broadcast back via
+  // `camera_filter_changed`.
+  function setCameraFilter(filterId) {
+    if (!obsCtrl) {
+      serverLog.warn("camera filter skipped (OBS not connected)", { filterId });
+      return false;
+    }
+    obsCtrl.triggerCameraFilter(filterId).catch((err) =>
+      serverLog.warn("camera filter failed", { filterId, message: err.message })
+    );
+    return true;
+  }
+
   mountOAuthRoutes(app, {
     state,
     hooks: {
@@ -174,7 +268,7 @@ function createServer({ db } = {}) {
 
   wss.on("connection", (socket) => {
     socket.send(JSON.stringify({ type: EVENT_TYPES.LOCALES, payload: { lang: language, locales: LOCALES } }));
-    socket.send(JSON.stringify({ type: EVENT_TYPES.STATE, payload: state.snapshot() }));
+    socket.send(JSON.stringify({ type: EVENT_TYPES.STATE, payload: stateSnapshot() }));
     if (db) {
       socket.send(JSON.stringify({ type: EVENT_TYPES.OVERLAY_PARTICIPANTS_CONFIG, payload: { config: db.getParticipantsConfig() } }));
       socket.send(JSON.stringify({ type: EVENT_TYPES.WHEEL_CONFIG, payload: { config: db.getWheelConfig() } }));
@@ -193,8 +287,106 @@ function createServer({ db } = {}) {
     });
   });
 
+  function handleRemoteAction(action, payload) {
+    action = String(action || "").toUpperCase();
+    switch (action) {
+      case "SCENE_SET": {
+        const scene = String((payload && payload.scene) || "main").toLowerCase();
+        const sceneName = (state.config.obs.sceneMap && state.config.obs.sceneMap[scene]) || "";
+        if (obsCtrl && sceneName) obsCtrl.switchScene(sceneName);
+        state.setActiveScene(scene);
+        broadcast(EVENT_TYPES.REMOTE_ACTION, { action: "SCENE_SET", payload: { scene } });
+        serverLog.info("remote scene switch", { scene, sceneName });
+        break;
+      }
+      case "WHEEL_START": {
+        clearAutoSpin();
+        isSpinning = false;
+        const giveaway = state.startGiveaway(payload && payload.command);
+        broadcastGiveaway(giveaway);
+        bus.emit("alert", { kind: "wheel_start", command: giveaway.command });
+        break;
+      }
+      case "WHEEL_STOP": {
+        clearAutoSpin();
+        isSpinning = false;
+        broadcastGiveaway(state.stopGiveaway());
+        break;
+      }
+      case "WHEEL_SPIN": {
+        if (isSpinning) break;
+        broadcast(EVENT_TYPES.GIVEAWAY_WHEEL, { sectors: state.giveawaySnapshot().participants });
+        const winner = state.pickRandomWinner();
+        if (winner) {
+          isSpinning = true;
+          broadcast(EVENT_TYPES.GIVEAWAY_SPIN, { winner });
+        }
+        break;
+      }
+      case "WHEEL_GENERATE": {
+        broadcast(EVENT_TYPES.GIVEAWAY_WHEEL, { sectors: state.giveawaySnapshot().participants });
+        break;
+      }
+      case "WHEEL_RESET_PARTICIPANTS": {
+        clearAutoSpin();
+        isSpinning = false;
+        broadcastGiveaway(state.clearGiveawayParticipants());
+        broadcast(EVENT_TYPES.GIVEAWAY_WHEEL, { sectors: [] });
+        break;
+      }
+      case "WHEEL_CLEAR_RESULT": {
+        broadcastGiveaway(state.clearGiveawayResult());
+        broadcast(EVENT_TYPES.GIVEAWAY_WHEEL, { sectors: state.giveawaySnapshot().participants });
+        break;
+      }
+      case "DEATH_INCREMENT": {
+        broadcast(EVENT_TYPES.DEATH_COUNT_UPDATE, state.adjustDeathCount(1));
+        break;
+      }
+      case "DEATH_DECREMENT": {
+        broadcast(EVENT_TYPES.DEATH_COUNT_UPDATE, state.adjustDeathCount(-1));
+        break;
+      }
+      case "DEATH_RESET": {
+        broadcast(EVENT_TYPES.DEATH_COUNT_UPDATE, state.resetDeathCount());
+        break;
+      }
+      case "TEST_ALERT": {
+        bus.emit("alert", { ...buildTestAlert(payload && payload.kind), isTest: true });
+        break;
+      }
+      case "THEME_SET": {
+        const id = payload && (payload.themeId || payload.id);
+        if (id && state.setActiveTheme(id)) broadcastTheme();
+        break;
+      }
+      case "OBS_RAW_COMMAND": {
+        runObsCommand(payload && payload.id);
+        break;
+      }
+      case "SOUNDBOARD_TRIGGER": {
+        triggerSoundboardSound(payload && payload.soundId, payload && payload.user);
+        break;
+      }
+      case "CAMERA_SET": {
+        setCameraAngle(payload && payload.angleId);
+        break;
+      }
+      case "CAMERA_FILTER": {
+        setCameraFilter(payload && payload.filterId);
+        break;
+      }
+      default:
+        serverLog.warn("unknown remote action", { action });
+    }
+  }
+
   function handleClientCommand(msg) {
     switch (msg.type) {
+      case EVENT_TYPES.REMOTE_ACTION: {
+        handleRemoteAction(msg.action, msg.payload || {});
+        break;
+      }
       case EVENT_TYPES.CMD_ADD_WIDGET: {
         const instance = state.addWidget(msg.payload && msg.payload.type);
         if (instance) broadcast(EVENT_TYPES.LAYOUT_UPDATE, { layout: state.layout });
@@ -224,6 +416,7 @@ function createServer({ db } = {}) {
       case EVENT_TYPES.CMD_SET_APP_CONFIG: {
         state.setAppConfig(msg.payload || {});
         restartTwitchChat();
+        broadcast(EVENT_TYPES.STATE, stateSnapshot());
         break;
       }
       case EVENT_TYPES.CMD_SET_ACTIVE_THEME: {
@@ -261,13 +454,32 @@ function createServer({ db } = {}) {
         break;
       }
       case EVENT_TYPES.CMD_TEST_CHAT: {
-        bus.emit("chat_message", {
-          user: "test_viewer",
-          color: "#7ee0d6",
-          badges: ["moderator"],
-          message: (msg.payload && msg.payload.message) || "Привет из тестового сообщения!",
-          isTest: true,
-        });
+        const count = Math.max(1, Math.min(20, Number((msg.payload && msg.payload.count)) || 1));
+        const users = [
+          { name: "test_viewer", color: "#7ee0d6" },
+          { name: "chat_fan", color: "#f4b8e4" },
+          { name: "pixel_lover", color: "#a6d189" },
+          { name: "stream_buddy", color: "#e5c890" },
+          { name: "lurker_42", color: "#8caaee" },
+        ];
+        const messages = [
+          "Привет всем! 👋",
+          "Классный стрим 🔥",
+          "Как дела, чат?",
+          "Погнали!",
+          "Это тестовое сообщение",
+          "Ловлю каждое слово 😄",
+        ];
+        for (let i = 0; i < count; i++) {
+          const u = users[i % users.length];
+          bus.emit("chat_message", {
+            user: u.name,
+            color: u.color,
+            badges: i % 3 === 0 ? ["moderator"] : (i % 3 === 1 ? ["subscriber"] : []),
+            message: messages[i % messages.length],
+            isTest: true,
+          });
+        }
         break;
       }
       case EVENT_TYPES.CMD_START_GIVEAWAY: {
@@ -384,8 +596,42 @@ function createServer({ db } = {}) {
           restartDonationAlerts();
         } else if (service === "youtube") {
           restartYoutube();
+        } else if (service === "obs") {
+          restartObs();
         }
-        broadcast(EVENT_TYPES.STATE, state.snapshot());
+        broadcast(EVENT_TYPES.STATE, stateSnapshot());
+        break;
+      }
+      case EVENT_TYPES.CMD_SET_OBS_CONFIG: {
+        state.setObsConfig(msg.payload || {});
+        restartObs();
+        broadcast(EVENT_TYPES.STATE, stateSnapshot());
+        break;
+      }
+      case EVENT_TYPES.CMD_SET_SOUNDBOARD_CONFIG: {
+        state.setSoundboardConfig((msg.payload && msg.payload.config) || {});
+        broadcast(EVENT_TYPES.STATE, stateSnapshot());
+        break;
+      }
+      case EVENT_TYPES.CMD_SET_STREAMDECK_CONFIG: {
+        state.setStreamDeckConfig((msg.payload && msg.payload.config) || {});
+        broadcast(EVENT_TYPES.STATE, stateSnapshot());
+        break;
+      }
+      case EVENT_TYPES.CMD_TEST_SOUNDBOARD: {
+        triggerSoundboardSound(msg.payload && msg.payload.soundId, "Тест");
+        break;
+      }
+      case EVENT_TYPES.CMD_RUN_OBS_COMMAND: {
+        runObsCommand(msg.payload && msg.payload.id);
+        break;
+      }
+      case EVENT_TYPES.CMD_SET_CAMERA_ANGLE: {
+        setCameraAngle(msg.payload && msg.payload.angleId);
+        break;
+      }
+      case EVENT_TYPES.CMD_TRIGGER_CAMERA_FILTER: {
+        setCameraFilter(msg.payload && msg.payload.filterId);
         break;
       }
       default:
@@ -456,22 +702,46 @@ function createServer({ db } = {}) {
     broadcast(EVENT_TYPES.TERMINAL_LOG, entry);
   });
 
+  bus.on("soundboard_play", (payload) => {
+    broadcast(EVENT_TYPES.SOUNDBOARD_PLAY, payload);
+  });
+
+  bus.on("camera_angle_changed", ({ activeCameraAngle }) => {
+    state.setActiveCameraAngle(activeCameraAngle);
+    broadcast(EVENT_TYPES.CAMERA_ANGLE_UPDATE, { activeCameraAngle });
+  });
+
+  bus.on("camera_angle_request", ({ angleId }) => {
+    setCameraAngle(angleId);
+  });
+
+  bus.on("camera_filter_changed", ({ filterId, active }) => {
+    state.setActiveFilter(filterId, active);
+    broadcast(EVENT_TYPES.CAMERA_FILTER_UPDATE, { filterId, active });
+  });
+
+  bus.on("camera_filter_request", ({ filterId }) => {
+    setCameraFilter(filterId);
+  });
+
   function start() {
     const port = state.config.port || 8710;
     server.listen(port, () => {
       serverLog.success("overlay + control bus listening", { url: `http://localhost:${port}` });
+      serverLog.success("web remote ready", { url: remoteUrl });
     });
 
     restartTwitchChat();
     restartTwitchEvents();
     restartDonationAlerts();
     restartYoutube();
+    restartObs();
 
     if (db) {
       currentSession = db.startSession(state.config.twitch.channel);
     }
 
-    return { port };
+    return { port, remoteUrl };
   }
 
   function importConfig(newConfig) {
@@ -480,7 +750,7 @@ function createServer({ db } = {}) {
     restartTwitchEvents();
     restartDonationAlerts();
     restartYoutube();
-    broadcast(EVENT_TYPES.STATE, state.snapshot());
+    broadcast(EVENT_TYPES.STATE, stateSnapshot());
   }
 
   function stop() {
@@ -580,7 +850,7 @@ function toStreamEvent(alert, isTest) {
   };
 }
 
-module.exports = { createServer };
+module.exports = { createServer, buildTestAlert, eventTypeForKind, toStreamEvent };
 
 // `npm run server:only` runs the bus without Electron — handy for iterating
 // on overlay/editor visuals in a normal browser tab.

@@ -531,6 +531,38 @@
   text-overflow: ellipsis;
 }
 
+/* ---------- Death counter ---------- */
+.widget-death {
+  width: 100%;
+  height: 100%;
+  background: var(--panel-bg, var(--md-surface-container));
+  backdrop-filter: blur(var(--panel-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--panel-blur, 0px));
+  border: var(--panel-border, 1px solid var(--md-outline-variant));
+  border-radius: var(--panel-radius);
+  clip-path: var(--panel-clip, none);
+  box-shadow: var(--elev-1), var(--panel-glow, 0 0 0 rgba(0, 0, 0, 0));
+  padding: 8px 16px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.widget-death__label {
+  font-family: var(--font-display);
+  font-size: clamp(9px, 2.6cqw, 12px);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--md-on-surface-variant);
+}
+.widget-death__value {
+  font-family: var(--font-mono);
+  font-size: clamp(22px, 9cqw, 34px);
+  font-weight: 700;
+  line-height: 1;
+}
+
 /* ---------- Rotating social banner ---------- */
 .widget-social {
   width: 100%;
@@ -656,4 +688,63 @@
 @keyframes mic-preview-drift {
   from { transform: translateX(-2.5%); }
   to { transform: translateX(2.5%); }
+}
+
+/* ---------- Drake industrial: hazard stripes ---------- */
+[data-decoration="hazard"] .widget-alert,
+[data-decoration="hazard"] .widget-goal,
+[data-decoration="hazard"] .widget-recent,
+[data-decoration="hazard"] .widget-custom.has-card,
+[data-decoration="hazard"] .widget-stat,
+[data-decoration="hazard"] .widget-social {
+  position: relative;
+  background-image: repeating-linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.02) 0px,
+    rgba(255, 255, 255, 0.02) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+[data-decoration="hazard"] .widget-goal::after,
+[data-decoration="hazard"] .widget-recent::after,
+[data-decoration="hazard"] .widget-custom.has-card::after,
+[data-decoration="hazard"] .widget-stat::after,
+[data-decoration="hazard"] .widget-social::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 5px;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--md-primary) 0 10px,
+    #121517 10px 20px
+  );
+  opacity: 0.7;
+}
+
+[data-decoration="hazard"] .widget-alert__lockbar {
+  display: block;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+[data-decoration="hazard"] .widget-alert__lockbar-fill {
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--md-primary) 0 8px,
+    #121517 8px 16px
+  );
+  box-shadow: none;
+  animation: widget-alert-lock-pulse 1.2s infinite linear;
 }

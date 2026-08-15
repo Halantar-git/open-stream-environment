@@ -2,6 +2,7 @@ node_modules/
 release/
 config/config.json
 config/local-db.json
+config/media/
 *.log
 .DS_Store
 Thumbs.db

@@ -133,6 +133,16 @@
       minH: 3,
       defaultConfig: {},
     },
+    death: {
+      type: "death",
+      label: "Счётчик смертей",
+      description: "Крупный счётчик смертей для челлендж-стримов",
+      icon: "widgetDeath",
+      defaultGeometry: { x: 80, y: 4, w: 16, h: 12 },
+      minW: 8,
+      minH: 5,
+      defaultConfig: { label: "Смерти", color: "#ff4d4d" },
+    },
   };
 
   const CANVAS = { w: 1920, h: 1080 };

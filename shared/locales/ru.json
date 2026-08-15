@@ -15,6 +15,7 @@
     "copyUrl": "Скопировать URL для OBS",
     "copied": "Скопировано!",
     "chat": "Чат",
+    "testChat": "Тест чата",
     "terminal": "Логи"
   },
   "boosty": {
@@ -57,7 +58,8 @@
     "youtubeVideoIdPlaceholder": "ID видео/стрима для поиска live-чата",
     "app": "Приложение",
     "port": "Порт локального сервера",
-    "portHint": "Порт хранится в config.json; чтобы изменить — отредактируйте файл и перезапустите приложение.",
+    "portHint": "После сохранения перезапустите приложение.",
+    "savePort": "Сохранить",
     "overlayUrl": "URL оверлея для OBS Browser Source",
     "resetLayout": "Сбросить раскладку по умолчанию",
     "history": "История событий",
@@ -80,6 +82,52 @@
     "imported": "Настройки импортированы",
     "importFailed": "Не удалось импортировать: {{error}}",
     "integrationSwitch": "Включить / отключить интеграцию",
+    "obs": "OBS WebSocket",
+    "obsDesc": "Подключение к OBS WebSocket (OBS 28+, Tools → WebSocket Server Settings) для переключения сцен пультом.",
+    "obsHost": "Хост",
+    "obsPort": "Порт",
+    "obsPassword": "Пароль",
+    "obsSceneMapping": "Маппинг сцен: логическое имя пульта → имя сцены в OBS.",
+    "obsCommands": "Кастомные OBS команды (RAW Requests, obs-websocket v5).",
+    "addObsCommand": "+ Добавить команду",
+    "obsCommandLabel": "Название",
+    "obsCommandRequestType": "RequestType (напр. ToggleInputMute)",
+    "soundboard": "Soundboard (Шумотека)",
+    "soundboardDesc": "Запуск звуков и анимаций за баллы канала Twitch: награда → аудиофайл + картинка/GIF.",
+    "soundboardVolume": "Громкость",
+    "soundboardQueue": "Очередь звуков (по одному)",
+    "addSound": "+ Добавить звук",
+    "soundReward": "Название награды на Twitch",
+    "streamdeck": "Stream Deck",
+    "streamdeckDesc": "Свои иконки для кнопок плагина Elgato Stream Deck. Файл (PNG/JPG/GIF/WebP) копируется в media/ и применяется поверх стандартной иконки плагина.",
+    "streamdeckIconScene": "Иконка «Сцена»",
+    "streamdeckIconSoundboard": "Иконка «Soundboard»",
+    "streamdeckIconCounter": "Иконка «Счётчик»",
+    "streamdeckIconWheel": "Иконка «Колесо»",
+    "streamdeckIconStart": "Иконка «Начало»",
+    "streamdeckIconBrb": "Иконка «BRB»",
+    "streamdeckIconTalk": "Иконка «Разговор»",
+    "streamdeckIconEnd": "Иконка «Конец»",
+    "chooseFile": "Выбрать файл",
+    "run": "Выполнить",
+    "test": "Тест",
+    "remoteHint": "Web Remote — откройте с телефона в той же Wi-Fi сети",
+    "cameraAngles": "Ракурсы Камер (Мультикамера)",
+    "cameraAnglesDesc": "Перманентная смена активной камеры за баллы Twitch или вручную (без таймера).",
+    "addCameraAngle": "+ Добавить ракурс",
+    "cameraAngleLabel": "Название ракурса",
+    "cameraAngleReward": "Название награды на Twitch",
+    "cameraAngleScene": "Сцена в OBS",
+    "cameraAngleSource": "Источник камеры",
+    "activateNow": "Включить сейчас",
+    "cameraFilters": "Эффекты и Фильтры Камеры",
+    "cameraFiltersDesc": "Включение фильтров OBS (Ч/Б, размытие, пикселизация, хромакей) за баллы Twitch или вручную. Длительность 0 — вкл/выкл тумблером.",
+    "addCameraFilter": "+ Добавить эффект",
+    "cameraFilterLabel": "Название эффекта",
+    "cameraFilterReward": "Название награды на Twitch",
+    "cameraFilterSource": "Источник в OBS",
+    "cameraFilterFilter": "Название фильтра в OBS",
+    "cameraFilterDuration": "Длительность (сек)",
     "ru": "Русский",
     "en": "English"
   },
@@ -107,17 +155,17 @@
     "spinSpeed": "Скорость вращения"
   },
   "alert": {
-    "follow": "Новый фолловер",
-    "sub": "Новая подписка",
-    "giftSub": "Подарил {{count}} подписок",
-    "cheer": "Чирс битами",
-    "donation": "Новый донат",
+    "follow": "Фолловер",
+    "sub": "Подписка",
+    "giftSub": "Гифт: {{count}}",
+    "cheer": "Чир",
+    "donation": "Донат",
     "wheelStart": "Розыгрыш",
     "wheelWinner": "Колесо Фортуны",
-    "wheelStartMessage": "Сбор участников начался! Пишите {{command}}",
+    "wheelStartMessage": "Сбор начался! {{command}}",
     "cheerBits": "{{amount}} бит",
-    "eliminated": "❌ Выбыл из игры: {{name}}",
-    "finalWinner": "🎉 Главный Победитель Розыгрыша: {{name}}!",
+    "eliminated": "❌ Выбыл: {{name}}",
+    "finalWinner": "🎉 Победитель: {{name}}!",
     "winner": "🏆 Победитель: {{name}}!"
   },
   "wheelScene": {
@@ -149,7 +197,9 @@
     "participants": "Участники розыгрыша",
     "participantsDesc": "Список зрителей на оверлее",
     "mic": "Визуализатор микрофона",
-    "micDesc": "Анимированная звуковая волна"
+    "micDesc": "Анимированная звуковая волна",
+    "death": "Счётчик смертей",
+    "deathDesc": "Крупный счётчик смертей для челлендж-стримов"
   },
   "mic": {
     "mode": "Режим визуализации",
@@ -231,7 +281,9 @@
     "x": "X %",
     "y": "Y %",
     "width": "Ширина %",
-    "height": "Высота %"
+    "height": "Высота %",
+    "deathLabel": "Подпись",
+    "deathColor": "Цвет числа"
   },
   "preview": {
     "goalTitle": "Цель",
@@ -247,7 +299,8 @@
     "recentFollow": "{{user}} подписался",
     "chat1": "го катку!",
     "chat2": "красивый оверлей 🔥",
-    "chat3": "хаю хай"
+    "chat3": "хаю хай",
+    "death": "Смерти"
   },
   "chatWindow": {
     "title": "Чат",
@@ -322,6 +375,7 @@
     "copy": "Копировать",
     "edit": "Изменить",
     "remove": "Удалить",
+    "close": "Закрыть",
     "forward": "На передний план",
     "backward": "На задний план",
     "toggleVisibility": "Показать/скрыть",
@@ -337,7 +391,9 @@
     "startLabel": "Начало стрима",
     "brbLabel": "Отошёл (BRB)",
     "endLabel": "Окончание стрима",
-    "wheelLabel": "Колесо Фортуны"
+    "wheelLabel": "Колесо Фортуны",
+    "mainLabel": "Main",
+    "talkLabel": "Разговор"
   },
   "sceneContent": {
     "start": {
@@ -357,6 +413,38 @@
       "title": "Спасибо за просмотр!",
       "subtitle": "Увидимся в следующий раз",
       "timerDoneText": ""
+    },
+    "talk": {
+      "statusLabel": "ОБЩАЕМСЯ",
+      "title": "Разговор со зрителями",
+      "subtitle": "Задавайте вопросы в чате!",
+      "timerDoneText": ""
     }
+  },
+  "remote": {
+    "connecting": "Подключение…",
+    "connected": "Подключено",
+    "reconnecting": "Переподключение…",
+    "scenes": "Сцены",
+    "wheel": "Колесо Фортуны",
+    "deathCounter": "Счётчик смертей",
+    "testAlerts": "Тестовые алерты",
+    "obsCommands": "OBS команды",
+    "theme": "Тема оверлея",
+    "wheelStart": "Старт розыгрыша",
+    "wheelStop": "Стоп",
+    "wheelSpin": "Вращение",
+    "wheelGenerate": "Сгенерировать колесо",
+    "wheelResetParticipants": "Сбросить участников",
+    "wheelClearResult": "Очистить результат",
+    "deathIncrement": "+1",
+    "deathDecrement": "−1",
+    "deathReset": "Сброс",
+    "noThemes": "Нет доступных тем",
+    "noCommands": "Нет команд",
+    "cameras": "Камеры",
+    "noCameras": "Нет ракурсов",
+    "filters": "Эффекты",
+    "noFilters": "Нет эффектов"
   }
 }

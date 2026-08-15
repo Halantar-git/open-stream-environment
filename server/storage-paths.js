@@ -49,6 +49,13 @@ function getExamplePath() {
   return path.join(BUNDLED_CONFIG_DIR, "config.example.json");
 }
 
+// Каталог, куда пользователь добавляет свои аудио/картинки для Soundboard.
+// Лежит рядом с config.json (userData / portable / dev config), поэтому в
+// собранном приложении в него можно писать, в отличие от app.asar.
+function getUserMediaDir() {
+  return path.join(configDir, "media");
+}
+
 module.exports = {
   BUNDLED_CONFIG_DIR,
   configureStorage,
@@ -56,4 +63,5 @@ module.exports = {
   getConfigPath,
   getDbPath,
   getExamplePath,
+  getUserMediaDir,
 };

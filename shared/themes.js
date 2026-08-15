@@ -27,6 +27,7 @@
       id: "nebula",
       name: "Material You",
       builtin: true,
+      borderRadius: "24px",
       tokens: {
         "--md-primary": "#d0bcff",
         "--md-on-primary": "#381e72",
@@ -74,6 +75,7 @@
       id: "orbital",
       name: "Orbital",
       builtin: true,
+      borderRadius: "0px",
       tokens: {
         "--md-primary": "#00f0ff",
         "--md-on-primary": "#00232b",
@@ -121,6 +123,7 @@
       id: "pixel",
       name: "Pixel Perfect",
       builtin: true,
+      borderRadius: "0px",
       tokens: {
         "--md-primary": "#4da6ff",
         "--md-on-primary": "#001a33",
@@ -162,6 +165,544 @@
         "--panel-border": "2px solid rgba(77, 166, 255, 0.6)",
         "--alert-enter-easing": "cubic-bezier(0.175, 0.885, 0.32, 1.2)",
         "--alert-enter-duration": "300ms",
+      },
+    },
+    drake: {
+      id: "drake",
+      name: "Drake Interplanetary",
+      builtin: true,
+      borderRadius: "2px",
+      tokens: {
+        // Warning amber / burnt-orange hazard accent.
+        "--md-primary": "#f39c12",
+        "--md-on-primary": "#241500",
+        "--md-primary-container": "#7a4a00",
+        "--md-on-primary-container": "#ffe0b2",
+
+        // Phosphor green HUD for active status.
+        "--md-secondary": "#2ecc71",
+        "--md-on-secondary": "#00391c",
+        "--md-secondary-container": "#0f5c33",
+        "--md-on-secondary-container": "#a8f2c8",
+
+        // Burnt orange tertiary for markers.
+        "--md-tertiary": "#e67e22",
+        "--md-on-tertiary": "#260a00",
+        "--md-tertiary-container": "#7a3600",
+        "--md-on-tertiary-container": "#ffdcc4",
+
+        "--md-error": "#ffb4ab",
+        "--md-on-error": "#690005",
+        "--md-error-container": "#93000a",
+        "--md-on-error-container": "#ffdad6",
+
+        // Rough gunmetal surfaces — no gloss, like unpolished hull plating.
+        "--md-surface-dim": "#121517",
+        "--md-surface": "#16191b",
+        "--md-surface-bright": "#343a40",
+        "--md-surface-container-lowest": "#0b0d0e",
+        "--md-surface-container-low": "#1b1e21",
+        "--md-surface-container": "#1f2226",
+        "--md-surface-container-high": "#24282c",
+        "--md-surface-container-highest": "#2c3136",
+
+        "--md-on-surface": "#ecf0f1",
+        "--md-on-surface-variant": "#b6bcc0",
+        "--md-outline": "#4e6a85",
+        "--md-outline-variant": "#2c3e50",
+
+        // HUD/бортовой компьютер: моноширинные заголовки и данные.
+        "--font-display": '"Roboto Mono", "Consolas", monospace',
+        "--font-body": '"Rajdhani", "Segoe UI", sans-serif',
+        "--font-mono": '"Roboto Mono", "Consolas", monospace',
+
+        // Sharp utilitarian panels — no chamfered corners.
+        "--panel-radius": "2px",
+        "--panel-clip": "none",
+        "--panel-decoration": "hazard",
+        "--panel-glow": "0 0 0 1px rgba(243, 156, 18, 0.30), 0 0 22px rgba(243, 156, 18, 0.08)",
+        "--panel-bg": "rgba(27, 30, 33, 0.94)",
+        "--panel-blur": "0px",
+        "--panel-border": "1px solid rgba(243, 156, 18, 0.45)",
+        "--alert-enter-easing": "cubic-bezier(0.2, 0, 0, 1)",
+        "--alert-enter-duration": "260ms",
+
+        // Sharper global shape scale for the overlay + canvas preview.
+        "--shape-xs": "2px",
+        "--shape-sm": "3px",
+        "--shape-md": "4px",
+        "--shape-lg": "6px",
+        "--shape-xl": "10px",
+        "--shape-full": "999px",
+      },
+    },
+
+    aegis: {
+      id: "aegis",
+      name: "Aegis Dynamics",
+      builtin: true,
+      borderRadius: "4px",
+      tokens: {
+        // Combat-red HUD accent for weapons/alerts.
+        "--md-primary": "#e74c3c",
+        "--md-on-primary": "#2a0000",
+        "--md-primary-container": "#6b1a14",
+        "--md-on-primary-container": "#ffd9d6",
+
+        // Amber-green HUD accent for status / confirmation.
+        "--md-secondary": "#2ecc71",
+        "--md-on-secondary": "#00391c",
+        "--md-secondary-container": "#0f5c33",
+        "--md-on-secondary-container": "#a8f2c8",
+
+        // Muted combat blue-grey for tertiary markers.
+        "--md-tertiary": "#8fb0c9",
+        "--md-on-tertiary": "#0a1c2a",
+        "--md-tertiary-container": "#24465e",
+        "--md-on-tertiary-container": "#c4e6ff",
+
+        "--md-error": "#ffb4ab",
+        "--md-on-error": "#690005",
+        "--md-error-container": "#93000a",
+        "--md-on-error-container": "#ffdad6",
+
+        // Matte graphite surfaces — no gloss.
+        "--md-surface-dim": "#0c1015",
+        "--md-surface": "#12181f",
+        "--md-surface-bright": "#2a333d",
+        "--md-surface-container-lowest": "#070a0e",
+        "--md-surface-container-low": "#161d25",
+        "--md-surface-container": "#1a222b",
+        "--md-surface-container-high": "#202a34",
+        "--md-surface-container-highest": "#283440",
+
+        "--md-on-surface": "#e6edf3",
+        "--md-on-surface-variant": "#b7c3cd",
+        "--md-outline": "#5b7488",
+        "--md-outline-variant": "#263846",
+
+        "--font-display": '"Roboto Mono", "Consolas", monospace',
+        "--font-body": '"Rajdhani", "Segoe UI", sans-serif',
+        "--font-mono": '"Roboto Mono", "Consolas", monospace',
+
+        "--panel-radius": "4px",
+        "--panel-clip": "none",
+        "--panel-decoration": "brackets2",
+        "--panel-glow": "0 0 0 1px rgba(231, 76, 60, 0.30), 0 0 20px rgba(231, 76, 60, 0.08)",
+        "--panel-bg": "rgba(18, 24, 31, 0.95)",
+        "--panel-blur": "0px",
+        "--panel-border": "1px solid rgba(231, 76, 60, 0.45)",
+        "--alert-enter-easing": "cubic-bezier(0.2, 0, 0, 1)",
+        "--alert-enter-duration": "240ms",
+
+        "--shape-xs": "2px",
+        "--shape-sm": "3px",
+        "--shape-md": "4px",
+        "--shape-lg": "6px",
+        "--shape-xl": "10px",
+        "--shape-full": "999px",
+      },
+    },
+
+    anvil: {
+      id: "anvil",
+      name: "Anvil Aerospace",
+      builtin: true,
+      borderRadius: "3px",
+      tokens: {
+        // Orange warning indicator.
+        "--md-primary": "#e67e22",
+        "--md-on-primary": "#2a1200",
+        "--md-primary-container": "#7a3a00",
+        "--md-on-primary-container": "#ffe0c2",
+
+        // Military olive / sand.
+        "--md-secondary": "#8d6e63",
+        "--md-on-secondary": "#26160f",
+        "--md-secondary-container": "#4a3327",
+        "--md-on-secondary-container": "#f0d8c8",
+
+        // Hardened steel blue-grey.
+        "--md-tertiary": "#90a4ae",
+        "--md-on-tertiary": "#0a151b",
+        "--md-tertiary-container": "#2a3a42",
+        "--md-on-tertiary-container": "#d2e5ee",
+
+        "--md-error": "#ffb4ab",
+        "--md-on-error": "#690005",
+        "--md-error-container": "#93000a",
+        "--md-on-error-container": "#ffdad6",
+
+        // Rugged steel surfaces.
+        "--md-surface-dim": "#141c22",
+        "--md-surface": "#1c252d",
+        "--md-surface-bright": "#36424c",
+        "--md-surface-container-lowest": "#0d1216",
+        "--md-surface-container-low": "#202a33",
+        "--md-surface-container": "#242f39",
+        "--md-surface-container-high": "#2a3640",
+        "--md-surface-container-highest": "#33414d",
+
+        "--md-on-surface": "#eef1f4",
+        "--md-on-surface-variant": "#c0c9cf",
+        "--md-outline": "#62747f",
+        "--md-outline-variant": "#2a3a44",
+
+        "--font-display": '"Roboto Mono", "Consolas", monospace',
+        "--font-body": '"Rajdhani", "Segoe UI", sans-serif',
+        "--font-mono": '"Roboto Mono", "Consolas", monospace',
+
+        "--panel-radius": "3px",
+        "--panel-clip": "none",
+        "--panel-decoration": "none",
+        "--panel-glow": "0 0 0 1px rgba(230, 126, 34, 0.28), 0 0 18px rgba(230, 126, 34, 0.06)",
+        "--panel-bg": "rgba(28, 37, 45, 0.96)",
+        "--panel-blur": "0px",
+        "--panel-border": "1px solid rgba(230, 126, 34, 0.40)",
+        "--alert-enter-easing": "cubic-bezier(0.2, 0, 0, 1)",
+        "--alert-enter-duration": "280ms",
+
+        "--shape-xs": "2px",
+        "--shape-sm": "2px",
+        "--shape-md": "3px",
+        "--shape-lg": "6px",
+        "--shape-xl": "10px",
+        "--shape-full": "999px",
+      },
+    },
+
+    origin: {
+      id: "origin",
+      name: "Origin Jumpworks",
+      builtin: true,
+      borderRadius: "16px",
+      tokens: {
+        // Neon cyan premium accent.
+        "--md-primary": "#00d2ff",
+        "--md-on-primary": "#001f2b",
+        "--md-primary-container": "#003746",
+        "--md-on-primary-container": "#baf2ff",
+
+        // Polished platinum.
+        "--md-secondary": "#c0cfdf",
+        "--md-on-secondary": "#1c2733",
+        "--md-secondary-container": "#2e3c4c",
+        "--md-on-secondary-container": "#e4eef7",
+
+        // Soft violet glow.
+        "--md-tertiary": "#c4b5fd",
+        "--md-on-tertiary": "#1e1145",
+        "--md-tertiary-container": "#3a2a68",
+        "--md-on-tertiary-container": "#e6ddff",
+
+        "--md-error": "#ffb4ab",
+        "--md-on-error": "#690005",
+        "--md-error-container": "#93000a",
+        "--md-on-error-container": "#ffdad6",
+
+        // Elegant near-black surfaces.
+        "--md-surface-dim": "#070a0e",
+        "--md-surface": "#0d1117",
+        "--md-surface-bright": "#2b313d",
+        "--md-surface-container-lowest": "#05080c",
+        "--md-surface-container-low": "#111722",
+        "--md-surface-container": "#141b27",
+        "--md-surface-container-high": "#182130",
+        "--md-surface-container-highest": "#1d2839",
+
+        "--md-on-surface": "#e8edf2",
+        "--md-on-surface-variant": "#bcc6d1",
+        "--md-outline": "#5e7185",
+        "--md-outline-variant": "#263546",
+
+        "--font-display": '"Rajdhani", "Segoe UI", sans-serif',
+        "--font-body": '"Roboto", "Segoe UI", sans-serif',
+        "--font-mono": '"Roboto Mono", "Consolas", monospace',
+
+        "--panel-radius": "16px",
+        "--panel-clip": "none",
+        "--panel-decoration": "none",
+        "--panel-glow": "0 12px 40px rgba(0, 210, 255, 0.12), inset 0 0 24px rgba(0, 210, 255, 0.04)",
+        "--panel-bg": "rgba(13, 17, 23, 0.90)",
+        "--panel-blur": "16px",
+        "--panel-border": "1px solid rgba(0, 210, 255, 0.25)",
+        "--alert-enter-easing": "cubic-bezier(0.05, 0.7, 0.1, 1)",
+        "--alert-enter-duration": "480ms",
+
+        "--shape-xs": "6px",
+        "--shape-sm": "10px",
+        "--shape-md": "16px",
+        "--shape-lg": "22px",
+        "--shape-xl": "28px",
+        "--shape-full": "999px",
+      },
+    },
+
+    rsi: {
+      id: "rsi",
+      name: "Roberts Space Industries",
+      builtin: true,
+      borderRadius: "8px",
+      tokens: {
+        // Bright holographic blue HUD.
+        "--md-primary": "#38bdf8",
+        "--md-on-primary": "#001e2b",
+        "--md-primary-container": "#0c4a6e",
+        "--md-on-primary-container": "#bce8ff",
+
+        // White aerospace text.
+        "--md-secondary": "#e2e8f0",
+        "--md-on-secondary": "#1e293b",
+        "--md-secondary-container": "#3b4757",
+        "--md-on-secondary-container": "#eef2f7",
+
+        // Supporting cyan.
+        "--md-tertiary": "#22d3ee",
+        "--md-on-tertiary": "#002830",
+        "--md-tertiary-container": "#0e5a66",
+        "--md-on-tertiary-container": "#b0f4ff",
+
+        "--md-error": "#ffb4ab",
+        "--md-on-error": "#690005",
+        "--md-error-container": "#93000a",
+        "--md-on-error-container": "#ffdad6",
+
+        // Deep space blue surfaces.
+        "--md-surface-dim": "#0a101f",
+        "--md-surface": "#0f172a",
+        "--md-surface-bright": "#243a5e",
+        "--md-surface-container-lowest": "#070d19",
+        "--md-surface-container-low": "#131e36",
+        "--md-surface-container": "#16223c",
+        "--md-surface-container-high": "#1b2946",
+        "--md-surface-container-highest": "#223352",
+
+        "--md-on-surface": "#e6ecf5",
+        "--md-on-surface-variant": "#a8b8cf",
+        "--md-outline": "#58708e",
+        "--md-outline-variant": "#22344d",
+
+        "--font-display": '"Rajdhani", "Segoe UI", sans-serif',
+        "--font-body": '"Segoe UI", sans-serif',
+        "--font-mono": '"Roboto Mono", "Consolas", monospace',
+
+        "--panel-radius": "8px",
+        "--panel-clip": "none",
+        "--panel-decoration": "brackets4",
+        "--panel-glow": "0 0 16px rgba(56, 189, 248, 0.22), inset 0 0 24px rgba(56, 189, 248, 0.04)",
+        "--panel-bg": "rgba(15, 23, 42, 0.92)",
+        "--panel-blur": "10px",
+        "--panel-border": "1px solid rgba(56, 189, 248, 0.35)",
+        "--alert-enter-easing": "cubic-bezier(0.175, 0.885, 0.32, 1.2)",
+        "--alert-enter-duration": "350ms",
+
+        "--shape-xs": "4px",
+        "--shape-sm": "6px",
+        "--shape-md": "8px",
+        "--shape-lg": "12px",
+        "--shape-xl": "20px",
+        "--shape-full": "999px",
+      },
+    },
+
+    misc: {
+      id: "misc",
+      name: "MISC",
+      builtin: true,
+      borderRadius: "16px",
+      tokens: {
+        // Soft mint glow.
+        "--md-primary": "#10b981",
+        "--md-on-primary": "#00251a",
+        "--md-primary-container": "#005238",
+        "--md-on-primary-container": "#a8f2d0",
+
+        // Brushed silver.
+        "--md-secondary": "#cbd5e1",
+        "--md-on-secondary": "#1e293b",
+        "--md-secondary-container": "#334155",
+        "--md-on-secondary-container": "#eef2f7",
+
+        // Xi'an tech cyan inlay.
+        "--md-tertiary": "#22d3ee",
+        "--md-on-tertiary": "#002830",
+        "--md-tertiary-container": "#0e5a66",
+        "--md-on-tertiary-container": "#b0f4ff",
+
+        "--md-error": "#ffb4ab",
+        "--md-on-error": "#690005",
+        "--md-error-container": "#93000a",
+        "--md-on-error-container": "#ffdad6",
+
+        // Matte titanium surfaces.
+        "--md-surface-dim": "#171c22",
+        "--md-surface": "#242b35",
+        "--md-surface-bright": "#3a4552",
+        "--md-surface-container-lowest": "#101419",
+        "--md-surface-container-low": "#2a333d",
+        "--md-surface-container": "#2e3743",
+        "--md-surface-container-high": "#343f4b",
+        "--md-surface-container-highest": "#3c4856",
+
+        "--md-on-surface": "#e8edf2",
+        "--md-on-surface-variant": "#b9c4cf",
+        "--md-outline": "#637382",
+        "--md-outline-variant": "#2c3a47",
+
+        "--font-display": '"Rajdhani", "Segoe UI", sans-serif',
+        "--font-body": '"Segoe UI", sans-serif',
+        "--font-mono": '"Roboto Mono", "Consolas", monospace',
+
+        "--panel-radius": "16px",
+        "--panel-clip": "none",
+        "--panel-decoration": "none",
+        "--panel-glow": "0 12px 36px rgba(16, 185, 129, 0.12), inset 0 0 22px rgba(16, 185, 129, 0.04)",
+        "--panel-bg": "rgba(36, 43, 53, 0.90)",
+        "--panel-blur": "12px",
+        "--panel-border": "1px solid rgba(16, 185, 129, 0.25)",
+        "--alert-enter-easing": "cubic-bezier(0.05, 0.7, 0.1, 1)",
+        "--alert-enter-duration": "440ms",
+
+        "--shape-xs": "6px",
+        "--shape-sm": "10px",
+        "--shape-md": "16px",
+        "--shape-lg": "22px",
+        "--shape-xl": "28px",
+        "--shape-full": "999px",
+      },
+    },
+
+    crusader: {
+      id: "crusader",
+      name: "Crusader Industries",
+      builtin: true,
+      borderRadius: "10px",
+      tokens: {
+        // Crusader red accent stripe.
+        "--md-primary": "#ef4444",
+        "--md-on-primary": "#2a0000",
+        "--md-primary-container": "#6b1010",
+        "--md-on-primary-container": "#ffd9d6",
+
+        // Bright white.
+        "--md-secondary": "#f8fafc",
+        "--md-on-secondary": "#1e293b",
+        "--md-secondary-container": "#475569",
+        "--md-on-secondary-container": "#eef2f7",
+
+        // Commercial aviation blue.
+        "--md-tertiary": "#38bdf8",
+        "--md-on-tertiary": "#001e2b",
+        "--md-tertiary-container": "#0c4a6e",
+        "--md-on-tertiary-container": "#bce8ff",
+
+        "--md-error": "#ffb4ab",
+        "--md-on-error": "#690005",
+        "--md-error-container": "#93000a",
+        "--md-on-error-container": "#ffdad6",
+
+        // Clean dark blue-grey surfaces.
+        "--md-surface-dim": "#131c29",
+        "--md-surface": "#1e293b",
+        "--md-surface-bright": "#334155",
+        "--md-surface-container-lowest": "#0d1521",
+        "--md-surface-container-low": "#202d42",
+        "--md-surface-container": "#243244",
+        "--md-surface-container-high": "#2a3a4e",
+        "--md-surface-container-highest": "#314356",
+
+        "--md-on-surface": "#eef2f7",
+        "--md-on-surface-variant": "#bcc8d6",
+        "--md-outline": "#61718a",
+        "--md-outline-variant": "#2a3a4e",
+
+        "--font-display": '"Rajdhani", "Segoe UI", sans-serif',
+        "--font-body": '"Segoe UI", sans-serif',
+        "--font-mono": '"Roboto Mono", "Consolas", monospace',
+
+        "--panel-radius": "10px",
+        "--panel-clip": "none",
+        "--panel-decoration": "none",
+        "--panel-glow": "0 0 0 1px rgba(239, 68, 68, 0.25), 0 10px 30px rgba(239, 68, 68, 0.08)",
+        "--panel-bg": "rgba(30, 41, 59, 0.92)",
+        "--panel-blur": "10px",
+        "--panel-border": "1px solid rgba(239, 68, 68, 0.35)",
+        "--alert-enter-easing": "cubic-bezier(0.175, 0.885, 0.32, 1.2)",
+        "--alert-enter-duration": "320ms",
+
+        "--shape-xs": "4px",
+        "--shape-sm": "8px",
+        "--shape-md": "12px",
+        "--shape-lg": "16px",
+        "--shape-xl": "24px",
+        "--shape-full": "999px",
+      },
+    },
+
+    esperia: {
+      id: "esperia",
+      name: "Esperia / Banu",
+      builtin: true,
+      borderRadius: "14px",
+      tokens: {
+        // Deep amber xeno glow.
+        "--md-primary": "#f59e0b",
+        "--md-on-primary": "#2a1500",
+        "--md-primary-container": "#6b3d00",
+        "--md-on-primary-container": "#ffe1b8",
+
+        // Alien violet accent.
+        "--md-secondary": "#a78bfa",
+        "--md-on-secondary": "#241055",
+        "--md-secondary-container": "#3a2a68",
+        "--md-on-secondary-container": "#e6ddff",
+
+        // Organic green.
+        "--md-tertiary": "#34d399",
+        "--md-on-tertiary": "#00251a",
+        "--md-tertiary-container": "#0f5c33",
+        "--md-on-tertiary-container": "#a8f2c8",
+
+        "--md-error": "#ffb4ab",
+        "--md-on-error": "#690005",
+        "--md-error-container": "#93000a",
+        "--md-on-error-container": "#ffdad6",
+
+        // Dark bronze / gold surfaces.
+        "--md-surface-dim": "#1c1209",
+        "--md-surface": "#2a1b0e",
+        "--md-surface-bright": "#4a3420",
+        "--md-surface-container-lowest": "#120b05",
+        "--md-surface-container-low": "#302013",
+        "--md-surface-container": "#342317",
+        "--md-surface-container-high": "#3a291b",
+        "--md-surface-container-highest": "#44301f",
+
+        "--md-on-surface": "#f3ede6",
+        "--md-on-surface-variant": "#d4c4b4",
+        "--md-outline": "#8a7460",
+        "--md-outline-variant": "#4a3827",
+
+        "--font-display": '"Rajdhani", "Segoe UI", sans-serif',
+        "--font-body": '"Segoe UI", sans-serif',
+        "--font-mono": '"Roboto Mono", "Consolas", monospace',
+
+        "--panel-radius": "14px",
+        "--panel-clip": "none",
+        "--panel-decoration": "none",
+        "--panel-glow": "0 0 0 1px rgba(245, 158, 11, 0.25), 0 0 22px rgba(167, 139, 250, 0.08)",
+        "--panel-bg": "rgba(42, 27, 14, 0.92)",
+        "--panel-blur": "8px",
+        "--panel-border": "1px solid rgba(245, 158, 11, 0.35)",
+        "--alert-enter-easing": "cubic-bezier(0.175, 0.885, 0.32, 1.2)",
+        "--alert-enter-duration": "400ms",
+
+        "--shape-xs": "6px",
+        "--shape-sm": "10px",
+        "--shape-md": "14px",
+        "--shape-lg": "20px",
+        "--shape-xl": "26px",
+        "--shape-full": "999px",
       },
     },
   };

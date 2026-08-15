@@ -22,7 +22,7 @@ const { app, BrowserWindow, ipcMain, shell, dialog, globalShortcut } = require("
 const { createServer } = require("./server");
 const { buildTwitchAuthorizeUrl, buildDonationAlertsAuthorizeUrl, buildYoutubeAuthorizeUrl } = require("./server/oauth");
 const { createDatabase } = require("./server/db");
-const { configureStorage } = require("./server/storage-paths");
+const { configureStorage, getUserMediaDir } = require("./server/storage-paths");
 
 const SPLASH_MIN_MS = 3500; // matches the progress-bar animation duration in splash.html
 
@@ -302,6 +302,37 @@ app.whenReady().then(() => {
 
   ipcMain.handle("app:open-widget-editor", (_event, widgetId) => {
     openWidgetEditorWindow(serverHandle.state.config.port, widgetId);
+  });
+
+  ipcMain.handle("app:pick-sound-file", async (_event, kind) => {
+    const isImage = kind === "image";
+    const filters = isImage
+      ? [{ name: "Изображения / GIF", extensions: ["png", "jpg", "jpeg", "gif", "webp"] }]
+      : [{ name: "Аудио", extensions: ["mp3", "wav", "ogg", "m4a", "aac"] }];
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+      title: isImage ? "Выберите картинку / GIF" : "Выберите аудиофайл",
+      filters,
+      properties: ["openFile"],
+    });
+    if (canceled || !filePaths[0]) return { canceled: true };
+
+    const src = filePaths[0];
+    const ext = path.extname(src).toLowerCase();
+    const base = (path.basename(src, path.extname(src)) || "sound")
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 40) || "sound";
+    const dir = getUserMediaDir();
+    fs.mkdirSync(dir, { recursive: true });
+    let dest = path.join(dir, `${base}${ext}`);
+    let i = 1;
+    while (fs.existsSync(dest)) {
+      dest = path.join(dir, `${base}_${i}${ext}`);
+      i++;
+    }
+    fs.copyFileSync(src, dest);
+    return { ok: true, relativePath: `media/${path.basename(dest)}` };
   });
 
   ipcMain.handle("oauth:connect-twitch", (_event, { clientId, clientSecret, channel }) => {

@@ -22,6 +22,8 @@
 
   const params = new URLSearchParams(location.search);
   const sceneType = params.get("type") || "brb";
+  const isTalk = sceneType === "talk";
+  const MAX_CHAT = 50;
 
   let recentEvents = [];
   let topDonation = { user: "", amount: 0, currency: "RUB" };
@@ -43,6 +45,11 @@
     evSubscriber: document.getElementById("evSubscriber"),
     evTopDonation: document.getElementById("evTopDonation"),
     socialsFooter: document.getElementById("socialsFooter"),
+    sceneCard: document.querySelector(".scene-card"),
+    sceneChat: document.getElementById("sceneChat"),
+    sceneChatTitle: document.getElementById("sceneChatTitle"),
+    sceneChatList: document.getElementById("sceneChatList"),
+    sceneAlerts: document.getElementById("sceneAlerts"),
   };
 
   document.querySelectorAll(".event-icon[data-icon]").forEach((el) => {
@@ -51,6 +58,9 @@
 
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function escapeAttr(s) {
+    return String(s).replace(/"/g, "&quot;");
   }
   function formatMoney(n) {
     const locale = (window.I18n && window.I18n.getLang() === "ru") ? "ru-RU" : "en-US";
@@ -83,12 +93,23 @@
     els.statusLabel.textContent = localizedField("statusLabel", scene.statusLabel);
     els.title.textContent = localizedField("title", scene.title);
     els.subtitle.textContent = localizedField("subtitle", scene.subtitle);
+    if (isTalk) els.sceneChatTitle.textContent = localizedField("title", scene.title);
   }
 
   function renderScene(scene) {
     if (!scene) return;
     currentScene = scene;
     renderSceneText(scene);
+
+    if (isTalk) {
+      els.sceneCard.hidden = true;
+      els.sceneChat.hidden = false;
+      stopTimer();
+      return;
+    }
+
+    els.sceneChat.hidden = true;
+    els.sceneCard.hidden = false;
     els.eventsGrid.hidden = !scene.showEvents;
     els.socialsFooter.hidden = !scene.showSocials;
     els.timerBox.hidden = !scene.showTimer;
@@ -112,6 +133,84 @@
     els.evFollower.textContent = follow ? follow.user : t("scene.notYet");
     els.evSubscriber.textContent = sub ? sub.user : t("scene.notYet");
     els.evTopDonation.textContent = topDonation.amount > 0 ? `${topDonation.user} (${formatMoney(topDonation.amount)} ${currencySymbol(topDonation.currency)})` : t("scene.notYet");
+  }
+
+  function pushChat(msg) {
+    const row = document.createElement("div");
+    row.className = "scene-chat__msg";
+    const badges = (msg.badges || [])
+      .slice(0, 3)
+      .map((b) => `<span class="scene-chat__badge" data-role="${escapeAttr(String(b))}">${escapeHtml(String(b).slice(0, 1).toUpperCase())}</span>`)
+      .join("");
+    const text = window.TwitchEmotes && window.TwitchEmotes.renderEmotes
+      ? window.TwitchEmotes.renderEmotes(msg.message, msg.emotes)
+      : escapeHtml(msg.message);
+    row.innerHTML = `${badges}<span class="scene-chat__user" style="color:${escapeAttr(msg.color || "#c9c1d6")}">${escapeHtml(msg.user)}</span><span class="scene-chat__colon">:</span><span class="scene-chat__text">${text}</span>`;
+    els.sceneChatList.appendChild(row);
+    while (els.sceneChatList.children.length > MAX_CHAT) els.sceneChatList.removeChild(els.sceneChatList.firstChild);
+    els.sceneChatList.scrollTop = els.sceneChatList.scrollHeight;
+  }
+
+  function kindLabel(alert) {
+    switch (alert.kind) {
+      case "follow": return t("alert.follow");
+      case "sub": return t("alert.sub");
+      case "gift_sub": return t("alert.giftSub", { count: alert.count || 1 });
+      case "cheer": return t("alert.cheer");
+      case "donation": return t("alert.donation");
+      case "wheel_start": return t("alert.wheelStart");
+      case "wheel_winner": return t("alert.wheelWinner");
+      default: return "";
+    }
+  }
+
+  function formatAmount(alert) {
+    if (alert.kind === "cheer") return t("alert.cheerBits", { amount: alert.amount });
+    if (alert.kind === "donation") return `${formatMoney(alert.amount)} ${currencySymbol(alert.currency || "RUB")}`;
+    return "";
+  }
+
+  function showAlert(alert) {
+    const card = document.createElement("div");
+    card.className = "scene-alert";
+    card.dataset.kind = alert.kind || "";
+
+    let icon = ICONS[alert.kind] || "";
+    let nameHtml = escapeHtml(alert.user || "");
+
+    if (alert.kind === "wheel_start") {
+      icon = "🎉";
+      nameHtml = escapeHtml(t("alert.wheelStartMessage", { command: alert.command || "" }));
+    } else if (alert.kind === "wheel_winner") {
+      icon = "";
+      const name = escapeHtml(alert.user || "");
+      if (alert.isElimination) nameHtml = t("alert.eliminated", { name });
+      else if (alert.isFinalWinner) nameHtml = t("alert.finalWinner", { name });
+      else nameHtml = t("alert.winner", { name });
+    }
+
+    const amount = formatAmount(alert);
+    const messageHtml = (alert.kind === "donation" || alert.kind === "cheer") && alert.message
+      ? `<div class="scene-alert__message">«${escapeHtml(alert.message)}»</div>`
+      : "";
+
+    card.innerHTML = `
+      ${icon ? `<div class="scene-alert__icon">${icon}</div>` : ""}
+      <div class="scene-alert__body">
+        <div class="scene-alert__kicker">${kindLabel(alert)}</div>
+        <div class="scene-alert__name">${nameHtml}</div>
+        ${amount ? `<div class="scene-alert__amount">${amount}</div>` : ""}
+        ${messageHtml}
+      </div>`;
+
+    els.sceneAlerts.prepend(card);
+    requestAnimationFrame(() => card.classList.add("scene-alert--in"));
+
+    const holdMs = alert.durationMs || 5000;
+    setTimeout(() => {
+      card.classList.add("scene-alert--out");
+      setTimeout(() => card.remove(), 300);
+    }, holdMs);
   }
 
   function startTimer(duration, doneMsg) {
@@ -159,6 +258,12 @@
       case EVENT_TYPES.RECENT_EVENT:
         recentEvents = [msg.payload, ...recentEvents].slice(0, 15);
         renderEvents();
+        break;
+      case EVENT_TYPES.CHAT_MESSAGE:
+        if (isTalk) pushChat(msg.payload);
+        break;
+      case EVENT_TYPES.ALERT:
+        if (isTalk) showAlert(msg.payload);
         break;
       case EVENT_TYPES.TOP_DONATION_UPDATE:
         topDonation = msg.payload;

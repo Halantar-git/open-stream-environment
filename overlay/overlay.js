@@ -27,6 +27,7 @@
   let recentEvents = [];
   let stats = { followerCount: null, subscriberCount: null };
   let topDonation = { user: "", amount: 0, currency: "RUB" };
+  let deathCount = 0;
 
   let ws;
   let wheelSectors = [];
@@ -73,6 +74,7 @@
         if (entry.type === "social") maybeStartSocialRotation(entry, inst.config || {});
         if (entry.type === "participants") renderParticipantsEntry(entry);
         if (entry.type === "mic") renderMic(entry);
+        if (entry.type === "death") renderDeath(entry);
         if (entry.type === "chat" && typeof inst.config.maxMessages === "number") {
           trimChat(entry);
         }
@@ -142,6 +144,9 @@
         break;
       case "mic":
         inner.className = "widget-mic";
+        break;
+      case "death":
+        inner.className = "widget-death";
         break;
       default:
         break;
@@ -378,6 +383,17 @@
     for (const entry of mounted.values()) if (entry.type === "stat") renderStat(entry);
   }
 
+  function renderDeath(entry) {
+    const cfg = entry.config || {};
+    const label = cfg.label || t("preview.death");
+    const color = cfg.color || "#ff4d4d";
+    entry.inner.innerHTML = `<div class="widget-death__label">${escapeHtml(label)}</div><div class="widget-death__value" style="color:${escapeAttr(color)}">${deathCount}</div>`;
+  }
+
+  function renderAllDeaths() {
+    for (const entry of mounted.values()) if (entry.type === "death") renderDeath(entry);
+  }
+
   // ---------------- rotating social banner ----------------
 
   function maybeStartSocialRotation(entry, config) {
@@ -477,6 +493,7 @@
         recentEvents = msg.payload.recentEvents || [];
         stats = msg.payload.stats || stats;
         topDonation = msg.payload.topDonation || topDonation;
+        deathCount = msg.payload.deathCount || 0;
         if (msg.payload.giveaway) {
           participantsState = {
             count: msg.payload.giveaway.count || 0,
@@ -495,6 +512,10 @@
       case EVENT_TYPES.STAT_UPDATE:
         stats = msg.payload;
         renderAllStats();
+        break;
+      case EVENT_TYPES.DEATH_COUNT_UPDATE:
+        deathCount = (msg.payload && msg.payload.count) || 0;
+        renderAllDeaths();
         break;
       case EVENT_TYPES.TOP_DONATION_UPDATE:
         topDonation = msg.payload;
@@ -550,6 +571,7 @@
         renderAllGoals();
         renderAllRecent();
         renderAllStats();
+        renderAllDeaths();
         renderAllParticipants();
         break;
       default:
