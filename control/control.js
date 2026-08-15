@@ -94,6 +94,11 @@
   const eventsSearchInput = document.getElementById("eventsSearch");
   const clearEventsBtn = document.getElementById("clearEventsBtn");
   const eventsMetaEl = document.getElementById("eventsMeta");
+  const toggleTerminalBtn = document.getElementById("toggleTerminalBtn");
+  const terminalPanel = document.getElementById("terminalPanel");
+  const terminalBody = document.getElementById("terminalBody");
+  const terminalClearBtn = document.getElementById("terminalClearBtn");
+  const terminalCloseBtn = document.getElementById("terminalCloseBtn");
 
   // ---- helpers ----
   function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
@@ -1436,6 +1441,93 @@
     });
   });
 
+  // ---- terminal ----
+  const TERMINAL_MAX_LINES = 500;
+  let terminalAtBottom = true;
+
+  function formatTerminalTime(ts) {
+    const d = new Date(Number(ts) || Date.now());
+    return d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+
+  function serializeTerminalData(data) {
+    if (data === null || data === undefined) return "";
+    if (typeof data === "string") return data;
+    try {
+      const s = JSON.stringify(data);
+      return s && s !== "{}" ? s : "";
+    } catch {
+      return String(data);
+    }
+  }
+
+  function appendTerminalLine(entry) {
+    if (!terminalBody || !entry) return;
+
+    const line = document.createElement("div");
+    line.className = `terminal-line terminal-line--${entry.level || "info"}`;
+    line.dataset.service = entry.service || "server";
+
+    const time = document.createElement("span");
+    time.className = "terminal-line__time";
+    time.textContent = formatTerminalTime(entry.timestamp);
+
+    const service = document.createElement("span");
+    service.className = "terminal-line__service";
+    service.textContent = entry.service || "server";
+
+    const level = document.createElement("span");
+    level.className = "terminal-line__level";
+    level.textContent = String(entry.level || "info").toUpperCase();
+
+    const message = document.createElement("span");
+    message.className = "terminal-line__message";
+    message.textContent = entry.message || "";
+
+    line.append(time, service, level, message);
+
+    const dataStr = serializeTerminalData(entry.data);
+    if (dataStr) {
+      const data = document.createElement("span");
+      data.className = "terminal-line__data";
+      data.textContent = dataStr;
+      line.appendChild(document.createTextNode(" "));
+      line.appendChild(data);
+    }
+
+    terminalBody.appendChild(line);
+    while (terminalBody.children.length > TERMINAL_MAX_LINES) {
+      terminalBody.removeChild(terminalBody.firstChild);
+    }
+
+    if (terminalAtBottom) {
+      terminalBody.scrollTop = terminalBody.scrollHeight;
+    }
+  }
+
+  function setTerminalOpen(open) {
+    if (!terminalPanel || !toggleTerminalBtn) return;
+    terminalPanel.hidden = !open;
+    toggleTerminalBtn.classList.toggle("is-active", open);
+    if (open && terminalBody) terminalBody.scrollTop = terminalBody.scrollHeight;
+  }
+
+  function toggleTerminal() {
+    setTerminalOpen(terminalPanel && terminalPanel.hidden);
+  }
+
+  if (toggleTerminalBtn) {
+    toggleTerminalBtn.innerHTML = `${ICONS.terminal} ${t("editor.terminal")}`;
+    toggleTerminalBtn.addEventListener("click", toggleTerminal);
+  }
+  if (terminalCloseBtn) terminalCloseBtn.addEventListener("click", () => setTerminalOpen(false));
+  if (terminalClearBtn) terminalClearBtn.addEventListener("click", () => { if (terminalBody) terminalBody.innerHTML = ""; });
+  if (terminalBody) {
+    terminalBody.addEventListener("scroll", () => {
+      terminalAtBottom = terminalBody.scrollHeight - terminalBody.scrollTop - terminalBody.clientHeight < 40;
+    });
+  }
+
   // ---- websocket ----
   function handleMessage(msg) {
     switch (msg.type) {
@@ -1529,6 +1621,9 @@
       case EVENT_TYPES.LOCALES:
         applyLocales(msg.payload && msg.payload.lang, msg.payload && msg.payload.locales);
         break;
+      case EVENT_TYPES.TERMINAL_LOG:
+        appendTerminalLine(msg.payload);
+        break;
       default:
         break; // ALERT / CHAT_MESSAGE / RECENT_EVENT are for the overlay, not the editor
     }
@@ -1567,6 +1662,7 @@
     importConfigBtn.textContent = t("settings.import");
     const chatBtn = document.getElementById("openChatWindowBtn");
     if (chatBtn) chatBtn.innerHTML = `${ICONS.widgetChat} ${t("editor.chat")}`;
+    if (toggleTerminalBtn) toggleTerminalBtn.innerHTML = `${ICONS.terminal} ${t("editor.terminal")}`;
     const boostyBtn = document.getElementById("openBoostyBtn");
     if (boostyBtn) boostyBtn.innerHTML = `${ICONS.heart} ${t("boosty.support")}`;
   }

@@ -18,6 +18,7 @@
 const WebSocket = require("ws");
 
 const { redirectUri } = require("../oauth");
+const { createLogger } = require("../logger");
 
 /**
  * DonationAlerts real-time donations over Centrifugo, following:
@@ -45,9 +46,11 @@ const AUTH_ERROR_RECONNECT_MS = 15000;
 const HEARTBEAT_MS = 25000;
 const PONG_TIMEOUT_MS = 10000;
 
-function log(...args) {
-  console.log(`[donationalerts] ${new Date().toISOString()}`, ...args);
-}
+// Опция подписки по WebSocket:
+//   "method" — отправлять Centrifugo v2 RPC-кадры { method: "subscribe", params, id }.
+//   "http"   — не отправлять subscribe в сокет: HTTP /centrifuge/subscribe уже
+//              регистрирует подписку на стороне DA, только ставим connected.
+const SUBSCRIBE_MODE = "method";
 
 function donationAlertFromPayload(payload) {
   return {
@@ -69,6 +72,13 @@ function startDonationAlerts({ bus, state }) {
   let tokenExpiresAt = 0;
   let connectRequestId = 1;
   let nextCommandId = 1;
+  let connectToken = null;
+  let connectFormat = "params";
+  let subscribeMode = SUBSCRIBE_MODE;
+
+  const logger = createLogger(bus, "donationalerts");
+  // Высокочастотные отладочные события (ping/pong) не засоряют терминал.
+  const debug = (...args) => console.log(`[donationalerts] ${new Date().toISOString()}`, ...args);
 
   function setStatus(status) {
     bus.emit("connection_status", { service: "donationAlerts", status });
@@ -91,11 +101,11 @@ function startDonationAlerts({ bus, state }) {
     clearHeartbeat();
     heartbeatTimer = setInterval(() => {
       if (stopped || !ws || ws.readyState !== WebSocket.OPEN) return;
-      log("sending heartbeat ping");
+      debug("sending heartbeat ping");
       ws.ping();
       clearTimeout(pongTimeoutTimer);
       pongTimeoutTimer = setTimeout(() => {
-        log("heartbeat pong timeout — terminating socket");
+        logger.warn("heartbeat pong timeout — terminating socket");
         if (ws) ws.terminate();
       }, PONG_TIMEOUT_MS);
     }, HEARTBEAT_MS);
@@ -113,7 +123,7 @@ function startDonationAlerts({ bus, state }) {
     const da = state.config.donationAlerts;
     if (!da.refreshToken) throw new Error("no refreshToken available");
 
-    log("refreshing access token…");
+    logger.info("refreshing access token…");
     const res = await fetch(OAUTH_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -140,7 +150,7 @@ function startDonationAlerts({ bus, state }) {
     if (json.expires_in) {
       tokenExpiresAt = Date.now() + (Number(json.expires_in) - 60) * 1000;
     }
-    log("access token refreshed");
+    logger.success("access token refreshed");
     return json.access_token;
   }
 
@@ -152,10 +162,26 @@ function startDonationAlerts({ bus, state }) {
   }
 
   function parseUserOauth(json) {
-    const user = json.data || json;
+    const user = (json && (json.data || json)) || {};
     const userId = user.id;
-    const connectionToken = user.socket_connection_token;
-    if (!userId || !connectionToken) throw new Error("no socket_connection_token in user/oauth response");
+    const rawToken = user.socket_connection_token;
+
+    logger.info("user/oauth parsed", {
+      userId,
+      tokenType: typeof rawToken,
+      tokenIsNullish: rawToken === undefined || rawToken === null,
+    });
+
+    if (userId === undefined || userId === null) {
+      throw new Error("user/oauth response is missing user.id");
+    }
+
+    const connectionToken = typeof rawToken === "string" ? rawToken.trim() : "";
+    if (!connectionToken) {
+      const received = rawToken === undefined ? "undefined" : rawToken === null ? "null" : typeof rawToken;
+      throw new Error(`user/oauth response has no valid socket_connection_token (received ${received})`);
+    }
+
     return { userId, connectionToken };
   }
 
@@ -165,7 +191,7 @@ function startDonationAlerts({ bus, state }) {
     });
 
     if (res.status === 401) {
-      log("user/oauth returned 401 — refreshing token and retrying once");
+      logger.warn("user/oauth returned 401 — refreshing token and retrying once");
       const refreshed = await refreshAccessToken();
       const retryRes = await fetch(USER_URL, {
         headers: { Authorization: `Bearer ${refreshed}` },
@@ -186,8 +212,22 @@ function startDonationAlerts({ bus, state }) {
   }
 
   function openSocket(userId, connectionToken) {
+    const token = String(connectionToken ?? "").trim();
+    if (!token) {
+      throw new Error("openSocket: connectionToken is empty (undefined/null/blank)");
+    }
+
     nextCommandId = 1;
     connectRequestId = nextCommandId++;
+    connectToken = token;
+    connectFormat = "params";
+
+    logger.info("opening Centrifugo socket", {
+      userId,
+      connectRequestId,
+      tokenPresent: !!token,
+      tokenLength: token.length,
+    });
 
     ws = new WebSocket(CENTRIFUGO_WS, {
       headers: {
@@ -198,47 +238,89 @@ function startDonationAlerts({ bus, state }) {
 
     ws.on("open", () => {
       startHeartbeat();
-      log("websocket opened — sending connect");
-      ws.send(JSON.stringify({ connect: { token: connectionToken }, id: connectRequestId }));
+      sendConnectFrame();
     });
 
     ws.on("pong", () => {
       clearTimeout(pongTimeoutTimer);
-      log("heartbeat pong received");
+      debug("heartbeat pong received");
     });
 
     ws.on("message", (raw) => handleMessage(raw, userId));
 
     ws.on("close", (code, reason) => {
-      log("websocket closed", code, String(reason || ""));
+      logger.warn("websocket closed", { code, reason: String(reason || "") });
       clearHeartbeat();
+      // Освобождаем ссылку на закрытый сокет сразу, чтобы не удерживать его
+      // в памяти и не оставлять висячие слушатели до следующего реконнекта.
+      ws = null;
       if (stopped) return;
       setStatus("disconnected");
       scheduleReconnect(RECONNECT_DELAY_MS);
     });
 
     ws.on("error", (err) => {
-      log("socket error:", err.code || "", err.message);
+      logger.error("socket error", { code: err.code || "", message: err.message });
     });
+  }
+
+  function sendConnectFrame() {
+    if (!ws || ws.readyState !== WebSocket.OPEN || !connectToken) return;
+
+    // Centrifugo v1/v2 RPC: кадр с полем `params`. Если сервер требует
+    // action/method — используем fallback с `action: "connect"`.
+    const frame = connectFormat === "action"
+      ? { action: "connect", params: { token: connectToken }, id: connectRequestId }
+      : { params: { token: connectToken }, id: connectRequestId };
+
+    logger.info("sending connect frame", {
+      id: connectRequestId,
+      format: connectFormat,
+      tokenLength: String(connectToken).length,
+    });
+
+    // Centrifugo использует JSON-lines: каждый кадр заканчивается переводом строки.
+    ws.send(JSON.stringify(frame) + "\n");
   }
 
   function handleMessage(raw, userId) {
     let msg;
     try {
-      msg = JSON.parse(raw.toString());
+      msg = JSON.parse(raw.toString().trim());
     } catch {
       return;
     }
 
-    // Reply to our "connect" command -> now subscribe to donation + goal channels.
-    if (msg.id === connectRequestId && (msg.connect || msg.result)) {
-      const client = (msg.connect && msg.connect.client) || (msg.result && msg.result.client);
-      subscribe(client, userId);
-      return;
+    // Ответ на connect: Centrifugo v2 возвращает result.client (или result.body.client).
+    if (msg.id === connectRequestId && msg.result) {
+      const client = msg.result.client || (msg.result.body && msg.result.body.client);
+      if (client) {
+        logger.success("centrifugo connected", { client });
+        subscribe(client, userId);
+        return;
+      }
     }
 
     if (msg.error) {
-      log("server error frame:", JSON.stringify(msg));
+      logger.warn("server error frame", msg);
+
+      // 3003 = bad request.
+      const code = msg.error && (msg.error.code !== undefined ? msg.error.code : msg.error);
+      const isBadRequest = code === 3003 || String(code).includes("3003");
+
+      // Connect: пробуем альтернативный формат кадра (action/method).
+      if (msg.id === connectRequestId && connectFormat === "params" && isBadRequest) {
+        connectFormat = "action";
+        connectRequestId = nextCommandId++;
+        logger.info("retrying connect with action format", { id: connectRequestId });
+        sendConnectFrame();
+      } else if (typeof msg.id === "number" && msg.id !== connectRequestId && isBadRequest && subscribeMode === "method") {
+        // Subscribe: если HTTP /centrifuge/subscribe уже регистрирует подписку,
+        // переключаемся на режим без отправки subscribe-кадров в сокет.
+        subscribeMode = "http";
+        setStatus("connected");
+        logger.warn("subscribe rejected (3003) — switching to HTTP-only subscription mode");
+      }
       return;
     }
 
@@ -249,7 +331,7 @@ function startDonationAlerts({ bus, state }) {
 
     if (channel.startsWith("$alerts:donation")) {
       const alert = donationAlertFromPayload(payload);
-      log("donation received:", JSON.stringify(alert));
+      logger.success("donation received", alert);
       bus.emit("alert", alert);
     } else if (channel.startsWith("$goals:goal")) {
       if (payload.raised !== undefined || payload.current_amount !== undefined) {
@@ -257,7 +339,7 @@ function startDonationAlerts({ bus, state }) {
           current: Number(payload.raised ?? payload.current_amount) || 0,
           target: Number(payload.goal ?? payload.target_amount) || undefined,
         };
-        log("goal update received:", JSON.stringify(update));
+        logger.success("goal update received", update);
         bus.emit("goal_external_update", update);
       }
     }
@@ -266,7 +348,7 @@ function startDonationAlerts({ bus, state }) {
   async function subscribe(client, userId) {
     try {
       const channels = [`$alerts:donation_${userId}`, `$goals:goal_${userId}`];
-      log("subscribing to channels:", channels.join(", "));
+      logger.info("subscribing to channels", { channels });
 
       const subRes = await fetch(SUBSCRIBE_URL, {
         method: "POST",
@@ -284,18 +366,32 @@ function startDonationAlerts({ bus, state }) {
 
       const subJson = await subRes.json();
       const subChannels = subJson.channels || (subJson.data && subJson.data.channels) || [];
-      if (!subChannels.length) log("subscribe response had no channels:", JSON.stringify(subJson));
+      if (!subChannels.length) logger.warn("subscribe response had no channels", subJson);
+
+      if (subscribeMode === "http") {
+        setStatus("connected");
+        logger.success("connected (subscriptions registered via HTTP, socket subscribe skipped)");
+        return;
+      }
 
       subChannels.forEach((ch) => {
         if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ subscribe: { channel: ch.channel, token: ch.token }, id: nextCommandId++ }));
+          const subCommand = {
+            method: "subscribe",
+            params: {
+              channel: ch.channel,
+              token: ch.token,
+            },
+            id: nextCommandId++,
+          };
+          ws.send(JSON.stringify(subCommand) + "\n");
         }
       });
 
       setStatus("connected");
-      log("connected and subscribed");
+      logger.success("connected and subscribed");
     } catch (err) {
-      log("subscribe failed:", err.message);
+      logger.error("subscribe failed", { message: err.message });
       setStatus("error");
       if (ws) ws.close();
     }
@@ -306,7 +402,7 @@ function startDonationAlerts({ bus, state }) {
     clearTimeout(reconnectTimer);
     clearHeartbeat();
     setStatus("connecting");
-    log("connecting…");
+    logger.info("connecting…");
 
     try {
       const accessToken = await ensureAccessToken();
@@ -314,7 +410,7 @@ function startDonationAlerts({ bus, state }) {
 
       if (!accessToken) {
         setStatus("not_configured");
-        log("no access token — configure DonationAlerts in Settings");
+        logger.warn("no access token — configure DonationAlerts in Settings");
         return;
       }
 
@@ -324,9 +420,9 @@ function startDonationAlerts({ bus, state }) {
       openSocket(userId, connectionToken);
     } catch (err) {
       if (stopped) return;
-      log("connect failed:", err.message);
+      logger.error("connect failed", { message: err.message });
       setStatus("error");
-      const authError = /401|refresh_token|unauthorized|invalid_grant/i.test(err.message);
+      const authError = /401|refresh_token|unauthorized|invalid_grant|socket_connection_token|connectionToken/i.test(err.message);
       scheduleReconnect(authError ? AUTH_ERROR_RECONNECT_MS : RECONNECT_DELAY_MS);
     }
   }

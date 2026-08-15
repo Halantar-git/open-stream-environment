@@ -45,7 +45,17 @@
       <div class="topbar__status" id="statusChips"></div>
       <button class="md-button md-button--filled topbar__boosty-btn" id="openBoostyBtn" title="Boosty">Поддержать автора</button>
       <button class="md-button md-button--tonal topbar__chat-btn" id="openChatWindowBtn"></button>
+      <button class="md-button md-button--tonal topbar__terminal-btn" id="toggleTerminalBtn" data-i18n-title="editor.terminal"></button>
     </header>
+
+    <aside class="terminal-panel" id="terminalPanel" hidden>
+      <header class="terminal-panel__header">
+        <span class="terminal-panel__title" data-i18n="terminal.title">Логи</span>
+        <button class="terminal-panel__btn" id="terminalClearBtn" data-i18n="terminal.clear">Очистить</button>
+        <button class="terminal-panel__btn terminal-panel__close" id="terminalCloseBtn" aria-label="Закрыть">×</button>
+      </header>
+      <div class="terminal-panel__body" id="terminalBody"></div>
+    </aside>
 
     <section class="view" id="view-editor">
       <aside class="library" id="library">

@@ -57,6 +57,7 @@
     layers: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 3 2 8l10 5 10-5-10-5z"/><path d="M2 13l10 5 10-5M2 17.5 12 22l10-4.5"/></svg>`,
     link: `<svg viewBox="0 0 24 24" ${stroke}><path d="M9 15l6-6M8 12l-2.5 2.5a3.5 3.5 0 0 0 5 5L13 17M16 12l2.5-2.5a3.5 3.5 0 0 0-5-5L11 7"/></svg>`,
     copy: `<svg viewBox="0 0 24 24" ${stroke}><rect x="9" y="9" width="12" height="12" rx="1.5"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>`,
+    terminal: `<svg viewBox="0 0 24 24" ${stroke}><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg>`,
     back: `<svg viewBox="0 0 24 24" ${stroke}><path d="M15 5l-7 7 7 7"/></svg>`,
     heart: `<svg viewBox="0 0 24 24"><path d="M12 21s-7-4.35-9.5-8.5C.8 8.9 2.6 5 6.2 5c2 0 3.3 1 4.8 2.7C12.5 6 13.8 5 15.8 5c3.6 0 5.4 3.9 3.7 7.5C19 16.65 12 21 12 21z" fill="currentColor"/></svg>`,
   };

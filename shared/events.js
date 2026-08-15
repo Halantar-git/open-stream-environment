@@ -44,6 +44,7 @@
     WHEEL_SPEED_CONFIG: "wheel_speed_config", // { config }
     OVERLAY_MIC_CONFIG: "overlay_mic_config", // { config }
     LOCALES: "locales", // { lang, locales: { ru, en } }
+    TERMINAL_LOG: "terminal_log", // { timestamp, service, level, message, data }
 
     // control -> server commands
     CMD_ADD_WIDGET: "cmd_add_widget", // { type }

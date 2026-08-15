@@ -17,6 +17,8 @@
 
 const WebSocket = require("ws");
 
+const { createLogger } = require("../logger");
+
 /**
  * Follows/subs/cheers via Twitch EventSub over WebSocket:
  * https://dev.twitch.tv/docs/eventsub/handling-websocket-events/
@@ -46,11 +48,9 @@ const AUTH_RECONNECT_DELAY_MS = 15000;
 const KEEPALIVE_TIMEOUT_MS = 35000; // keepalive_timeout_seconds=30 + buffer
 const KEEPALIVE_CHECK_MS = 5000;
 
-function log(...args) {
-  console.log(`[twitch-eventsub] ${new Date().toISOString()}`, ...args);
-}
-
 function startTwitchEvents({ bus, state }) {
+  const logger = createLogger(bus, "twitch-eventsub");
+
   let ws = null;
   let stopped = false;
   let keepaliveTimer = null;
@@ -76,7 +76,7 @@ function startTwitchEvents({ bus, state }) {
     keepaliveTimer = setInterval(() => {
       if (stopped || !ws || ws.readyState !== WebSocket.OPEN) return;
       if (Date.now() - lastMessageAt > KEEPALIVE_TIMEOUT_MS) {
-        log("keepalive timeout — closing socket");
+        logger.warn("keepalive timeout — closing socket");
         ws.close();
       }
     }, KEEPALIVE_CHECK_MS);
@@ -94,7 +94,7 @@ function startTwitchEvents({ bus, state }) {
     const twitch = state.config.twitch;
     if (!twitch.refreshToken) throw new Error("no refreshToken available");
 
-    log("refreshing access token…");
+    logger.info("refreshing access token…");
     const res = await fetch(TOKEN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -120,7 +120,7 @@ function startTwitchEvents({ bus, state }) {
     if (json.expires_in) {
       tokenExpiresAt = Date.now() + (Number(json.expires_in) - 60) * 1000;
     }
-    log("access token refreshed");
+    logger.success("access token refreshed");
     return json.access_token;
   }
 
@@ -165,7 +165,7 @@ function startTwitchEvents({ bus, state }) {
       await subscribeAll(twitchConfig, sessionId, token);
     } catch (err) {
       if (err.status === 401) {
-        log("subscribe returned 401 — refreshing and retrying once");
+        logger.warn("subscribe returned 401 — refreshing and retrying once");
         token = await refreshAccessToken();
         await subscribeAll(twitchConfig, sessionId, token);
       } else {
@@ -178,7 +178,7 @@ function startTwitchEvents({ bus, state }) {
   function connect(url) {
     if (stopped) return;
     setStatus("connecting");
-    log("connecting…", url);
+    logger.info("connecting", { url });
 
     const socket = new WebSocket(url);
     ws = socket;
@@ -199,22 +199,22 @@ function startTwitchEvents({ bus, state }) {
 
       if (type === "session_welcome") {
         const sessionId = msg.payload.session.id;
-        log("session_welcome", sessionId);
+        logger.info("session_welcome", { sessionId });
         try {
           const token = await subscribeWithRetry(state.config.twitch, sessionId);
           authFailure = false;
           setStatus("connected");
-          log("subscribed and connected");
+          logger.success("subscribed and connected");
           fetchInitialStats(state.config.twitch, token, bus);
         } catch (err) {
-          log("subscribe failed:", err.message);
+          logger.error("subscribe failed", { message: err.message });
           authFailure = /401|refresh_token|unauthorized|invalid_grant/i.test(err.message);
           setStatus("error");
           if (ws === socket) socket.close();
         }
       } else if (type === "session_reconnect") {
         const reconnectUrl = msg.payload.session.reconnect_url;
-        log("session_reconnect", reconnectUrl);
+        logger.info("session_reconnect", { reconnectUrl });
         const old = socket;
         connect(reconnectUrl);
         if (old) setTimeout(() => { try { old.close(); } catch {} }, 5000);
@@ -225,7 +225,7 @@ function startTwitchEvents({ bus, state }) {
     });
 
     socket.on("close", (code, reason) => {
-      log("websocket closed", code, String(reason || ""));
+      logger.warn("websocket closed", { code, reason: String(reason || "") });
       clearKeepaliveWatchdog();
       if (stopped) return;
       if (ws !== socket) return; // superseded by a session_reconnect
@@ -235,7 +235,7 @@ function startTwitchEvents({ bus, state }) {
     });
 
     socket.on("error", (err) => {
-      log("socket error:", err.code || "", err.message);
+      logger.error("socket error", { code: err.code || "", message: err.message });
     });
   }
 
@@ -254,19 +254,20 @@ function startTwitchEvents({ bus, state }) {
 }
 
 async function fetchInitialStats(twitchConfig, accessToken, bus) {
+  const logger = createLogger(bus, "twitch-eventsub");
   const headers = { "Client-Id": twitchConfig.clientId, Authorization: `Bearer ${accessToken}` };
   const snapshot = {};
   try {
     const res = await fetch(`https://api.twitch.tv/helix/channels/followers?broadcaster_id=${twitchConfig.broadcasterId}&first=1`, { headers });
     if (res.ok) snapshot.followerCount = (await res.json()).total;
   } catch (err) {
-    console.error("[twitch-eventsub] followers total fetch failed:", err.message);
+    logger.warn("followers total fetch failed", { message: err.message });
   }
   try {
     const res = await fetch(`https://api.twitch.tv/helix/subscriptions?broadcaster_id=${twitchConfig.broadcasterId}&first=1`, { headers });
     if (res.ok) snapshot.subscriberCount = (await res.json()).total;
   } catch (err) {
-    console.error("[twitch-eventsub] subscribers total fetch failed:", err.message);
+    logger.warn("subscribers total fetch failed", { message: err.message });
   }
   if (Object.keys(snapshot).length) bus.emit("stat_snapshot", snapshot);
 }

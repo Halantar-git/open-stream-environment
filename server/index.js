@@ -23,6 +23,7 @@ const { EventEmitter } = require("events");
 
 const { AppState } = require("./state");
 const { EVENT_TYPES, ALERT_DURATIONS_MS } = require("../shared/events");
+const { createLogger } = require("./logger");
 const { mountOAuthRoutes, buildTwitchAuthorizeUrl, buildDonationAlertsAuthorizeUrl } = require("./oauth");
 const { startTwitchChat } = require("./integrations/twitch-chat");
 const { startTwitchEvents } = require("./integrations/twitch-eventsub");
@@ -52,6 +53,7 @@ function createServer({ db } = {}) {
   let currentSession = null;
   let autoSpinTimer = null;
   let language = db ? db.getLanguage() : "en";
+  const serverLog = createLogger(bus, "server");
 
   function broadcast(type, payload) {
     const message = JSON.stringify({ type, payload });
@@ -387,10 +389,14 @@ function createServer({ db } = {}) {
     broadcast(EVENT_TYPES.STAT_UPDATE, stats);
   });
 
+  bus.on("terminal_log", (entry) => {
+    broadcast(EVENT_TYPES.TERMINAL_LOG, entry);
+  });
+
   function start() {
     const port = state.config.port || 8710;
     server.listen(port, () => {
-      console.log(`[server] overlay + control bus listening on http://localhost:${port}`);
+      serverLog.success("overlay + control bus listening", { url: `http://localhost:${port}` });
     });
 
     restartTwitchChat();
@@ -413,6 +419,7 @@ function createServer({ db } = {}) {
   }
 
   function stop() {
+    serverLog.info("stopping server");
     clearAutoSpin();
     if (currentSession) {
       if (db) db.endSession(currentSession.id);

@@ -14,10 +14,15 @@
     "gridOff": "Off",
     "copyUrl": "Copy OBS URL",
     "copied": "Copied!",
-    "chat": "Chat"
+    "chat": "Chat",
+    "terminal": "Logs"
   },
   "boosty": {
     "support": "Support the author"
+  },
+  "terminal": {
+    "title": "Logs",
+    "clear": "Clear"
   },
   "scenes": {
     "title": "Scenes",

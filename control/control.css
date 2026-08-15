@@ -406,6 +406,93 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 }
 .giveaway-participant__remove:hover { opacity: 1; background: rgba(255, 180, 171, 0.14); }
 
+/* ---------- Terminal panel ---------- */
+.topbar__terminal-btn { margin-left: 10px; font-size: 12px; padding: 7px 14px; }
+.topbar__terminal-btn svg { width: 14px; height: 14px; }
+.topbar__terminal-btn.is-active { background: var(--md-primary-container); color: var(--md-on-primary-container); }
+
+.terminal-panel {
+  position: fixed;
+  top: 56px;
+  right: 0;
+  bottom: 0;
+  width: min(460px, 100vw);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: #0d1117;
+  color: #c9d1d9;
+  border-left: 1px solid #30363d;
+  box-shadow: -12px 0 32px rgba(0, 0, 0, 0.45);
+  font-family: var(--font-mono);
+}
+.terminal-panel[hidden] { display: none; }
+.terminal-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #21262d;
+  background: #161b22;
+}
+.terminal-panel__title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #8b949e;
+  margin-right: auto;
+}
+.terminal-panel__btn {
+  font-family: var(--font-body);
+  font-size: 12px;
+  border: 1px solid #30363d;
+  background: #21262d;
+  color: #c9d1d9;
+  border-radius: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.terminal-panel__btn:hover { background: #30363d; }
+.terminal-panel__close {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+  color: #8b949e;
+}
+.terminal-panel__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.terminal-line {
+  display: flex;
+  gap: 8px;
+  padding: 1px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.terminal-line__time { color: #6e7681; flex-shrink: 0; }
+.terminal-line__service { flex-shrink: 0; font-weight: 600; }
+.terminal-line__level { flex-shrink: 0; font-weight: 700; }
+.terminal-line__message { color: #c9d1d9; }
+.terminal-line__data { color: #8b949e; }
+
+.terminal-line--info .terminal-line__level { color: #58a6ff; }
+.terminal-line--success .terminal-line__level { color: #3fb950; }
+.terminal-line--warn .terminal-line__level { color: #d29922; }
+.terminal-line--error .terminal-line__level { color: #f85149; }
+
+.terminal-line[data-service="server"] .terminal-line__service { color: #8b949e; }
+.terminal-line[data-service="twitch-chat"] .terminal-line__service { color: #a371f7; }
+.terminal-line[data-service="twitch-eventsub"] .terminal-line__service { color: #79c0ff; }
+.terminal-line[data-service="donationalerts"] .terminal-line__service { color: #7ee0d6; }
+
 /* ---------- Participants widget settings ---------- */
 .settings__row { display: flex; gap: 12px; }
 .settings__row .md-field { flex: 1; }

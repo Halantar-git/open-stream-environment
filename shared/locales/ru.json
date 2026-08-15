@@ -14,10 +14,15 @@
     "gridOff": "Выкл",
     "copyUrl": "Скопировать URL для OBS",
     "copied": "Скопировано!",
-    "chat": "Чат"
+    "chat": "Чат",
+    "terminal": "Логи"
   },
   "boosty": {
     "support": "Поддержать автора"
+  },
+  "terminal": {
+    "title": "Логи",
+    "clear": "Очистить"
   },
   "scenes": {
     "title": "Сцены",

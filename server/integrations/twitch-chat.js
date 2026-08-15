@@ -17,13 +17,18 @@
 
 const tmi = require("tmi.js");
 
+const { createLogger } = require("../logger");
+
 /**
  * Reads chat as an anonymous viewer (tmi.js's "justinfan" mode) — no
  * Twitch app or token required, just the channel name. This only lets us
  * read; follows/subs/cheers need EventSub (see twitch-eventsub.js).
  */
 function startTwitchChat({ bus, channel }) {
+  const logger = createLogger(bus, "twitch-chat");
+
   if (!channel) {
+    logger.warn("no channel configured");
     bus.emit("connection_status", { service: "twitchChat", status: "not_configured" });
     return { stop() {} };
   }
@@ -45,12 +50,19 @@ function startTwitchChat({ bus, channel }) {
     });
   });
 
-  client.on("connected", () => bus.emit("connection_status", { service: "twitchChat", status: "connected" }));
-  client.on("disconnected", () => bus.emit("connection_status", { service: "twitchChat", status: "disconnected" }));
+  client.on("connected", () => {
+    logger.success("connected to chat", { channel });
+    bus.emit("connection_status", { service: "twitchChat", status: "connected" });
+  });
+  client.on("disconnected", () => {
+    logger.warn("chat disconnected", { channel });
+    bus.emit("connection_status", { service: "twitchChat", status: "disconnected" });
+  });
 
+  logger.info("connecting to chat", { channel });
   bus.emit("connection_status", { service: "twitchChat", status: "connecting" });
   client.connect().catch((err) => {
-    console.error("[twitch-chat] connect failed", err.message);
+    logger.error("chat connect failed", { message: err.message });
     bus.emit("connection_status", { service: "twitchChat", status: "error" });
   });
 
