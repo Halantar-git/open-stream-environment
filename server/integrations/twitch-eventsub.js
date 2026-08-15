@@ -58,6 +58,7 @@ function startTwitchEvents({ bus, state }) {
   let refreshPromise = null;
   let tokenExpiresAt = 0;
   let authFailure = false;
+  let isReconnecting = false;
 
   const initialUrl = "wss://eventsub.wss.twitch.tv/ws?keepalive_timeout_seconds=30";
 
@@ -199,22 +200,33 @@ function startTwitchEvents({ bus, state }) {
 
       if (type === "session_welcome") {
         const sessionId = msg.payload.session.id;
-        logger.info("session_welcome", { sessionId });
-        try {
-          const token = await subscribeWithRetry(state.config.twitch, sessionId);
+        logger.info("session_welcome", { sessionId, isReconnecting });
+
+        if (isReconnecting) {
+          // При session_reconnect Twitch сохраняет подписки; повторный subscribe
+          // вернул бы 409 Conflict.
+          isReconnecting = false;
           authFailure = false;
           setStatus("connected");
-          logger.success("subscribed and connected");
-          fetchInitialStats(state.config.twitch, token, bus);
-        } catch (err) {
-          logger.error("subscribe failed", { message: err.message });
-          authFailure = /401|refresh_token|unauthorized|invalid_grant/i.test(err.message);
-          setStatus("error");
-          if (ws === socket) socket.close();
+          logger.success("reconnected (subscriptions preserved by Twitch)");
+        } else {
+          try {
+            const token = await subscribeWithRetry(state.config.twitch, sessionId);
+            authFailure = false;
+            setStatus("connected");
+            logger.success("subscribed and connected");
+            fetchInitialStats(state.config.twitch, token, bus);
+          } catch (err) {
+            logger.error("subscribe failed", { message: err.message });
+            authFailure = /401|refresh_token|unauthorized|invalid_grant/i.test(err.message);
+            setStatus("error");
+            if (ws === socket) socket.close();
+          }
         }
       } else if (type === "session_reconnect") {
         const reconnectUrl = msg.payload.session.reconnect_url;
         logger.info("session_reconnect", { reconnectUrl });
+        isReconnecting = true;
         const old = socket;
         connect(reconnectUrl);
         if (old) setTimeout(() => { try { old.close(); } catch {} }, 5000);
@@ -229,6 +241,7 @@ function startTwitchEvents({ bus, state }) {
       clearKeepaliveWatchdog();
       if (stopped) return;
       if (ws !== socket) return; // superseded by a session_reconnect
+      isReconnecting = false; // полный реконнект: потребуется переподписка
       setStatus("disconnected");
       const delay = authFailure ? AUTH_RECONNECT_DELAY_MS : RECONNECT_DELAY_MS;
       setTimeout(() => connect(initialUrl), delay);

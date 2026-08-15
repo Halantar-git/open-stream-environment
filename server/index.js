@@ -52,6 +52,7 @@ function createServer({ db } = {}) {
   let donationAlertsCtrl = null;
   let currentSession = null;
   let autoSpinTimer = null;
+  let isSpinning = false;
   let language = db ? db.getLanguage() : "en";
   const serverLog = createLogger(bus, "server");
 
@@ -86,12 +87,16 @@ function createServer({ db } = {}) {
     clearAutoSpin();
     autoSpinTimer = setTimeout(() => {
       autoSpinTimer = null;
+      if (isSpinning) return; // предыдущий цикл ещё не завершён
       // Re-sync the wheel sectors right before the next spin so the already
       // eliminated participant disappears from the barrel without yanking the
       // arrow away from the winner while the result alert is still on screen.
       broadcast(EVENT_TYPES.GIVEAWAY_WHEEL, { sectors: state.giveawaySnapshot().participants });
       const winner = state.pickRandomWinner();
-      if (winner) broadcast(EVENT_TYPES.GIVEAWAY_SPIN, { winner });
+      if (winner) {
+        isSpinning = true;
+        broadcast(EVENT_TYPES.GIVEAWAY_SPIN, { winner });
+      }
     }, 1800);
   }
 
@@ -234,6 +239,7 @@ function createServer({ db } = {}) {
       }
       case EVENT_TYPES.CMD_START_GIVEAWAY: {
         clearAutoSpin();
+        isSpinning = false;
         const giveaway = state.startGiveaway(msg.payload && msg.payload.command);
         broadcastGiveaway(giveaway);
         bus.emit("alert", {
@@ -244,6 +250,7 @@ function createServer({ db } = {}) {
       }
       case EVENT_TYPES.CMD_STOP_GIVEAWAY: {
         clearAutoSpin();
+        isSpinning = false;
         broadcastGiveaway(state.stopGiveaway());
         break;
       }
@@ -260,16 +267,21 @@ function createServer({ db } = {}) {
         break;
       }
       case EVENT_TYPES.CMD_SPIN_WHEEL: {
+        if (isSpinning) break; // вращение уже запущено
         broadcast(EVENT_TYPES.GIVEAWAY_WHEEL, { sectors: state.giveawaySnapshot().participants });
         const winner = state.pickRandomWinner();
-        broadcast(EVENT_TYPES.GIVEAWAY_SPIN, { winner });
+        if (winner) {
+          isSpinning = true;
+          broadcast(EVENT_TYPES.GIVEAWAY_SPIN, { winner });
+        }
         break;
       }
       case EVENT_TYPES.CMD_SET_GIVEAWAY_WINNER: {
         const username = msg.payload && msg.payload.username;
         if (!state.consumePendingWinner(username)) break;
+        isSpinning = false; // текущий цикл завершён, pendingWinner очищен
         const giveaway = state.setGiveawayWinner(username);
-        const isFinalWinner = !!giveaway.eliminationMode && giveaway.count === 0;
+        const isFinalWinner = !!giveaway.isFinalWinner;
         const isElimination = !!giveaway.eliminationMode && !isFinalWinner;
         broadcastGiveaway(giveaway);
         // The wheel keeps showing the winner under the marker until the next

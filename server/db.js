@@ -28,6 +28,8 @@ function defaultData() {
     // Сессии стрима.
     sessions: [],
     // История чата / логов, привязанная к sessionId.
+    // Накопление отключено (см. appendChat) — массив оставлен для обратной
+    // совместимости и методов очистки истории.
     chatMessages: [],
     // История всех входящих событий (донаты, подписки, фоллоу).
     stream_events: [],
@@ -96,20 +98,12 @@ function createDatabase(dbPath = getDbPath()) {
     return db.get("sessions").find({ id: sessionId }).value();
   }
 
-  function appendChat(msg) {
-    const openSession = db.get("sessions").find({ endedAt: null }).value();
-    const row = {
-      id: crypto.randomUUID(),
-      sessionId: (msg && msg.sessionId) || (openSession && openSession.id) || null,
-      timestamp: (msg && msg.timestamp) || Date.now(),
-      user: (msg && msg.user) || "viewer",
-      message: (msg && msg.message) || "",
-      color: (msg && msg.color) || "#c9c1d6",
-      badges: Array.isArray(msg && msg.badges) ? msg.badges : [],
-      emotes: (msg && msg.emotes) || {},
-    };
-    db.get("chatMessages").push(row).write();
-    return row;
+  // Логирование чата отключено для оптимизации производительности:
+  // раньше на каждое сообщение выполнялась синхронная запись на диск
+  // (db.write()), что на активном чате заметно тормозило приложение.
+  // Сообщения по-прежнему доставляются в оверлей и окно чата по WebSocket.
+  function appendChat() {
+    return null;
   }
 
   function getChat(opts = {}) {

@@ -134,6 +134,7 @@ class AppState {
         eliminationMode: false,
         participants: new Set(),
         winner: null,
+        isFinalWinner: false,
         pendingWinner: null,
       },
     };
@@ -252,6 +253,7 @@ class AppState {
       command: this.runtime.giveaway.command,
       eliminationMode: this.runtime.giveaway.eliminationMode,
       winner: this.runtime.giveaway.winner,
+      isFinalWinner: this.runtime.giveaway.isFinalWinner,
       count: this.runtime.giveaway.participants.size,
       participants: [...this.runtime.giveaway.participants],
     };
@@ -262,6 +264,7 @@ class AppState {
     this.runtime.giveaway.active = true;
     this.runtime.giveaway.participants = new Set();
     this.runtime.giveaway.winner = null;
+    this.runtime.giveaway.isFinalWinner = false;
     this.runtime.giveaway.pendingWinner = null;
     return this.giveawaySnapshot();
   }
@@ -308,9 +311,15 @@ class AppState {
 
   setGiveawayWinner(username) {
     const name = String(username || "").trim();
-    this.runtime.giveaway.winner = name || null;
-    if (name && this.runtime.giveaway.eliminationMode) {
-      this.runtime.giveaway.participants.delete(name);
+    const g = this.runtime.giveaway;
+    g.winner = name || null;
+
+    // Финал определяем ДО удаления победителя: он был последним участником.
+    const isFinalWinner = !!g.eliminationMode && !!name && g.participants.has(name) && g.participants.size === 1;
+    g.isFinalWinner = isFinalWinner;
+
+    if (name && g.eliminationMode) {
+      g.participants.delete(name);
     }
     return this.giveawaySnapshot();
   }
