@@ -551,10 +551,11 @@ class AppState {
     saveConfig(this.config);
   }
 
-  saveTwitchTokens({ userAccessToken, refreshToken, broadcasterId }) {
+  saveTwitchTokens({ userAccessToken, refreshToken, broadcasterId, expiresAt }) {
     if (userAccessToken !== undefined) this.config.twitch.userAccessToken = userAccessToken;
     if (refreshToken !== undefined) this.config.twitch.refreshToken = refreshToken;
     if (broadcasterId !== undefined) this.config.twitch.broadcasterId = broadcasterId;
+    if (expiresAt !== undefined) this.config.twitch.expiresAt = expiresAt;
     saveConfig(this.config);
   }
 
@@ -564,10 +565,11 @@ class AppState {
     saveConfig(this.config);
   }
 
-  saveDonationAlertsTokens({ accessToken, refreshToken, userId }) {
+  saveDonationAlertsTokens({ accessToken, refreshToken, userId, expiresAt }) {
     if (accessToken !== undefined) this.config.donationAlerts.accessToken = accessToken;
     if (refreshToken !== undefined) this.config.donationAlerts.refreshToken = refreshToken;
     if (userId !== undefined) this.config.donationAlerts.userId = userId;
+    if (expiresAt !== undefined) this.config.donationAlerts.expiresAt = expiresAt;
     saveConfig(this.config);
   }
 
@@ -577,9 +579,10 @@ class AppState {
     saveConfig(this.config);
   }
 
-  saveYoutubeTokens({ accessToken, refreshToken }) {
+  saveYoutubeTokens({ accessToken, refreshToken, expiresAt }) {
     if (accessToken !== undefined) this.config.youtube.accessToken = accessToken;
     if (refreshToken !== undefined) this.config.youtube.refreshToken = refreshToken;
+    if (expiresAt !== undefined) this.config.youtube.expiresAt = expiresAt;
     saveConfig(this.config);
   }
 
@@ -612,11 +615,17 @@ class AppState {
   }
 
   listThemes() {
-    const builtins = Object.values(BUILTIN_THEMES).map((t) => ({ id: t.id, name: t.name, builtin: true }));
+    const builtins = Object.values(BUILTIN_THEMES).map((t) => ({
+      id: t.id,
+      name: t.name,
+      builtin: true,
+      category: t.category || "system",
+    }));
     const custom = this.config.appearance.customThemes.map((t) => ({
       id: t.id,
       name: t.name,
       builtin: false,
+      category: "custom",
       seeds: t.seeds,
     }));
     return [...builtins, ...custom];
@@ -710,21 +719,45 @@ class AppState {
   // ---- Import / export ----
 
   replaceConfig(newConfig) {
-    if (!newConfig || typeof newConfig !== "object") throw new Error("Файл настроек повреждён или не в том формате");
+    if (!newConfig || typeof newConfig !== "object" || Array.isArray(newConfig)) {
+      throw new Error("Файл настроек повреждён или не в том формате");
+    }
+
+    // Входящие массивы принимаются только если они действительно массивы;
+    // иначе сохраняем текущее значение, чтобы повреждённый файл не стирал данные.
+    const keepArr = (incoming, existing) => (Array.isArray(incoming) ? incoming : existing);
+    const port = Number(newConfig.port);
+    const portValid = Number.isInteger(port) && port >= 1024 && port <= 65535;
+
     this.config = {
-      port: typeof newConfig.port === "number" ? newConfig.port : this.config.port,
+      port: portValid ? port : this.config.port,
       twitch: { ...this.config.twitch, ...(newConfig.twitch || {}) },
       donationAlerts: { ...this.config.donationAlerts, ...(newConfig.donationAlerts || {}) },
       youtube: { ...this.config.youtube, ...(newConfig.youtube || {}) },
-      obs: { ...this.config.obs, ...(newConfig.obs || {}) },
+      obs: {
+        ...this.config.obs,
+        ...(newConfig.obs || {}),
+        sceneMap: { ...this.config.obs.sceneMap, ...((newConfig.obs && newConfig.obs.sceneMap) || {}) },
+        customCommands: keepArr(newConfig.obs && newConfig.obs.customCommands, this.config.obs.customCommands),
+        cameraAngles: keepArr(newConfig.obs && newConfig.obs.cameraAngles, this.config.obs.cameraAngles),
+        cameraFilters: keepArr(newConfig.obs && newConfig.obs.cameraFilters, this.config.obs.cameraFilters),
+      },
       goal: { ...this.config.goal, ...(newConfig.goal || {}) },
+      soundboard: {
+        ...this.config.soundboard,
+        ...(newConfig.soundboard || {}),
+        sounds: keepArr(newConfig.soundboard && newConfig.soundboard.sounds, this.config.soundboard.sounds),
+      },
+      streamdeck: {
+        ...this.config.streamdeck,
+        ...(newConfig.streamdeck || {}),
+        icons: { ...this.config.streamdeck.icons, ...((newConfig.streamdeck && newConfig.streamdeck.icons) || {}) },
+      },
       appearance: {
         ...defaultAppearance(),
         ...this.config.appearance,
         ...(newConfig.appearance || {}),
-        customThemes: Array.isArray(newConfig.appearance && newConfig.appearance.customThemes)
-          ? newConfig.appearance.customThemes
-          : this.config.appearance.customThemes,
+        customThemes: keepArr(newConfig.appearance && newConfig.appearance.customThemes, this.config.appearance.customThemes),
       },
       editor: { ...defaultEditor(), ...this.config.editor, ...(newConfig.editor || {}) },
       scenes: newConfig.scenes ? { ...defaultScenes(), ...newConfig.scenes } : this.config.scenes,

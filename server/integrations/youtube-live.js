@@ -16,6 +16,7 @@
  */
 
 const { createLogger } = require("../logger");
+const { createTokenRefresher } = require("../token-refresh");
 
 /**
  * YouTube Live integration via YouTube Data API v3.
@@ -42,8 +43,6 @@ function startYoutube({ bus, state }) {
 
   let stopped = false;
   let pollTimer = null;
-  let refreshPromise = null;
-  let tokenExpiresAt = 0;
   let liveChatId = null;
   let nextPageToken = null;
 
@@ -57,53 +56,27 @@ function startYoutube({ bus, state }) {
     pollTimer = setTimeout(() => tick(), delayMs);
   }
 
-  function refreshAccessToken() {
-    if (refreshPromise) return refreshPromise;
-    refreshPromise = doRefreshAccessToken().finally(() => {
-      refreshPromise = null;
-    });
-    return refreshPromise;
-  }
-
-  async function doRefreshAccessToken() {
-    const yt = state.config.youtube;
-    if (!yt.refreshToken) throw new Error("no youtube refreshToken");
-
-    logger.info("refreshing access token…");
-    const res = await fetch(TOKEN_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        client_id: yt.clientId,
-        client_secret: yt.clientSecret,
-        refresh_token: yt.refreshToken,
-      }),
-    });
-
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json.access_token) {
-      throw new Error(`refresh_token: ${res.status} ${JSON.stringify(json)}`);
-    }
-
-    state.saveYoutubeTokens({
-      accessToken: json.access_token,
-      refreshToken: json.refresh_token ?? yt.refreshToken,
-    });
-
-    if (json.expires_in) {
-      tokenExpiresAt = Date.now() + (Number(json.expires_in) - 60) * 1000;
-    }
-    logger.success("access token refreshed");
-    return json.access_token;
-  }
-
-  async function ensureAccessToken() {
-    const yt = state.config.youtube;
-    if (tokenExpiresAt && Date.now() < tokenExpiresAt) return yt.accessToken;
-    if (yt.refreshToken) return await refreshAccessToken();
-    return yt.accessToken;
-  }
+  const { ensureAccessToken, refreshAccessToken } = createTokenRefresher({
+    tokenUrl: TOKEN_URL,
+    logger,
+    label: "youtube",
+    getConfig: () => state.config.youtube,
+    buildParams: (yt) => ({
+      grant_type: "refresh_token",
+      client_id: yt.clientId,
+      client_secret: yt.clientSecret,
+      refresh_token: yt.refreshToken,
+    }),
+    accessTokenKey: "accessToken",
+    saveTokens: (json, expiresAt) => {
+      const yt = state.config.youtube;
+      state.saveYoutubeTokens({
+        accessToken: json.access_token,
+        refreshToken: json.refresh_token ?? yt.refreshToken,
+        expiresAt,
+      });
+    },
+  });
 
   async function resolveLiveChatId(accessToken) {
     const yt = state.config.youtube;

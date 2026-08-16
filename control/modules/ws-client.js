@@ -26,7 +26,7 @@
 
 import { el } from "./dom.js";
 
-export function initWsClient({ url, t, onMessage }) {
+export function initWsClient({ url, t, onMessage, onStatusClick }) {
   let ws = null;
   let connectionStatus = {};
 
@@ -44,11 +44,23 @@ export function initWsClient({ url, t, onMessage }) {
   }
 
   function renderStatusChips() {
-    const container = el("statusChips");
+    const container = el("statusFabList");
     if (!container) return;
-    container.innerHTML = Object.entries(connectionStatus)
-      .map(([service, status]) => `<span class="md-chip ${statusClass(status)}"><span class="md-chip__dot"></span>${STATUS_LABEL(service)}</span>`)
+    const order = ["twitchChat", "twitchEvents", "donationAlerts", "youtube", "obs"];
+    container.innerHTML = order
+      .filter((service) => connectionStatus[service] !== undefined)
+      .map((service) => {
+        const status = connectionStatus[service];
+        return `<button class="status-fab ${statusClass(status)}" data-service="${service}" type="button" title="${STATUS_LABEL(service)}">
+          <span class="status-fab__dot"></span>
+          <span class="status-fab__label">${STATUS_LABEL(service)}</span>
+          <span class="status-fab__status">${STATUS_TEXT(status)}</span>
+        </button>`;
+      })
       .join("");
+    container.querySelectorAll(".status-fab").forEach((btn) => {
+      btn.addEventListener("click", () => onStatusClick && onStatusClick(btn.dataset.service));
+    });
   }
 
   function updateSettingsChips() {

@@ -55,7 +55,7 @@ export function createStateManager() {
     participantsConfig: { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82 },
     wheelConfig: { musicVolume: 50 },
     wheelSpeedConfig: { speed: 3 },
-    micConfig: { sensitivity: 1.5, lineWidth: 2, color: "#0060A8", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2 },
+    micConfig: { sensitivity: 1.5, lineWidth: 2, color: "", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2 },
   };
 
   // Maps the server's `state` snapshot payload into this object.

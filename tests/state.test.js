@@ -164,6 +164,24 @@ describe("AppState config + runtime", () => {
     expect(snap.participants).toEqual(["a"]);
   });
 
+  test("replaceConfig не теряет soundboard/streamdeck и игнорирует невалидный порт", () => {
+    state.setAppConfig({ port: 9000 });
+
+    state.replaceConfig({
+      port: 70000, // вне диапазона 1024-65535
+      soundboard: { enabled: false, volume: 0.5, queueMode: true, sounds: [{ id: "s1", rewardTitle: "R" }] },
+      streamdeck: { icons: { wheel: "media/w.png" } },
+      obs: { customCommands: "not-an-array" },
+    });
+
+    expect(state.config.port).toBe(9000);
+    expect(state.config.soundboard.enabled).toBe(false);
+    expect(state.config.soundboard.sounds).toEqual([{ id: "s1", rewardTitle: "R" }]);
+    expect(state.config.streamdeck.icons.wheel).toBe("media/w.png");
+    expect(state.config.streamdeck.icons).toHaveProperty("start"); // существующие иконки сохранены
+    expect(state.config.obs.customCommands).toEqual([]); // невалидный массив -> []
+  });
+
   test("snapshot включает новые поля состояния", () => {
     state.setObsConfig({ cameraAngles: [{ id: "cam1", label: "", twitchRewardTitle: "", sceneName: "", cameraSource: "" }] });
     state.setStreamDeckConfig({ icons: { scene: "media/x.png" } });

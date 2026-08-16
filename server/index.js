@@ -23,20 +23,24 @@ const { WebSocketServer } = require("ws");
 const { EventEmitter } = require("events");
 
 const { AppState } = require("./state");
-const { getUserMediaDir } = require("./storage-paths");
+const { getUserMediaDir, getLogsDir } = require("./storage-paths");
 const { EVENT_TYPES, ALERT_DURATIONS_MS } = require("../shared/events");
-const { createLogger } = require("./logger");
+const { createLogger, enableFileLogging } = require("./logger");
 const { mountOAuthRoutes, buildTwitchAuthorizeUrl, buildDonationAlertsAuthorizeUrl, buildYoutubeAuthorizeUrl } = require("./oauth");
 const { startTwitchChat } = require("./integrations/twitch-chat");
 const { startTwitchEvents } = require("./integrations/twitch-eventsub");
 const { startDonationAlerts } = require("./integrations/donationalerts");
 const { startYoutube } = require("./integrations/youtube-live");
 const { startObsWebSocket } = require("./integrations/obs-websocket");
+const { createCliHandler } = require("./cli");
+const I18n = require("../shared/i18n");
 
 const LOCALES = {
   ru: require("../shared/locales/ru.json"),
   en: require("../shared/locales/en.json"),
 };
+
+I18n.setLocales(LOCALES);
 
 const bus = new EventEmitter();
 
@@ -51,6 +55,7 @@ function getLocalIp() {
 }
 
 function createServer({ db } = {}) {
+  enableFileLogging(getLogsDir());
   const state = new AppState(db);
   const app = express();
   const server = http.createServer(app);
@@ -72,6 +77,7 @@ function createServer({ db } = {}) {
   let autoSpinTimer = null;
   let isSpinning = false;
   let language = db ? db.getLanguage() : "en";
+  I18n.setLang(language);
   const serverLog = createLogger(bus, "server");
   const remoteUrl = `http://${getLocalIp()}:${state.config.port || 8710}/remote`;
 
@@ -88,6 +94,7 @@ function createServer({ db } = {}) {
 
   function setLanguage(code) {
     language = code === "ru" ? "ru" : "en";
+    I18n.setLang(language);
     if (db) db.saveLanguage(language);
     broadcast(EVENT_TYPES.LOCALES, { lang: language, locales: LOCALES });
     return language;
@@ -191,13 +198,21 @@ function createServer({ db } = {}) {
 
   function runObsCommand(id) {
     const cmd = (state.config.obs.customCommands || []).find((c) => c.id === id);
-    if (!cmd) return false;
+    if (!cmd) {
+      serverLog.warn("OBS command skipped (unknown command)", { id });
+      return false;
+    }
+    const requestType = String(cmd.requestType || "").trim();
+    if (!requestType) {
+      serverLog.warn("OBS command skipped (empty requestType)", { id });
+      return false;
+    }
     if (!obsCtrl) {
       serverLog.warn("OBS command skipped (OBS not connected)", { id });
       return false;
     }
-    obsCtrl.sendRawRequest(cmd.requestType, cmd.requestData || {}).catch((err) =>
-      serverLog.warn("OBS raw command failed", { id, message: err.message })
+    obsCtrl.sendRawRequest(requestType, cmd.requestData || {}).catch((err) =>
+      serverLog.warn("OBS raw command failed", { id, requestType, message: err && err.message ? err.message : String(err) })
     );
     return true;
   }
@@ -248,6 +263,18 @@ function createServer({ db } = {}) {
     return true;
   }
 
+  // Interactive CLI console exposed to the control panel log panel.
+  const cli = createCliHandler({
+    state,
+    bus,
+    obsCtrl,
+    broadcast,
+    startedAt: Date.now(),
+    handleRemoteAction,
+    setLanguage,
+    t: (key, params) => I18n.t(key, params),
+  });
+
   mountOAuthRoutes(app, {
     state,
     hooks: {
@@ -283,6 +310,16 @@ function createServer({ db } = {}) {
       } catch {
         return;
       }
+
+      // Tab-completion is answered directly to the requesting socket (not
+      // broadcast) to avoid noisy completion frames reaching other clients.
+      if (msg.type === EVENT_TYPES.EXEC_CLI_COMPLETION) {
+        const input = (msg.payload && msg.payload.input) || "";
+        const completions = cli.getCompletions(input);
+        socket.send(JSON.stringify({ type: EVENT_TYPES.CLI_COMPLETIONS, payload: { input, completions } }));
+        return;
+      }
+
       handleClientCommand(msg);
     });
   });
@@ -385,6 +422,10 @@ function createServer({ db } = {}) {
     switch (msg.type) {
       case EVENT_TYPES.REMOTE_ACTION: {
         handleRemoteAction(msg.action, msg.payload || {});
+        break;
+      }
+      case EVENT_TYPES.EXEC_CLI_COMMAND: {
+        cli.execute(msg.payload && msg.payload.command);
         break;
       }
       case EVENT_TYPES.CMD_ADD_WIDGET: {

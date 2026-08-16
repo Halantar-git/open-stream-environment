@@ -2,7 +2,8 @@
   "nav": {
     "editor": "Редактор",
     "scenes": "Сцены",
-    "settings": "Настройки"
+    "settings": "Настройки",
+    "history": "История"
   },
   "editor": {
     "widgets": "Виджеты",
@@ -16,14 +17,96 @@
     "copied": "Скопировано!",
     "chat": "Чат",
     "testChat": "Тест чата",
-    "terminal": "Логи"
+    "terminal": "Терминал"
   },
   "boosty": {
     "support": "Поддержать автора"
   },
   "terminal": {
-    "title": "Логи",
-    "clear": "Очистить"
+    "title": "Терминал",
+    "clear": "Очистить",
+    "inputPlaceholder": "Введите команду…",
+    "searchPlaceholder": "Поиск по логам…"
+  },
+  "cli": {
+    "availableCommands": "Доступные команды:",
+    "unknownCommand": "Неизвестная команда. Введите \"help\" для списка команд.",
+    "obsOffline": " — OBS не подключён",
+    "on": "вкл",
+    "off": "выкл",
+    "none": "нет",
+    "custom": " (своя)",
+    "help": {
+      "scene": "scene <name> — смена сцены OBS",
+      "cam": "cam <angle_id> — переключение ракурса камеры",
+      "filter": "filter <filter_id> [duration] — активация фильтра камеры",
+      "sound": "sound <sound_id> — запуск звука саундборда",
+      "death": "death +1 | -1 | set X | reset — управление счётчиком смертей",
+      "wheel": "wheel spin | generate | reset | clear — управление колесом",
+      "giveaway": "giveaway start [command] | stop | add <name> | remove <name> | shuffle | elimination on|off | list",
+      "simSub": "sim sub <username> [tier] — симуляция подписки Twitch",
+      "simPoints": "sim points <reward_title> — симуляция списания баллов",
+      "simRaid": "sim raid <username> <viewers> — симуляция рейда",
+      "alert": "alert <follow|sub|gift_sub|cheer|donation> — тестовый алерт",
+      "chat": "chat <message> — тестовое сообщение в чат",
+      "theme": "theme <id> | themes — переключение/список тем",
+      "goal": "goal <current> <target> | goal add <amount> — цель доната",
+      "obs": "obs <id> | obs list — выполнение/список OBS-команд",
+      "lists": "sounds | cameras | filters — списки ресурсов",
+      "logs": "logs <info|success|warn|error|hint|all> — фильтр уровней логов",
+      "media": "media list | cleanup — список/очистка осиротевших медиафайлов",
+      "lang": "lang <ru|en> — язык интерфейса",
+      "status": "status — текущее состояние системы",
+      "clear": "clear — очистка логов",
+      "help": "help — список команд"
+    },
+    "scene": { "usage": "Укажите сцену. Пример: scene brb", "switched": "Сцена переключена: {{scene}} (OBS: {{name}})" },
+    "cam": { "usage": "Укажите id ракурса. Пример: cam cam_main", "obsOffline": "OBS не подключён — ракурс не переключён", "switched": "Переключён ракурс камеры: {{id}}", "failed": "Не удалось переключить ракурс: {{error}}" },
+    "filter": { "usage": "Укажите id фильтра. Пример: filter filter_bw", "obsOffline": "OBS не подключён — фильтр не активирован", "activated": "Фильтр активирован: {{id}}{{state}}", "off": " (выключен)", "failed": "Не удалось активировать фильтр: {{error}}" },
+    "sound": { "usage": "Укажите id звука. Пример: sound airhorn", "notFound": "Звук не найден: {{id}}", "played": "Запущен звук: {{name}}" },
+    "death": { "usage": "Использование: death +1 | death -1 | death set X | death reset", "result": "Счётчик смертей: {{count}}" },
+    "wheel": { "unavailable": "Операции колеса недоступны", "usage": "Использование: wheel spin | generate | reset | clear", "done": "Выполнено: wheel {{sub}}" },
+    "giveaway": {
+      "unavailable": "Операции розыгрыша недоступны",
+      "started": "Розыгрыш запущен",
+      "stopped": "Розыгрыш остановлен",
+      "addUsage": "Использование: giveaway add <name>",
+      "added": "Участник добавлен: {{name}}",
+      "duplicate": "Участник уже есть или имя пустое: {{name}}",
+      "removeUsage": "Использование: giveaway remove <name>",
+      "removed": "Участник удалён: {{name}}",
+      "shuffled": "Участники перемешаны",
+      "elimination": "Режим выбывания: {{state}}",
+      "list": "Участники ({{count}}): {{names}}",
+      "usage": "Использование: giveaway start|stop|add|remove|shuffle|elimination|list"
+    },
+    "sim": {
+      "subUsage": "Использование: sim sub <username> [tier]",
+      "subDone": "Симулирована подписка: {{user}} (tier {{tier}})",
+      "pointsUsage": "Использование: sim points <reward_title>",
+      "pointsSound": "Награда \"{{title}}\" → звук: {{name}}",
+      "pointsCam": "Награда \"{{title}}\" → ракурс: {{id}}",
+      "pointsFilter": "Награда \"{{title}}\" → эффект: {{id}}",
+      "pointsNone": "Награда \"{{title}}\" не привязана ни к звуку, ни к ракурсу, ни к эффекту",
+      "raidUsage": "Использование: sim raid <username> <viewers>",
+      "raidMessage": "{{user}} рейдит с {{count}} зрителями!",
+      "raidDone": "Симулирован рейд: {{user}} ({{count}} зрителей)",
+      "unknown": "Неизвестная sim-команда. Используйте: sim sub | sim points | sim raid"
+    },
+    "alert": { "unknown": "Неизвестный тип алерта. Доступно: {{types}}", "done": "Тестовый алерт: {{kind}}" },
+    "chat": { "usage": "Использование: chat <message>", "done": "Сообщение в чат: {{message}}" },
+    "theme": { "usage": "Укажите id темы. Пример: theme pixel", "switched": "Тема переключена: {{id}}", "notFound": "Тема не найдена: {{id}}" },
+    "themes": { "none": "Нет тем", "title": "Темы:" },
+    "goal": { "added": "Цель: {{current}} / {{target}} (+{{amount}})", "usage": "Использование: goal <current> <target> | goal add <amount>", "updated": "Цель обновлена: {{current}} / {{target}}" },
+    "obs": { "none": "Нет кастомных OBS-команд", "title": "Кастомные OBS-команды:", "notFound": "OBS-команда не найдена: {{id}}", "emptyRequestType": "У команды {{id}} пустой requestType", "offline": "OBS не подключён", "done": "Выполнена OBS-команда: {{id}}", "failed": "Ошибка OBS-команды: {{error}}" },
+    "sounds": { "none": "Нет звуков саундборда", "title": "Звуки саундборда:" },
+    "cameras": { "none": "Нет ракурсов камер", "title": "Ракурсы камер:" },
+    "filters": { "none": "Нет фильтров камер", "title": "Фильтры камер:" },
+    "lang": { "done": "Язык интерфейса: {{lang}}" },
+    "logs": { "usage": "Использование: logs <info|success|warn|error|hint|all>", "all": "Фильтр логов: все уровни", "set": "Фильтр логов: {{level}}", "unknown": "Неизвестный уровень. Доступно: {{levels}}, all" },
+    "media": { "cleaned": "Удалено осиротевших файлов: {{count}}", "none": "Осиротевших медиафайлов не найдено", "empty": "Каталог медиа пуст", "title": "Файлы медиа:" },
+    "status": { "obs": "OBS: {{status}}", "scene": "Активная сцена: {{scene}}", "camera": "Активный ракурс: {{cam}}", "theme": "Тема: {{theme}}", "channel": "Канал: {{channel}}", "death": "Смертей: {{death}}", "goal": "Цель: {{goal}}", "uptime": "Аптайм: {{uptime}}" },
+    "clear": { "done": "Логи очищены" }
   },
   "scenes": {
     "title": "Сцены",
@@ -70,6 +153,9 @@
     "appearance": "Оформление",
     "appearanceDesc": "Тема влияет только на сам оверлей (и его превью на канвасе) — панель управления всегда выглядит одинаково.",
     "createTheme": "Создать свою тему",
+    "themeCategorySystem": "Системные",
+    "themeCategoryStarCitizen": "Star Citizen",
+    "themeCategoryCustom": "Свои",
     "exportImport": "Экспорт / импорт настроек",
     "exportImportDesc": "Экспорт сохраняет полный config.json — раскладку, темы, цель, а также токены и ключи Twitch/DonationAlerts. Файл содержит секреты — не выкладывайте его публично.",
     "export": "Экспортировать в файл",
@@ -199,7 +285,9 @@
     "mic": "Визуализатор микрофона",
     "micDesc": "Анимированная звуковая волна",
     "death": "Счётчик смертей",
-    "deathDesc": "Крупный счётчик смертей для челлендж-стримов"
+    "deathDesc": "Крупный счётчик смертей для челлендж-стримов",
+    "soundboard": "Шумотека",
+    "soundboardDesc": "Звук и попап-карточка за баллы канала"
   },
   "mic": {
     "mode": "Режим визуализации",
@@ -211,6 +299,7 @@
     "barCount": "Количество полос",
     "barGap": "Расстояние между полосами",
     "color": "Цвет волны",
+    "colorAuto": "Авто",
     "opacity": "Прозрачность"
   },
   "sceneForm": {
@@ -283,7 +372,13 @@
     "width": "Ширина %",
     "height": "Высота %",
     "deathLabel": "Подпись",
-    "deathColor": "Цвет числа"
+    "deathColor": "Цвет числа",
+    "soundboardPopupDuration": "Длительность попапа, мс",
+    "soundboardImageSize": "Размер картинки, px",
+    "soundboardShowImage": "Показывать картинку/GIF",
+    "soundboardShowText": "Показывать подпись",
+    "soundboardShowBackground": "Фон попапа",
+    "soundboardShowBorder": "Рамка попапа"
   },
   "preview": {
     "goalTitle": "Цель",
@@ -446,5 +541,111 @@
     "noCameras": "Нет ракурсов",
     "filters": "Эффекты",
     "noFilters": "Нет эффектов"
+  },
+  "overlay": {
+    "soundboardPlayed": "<b>{{user}}</b> запустил <b>{{title}}</b>"
+  },
+  "help": {
+    "title": "Справка",
+    "overview": {
+      "title": "О приложении",
+      "p1": "Open Stream Environment — это оверлей в стиле Material Design 3 и панель управления с перетаскиванием для Twitch и OBS. Оверлей раздаётся локально и добавляется в OBS как Browser Source.",
+      "p2": "Компоненты: сам оверлей (показывается в OBS), эта панель управления, отдельные сцены, Web Remote для телефона/планшета и плагин для Elgato Stream Deck."
+    },
+    "quickstart": {
+      "title": "Быстрый старт",
+      "s1": "В OBS добавьте Browser Source и вставьте URL оверлея из панели редактора.",
+      "s2": "В Настройках → Twitch укажите хотя бы имя канала (чат подключается анонимно).",
+      "s3": "При необходимости подключите DonationAlerts, YouTube и OBS WebSocket в Настройках.",
+      "s4": "Добавьте и расставьте виджеты в Редакторе — изменения сразу применяются к оверлею."
+    },
+    "editor": {
+      "title": "Редактор",
+      "p1": "Перетаскивайте виджеты из библиотеки слева на канвас или кликните по виджету, чтобы добавить его.",
+      "p2": "Выберите виджет, чтобы изменить его свойства справа. Перетаскивайте для перемещения, за угол — для изменения размера.",
+      "p3": "Панель «Слои» управляет порядком наложения, переключатель «Сетка» помогает выравнивать. Вставьте этот URL в Browser Source OBS:"
+    },
+    "themes": {
+      "title": "Темы оформления",
+      "p1": "В Настройках → Оформление выбирается тема оверлея. Категория «Системные»: Nebula (Material 3), Orbital (техно-HUD) и Pixel Perfect (пиксельный стиль в духе ShestakUI).",
+      "p2": "Категория «Star Citizen» — темы производителей кораблей, повторяющие цвета и шрифты кабинных интерфейсов (HUD/MFD): Drake, Aegis, Anvil, Origin, RSI, MISC, Crusader, Consolidated Outland, Argo, Esperia, а также локации Grey's Market, Grim HEX и Levski.",
+      "p3": "В теме Pixel Perfect используется пиксельный шрифт Pixelify Sans с поддержкой кириллицы; размеры текста виджетов зафиксированы по пиксельной сетке (12/16/24/32px)."
+    },
+    "scenes": {
+      "title": "Сцены",
+      "p1": "Каждая сцена — это отдельный источник в OBS, который целиком заменяет игровой экран (а не рисуется поверх него).",
+      "p2": "Доступные сцены: Старт, BRB, Main, Just Chatting, Конец и Колесо Фортуны.",
+      "p3": "Just Chatting показывает крупный чат и алерты, оставляя слева место под вашу веб-камеру.",
+      "p4": "Скопируйте URL каждой сцены в отдельный Browser Source OBS и переключайте сцены с пульта или Stream Deck."
+    },
+    "twitch": {
+      "title": "Twitch",
+      "p1": "Чат подключается анонимно и требует только имя канала.",
+      "p2": "Для алертов о фоллоу/сабах/чирах нужны приложение Twitch и авторизация.",
+      "s1": "Зарегистрируйте приложение на dev.twitch.tv/console/apps.",
+      "s2": "Укажите Redirect URI из Настроек → Twitch.",
+      "s3": "Вставьте Client ID и Client Secret.",
+      "s4": "Нажмите «Подключить Twitch» и разрешите доступ в браузере."
+    },
+    "donationalerts": {
+      "title": "DonationAlerts",
+      "p1": "Донаты автоматически увеличивают счётчик цели и запускают алерт.",
+      "s1": "Создайте клиент на donationalerts.com/application/clients.",
+      "s2": "Укажите Redirect URI из Настроек → DonationAlerts.",
+      "s3": "Вставьте Client ID и Client Secret, затем нажмите «Подключить DonationAlerts»."
+    },
+    "youtube": {
+      "title": "YouTube",
+      "p1": "Чат и события прямого эфира (Super Chat, новые участники) через YouTube Data API v3.",
+      "s1": "Создайте OAuth-клиент на console.cloud.google.com.",
+      "s2": "Включите YouTube Data API v3 для проекта.",
+      "s3": "Укажите Redirect URI из Настроек → YouTube и вставьте Client ID/Secret.",
+      "s4": "Подключитесь и при необходимости укажите Video ID как фоллбек для поиска live-чата."
+    },
+    "obs": {
+      "title": "OBS WebSocket",
+      "p1": "Требуется OBS 28+ с включённым WebSocket-сервером (Tools → WebSocket Server Settings).",
+      "p2": "Маппинг сцен сопоставляет логические имена пульта с вашими реальными именами сцен в OBS.",
+      "p3": "Также можно задать кастомные RAW-команды, ракурсы камер (мультикамера) и фильтры камеры, запускаемые за баллы Twitch или вручную."
+    },
+    "soundboard": {
+      "title": "Soundboard (Шумотека)",
+      "p1": "Сопоставьте награду за баллы Twitch со звуковым файлом и картинкой/GIF-анимацией.",
+      "p2": "Настройте громкость и режим очереди, затем протестируйте каждый звук из панели."
+    },
+    "streamdeck": {
+      "title": "Stream Deck",
+      "p1": "Плагин Elgato переключает сцены: Старт, BRB, Колесо, Разговор и Конец.",
+      "p2": "Задайте свои иконки для каждой сцены в Настройках → Stream Deck."
+    },
+    "remote": {
+      "title": "Web Remote (Пульт)",
+      "p1": "Открывается с телефона или планшета в той же Wi-Fi-сети по адресу из шапки приложения.",
+      "p2": "С пульта можно переключать сцены, управлять колесом и счётчиком смертей, отправлять тестовые алерты, выполнять OBS-команды, менять тему, переключать камеры и запускать эффекты."
+    },
+    "terminal": {
+      "title": "Терминал и команды",
+      "p1": "Кнопка «Терминал» в шапке открывает встроенную консоль: там видны логи сервера и интеграций в реальном времени.",
+      "p2": "В поле ввода работают команды (например, scene brb, death +1, wheel spin, sim sub user, theme pixel, status). Введите help для полного списка.",
+      "p3": "Tab автодополняет команды и аргументы (сцены, звуки, камеры, фильтры). Поле поиска в шапке терминала фильтрует логи по тексту, а команда logs <уровень> — по уровню."
+    },
+    "wheel": {
+      "title": "Колесо Фортуны",
+      "p1": "Зрители участвуют, написав команду входа в чат Twitch.",
+      "p2": "Режим «на выбывание» убирает по одному участнику за вращение до финального победителя.",
+      "p3": "Используйте «Сгенерировать колесо», «Вращение», «Сбросить участников» и «Очистить результат»."
+    },
+    "settings": {
+      "title": "Настройки приложения",
+      "p1": "Порт меняет порт локального сервера и требует перезапуска приложения.",
+      "p2": "Оформление управляет темами оверлея; Экспорт/Импорт сохраняет полный config.json вместе с медиафайлами (он содержит секреты — не публикуйте его).",
+      "p3": "Язык переключает весь интерфейс между русским и английским."
+    },
+    "data": {
+      "title": "Данные и резервные копии",
+      "p1": "Экспорт настроек сохраняет полный config.json и все файлы из папки media (звуки, картинки, GIF) в одном файле.",
+      "p2": "При импорте медиафайлы автоматически восстанавливаются в папку media.",
+      "p3": "Команда media cleanup в терминале удаляет неиспользуемые медиафайлы. Размеры и позиции окон запоминаются, логи сервера пишутся в папку logs."
+    }
   }
 }

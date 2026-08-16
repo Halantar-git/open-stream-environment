@@ -143,6 +143,7 @@ function mountOAuthRoutes(app, { state, hooks }) {
         userAccessToken: tokenJson.access_token,
         refreshToken: tokenJson.refresh_token,
         broadcasterId,
+        expiresAt: tokenJson.expires_in ? Date.now() + (Number(tokenJson.expires_in) - 60) * 1000 : 0,
       });
 
       res.send(resultPage("Twitch подключён", "Можно закрыть эту вкладку и вернуться в приложение.", true));
@@ -202,6 +203,7 @@ function mountOAuthRoutes(app, { state, hooks }) {
         accessToken: tokenJson.access_token,
         refreshToken: tokenJson.refresh_token,
         userId: userData && userData.id,
+        expiresAt: tokenJson.expires_in ? Date.now() + (Number(tokenJson.expires_in) - 60) * 1000 : 0,
       });
 
       res.send(resultPage("DonationAlerts подключён", "Можно закрыть эту вкладку и вернуться в приложение.", true));
@@ -243,6 +245,7 @@ function mountOAuthRoutes(app, { state, hooks }) {
       state.saveYoutubeTokens({
         accessToken: tokenJson.access_token,
         refreshToken: tokenJson.refresh_token,
+        expiresAt: tokenJson.expires_in ? Date.now() + (Number(tokenJson.expires_in) - 60) * 1000 : 0,
       });
 
       res.send(resultPage("YouTube подключён", "Можно закрыть эту вкладку и вернуться в приложение.", true));

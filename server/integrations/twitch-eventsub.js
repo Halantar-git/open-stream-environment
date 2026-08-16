@@ -18,6 +18,7 @@
 const WebSocket = require("ws");
 
 const { createLogger } = require("../logger");
+const { createTokenRefresher } = require("../token-refresh");
 
 /**
  * Follows/subs/cheers via Twitch EventSub over WebSocket:
@@ -73,8 +74,6 @@ function startTwitchEvents({ bus, state }) {
   let stopped = false;
   let keepaliveTimer = null;
   let lastMessageAt = 0;
-  let refreshPromise = null;
-  let tokenExpiresAt = 0;
   let authFailure = false;
   let isReconnecting = false;
 
@@ -101,54 +100,28 @@ function startTwitchEvents({ bus, state }) {
     }, KEEPALIVE_CHECK_MS);
   }
 
-  function refreshAccessToken() {
-    if (refreshPromise) return refreshPromise;
-    refreshPromise = doRefreshAccessToken().finally(() => {
-      refreshPromise = null;
-    });
-    return refreshPromise;
-  }
-
-  async function doRefreshAccessToken() {
-    const twitch = state.config.twitch;
-    if (!twitch.refreshToken) throw new Error("no refreshToken available");
-
-    logger.info("refreshing access token…");
-    const res = await fetch(TOKEN_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        client_id: twitch.clientId,
-        client_secret: twitch.clientSecret,
-        refresh_token: twitch.refreshToken,
-      }),
-    });
-
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json.access_token) {
-      throw new Error(`refresh_token: ${res.status} ${JSON.stringify(json)}`);
-    }
-
-    state.saveTwitchTokens({
-      userAccessToken: json.access_token,
-      refreshToken: json.refresh_token ?? twitch.refreshToken,
-      broadcasterId: twitch.broadcasterId,
-    });
-
-    if (json.expires_in) {
-      tokenExpiresAt = Date.now() + (Number(json.expires_in) - 60) * 1000;
-    }
-    logger.success("access token refreshed");
-    return json.access_token;
-  }
-
-  async function ensureAccessToken() {
-    const twitch = state.config.twitch;
-    if (tokenExpiresAt && Date.now() < tokenExpiresAt) return twitch.userAccessToken;
-    if (twitch.refreshToken) return await refreshAccessToken();
-    return twitch.userAccessToken;
-  }
+  const { ensureAccessToken, refreshAccessToken } = createTokenRefresher({
+    tokenUrl: TOKEN_URL,
+    logger,
+    label: "twitch",
+    getConfig: () => state.config.twitch,
+    buildParams: (twitch) => ({
+      grant_type: "refresh_token",
+      client_id: twitch.clientId,
+      client_secret: twitch.clientSecret,
+      refresh_token: twitch.refreshToken,
+    }),
+    accessTokenKey: "userAccessToken",
+    saveTokens: (json, expiresAt) => {
+      const twitch = state.config.twitch;
+      state.saveTwitchTokens({
+        userAccessToken: json.access_token,
+        refreshToken: json.refresh_token ?? twitch.refreshToken,
+        broadcasterId: twitch.broadcasterId,
+        expiresAt,
+      });
+    },
+  });
 
   async function subscribeAll(twitchConfig, sessionId, accessToken) {
     if (!twitchConfig.broadcasterId) throw new Error("no broadcasterId — reconnect via Settings");

@@ -56,6 +56,12 @@ function getUserMediaDir() {
   return path.join(configDir, "media");
 }
 
+// Каталог для файлового логирования (суточная ротация). Лежит рядом с
+// config.json, поэтому доступен для записи и в собранном приложении.
+function getLogsDir() {
+  return path.join(configDir, "logs");
+}
+
 module.exports = {
   BUNDLED_CONFIG_DIR,
   configureStorage,
@@ -64,4 +70,5 @@ module.exports = {
   getDbPath,
   getExamplePath,
   getUserMediaDir,
+  getLogsDir,
 };

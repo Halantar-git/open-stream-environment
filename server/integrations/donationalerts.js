@@ -19,6 +19,7 @@ const WebSocket = require("ws");
 
 const { redirectUri } = require("../oauth");
 const { createLogger } = require("../logger");
+const { createTokenRefresher } = require("../token-refresh");
 
 /**
  * DonationAlerts real-time donations over Centrifugo, following:
@@ -68,8 +69,6 @@ function startDonationAlerts({ bus, state }) {
   let reconnectTimer = null;
   let heartbeatTimer = null;
   let pongTimeoutTimer = null;
-  let refreshPromise = null;
-  let tokenExpiresAt = 0;
   let connectRequestId = 1;
   let nextCommandId = 1;
   let connectToken = null;
@@ -111,55 +110,29 @@ function startDonationAlerts({ bus, state }) {
     }, HEARTBEAT_MS);
   }
 
-  function refreshAccessToken() {
-    if (refreshPromise) return refreshPromise;
-    refreshPromise = doRefreshAccessToken().finally(() => {
-      refreshPromise = null;
-    });
-    return refreshPromise;
-  }
-
-  async function doRefreshAccessToken() {
-    const da = state.config.donationAlerts;
-    if (!da.refreshToken) throw new Error("no refreshToken available");
-
-    logger.info("refreshing access token…");
-    const res = await fetch(OAUTH_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        client_id: da.clientId,
-        client_secret: da.clientSecret,
-        refresh_token: da.refreshToken,
-        redirect_uri: redirectUri(state.config.port, "donationalerts"),
-      }),
-    });
-
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json.access_token) {
-      throw new Error(`refresh_token: ${res.status} ${JSON.stringify(json)}`);
-    }
-
-    state.saveDonationAlertsTokens({
-      accessToken: json.access_token,
-      refreshToken: json.refresh_token ?? da.refreshToken,
-      userId: json.user_id ?? da.userId,
-    });
-
-    if (json.expires_in) {
-      tokenExpiresAt = Date.now() + (Number(json.expires_in) - 60) * 1000;
-    }
-    logger.success("access token refreshed");
-    return json.access_token;
-  }
-
-  async function ensureAccessToken() {
-    const da = state.config.donationAlerts;
-    if (tokenExpiresAt && Date.now() < tokenExpiresAt) return da.accessToken;
-    if (da.refreshToken) return await refreshAccessToken();
-    return da.accessToken;
-  }
+  const { ensureAccessToken, refreshAccessToken } = createTokenRefresher({
+    tokenUrl: OAUTH_URL,
+    logger,
+    label: "donationalerts",
+    getConfig: () => state.config.donationAlerts,
+    buildParams: (da) => ({
+      grant_type: "refresh_token",
+      client_id: da.clientId,
+      client_secret: da.clientSecret,
+      refresh_token: da.refreshToken,
+      redirect_uri: redirectUri(state.config.port, "donationalerts"),
+    }),
+    accessTokenKey: "accessToken",
+    saveTokens: (json, expiresAt) => {
+      const da = state.config.donationAlerts;
+      state.saveDonationAlertsTokens({
+        accessToken: json.access_token,
+        refreshToken: json.refresh_token ?? da.refreshToken,
+        userId: json.user_id ?? da.userId,
+        expiresAt,
+      });
+    },
+  });
 
   function parseUserOauth(json) {
     const user = (json && (json.data || json)) || {};
@@ -350,14 +323,30 @@ function startDonationAlerts({ bus, state }) {
       const channels = [`$alerts:donation_${userId}`, `$goals:goal_${userId}`];
       logger.info("subscribing to channels", { channels });
 
-      const subRes = await fetch(SUBSCRIBE_URL, {
+      let accessToken = await ensureAccessToken();
+      if (stopped) return;
+
+      let subRes = await fetch(SUBSCRIBE_URL, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${state.config.donationAlerts.accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ channels, client }),
       });
+
+      if (subRes.status === 401) {
+        logger.warn("centrifuge/subscribe returned 401 — refreshing token and retrying once");
+        accessToken = await refreshAccessToken();
+        subRes = await fetch(SUBSCRIBE_URL, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ channels, client }),
+        });
+      }
 
       if (!subRes.ok) {
         const body = await subRes.text().catch(() => "");

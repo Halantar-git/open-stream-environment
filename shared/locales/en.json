@@ -2,7 +2,8 @@
   "nav": {
     "editor": "Editor",
     "scenes": "Scenes",
-    "settings": "Settings"
+    "settings": "Settings",
+    "history": "History"
   },
   "editor": {
     "widgets": "Widgets",
@@ -16,14 +17,96 @@
     "copied": "Copied!",
     "chat": "Chat",
     "testChat": "Test chat",
-    "terminal": "Logs"
+    "terminal": "Terminal"
   },
   "boosty": {
     "support": "Support the author"
   },
   "terminal": {
-    "title": "Logs",
-    "clear": "Clear"
+    "title": "Terminal",
+    "clear": "Clear",
+    "inputPlaceholder": "Type command…",
+    "searchPlaceholder": "Search logs…"
+  },
+  "cli": {
+    "availableCommands": "Available commands:",
+    "unknownCommand": "Unknown command. Type \"help\" for the list of commands.",
+    "obsOffline": " — OBS not connected",
+    "on": "on",
+    "off": "off",
+    "none": "none",
+    "custom": " (custom)",
+    "help": {
+      "scene": "scene <name> — switch OBS scene",
+      "cam": "cam <angle_id> — switch camera angle",
+      "filter": "filter <filter_id> [duration] — trigger camera filter",
+      "sound": "sound <sound_id> — play a soundboard sound",
+      "death": "death +1 | -1 | set X | reset — manage death counter",
+      "wheel": "wheel spin | generate | reset | clear — manage the wheel",
+      "giveaway": "giveaway start [command] | stop | add <name> | remove <name> | shuffle | elimination on|off | list",
+      "simSub": "sim sub <username> [tier] — simulate a Twitch subscription",
+      "simPoints": "sim points <reward_title> — simulate a channel-points redemption",
+      "simRaid": "sim raid <username> <viewers> — simulate a raid",
+      "alert": "alert <follow|sub|gift_sub|cheer|donation> — test alert",
+      "chat": "chat <message> — test chat message",
+      "theme": "theme <id> | themes — switch/list themes",
+      "goal": "goal <current> <target> | goal add <amount> — donation goal",
+      "obs": "obs <id> | obs list — run/list OBS commands",
+      "lists": "sounds | cameras | filters — resource lists",
+      "logs": "logs <info|success|warn|error|hint|all> — filter log levels",
+      "media": "media list | cleanup — list/remove orphaned media files",
+      "lang": "lang <ru|en> — interface language",
+      "status": "status — current system state",
+      "clear": "clear — clear logs",
+      "help": "help — list commands"
+    },
+    "scene": { "usage": "Specify a scene. Example: scene brb", "switched": "Scene switched: {{scene}} (OBS: {{name}})" },
+    "cam": { "usage": "Specify an angle id. Example: cam cam_main", "obsOffline": "OBS not connected — angle not switched", "switched": "Camera angle switched: {{id}}", "failed": "Failed to switch angle: {{error}}" },
+    "filter": { "usage": "Specify a filter id. Example: filter filter_bw", "obsOffline": "OBS not connected — filter not triggered", "activated": "Filter triggered: {{id}}{{state}}", "off": " (off)", "failed": "Failed to trigger filter: {{error}}" },
+    "sound": { "usage": "Specify a sound id. Example: sound airhorn", "notFound": "Sound not found: {{id}}", "played": "Sound played: {{name}}" },
+    "death": { "usage": "Usage: death +1 | death -1 | death set X | death reset", "result": "Death counter: {{count}}" },
+    "wheel": { "unavailable": "Wheel operations are unavailable", "usage": "Usage: wheel spin | generate | reset | clear", "done": "Done: wheel {{sub}}" },
+    "giveaway": {
+      "unavailable": "Giveaway operations are unavailable",
+      "started": "Giveaway started",
+      "stopped": "Giveaway stopped",
+      "addUsage": "Usage: giveaway add <name>",
+      "added": "Participant added: {{name}}",
+      "duplicate": "Participant already exists or name is empty: {{name}}",
+      "removeUsage": "Usage: giveaway remove <name>",
+      "removed": "Participant removed: {{name}}",
+      "shuffled": "Participants shuffled",
+      "elimination": "Elimination mode: {{state}}",
+      "list": "Participants ({{count}}): {{names}}",
+      "usage": "Usage: giveaway start|stop|add|remove|shuffle|elimination|list"
+    },
+    "sim": {
+      "subUsage": "Usage: sim sub <username> [tier]",
+      "subDone": "Simulated subscription: {{user}} (tier {{tier}})",
+      "pointsUsage": "Usage: sim points <reward_title>",
+      "pointsSound": "Reward \"{{title}}\" → sound: {{name}}",
+      "pointsCam": "Reward \"{{title}}\" → camera angle: {{id}}",
+      "pointsFilter": "Reward \"{{title}}\" → filter: {{id}}",
+      "pointsNone": "Reward \"{{title}}\" is not bound to a sound, camera angle or filter",
+      "raidUsage": "Usage: sim raid <username> <viewers>",
+      "raidMessage": "{{user}} raids with {{count}} viewers!",
+      "raidDone": "Simulated raid: {{user}} ({{count}} viewers)",
+      "unknown": "Unknown sim command. Use: sim sub | sim points | sim raid"
+    },
+    "alert": { "unknown": "Unknown alert type. Available: {{types}}", "done": "Test alert: {{kind}}" },
+    "chat": { "usage": "Usage: chat <message>", "done": "Chat message: {{message}}" },
+    "theme": { "usage": "Specify a theme id. Example: theme pixel", "switched": "Theme switched: {{id}}", "notFound": "Theme not found: {{id}}" },
+    "themes": { "none": "No themes", "title": "Themes:" },
+    "goal": { "added": "Goal: {{current}} / {{target}} (+{{amount}})", "usage": "Usage: goal <current> <target> | goal add <amount>", "updated": "Goal updated: {{current}} / {{target}}" },
+    "obs": { "none": "No custom OBS commands", "title": "Custom OBS commands:", "notFound": "OBS command not found: {{id}}", "emptyRequestType": "Command {{id}} has an empty requestType", "offline": "OBS not connected", "done": "OBS command executed: {{id}}", "failed": "OBS command error: {{error}}" },
+    "sounds": { "none": "No soundboard sounds", "title": "Soundboard sounds:" },
+    "cameras": { "none": "No camera angles", "title": "Camera angles:" },
+    "filters": { "none": "No camera filters", "title": "Camera filters:" },
+    "lang": { "done": "Interface language: {{lang}}" },
+    "logs": { "usage": "Usage: logs <info|success|warn|error|hint|all>", "all": "Log filter: all levels", "set": "Log filter: {{level}}", "unknown": "Unknown level. Available: {{levels}}, all" },
+    "media": { "cleaned": "Orphaned files removed: {{count}}", "none": "No orphaned media files found", "empty": "Media directory is empty", "title": "Media files:" },
+    "status": { "obs": "OBS: {{status}}", "scene": "Active scene: {{scene}}", "camera": "Active camera angle: {{cam}}", "theme": "Theme: {{theme}}", "channel": "Channel: {{channel}}", "death": "Deaths: {{death}}", "goal": "Goal: {{goal}}", "uptime": "Uptime: {{uptime}}" },
+    "clear": { "done": "Logs cleared" }
   },
   "scenes": {
     "title": "Scenes",
@@ -70,6 +153,9 @@
     "appearance": "Appearance",
     "appearanceDesc": "The theme only affects the overlay itself (and its canvas preview) — the control panel always looks the same.",
     "createTheme": "Create custom theme",
+    "themeCategorySystem": "System",
+    "themeCategoryStarCitizen": "Star Citizen",
+    "themeCategoryCustom": "Custom",
     "exportImport": "Export / import settings",
     "exportImportDesc": "Export saves the full config.json — layout, themes, goal, as well as Twitch/DonationAlerts tokens and keys. The file contains secrets — don't share it publicly.",
     "export": "Export to file",
@@ -199,7 +285,9 @@
     "mic": "Microphone visualizer",
     "micDesc": "Animated sound wave",
     "death": "Death Counter",
-    "deathDesc": "Big death counter for challenge streams"
+    "deathDesc": "Big death counter for challenge streams",
+    "soundboard": "Soundboard",
+    "soundboardDesc": "Sound and popup card for channel points"
   },
   "mic": {
     "mode": "Visualization mode",
@@ -211,6 +299,7 @@
     "barCount": "Bar count",
     "barGap": "Bar gap",
     "color": "Wave color",
+    "colorAuto": "Auto",
     "opacity": "Opacity"
   },
   "sceneForm": {
@@ -283,7 +372,13 @@
     "width": "Width %",
     "height": "Height %",
     "deathLabel": "Label",
-    "deathColor": "Number color"
+    "deathColor": "Number color",
+    "soundboardPopupDuration": "Popup duration, ms",
+    "soundboardImageSize": "Image size, px",
+    "soundboardShowImage": "Show image/GIF",
+    "soundboardShowText": "Show caption",
+    "soundboardShowBackground": "Popup background",
+    "soundboardShowBorder": "Popup border"
   },
   "preview": {
     "goalTitle": "Goal",
@@ -446,5 +541,111 @@
     "noCameras": "No camera angles",
     "filters": "Effects",
     "noFilters": "No effects"
+  },
+  "overlay": {
+    "soundboardPlayed": "<b>{{user}}</b> played <b>{{title}}</b>"
+  },
+  "help": {
+    "title": "Help",
+    "overview": {
+      "title": "About",
+      "p1": "Open Stream Environment is a Material Design 3 overlay plus a drag-and-drop control panel for Twitch and OBS. The overlay is served locally and added to OBS as a Browser Source.",
+      "p2": "Components: the overlay itself (shown in OBS), this control panel, standalone scenes, a Web Remote for phones and tablets, and an Elgato Stream Deck plugin."
+    },
+    "quickstart": {
+      "title": "Quick start",
+      "s1": "In OBS add a Browser Source and paste the overlay URL from the Editor toolbar.",
+      "s2": "In Settings → Twitch set at least your channel name (chat connects anonymously).",
+      "s3": "Optionally connect DonationAlerts, YouTube and OBS WebSocket in Settings.",
+      "s4": "Add and arrange widgets in the Editor — changes apply to the overlay live."
+    },
+    "editor": {
+      "title": "Editor",
+      "p1": "Drag widgets from the left library onto the canvas, or click one to add it.",
+      "p2": "Select a widget to edit its properties on the right. Drag to move it, use the corner handle to resize.",
+      "p3": "The Layers panel controls z-order; the Grid toggle helps with alignment. Copy this URL into an OBS Browser Source:"
+    },
+    "themes": {
+      "title": "Themes",
+      "p1": "Pick the overlay theme in Settings → Appearance. The System category: Nebula (Material 3), Orbital (tech HUD) and Pixel Perfect (a pixel look inspired by ShestakUI).",
+      "p2": "The Star Citizen category includes manufacturer themes that reproduce in-ship HUD/MFD colors and fonts: Drake, Aegis, Anvil, Origin, RSI, MISC, Crusader, Consolidated Outland, Argo and Esperia, plus the locations Grey's Market, Grim HEX and Levski.",
+      "p3": "Pixel Perfect uses the Pixelify Sans pixel font with Cyrillic support; widget text is snapped to the pixel grid (12/16/24/32px)."
+    },
+    "scenes": {
+      "title": "Scenes",
+      "p1": "Each scene is a separate OBS source that replaces the gameplay view entirely (not drawn on top of it).",
+      "p2": "Available scenes: Start, BRB, Main, Just Chatting, End and Fortune Wheel.",
+      "p3": "Just Chatting shows a large chat feed and alerts, leaving room for your webcam on the left.",
+      "p4": "Copy each scene's URL into its own OBS Browser Source and switch scenes from the remote or Stream Deck."
+    },
+    "twitch": {
+      "title": "Twitch",
+      "p1": "Chat connects anonymously and only needs the channel name.",
+      "p2": "For follow/sub/cheer alerts you need a Twitch application and authorization.",
+      "s1": "Register an app at dev.twitch.tv/console/apps.",
+      "s2": "Set the Redirect URI to the value shown in Settings → Twitch.",
+      "s3": "Paste the Client ID and Client Secret.",
+      "s4": "Press Connect Twitch and approve the authorization in the browser."
+    },
+    "donationalerts": {
+      "title": "DonationAlerts",
+      "p1": "Donations automatically increase the goal counter and trigger an alert.",
+      "s1": "Create a client at donationalerts.com/application/clients.",
+      "s2": "Set the Redirect URI to the value shown in Settings → DonationAlerts.",
+      "s3": "Paste the Client ID and Client Secret, then press Connect DonationAlerts."
+    },
+    "youtube": {
+      "title": "YouTube",
+      "p1": "Live chat and live events (Super Chat, new members) via the YouTube Data API v3.",
+      "s1": "Create an OAuth client in console.cloud.google.com.",
+      "s2": "Enable the YouTube Data API v3 for the project.",
+      "s3": "Set the Redirect URI shown in Settings → YouTube and paste the Client ID/Secret.",
+      "s4": "Connect, then optionally set a Video ID as a fallback for live-chat lookup."
+    },
+    "obs": {
+      "title": "OBS WebSocket",
+      "p1": "Requires OBS 28+ with the WebSocket server enabled (Tools → WebSocket Server Settings).",
+      "p2": "Scene mapping translates logical remote names into your actual OBS scene names.",
+      "p3": "You can also define custom RAW commands, camera angles (multicam) and camera filters, triggered by Twitch points or manually."
+    },
+    "soundboard": {
+      "title": "Soundboard",
+      "p1": "Map a Twitch channel-points reward to a sound file and an image/GIF animation.",
+      "p2": "Adjust the volume and queue mode, then test each sound from the panel."
+    },
+    "streamdeck": {
+      "title": "Stream Deck",
+      "p1": "The Elgato plugin switches scenes: Start, BRB, Wheel, Talk and End.",
+      "p2": "Set custom per-scene icons in Settings → Stream Deck."
+    },
+    "remote": {
+      "title": "Web Remote",
+      "p1": "Open from a phone or tablet on the same Wi-Fi network using the address shown in the header.",
+      "p2": "From the remote you can switch scenes, control the wheel and death counter, send test alerts, run OBS commands, change the theme, switch cameras and trigger effects."
+    },
+    "terminal": {
+      "title": "Terminal and commands",
+      "p1": "The Terminal button in the header opens the built-in console: it shows server and integration logs in real time.",
+      "p2": "Type commands in the input (e.g. scene brb, death +1, wheel spin, sim sub user, theme pixel, status). Type help for the full list.",
+      "p3": "Tab autocompletes commands and arguments (scenes, sounds, cameras, filters). The search field in the terminal header filters logs by text, and logs <level> filters by level."
+    },
+    "wheel": {
+      "title": "Fortune Wheel",
+      "p1": "Viewers join by typing the entry command in Twitch chat.",
+      "p2": "Elimination mode removes one participant per spin until the final winner.",
+      "p3": "Use Generate wheel, Spin, Reset participants and Clear result to run a giveaway."
+    },
+    "settings": {
+      "title": "Application settings",
+      "p1": "Port changes the local server port and requires an app restart.",
+      "p2": "Appearance manages overlay themes; Export/Import saves the full config.json together with media files (it contains secrets — don't share it).",
+      "p3": "Language switches the whole interface between English and Russian."
+    },
+    "data": {
+      "title": "Data and backups",
+      "p1": "Exporting settings saves the full config.json plus all files from the media folder (sounds, images, GIFs) in a single file.",
+      "p2": "On import, media files are automatically restored into the media folder.",
+      "p3": "The media cleanup command in the terminal removes unused media files. Window sizes and positions are remembered, and server logs are written to the logs folder."
+    }
   }
 }

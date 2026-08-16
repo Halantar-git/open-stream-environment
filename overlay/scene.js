@@ -76,6 +76,7 @@
     const root = document.documentElement;
     Object.entries(appearance.tokens).forEach(([k, v]) => root.style.setProperty(k, v));
     document.body.dataset.decoration = appearance.tokens["--panel-decoration"] || "none";
+    document.body.dataset.theme = appearance.activeThemeId || "";
   }
 
   // Scene content lives in config as editable text, but its defaults come from

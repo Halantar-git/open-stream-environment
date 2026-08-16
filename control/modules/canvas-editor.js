@@ -162,7 +162,8 @@ export function initCanvasEditor({
         </div>`;
       }
       case "mic": {
-        const color = state.micConfig.color || "#0060A8";
+        const themePrimary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#0060A8";
+        const color = config.color || state.micConfig.color || themePrimary;
         const opacity = state.micConfig.opacity ?? 0.9;
         const width = 400;
         const height = 80;
@@ -182,6 +183,9 @@ export function initCanvasEditor({
         const label = config.label || t("preview.death");
         const color = config.color || "#ff4d4d";
         return `<div class="widget-death"><div class="widget-death__label">${escapeHtml(label)}</div><div class="widget-death__value" style="color:${escapeAttr(color)}">${state.deathCount ?? 0}</div></div>`;
+      }
+      case "soundboard": {
+        return `<div class="widget-soundboard"><div class="widget-soundboard__placeholder">🔊 ${escapeHtml(t("widgets.soundboard"))}</div></div>`;
       }
       default:
         return "";
@@ -239,10 +243,11 @@ export function initCanvasEditor({
   }
 
   // ---- theme + grid (canvas preview only — app chrome stays fixed Nebula) ----
-  function applyThemeToCanvas(tokens) {
+  function applyThemeToCanvas(tokens, themeId) {
     if (!tokens) return;
     Object.entries(tokens).forEach(([k, v]) => canvasEl.style.setProperty(k, v));
     canvasEl.dataset.decoration = tokens["--panel-decoration"] || "none";
+    canvasEl.dataset.theme = themeId || "";
   }
 
   function applyGridToCanvas() {

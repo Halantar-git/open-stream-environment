@@ -191,6 +191,9 @@ function startObsWebSocket({ bus, config }) {
     if (!target) {
       return Promise.reject(new Error(`Unknown camera angle: ${angleId}`));
     }
+    if (!target.sceneName || !target.cameraSource) {
+      return Promise.reject(new Error(`Camera angle ${angleId} missing sceneName/cameraSource`));
+    }
     if (!connected || !ws || ws.readyState !== WebSocket.OPEN) {
       return Promise.reject(new Error("OBS не подключен"));
     }
@@ -219,7 +222,7 @@ function startObsWebSocket({ bus, config }) {
   // filter and auto-disable it after the configured duration; durationSec === 0
   // toggles the current on/off state. Emits `camera_filter_changed` so the
   // server can broadcast the active state to remote + control panel.
-  function triggerCameraFilter(filterId) {
+  function triggerCameraFilter(filterId, durationOverride) {
     const filters = Array.isArray(config.obs && config.obs.cameraFilters) ? config.obs.cameraFilters : [];
     const filter = filters.find((f) => f.id === filterId);
     if (!filter) {
@@ -232,7 +235,11 @@ function startObsWebSocket({ bus, config }) {
       return Promise.reject(new Error("OBS не подключен"));
     }
 
-    const durationSec = Math.max(0, Number(filter.durationSec) || 0);
+    const configured = Math.max(0, Number(filter.durationSec) || 0);
+    const durationSec =
+      durationOverride === undefined || durationOverride === null
+        ? configured
+        : Math.max(0, Number(durationOverride) || 0);
     const req = { sourceName: filter.sourceName, filterName: filter.filterName };
 
     if (durationSec > 0) {

@@ -15,9 +15,9 @@
  * along with this program.  If not, see <https://gnu.org>.
  */
 
+const fs = require("fs");
+const path = require("path");
 const crypto = require("crypto");
-const low = require("lowdb");
-const FileSync = require("lowdb/adapters/FileSync");
 
 const { getDbPath } = require("./storage-paths");
 
@@ -55,7 +55,7 @@ function defaultData() {
     overlay_mic_config: {
       sensitivity: 1.5,
       lineWidth: 2,
-      color: "#0060A8",
+      color: "", // пусто = цвет берётся из активной темы (--md-primary)
       opacity: 0.9,
       visualizer_mode: "sine", // "sine" | "bars" | "ring"
       barCount: 32,
@@ -66,17 +66,73 @@ function defaultData() {
   };
 }
 
+function isPlainObject(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+// Аналог _.defaultsDeep из lowdb v1: дополняет данные дефолтами, не затирая
+// уже сохранённые значения. Объекты мёрджатся рекурсивно, массивы/примитивы
+// берутся из данных, если они уже есть.
+function deepDefaults(defaults, data) {
+  const out = { ...(data || {}) };
+  Object.keys(defaults).forEach((key) => {
+    const def = defaults[key];
+    const cur = out[key];
+    if (cur === undefined || cur === null) {
+      out[key] = Array.isArray(def) ? [...def] : isPlainObject(def) ? { ...def } : def;
+    } else if (isPlainObject(def) && isPlainObject(cur)) {
+      out[key] = deepDefaults(def, cur);
+    }
+  });
+  return out;
+}
+
+function readJson(file) {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(file, "utf-8"));
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+/*
+  Лёгкое синхронное JSON-хранилище вместо lowdb v1. Сохраняет прежний файл
+  (config/local-db.json), прежнюю схему и прежний API, но без устаревшей
+  зависимости. Все чтения идут напрямую из `data`, запись — в `persist()`.
+*/
 function createDatabase(dbPath = getDbPath()) {
-  const adapter = new FileSync(dbPath);
-  const db = low(adapter);
-  db.defaults(defaultData()).write();
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+
+  let data = deepDefaults(defaultData(), readJson(dbPath));
+
+  function persist() {
+    fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
+  }
+  persist(); // при первом запуске создаём файл с дефолтами
+
+  function get(pathStr) {
+    return String(pathStr).split(".").reduce((acc, key) => (acc == null ? undefined : acc[key]), data);
+  }
+
+  function set(pathStr, value) {
+    const keys = String(pathStr).split(".");
+    let node = data;
+    for (let i = 0; i < keys.length - 1; i++) {
+      const key = keys[i];
+      if (node[key] == null || typeof node[key] !== "object") node[key] = {};
+      node = node[key];
+    }
+    node[keys[keys.length - 1]] = value;
+  }
 
   function getWidgets() {
-    return db.get("overlay.widgets").value() || [];
+    return get("overlay.widgets") || [];
   }
 
   function saveWidgets(widgets) {
-    db.get("overlay").set("widgets", widgets).write();
+    set("overlay.widgets", widgets);
+    persist();
     return widgets;
   }
 
@@ -87,28 +143,32 @@ function createDatabase(dbPath = getDbPath()) {
       startedAt: Date.now(),
       endedAt: null,
     };
-    db.get("sessions").push(session).write();
+    get("sessions").push(session);
+    persist();
     return session;
   }
 
   function endSession(sessionId) {
-    const session = db.get("sessions").find({ id: sessionId }).value();
+    const sessions = get("sessions");
+    const session = sessions.find((s) => s.id === sessionId);
     if (!session) return null;
-    db.get("sessions").find({ id: sessionId }).assign({ endedAt: Date.now() }).write();
-    return db.get("sessions").find({ id: sessionId }).value();
+    session.endedAt = Date.now();
+    persist();
+    return session;
   }
 
   // Логирование чата отключено для оптимизации производительности:
-  // раньше на каждое сообщение выполнялась синхронная запись на диск
-  // (db.write()), что на активном чате заметно тормозило приложение.
-  // Сообщения по-прежнему доставляются в оверлей и окно чата по WebSocket.
+  // раньше на каждое сообщение выполнялась синхронная запись на диск,
+  // что на активном чате заметно тормозило приложение. Сообщения по-прежнему
+  // доставляются в оверлей и окно чата по WebSocket.
   function appendChat() {
     return null;
   }
 
   function getChat(opts = {}) {
-    if (opts.sessionId) return db.get("chatMessages").filter({ sessionId: opts.sessionId }).value();
-    return db.get("chatMessages").value();
+    const all = get("chatMessages") || [];
+    if (opts.sessionId) return all.filter((m) => m.sessionId === opts.sessionId);
+    return all;
   }
 
   function appendStreamEvent(event) {
@@ -125,18 +185,19 @@ function createDatabase(dbPath = getDbPath()) {
       count: typeof event.count === "number" ? event.count : null,
       tier: event.tier || null,
     };
-    db.get("stream_events").push(row).write();
+    get("stream_events").push(row);
+    persist();
     return row;
   }
 
   function getStreamEventById(id) {
-    return db.get("stream_events").find({ id }).value() || null;
+    return get("stream_events").find((e) => e.id === id) || null;
   }
 
   function getStreamEvents(opts = {}) {
     const limit = Math.max(1, Number(opts.limit) || 50);
     const offset = Math.max(0, Number(opts.offset) || 0);
-    let all = db.get("stream_events").value() || [];
+    let all = get("stream_events") || [];
 
     if (opts.type) {
       all = all.filter((e) => e.type === opts.type);
@@ -162,11 +223,11 @@ function createDatabase(dbPath = getDbPath()) {
   }
 
   function getSessions() {
-    return db.get("sessions").value();
+    return get("sessions") || [];
   }
 
   function getParticipantsConfig() {
-    const raw = db.get("overlay_participants_config").value() || {};
+    const raw = get("overlay_participants_config") || {};
     return {
       maxNames: typeof raw.maxNames === "number" ? raw.maxNames : 10,
       marquee: !!raw.marquee,
@@ -180,39 +241,42 @@ function createDatabase(dbPath = getDbPath()) {
 
   function saveParticipantsConfig(config) {
     const next = { ...getParticipantsConfig(), ...(config || {}) };
-    db.set("overlay_participants_config", next).write();
+    set("overlay_participants_config", next);
+    persist();
     return next;
   }
 
   function getWheelConfig() {
-    const raw = db.get("wheel_config").value() || {};
+    const raw = get("wheel_config") || {};
     return { musicVolume: typeof raw.musicVolume === "number" ? raw.musicVolume : 50 };
   }
 
   function saveWheelConfig(config) {
     const next = { ...getWheelConfig(), ...(config || {}) };
-    db.set("wheel_config", next).write();
+    set("wheel_config", next);
+    persist();
     return next;
   }
 
   function getWheelSpeedConfig() {
-    const raw = db.get("wheel_speed_config").value() || {};
+    const raw = get("wheel_speed_config") || {};
     return { speed: typeof raw.speed === "number" ? raw.speed : 3 };
   }
 
   function saveWheelSpeedConfig(config) {
     const next = { ...getWheelSpeedConfig(), ...(config || {}) };
-    db.set("wheel_speed_config", next).write();
+    set("wheel_speed_config", next);
+    persist();
     return next;
   }
 
   function getMicConfig() {
-    const raw = db.get("overlay_mic_config").value() || {};
+    const raw = get("overlay_mic_config") || {};
     const mode = raw.visualizer_mode === "bars" || raw.visualizer_mode === "ring" ? raw.visualizer_mode : "sine";
     return {
       sensitivity: typeof raw.sensitivity === "number" ? raw.sensitivity : 1.5,
       lineWidth: typeof raw.lineWidth === "number" ? raw.lineWidth : 2,
-      color: typeof raw.color === "string" ? raw.color : "#0060A8",
+      color: typeof raw.color === "string" ? raw.color : "",
       opacity: typeof raw.opacity === "number" ? raw.opacity : 0.9,
       visualizer_mode: mode,
       barCount: Math.min(64, Math.max(10, Math.round(Number(raw.barCount) || 32))),
@@ -222,43 +286,43 @@ function createDatabase(dbPath = getDbPath()) {
 
   function saveMicConfig(config) {
     const next = { ...getMicConfig(), ...(config || {}) };
-    db.set("overlay_mic_config", next).write();
+    set("overlay_mic_config", next);
+    persist();
     return next;
   }
 
   function getLanguage() {
-    const raw = db.get("language").value();
-    return raw === "ru" ? "ru" : "en";
+    return get("language") === "ru" ? "ru" : "en";
   }
 
   function saveLanguage(lang) {
     const next = lang === "ru" ? "ru" : "en";
-    db.set("language", next).write();
+    set("language", next);
+    persist();
     return next;
   }
 
   function clearStreamEvents() {
-    db.set("stream_events", []).write();
+    set("stream_events", []);
+    persist();
     return true;
   }
 
   function clearHistory() {
-    db.set("sessions", []).write();
-    db.set("chatMessages", []).write();
-    db.set("stream_events", []).write();
+    set("sessions", []);
+    set("chatMessages", []);
+    set("stream_events", []);
+    persist();
     return true;
   }
 
   function clearAll() {
-    const defaults = defaultData();
-    Object.keys(defaults).forEach((key) => {
-      db.set(key, defaults[key]).write();
-    });
+    data = deepDefaults(defaultData(), {});
+    persist();
     return true;
   }
 
   return {
-    raw: db,
     getWidgets,
     saveWidgets,
     startSession,

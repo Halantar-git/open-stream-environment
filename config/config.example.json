@@ -7,6 +7,7 @@
     "userAccessToken": "",
     "refreshToken": "",
     "broadcasterId": "",
+    "expiresAt": 0,
     "enabled": true
   },
   "donationAlerts": {
@@ -15,6 +16,7 @@
     "accessToken": "",
     "refreshToken": "",
     "userId": "",
+    "expiresAt": 0,
     "enabled": true
   },
   "youtube": {
@@ -23,6 +25,7 @@
     "accessToken": "",
     "refreshToken": "",
     "videoId": "",
+    "expiresAt": 0,
     "enabled": true
   },
   "obs": {

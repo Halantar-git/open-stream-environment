@@ -342,6 +342,10 @@
           renderFilters();
         }
         if (typeof p.deathCount === "number") deathValue.textContent = String(p.deathCount);
+        if (typeof p.activeScene === "string") {
+          activeScene = p.activeScene;
+          renderScenes();
+        }
         if (p.giveaway) {
           giveaway = {
             command: p.giveaway.command || giveaway.command || "!go",

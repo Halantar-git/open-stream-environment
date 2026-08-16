@@ -143,6 +143,16 @@
       minH: 5,
       defaultConfig: { label: "Смерти", color: "#ff4d4d" },
     },
+    soundboard: {
+      type: "soundboard",
+      label: "Шумотека",
+      description: "Звук и попап-карточка за баллы канала",
+      icon: "widgetSoundboard",
+      defaultGeometry: { x: 32, y: 38, w: 36, h: 24 },
+      minW: 12,
+      minH: 8,
+      defaultConfig: { popupDurationMs: 4600, imageSize: 200, showImage: true, showText: true, showBackground: true, showBorder: true },
+    },
   };
 
   const CANVAS = { w: 1920, h: 1080 };

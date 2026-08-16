@@ -41,6 +41,7 @@
     widgetParticipants: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="9" cy="8" r="3"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.5c2.8.3 4.8 2.3 4.8 4.5"/></svg>`,
     widgetMic: `<svg viewBox="0 0 24 24" ${stroke}><path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 12h2"/></svg>`,
     widgetDeath: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 3a8 8 0 0 0-8 8c0 2.6 1.1 4.3 2.4 5.6V19a1 1 0 0 0 1 1h2.6v-2h4v2H16a1 1 0 0 0 1-1v-2.4C18.9 15.3 20 13.6 20 11a8 8 0 0 0-8-8z"/><circle cx="9" cy="10.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="10.5" r="1.3" fill="currentColor" stroke="none"/><path d="M9 14h6"/></svg>`,
+    widgetSoundboard: `<svg viewBox="0 0 24 24" ${stroke}><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>`,
     palette: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.9 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.7-1.6 1.6-1.6H16a4 4 0 0 0 4-4c0-4.4-3.6-8.2-8-8.2z"/><circle cx="7.5" cy="10.5" r="1.2" fill="currentColor"/><circle cx="11" cy="7" r="1.2" fill="currentColor"/><circle cx="15.5" cy="8" r="1.2" fill="currentColor"/></svg>`,
     download: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 4v11m0 0-4-4m4 4 4-4M5 18h14"/></svg>`,
     upload: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 20V9m0 0-4 4m4-4 4 4M5 4h14"/></svg>`,
@@ -60,6 +61,7 @@
     link: `<svg viewBox="0 0 24 24" ${stroke}><path d="M9 15l6-6M8 12l-2.5 2.5a3.5 3.5 0 0 0 5 5L13 17M16 12l2.5-2.5a3.5 3.5 0 0 0-5-5L11 7"/></svg>`,
     copy: `<svg viewBox="0 0 24 24" ${stroke}><rect x="9" y="9" width="12" height="12" rx="1.5"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>`,
     terminal: `<svg viewBox="0 0 24 24" ${stroke}><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg>`,
+    help: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="12" r="9"/><path d="M9.3 9a2.8 2.8 0 0 1 5.4 1c0 1.7-2.7 2.4-2.7 4"/><circle cx="12" cy="17.4" r="1.2" fill="currentColor" stroke="none"/></svg>`,
     back: `<svg viewBox="0 0 24 24" ${stroke}><path d="M15 5l-7 7 7 7"/></svg>`,
     heart: `<svg viewBox="0 0 24 24"><path d="M12 21s-7-4.35-9.5-8.5C.8 8.9 2.6 5 6.2 5c2 0 3.3 1 4.8 2.7C12.5 6 13.8 5 15.8 5c3.6 0 5.4 3.9 3.7 7.5C19 16.65 12 21 12 21z" fill="currentColor"/></svg>`,
   };

@@ -23,7 +23,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500;700&family=Rajdhani:wght@500;600;700&family=Orbitron:wght@500;700;900&family=Press+Start+2P&family=VT323&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@400;500;700&family=Rajdhani:wght@500;600;700&family=Orbitron:wght@500;700;900&family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&family=Rubik+Glitch&family=Stardos+Stencil:wght@400;700&family=Syncopate:wght@400;700&family=Geologica:wght@400;500;700&family=Quantico:wght@400;700&family=Unbounded:wght@400;700&family=Jura:wght@400;700&family=Teko:wght@400;700&family=Overpass+Mono:wght@400;700&family=Russo+One&family=Monda:wght@400;700&family=Manrope:wght@400;700&family=Space+Grotesk:wght@400;700&family=Prompt:wght@400;700&family=Anonymous+Pro:wght@400;700&family=Chakra+Petch:wght@400;700&family=Tomorrow:wght@400;700&family=Black+Ops+One&family=Ubuntu+Mono:wght@400;700&family=Michroma&family=Wallpoet&family=Pixelify+Sans:wght@400;500;600;700&display=block"
     rel="stylesheet"
   />
   <link rel="stylesheet" href="../shared/theme.css" />
@@ -42,28 +42,65 @@
         <button class="topbar__tab" data-view="scenes" data-i18n="nav.scenes">Сцены</button>
         <button class="topbar__tab" data-view="settings" data-i18n="nav.settings">Настройки</button>
       </nav>
-      <div class="topbar__status" id="statusChips"></div>
-      <button class="md-button md-button--tonal topbar__remote-btn" id="remoteUrlHint" data-i18n-title="settings.remoteHint" hidden>
-        <span class="topbar__remote-dot"></span>
-        <span id="remoteUrlText">—</span>
-      </button>
-      <div class="topbar__lang" id="languageSwitcher" role="group" data-i18n-title="settings.language">
-        <button class="md-button md-button--tonal topbar__lang-btn" data-lang="ru" type="button">RU</button>
-        <button class="md-button md-button--tonal topbar__lang-btn" data-lang="en" type="button">EN</button>
+      <div class="topbar__actions">
+        <div class="topbar__lang" id="languageSwitcher" role="group" data-i18n-title="settings.language">
+          <button class="md-button md-button--tonal topbar__lang-btn" data-lang="ru" type="button">RU</button>
+          <button class="md-button md-button--tonal topbar__lang-btn" data-lang="en" type="button">EN</button>
+        </div>
+        <button class="md-button md-button--filled topbar__boosty-btn" id="openBoostyBtn" title="Boosty" data-i18n="boosty.support">Поддержать автора</button>
+        <button class="md-button md-button--tonal topbar__chat-btn" id="openChatWindowBtn"></button>
+        <button class="md-button md-button--tonal topbar__test-chat-btn" id="testChatBtn" data-i18n-title="editor.testChat"></button>
+        <button class="md-button md-button--tonal topbar__terminal-btn" id="toggleTerminalBtn" data-i18n-title="editor.terminal"></button>
+        <button class="md-button md-button--tonal topbar__history-btn" id="toggleHistoryBtn" data-i18n-title="settings.history"></button>
       </div>
-      <button class="md-button md-button--filled topbar__boosty-btn" id="openBoostyBtn" title="Boosty" data-i18n="boosty.support">Поддержать автора</button>
-      <button class="md-button md-button--tonal topbar__chat-btn" id="openChatWindowBtn"></button>
-      <button class="md-button md-button--tonal topbar__test-chat-btn" id="testChatBtn" data-i18n-title="editor.testChat"></button>
-      <button class="md-button md-button--tonal topbar__terminal-btn" id="toggleTerminalBtn" data-i18n-title="editor.terminal"></button>
     </header>
 
     <aside class="terminal-panel" id="terminalPanel" hidden>
       <header class="terminal-panel__header">
-        <span class="terminal-panel__title" data-i18n="terminal.title">Логи</span>
+        <span class="terminal-panel__title" data-i18n="terminal.title">Терминал</span>
+        <input class="terminal-panel__search" id="terminalSearch" type="text" data-i18n-placeholder="terminal.searchPlaceholder" placeholder="Поиск по логам…" autocomplete="off" spellcheck="false" />
         <button class="terminal-panel__btn" id="terminalClearBtn" data-i18n="terminal.clear">Очистить</button>
         <button class="terminal-panel__btn terminal-panel__close" id="terminalCloseBtn" aria-label="Закрыть" data-i18n-title="common.close">×</button>
       </header>
+      <div class="terminal-panel__input">
+        <span class="terminal-panel__prompt">>_</span>
+        <div class="terminal-panel__field-wrap">
+          <span class="terminal-panel__ghost" id="terminalGhost" aria-hidden="true"></span>
+          <input class="terminal-panel__field" id="terminalInput" type="text" data-i18n-placeholder="terminal.inputPlaceholder" placeholder="Введите команду…" autocomplete="off" spellcheck="false" />
+        </div>
+      </div>
       <div class="terminal-panel__body" id="terminalBody"></div>
+    </aside>
+
+    <aside class="help-panel" id="helpPanel" hidden>
+      <header class="help-panel__header">
+        <span class="help-panel__title" data-i18n="help.title">Справка</span>
+        <button class="help-panel__close" id="helpCloseBtn" aria-label="Закрыть" data-i18n-title="common.close">×</button>
+      </header>
+      <nav class="help-panel__nav" id="helpNav"></nav>
+      <div class="help-panel__body" id="helpBody"></div>
+    </aside>
+
+    <aside class="history-panel" id="historyPanel" hidden>
+      <header class="history-panel__header">
+        <span class="history-panel__title" data-i18n="settings.history">История событий</span>
+        <input class="history-panel__search" id="eventsSearch" type="text" data-i18n-placeholder="events.searchPlaceholder" placeholder="Поиск по нику или сообщению" />
+        <button class="history-panel__btn" id="clearEventsBtn" data-i18n="events.clear">Очистить</button>
+        <button class="history-panel__close" id="historyCloseBtn" aria-label="Закрыть" data-i18n-title="common.close">×</button>
+      </header>
+      <div class="history-panel__toolbar" id="eventsFilters">
+        <button class="history-filter is-active" data-filter="all" data-i18n="events.all">Все</button>
+        <button class="history-filter" data-filter="donation" data-i18n="events.donation">Донат</button>
+        <button class="history-filter" data-filter="subscription" data-i18n="events.subscription">Подписка</button>
+        <button class="history-filter" data-filter="follow" data-i18n="events.follow">Фоллоу</button>
+        <button class="history-filter" data-filter="cheer" data-i18n="events.cheer">Чир</button>
+        <span class="history-panel__meta" id="eventsMeta"></span>
+        <button class="history-panel__btn" id="refreshEventsBtn" data-i18n="settings.refresh">Обновить</button>
+      </div>
+      <div class="history-panel__body" id="eventsHistory"></div>
+      <div class="history-panel__footer">
+        <button class="history-panel__btn" id="loadMoreEventsBtn" hidden data-i18n="settings.showMore">Показать ещё</button>
+      </div>
     </aside>
 
     <section class="view" id="view-editor">
@@ -133,7 +170,7 @@
 
     <section class="view" id="view-settings" hidden>
       <div class="settings">
-        <div class="settings__card md-card">
+        <div class="settings__card md-card" id="settingsCardTwitch">
           <div class="settings__card-head">
             <h2 data-i18n="settings.twitch">Twitch</h2>
             <div class="md-switch is-on" id="twitchEnabledSwitch" role="switch" aria-checked="true" data-i18n-title="settings.integrationSwitch"><div class="md-switch__thumb"></div></div>
@@ -169,7 +206,7 @@
           </div>
         </div>
 
-        <div class="settings__card md-card">
+        <div class="settings__card md-card" id="settingsCardDonationAlerts">
           <div class="settings__card-head">
             <h2 data-i18n="settings.donationAlerts">DonationAlerts</h2>
             <div class="md-switch is-on" id="donationAlertsEnabledSwitch" role="switch" aria-checked="true" data-i18n-title="settings.integrationSwitch"><div class="md-switch__thumb"></div></div>
@@ -197,7 +234,7 @@
           </div>
         </div>
 
-        <div class="settings__card md-card">
+        <div class="settings__card md-card" id="settingsCardYoutube">
           <div class="settings__card-head">
             <h2 data-i18n="settings.youtube">YouTube</h2>
             <div class="md-switch is-on" id="youtubeEnabledSwitch" role="switch" aria-checked="true" data-i18n-title="settings.integrationSwitch"><div class="md-switch__thumb"></div></div>
@@ -229,7 +266,7 @@
           </div>
         </div>
 
-        <div class="settings__card md-card">
+        <div class="settings__card md-card" id="settingsCardObs">
           <div class="settings__card-head">
             <h2 data-i18n="settings.obs">OBS WebSocket</h2>
             <div class="md-switch" id="obsEnabledSwitch" role="switch" aria-checked="false" data-i18n-title="settings.integrationSwitch"><div class="md-switch__thumb"></div></div>
@@ -334,28 +371,6 @@
         </div>
 
         <div class="settings__card md-card">
-          <h2 data-i18n="settings.history">История событий</h2>
-          <p class="settings__desc" data-i18n="settings.historyDesc">Последние донаты, подписки и фолловы. Кнопка «Повторить» запускает анимацию в оверлее.</p>
-          <div class="events-history__toolbar">
-            <div class="events-history__filters" id="eventsFilters">
-              <button class="md-button md-button--tonal is-active" data-filter="all" data-i18n="events.all">Все</button>
-              <button class="md-button md-button--tonal" data-filter="donation" data-i18n="events.donation">Донат</button>
-              <button class="md-button md-button--tonal" data-filter="subscription" data-i18n="events.subscription">Подписка</button>
-              <button class="md-button md-button--tonal" data-filter="follow" data-i18n="events.follow">Фоллоу</button>
-              <button class="md-button md-button--tonal" data-filter="cheer" data-i18n="events.cheer">Чир</button>
-            </div>
-            <input class="events-history__search" id="eventsSearch" type="text" data-i18n-placeholder="events.searchPlaceholder" placeholder="Поиск по нику или сообщению" />
-            <button class="md-button md-button--text" id="clearEventsBtn" data-i18n="events.clear">Очистить</button>
-          </div>
-          <div class="events-history__meta" id="eventsMeta"></div>
-          <div class="events-history" id="eventsHistory"></div>
-          <div class="settings__actions">
-            <button class="md-button md-button--tonal" id="refreshEventsBtn" data-i18n="settings.refresh">Обновить</button>
-            <button class="md-button md-button--outlined" id="loadMoreEventsBtn" hidden data-i18n="settings.showMore">Показать ещё</button>
-          </div>
-        </div>
-
-        <div class="settings__card md-card">
           <h2 data-i18n="settings.appearance">Оформление</h2>
           <p class="settings__desc" data-i18n="settings.appearanceDesc">Тема влияет только на сам оверлей (и его превью на канвасе) — панель управления всегда выглядит одинаково.</p>
           <div class="theme-grid" id="themeGrid"></div>
@@ -379,6 +394,19 @@
         </div>
       </div>
     </section>
+
+    <div class="status-fab-stack" id="statusFabStack">
+      <button class="status-fab status-fab--remote" id="remoteUrlHint" data-i18n-title="settings.remoteHint" hidden>
+        <span class="status-fab__dot status-fab__dot--green"></span>
+        <span class="status-fab__label" id="remoteUrlText">—</span>
+      </button>
+      <div class="status-fab-stack__list" id="statusFabList"></div>
+    </div>
+
+    <button class="help-fab" id="helpFabBtn" type="button" data-i18n-title="help.title" title="Справка">
+      <span class="help-fab__icon" id="helpFabIcon"></span>
+      <span class="help-fab__label" data-i18n="help.title">Справка</span>
+    </button>
   </div>
 
   <script src="../shared/events.js"></script>

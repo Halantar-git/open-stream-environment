@@ -114,7 +114,7 @@
 
   const FONT_PRESETS = {
     nebula: {
-      "--font-display": '"Roboto", "Google Sans", "Segoe UI", sans-serif',
+      "--font-display": '"Roboto", "Segoe UI", sans-serif',
       "--font-body": '"Roboto", "Segoe UI", sans-serif',
       "--font-mono": '"Roboto Mono", "Consolas", monospace',
     },

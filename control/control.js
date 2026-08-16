@@ -24,6 +24,7 @@
  */
 
 import { initLoggerPanel } from "./modules/logger-panel.js";
+import { initHelpPanel } from "./modules/help-panel.js";
 import { initWsClient } from "./modules/ws-client.js";
 import { createStateManager } from "./modules/state-manager.js";
 import { initPropertiesPanel } from "./modules/properties-panel.js";
@@ -39,7 +40,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const wsUrl = `ws://localhost:${port}/ws`;
   const overlayUrl = `http://localhost:${port}/overlay/overlay.html`;
 
-  const wsClient = initWsClient({ url: wsUrl, t, onMessage: handleMessage });
+  const wsClient = initWsClient({ url: wsUrl, t, onMessage: handleMessage, onStatusClick });
   const send = wsClient.send;
 
   // ---- state ----
@@ -144,17 +145,32 @@ const { EVENT_TYPES } = window.SharedEvents;
   }
 
   // ---- tabs ----
-  tabsEl.querySelectorAll(".topbar__tab").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      tabsEl.querySelectorAll(".topbar__tab").forEach((b) => b.classList.remove("is-active"));
-      btn.classList.add("is-active");
-      const view = btn.dataset.view;
-      viewEditor.hidden = view !== "editor";
-      viewScenes.hidden = view !== "scenes";
-      viewSettings.hidden = view !== "settings";
-      if (view === "settings") renderStreamEvents();
+  function switchView(view) {
+    tabsEl.querySelectorAll(".topbar__tab").forEach((b) => {
+      b.classList.toggle("is-active", b.dataset.view === view);
     });
+    viewEditor.hidden = view !== "editor";
+    viewScenes.hidden = view !== "scenes";
+    viewSettings.hidden = view !== "settings";
+    if (view === "settings") renderStreamEvents();
+  }
+
+  tabsEl.querySelectorAll(".topbar__tab").forEach((btn) => {
+    btn.addEventListener("click", () => switchView(btn.dataset.view));
   });
+
+  // ---- status FAB → jump to the matching settings card ----
+  function onStatusClick(service) {
+    const cardId =
+      ({ twitchChat: "settingsCardTwitch", twitchEvents: "settingsCardTwitch", donationAlerts: "settingsCardDonationAlerts", youtube: "settingsCardYoutube", obs: "settingsCardObs" })[service];
+    switchView("settings");
+    const card = cardId && document.getElementById(cardId);
+    if (card) {
+      card.classList.add("is-flash");
+      requestAnimationFrame(() => card.scrollIntoView({ behavior: "smooth", block: "start" }));
+      setTimeout(() => card.classList.remove("is-flash"), 1200);
+    }
+  }
 
   // ---- library rail ----
   function renderLibrary() {
@@ -832,47 +848,66 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   // ---- appearance: theme picker + custom theme editor ----
 
+  function renderThemeSwatch(theme) {
+    const card = document.createElement("div");
+    card.className = "theme-swatch" + (theme.id === state.appearance.activeThemeId ? " is-active" : "");
+    const dotColors = theme.builtin
+      ? BuiltinThemes.BUILTIN_THEMES[theme.id].tokens
+      : null;
+    const dots = theme.builtin
+      ? [dotColors["--md-primary"], dotColors["--md-secondary"], dotColors["--md-tertiary"]]
+      : theme.seeds
+      ? [theme.seeds.primary, theme.seeds.secondary, theme.seeds.tertiary]
+      : ["#888", "#888", "#888"];
+    card.innerHTML = `
+      <div class="theme-swatch__dots">${dots.map((c) => `<span class="theme-swatch__dot" style="background:${c}"></span>`).join("")}</div>
+      <div class="theme-swatch__row">
+        <span class="theme-swatch__name">${escapeHtml(theme.name)}</span>
+        ${
+          theme.builtin
+            ? ""
+            : `<span class="layer-row__btns">
+                <button class="theme-swatch__btn" data-action="edit" title="${t("common.edit")}">✎</button>
+                <button class="theme-swatch__btn" data-action="delete" title="${t("common.remove")}">${ICONS.trash}</button>
+              </span>`
+        }
+      </div>`;
+    card.addEventListener("click", (e) => {
+      if (e.target.closest("[data-action]")) return;
+      send(EVENT_TYPES.CMD_SET_ACTIVE_THEME, { id: theme.id });
+    });
+    if (!theme.builtin) {
+      card.querySelector('[data-action="edit"]').addEventListener("click", (e) => {
+        e.stopPropagation();
+        openThemeEditor(theme);
+      });
+      card.querySelector('[data-action="delete"]').addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (confirm(t("common.deleteThemeConfirm", { name: theme.name }))) send(EVENT_TYPES.CMD_DELETE_CUSTOM_THEME, { id: theme.id });
+      });
+    }
+    return card;
+  }
+
   function renderThemeGrid() {
     themeGridEl.innerHTML = "";
-    (state.appearance.themes || []).forEach((theme) => {
-      const card = document.createElement("div");
-      card.className = "theme-swatch" + (theme.id === state.appearance.activeThemeId ? " is-active" : "");
-      const dotColors = theme.builtin
-        ? BuiltinThemes.BUILTIN_THEMES[theme.id].tokens
-        : null;
-      const dots = theme.builtin
-        ? [dotColors["--md-primary"], dotColors["--md-secondary"], dotColors["--md-tertiary"]]
-        : theme.seeds
-        ? [theme.seeds.primary, theme.seeds.secondary, theme.seeds.tertiary]
-        : ["#888", "#888", "#888"];
-      card.innerHTML = `
-        <div class="theme-swatch__dots">${dots.map((c) => `<span class="theme-swatch__dot" style="background:${c}"></span>`).join("")}</div>
-        <div class="theme-swatch__row">
-          <span class="theme-swatch__name">${escapeHtml(theme.name)}</span>
-          ${
-            theme.builtin
-              ? ""
-              : `<span class="layer-row__btns">
-                  <button class="theme-swatch__btn" data-action="edit" title="${t("common.edit")}">✎</button>
-                  <button class="theme-swatch__btn" data-action="delete" title="${t("common.remove")}">${ICONS.trash}</button>
-                </span>`
-          }
-        </div>`;
-      card.addEventListener("click", (e) => {
-        if (e.target.closest("[data-action]")) return;
-        send(EVENT_TYPES.CMD_SET_ACTIVE_THEME, { id: theme.id });
-      });
-      if (!theme.builtin) {
-        card.querySelector('[data-action="edit"]').addEventListener("click", (e) => {
-          e.stopPropagation();
-          openThemeEditor(theme);
-        });
-        card.querySelector('[data-action="delete"]').addEventListener("click", (e) => {
-          e.stopPropagation();
-          if (confirm(t("common.deleteThemeConfirm", { name: theme.name }))) send(EVENT_TYPES.CMD_DELETE_CUSTOM_THEME, { id: theme.id });
-        });
-      }
-      themeGridEl.appendChild(card);
+    const themes = state.appearance.themes || [];
+    const groups = [
+      ["system", t("settings.themeCategorySystem")],
+      ["starcitizen", t("settings.themeCategoryStarCitizen")],
+      ["custom", t("settings.themeCategoryCustom")],
+    ];
+    groups.forEach(([category, label]) => {
+      const items = themes.filter((theme) => (theme.category || "system") === category);
+      if (!items.length) return;
+      const header = document.createElement("div");
+      header.className = "theme-grid__category";
+      header.textContent = label;
+      themeGridEl.appendChild(header);
+      const grid = document.createElement("div");
+      grid.className = "theme-grid__items";
+      items.forEach((theme) => grid.appendChild(renderThemeSwatch(theme)));
+      themeGridEl.appendChild(grid);
     });
   }
 
@@ -942,7 +977,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     state.editingThemeId = null;
     themeEditorEl.hidden = true;
     themeEditorEl.innerHTML = "";
-    canvasEditor.applyThemeToCanvas(state.appearance.tokens); // revert live-preview back to the actually active theme
+    canvasEditor.applyThemeToCanvas(state.appearance.tokens, state.appearance.activeThemeId); // revert live-preview back to the actually active theme
   }
 
   newThemeBtn.addEventListener("click", () => openThemeEditor(null));
@@ -1210,7 +1245,24 @@ const { EVENT_TYPES } = window.SharedEvents;
     });
   });
 
-  const loggerPanel = initLoggerPanel({ t, ICONS });
+  const loggerPanel = initLoggerPanel({ t, ICONS, send, EVENT_TYPES, state });
+  const helpPanel = initHelpPanel({ t, ICONS });
+
+  // ---- history console panel ----
+  const historyPanelEl = document.getElementById("historyPanel");
+  const toggleHistoryBtn = document.getElementById("toggleHistoryBtn");
+  function setHistoryOpen(open) {
+    if (!historyPanelEl || !toggleHistoryBtn) return;
+    historyPanelEl.hidden = !open;
+    toggleHistoryBtn.classList.toggle("is-active", open);
+    if (open) renderStreamEvents(true);
+  }
+  if (toggleHistoryBtn) {
+    toggleHistoryBtn.innerHTML = `${ICONS.widgetRecent} ${t("nav.history")}`;
+    toggleHistoryBtn.addEventListener("click", () => setHistoryOpen(historyPanelEl && historyPanelEl.hidden));
+  }
+  const historyCloseBtn = document.getElementById("historyCloseBtn");
+  if (historyCloseBtn) historyCloseBtn.addEventListener("click", () => setHistoryOpen(false));
 
   // ---- websocket ----
   function handleMessage(msg) {
@@ -1223,7 +1275,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         }
         wsClient.setStatuses(msg.payload.connectionStatus);
         gridSizeSelect.value = String(state.editorPrefs.gridSize || 0);
-        canvasEditor.applyThemeToCanvas(state.appearance.tokens);
+        canvasEditor.applyThemeToCanvas(state.appearance.tokens, state.appearance.activeThemeId);
         canvasEditor.applyGridToCanvas();
         renderThemeGrid();
         renderLibrary();
@@ -1240,7 +1292,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         break;
       case EVENT_TYPES.THEME_UPDATE:
         state.appearance = msg.payload;
-        if (!state.editingThemeId) canvasEditor.applyThemeToCanvas(state.appearance.tokens);
+        if (!state.editingThemeId) canvasEditor.applyThemeToCanvas(state.appearance.tokens, state.appearance.activeThemeId);
         renderThemeGrid();
         canvasEditor.renderCanvas();
         break;
@@ -1316,6 +1368,15 @@ const { EVENT_TYPES } = window.SharedEvents;
       case EVENT_TYPES.TERMINAL_LOG:
         loggerPanel.append(msg.payload);
         break;
+      case EVENT_TYPES.CLEAR_TERMINAL:
+        loggerPanel.clear();
+        break;
+      case EVENT_TYPES.CLI_COMPLETIONS:
+        loggerPanel.applyCompletions(msg.payload || {});
+        break;
+      case EVENT_TYPES.TERMINAL_FILTER:
+        loggerPanel.setFilter((msg.payload && msg.payload.level) || "all");
+        break;
       default:
         break; // ALERT / CHAT_MESSAGE / RECENT_EVENT are for the overlay, not the editor
     }
@@ -1344,6 +1405,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     propertiesPanel.render();
     renderSceneForm();
     renderGiveaway();
+    renderThemeGrid();
     wsClient.refreshStatusChips();
     updateEventsFilterButtons();
     renderStreamEvents(true);
@@ -1355,7 +1417,10 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (chatBtn) chatBtn.innerHTML = `${ICONS.widgetChat} ${t("editor.chat")}`;
     const testChatBtn = document.getElementById("testChatBtn");
     if (testChatBtn) testChatBtn.innerHTML = `${ICONS.widgetChat} ${t("editor.testChat")}`;
+    const historyBtn = document.getElementById("toggleHistoryBtn");
+    if (historyBtn) historyBtn.innerHTML = `${ICONS.widgetRecent} ${t("nav.history")}`;
     loggerPanel.refreshLabel();
+    helpPanel.refresh();
     const boostyBtn = document.getElementById("openBoostyBtn");
     if (boostyBtn) boostyBtn.innerHTML = `${ICONS.heart} ${t("boosty.support")}`;
   }

@@ -39,6 +39,10 @@
   let wheelConfig = { musicVolume: 50 };
   let wheelSpeedConfig = { speed: 3 };
   let micConfig = { sensitivity: 1.5, lineWidth: 2, color: "#0060A8", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2 };
+  let soundboardConfig = { volume: 0.8, queueMode: false };
+  const sbQueue = [];
+  let sbQueueBusy = false;
+  const sbActiveAudios = [];
   let spinAudioEl = null;
   let spinFallback = null;
 
@@ -147,6 +151,9 @@
         break;
       case "death":
         inner.className = "widget-death";
+        break;
+      case "soundboard":
+        inner.className = "widget-soundboard";
         break;
       default:
         break;
@@ -484,6 +491,102 @@
     return String(s).replace(/"/g, "&quot;");
   }
 
+  // ---------------- soundboard ----------------
+
+  function resolveMediaUrl(path) {
+    if (!path) return "";
+    if (/^(https?:)?\/\//i.test(path)) return path;
+    return "/" + String(path).replace(/^\/+/, "");
+  }
+
+  function playSoundboardAudio(sound, onEnded) {
+    if (!sound.audioFile) {
+      if (onEnded) onEnded();
+      return;
+    }
+    const audio = new Audio(resolveMediaUrl(sound.audioFile));
+    audio.volume = typeof soundboardConfig.volume === "number" ? soundboardConfig.volume : 0.8;
+    audio.play().catch(() => {
+      if (onEnded) onEnded();
+    });
+    audio.addEventListener("ended", () => {
+      const i = sbActiveAudios.indexOf(audio);
+      if (i >= 0) sbActiveAudios.splice(i, 1);
+      if (onEnded) onEnded();
+    });
+    sbActiveAudios.push(audio);
+  }
+
+  function drainSoundboardQueue() {
+    if (sbQueueBusy) return;
+    const next = sbQueue.shift();
+    if (!next) return;
+    sbQueueBusy = true;
+    playSoundboardAudio(next, () => {
+      sbQueueBusy = false;
+      drainSoundboardQueue();
+    });
+  }
+
+  function showSoundboardPopup(sound) {
+    for (const [, entry] of mounted) {
+      if (entry.type !== "soundboard" || !entry.visible) continue;
+      const cfg = entry.config || {};
+      const duration = typeof cfg.popupDurationMs === "number" ? cfg.popupDurationMs : 4600;
+      const showImage = cfg.showImage !== false;
+      const showText = cfg.showText !== false;
+      const showBackground = cfg.showBackground !== false;
+      const showBorder = cfg.showBorder !== false;
+      const imageSize = Math.max(40, typeof cfg.imageSize === "number" ? cfg.imageSize : 200);
+
+      const card = document.createElement("div");
+      card.className = "soundboard-popup";
+      if (!showBackground) card.classList.add("soundboard-popup--no-bg");
+      if (!showBorder) card.classList.add("soundboard-popup--no-border");
+
+      if (showImage) {
+        const media = document.createElement("div");
+        media.className = "soundboard-popup__media";
+        media.style.width = imageSize + "px";
+        media.style.height = imageSize + "px";
+        if (sound.imageFile) {
+          const img = document.createElement("img");
+          img.src = resolveMediaUrl(sound.imageFile);
+          img.alt = "";
+          media.appendChild(img);
+        } else {
+          media.textContent = "🔊";
+          media.style.fontSize = Math.round(imageSize * 0.5) + "px";
+        }
+        card.appendChild(media);
+      }
+
+      if (showText) {
+        const text = document.createElement("div");
+        text.className = "soundboard-popup__text";
+        text.innerHTML = t("overlay.soundboardPlayed", {
+          user: escapeHtml(sound.user || ""),
+          title: escapeHtml(sound.title || sound.soundId || ""),
+        });
+        card.appendChild(text);
+      }
+
+      entry.inner.appendChild(card);
+      setTimeout(() => card.remove(), duration + 100);
+    }
+  }
+
+  function triggerSoundboard(sound) {
+    if (!sound) return;
+    if (soundboardConfig.queueMode) {
+      sbQueue.push(sound);
+      drainSoundboardQueue();
+    } else {
+      playSoundboardAudio(sound);
+    }
+    showSoundboardPopup(sound);
+  }
+
   // ---------------- socket ----------------
 
   function handleMessage(msg) {
@@ -494,6 +597,7 @@
         stats = msg.payload.stats || stats;
         topDonation = msg.payload.topDonation || topDonation;
         deathCount = msg.payload.deathCount || 0;
+        soundboardConfig = msg.payload.soundboard || soundboardConfig;
         if (msg.payload.giveaway) {
           participantsState = {
             count: msg.payload.giveaway.count || 0,
@@ -526,6 +630,9 @@
         break;
       case EVENT_TYPES.CHAT_MESSAGE:
         pushChat(msg.payload);
+        break;
+      case EVENT_TYPES.SOUNDBOARD_PLAY:
+        triggerSoundboard(msg.payload);
         break;
       case EVENT_TYPES.RECENT_EVENT:
         recentEvents = [msg.payload, ...recentEvents].slice(0, 15);
@@ -879,7 +986,8 @@
     ctx.clearRect(0, 0, cw, ch);
 
     const cfg = micConfig || {};
-    const color = cfg.color || readCssVar("--md-primary") || "#0060A8";
+    const widgetColor = entry.config && entry.config.color;
+    const color = widgetColor || cfg.color || readCssVar("--md-primary") || "#0060A8";
     const sensitivity = clampNum(cfg.sensitivity, 0.2, 6, 1.5);
     const lineWidth = clampNum(cfg.lineWidth, 1, 12, 2);
     const opacity = clampNum(cfg.opacity, 0.05, 1, 0.9);

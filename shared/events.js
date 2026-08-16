@@ -45,6 +45,7 @@
     OVERLAY_MIC_CONFIG: "overlay_mic_config", // { config }
     LOCALES: "locales", // { lang, locales: { ru, en } }
     TERMINAL_LOG: "terminal_log", // { timestamp, service, level, message, data }
+    CLEAR_TERMINAL: "clear_terminal", // server -> client: clear the log panel
     REMOTE_ACTION: "remote_action", // { action, payload } — remote quick action (command + broadcast)
     DEATH_COUNT_UPDATE: "death_count_update", // { count }
     CAMERA_ANGLE_UPDATE: "camera_angle_update", // { activeCameraAngle }
@@ -89,6 +90,10 @@
     CMD_RUN_OBS_COMMAND: "cmd_run_obs_command", // { id }
     CMD_SET_CAMERA_ANGLE: "cmd_set_camera_angle", // { angleId }
     CMD_TRIGGER_CAMERA_FILTER: "cmd_trigger_camera_filter", // { filterId }
+    EXEC_CLI_COMMAND: "exec_cli_command", // { command } — control panel CLI console
+    EXEC_CLI_COMPLETION: "exec_cli_completion", // { input } — request CLI Tab completions
+    CLI_COMPLETIONS: "cli_completions", // { input, completions } — server -> requesting client
+    TERMINAL_FILTER: "terminal_filter", // { level } — server -> client: filter log levels
   };
 
   const CONNECTION_SERVICES = ["twitchChat", "twitchEvents", "donationAlerts", "youtube", "obs"];

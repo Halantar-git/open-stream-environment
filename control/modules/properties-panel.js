@@ -195,6 +195,8 @@ export function initPropertiesPanel({
         <div class="properties__toggle-row"><label>${t("properties.marquee")}</label>${switchHtml("pPwMarquee", !!state.participantsConfig.marquee)}</div>`;
     } else if (inst.type === "mic") {
       const mode = state.micConfig.visualizer_mode || "sine";
+      const themePrimary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#0060A8";
+      const micColor = config.color || state.micConfig.color || themePrimary;
       extraHtml = `
         <div class="md-field"><label>${t("mic.mode")}</label>
           <select id="pMicMode">
@@ -207,12 +209,25 @@ export function initPropertiesPanel({
         <div class="md-field"><label>${t("mic.lineWidth")}: <span id="pMicLineWidthValue">${state.micConfig.lineWidth ?? 2}</span></label><input type="range" id="pMicLineWidth" min="1" max="12" step="0.5" value="${state.micConfig.lineWidth ?? 2}"></div>
         <div class="md-field"><label>${t("mic.barCount")}: <span id="pMicBarCountValue">${state.micConfig.barCount ?? 32}</span></label><input type="range" id="pMicBarCount" min="10" max="64" step="1" value="${state.micConfig.barCount ?? 32}"></div>
         <div class="md-field"><label>${t("mic.barGap")}: <span id="pMicBarGapValue">${state.micConfig.barGap ?? 2}</span></label><input type="range" id="pMicBarGap" min="0" max="12" step="0.5" value="${state.micConfig.barGap ?? 2}"></div>
-        <div class="md-field"><label>${t("mic.color")}</label><input type="color" id="pMicColor" value="${escapeAttr(state.micConfig.color || "#0060A8")}"></div>
+        <div class="md-field"><label>${t("mic.color")}</label>
+          <div class="properties__color-row">
+            <input type="color" id="pMicColor" value="${escapeAttr(micColor)}">
+            <button class="md-button md-button--text" id="pMicColorReset" title="${t("mic.colorAuto")}">${t("mic.colorAuto")}</button>
+          </div>
+        </div>
         <div class="md-field"><label>${t("mic.opacity")}: <span id="pMicOpacityValue">${Math.round((state.micConfig.opacity ?? 0.9) * 100)}%</span></label><input type="range" id="pMicOpacity" min="5" max="100" step="1" value="${Math.round((state.micConfig.opacity ?? 0.9) * 100)}"></div>`;
     } else if (inst.type === "death") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.deathLabel")}</label><input type="text" id="pDeathLabel" value="${escapeAttr(config.label || "")}"></div>
         <div class="md-field"><label>${t("properties.deathColor")}</label><input type="color" id="pDeathColor" value="${escapeAttr(config.color || "#ff4d4d")}"></div>`;
+    } else if (inst.type === "soundboard") {
+      extraHtml = `
+        <div class="md-field"><label>${t("properties.soundboardPopupDuration")}</label><input type="number" id="pSoundboardPopupDuration" min="1000" max="15000" step="100" value="${config.popupDurationMs || 4600}"></div>
+        <div class="md-field"><label>${t("properties.soundboardImageSize")}</label><input type="number" id="pSoundboardImageSize" min="80" max="500" step="10" value="${config.imageSize || 200}"></div>
+        <div class="properties__toggle-row"><label>${t("properties.soundboardShowImage")}</label>${switchHtml("pSoundboardShowImage", config.showImage !== false)}</div>
+        <div class="properties__toggle-row"><label>${t("properties.soundboardShowText")}</label>${switchHtml("pSoundboardShowText", config.showText !== false)}</div>
+        <div class="properties__toggle-row"><label>${t("properties.soundboardShowBackground")}</label>${switchHtml("pSoundboardShowBackground", config.showBackground !== false)}</div>
+        <div class="properties__toggle-row"><label>${t("properties.soundboardShowBorder")}</label>${switchHtml("pSoundboardShowBorder", config.showBorder !== false)}</div>`;
     } else if (inst.type === "custom") {
       const mode = config.mode || "text";
       extraHtml = `
@@ -292,7 +307,8 @@ export function initPropertiesPanel({
         if (label) label.textContent = v.toFixed(1);
         sendMicConfig({ lineWidth: v });
       });
-      propertiesEl.querySelector("#pMicColor").addEventListener("input", (e) => sendMicConfig({ color: e.target.value }));
+      propertiesEl.querySelector("#pMicColor").addEventListener("input", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { color: e.target.value } } }));
+      propertiesEl.querySelector("#pMicColorReset").addEventListener("click", () => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { color: "" } } }));
       propertiesEl.querySelector("#pMicOpacity").addEventListener("input", (e) => {
         const v = Number(e.target.value);
         const label = propertiesEl.querySelector("#pMicOpacityValue");
@@ -315,6 +331,13 @@ export function initPropertiesPanel({
     } else if (inst.type === "death") {
       propertiesEl.querySelector("#pDeathLabel").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { label: e.target.value } } }));
       propertiesEl.querySelector("#pDeathColor").addEventListener("input", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { color: e.target.value } } }));
+    } else if (inst.type === "soundboard") {
+      propertiesEl.querySelector("#pSoundboardPopupDuration").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { popupDurationMs: Number(e.target.value) || 4600 } } }));
+      propertiesEl.querySelector("#pSoundboardImageSize").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { imageSize: Math.max(40, Number(e.target.value) || 200) } } }));
+      wireSwitch(propertiesEl.querySelector("#pSoundboardShowImage"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showImage: on } } }));
+      wireSwitch(propertiesEl.querySelector("#pSoundboardShowText"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showText: on } } }));
+      wireSwitch(propertiesEl.querySelector("#pSoundboardShowBackground"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showBackground: on } } }));
+      wireSwitch(propertiesEl.querySelector("#pSoundboardShowBorder"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showBorder: on } } }));
     } else if (inst.type === "custom") {
       wireCustomWidgetFields(inst, config);
       document.getElementById("pCustomMode").addEventListener("change", (e) => {

@@ -97,12 +97,12 @@
   --easing-standard: cubic-bezier(0.2, 0, 0, 1);
 
   /* ---- Type ----
-     Display face: Space Grotesk — geometric, a little synthetic, carries
-     the "signal from space" feel for names/headlines and big numbers.
-     Body/UI face: Roboto — the M3 default, kept for chat text and labels
-     so the system still reads as Material underneath the accent.
+     Display face: Roboto — the M3 default, used for names/headlines and
+     big numbers.
+     Body/UI face: Roboto — kept for chat text and labels so the system
+     still reads as Material underneath the accent.
      Data face: Roboto Mono — donation amounts, goal totals, timers. */
-  --font-display: "Space Grotesk", "Google Sans", "Segoe UI", sans-serif;
+  --font-display: "Roboto", "Segoe UI", sans-serif;
   --font-body: "Roboto", "Segoe UI", sans-serif;
   --font-mono: "Roboto Mono", "Consolas", monospace;
 
@@ -117,6 +117,17 @@
   --panel-border: 1px solid rgba(255, 255, 255, 0.12);
   --alert-enter-easing: cubic-bezier(0.05, 0.7, 0.1, 1);
   --alert-enter-duration: 480ms;
+}
+
+/* Pixel faces: disable font smoothing so the pixel grid stays crisp —
+   Grey's Market (Rubik Glitch / VT323) and Pixel Perfect (Pixelify Sans). */
+[data-theme="greysmarket"],
+[data-theme="greysmarket"] *,
+[data-theme="pixel"],
+[data-theme="pixel"] * {
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: grayscale;
+  font-smooth: never;
 }
 
 * {
@@ -305,3 +316,18 @@
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--md-surface-container-highest); border-radius: var(--shape-full); border: 2px solid transparent; background-clip: padding-box; }
 ::-webkit-scrollbar-thumb:hover { background: var(--md-outline); background-clip: padding-box; }
+
+/* ---- Tabular figures for dynamic data ---- */
+/* Digits keep a fixed width so counters/timers don't jitter while updating. */
+.widget-alert__amount,
+.widget-goal__amounts,
+.widget-goal__percent,
+.widget-death__value,
+.widget-stat__value,
+.timer-display,
+.scene-alert__amount,
+.events-history__amount,
+.events-history__time,
+.chat-row__time {
+  font-variant-numeric: tabular-nums;
+}

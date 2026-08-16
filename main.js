@@ -17,12 +17,13 @@
 
 const path = require("path");
 const fs = require("fs");
-const { app, BrowserWindow, ipcMain, shell, dialog, globalShortcut } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, dialog, globalShortcut, screen } = require("electron");
 
 const { createServer } = require("./server");
 const { buildTwitchAuthorizeUrl, buildDonationAlertsAuthorizeUrl, buildYoutubeAuthorizeUrl } = require("./server/oauth");
 const { createDatabase } = require("./server/db");
-const { configureStorage, getUserMediaDir } = require("./server/storage-paths");
+const { configureStorage, getUserMediaDir, getConfigDir } = require("./server/storage-paths");
+const { collectMediaForExport, importMedia } = require("./server/media");
 
 const SPLASH_MIN_MS = 3500; // matches the progress-bar animation duration in splash.html
 
@@ -35,6 +36,56 @@ let db;
 let gameMode = false;
 let chatPinned = true; // выбор пользователя кнопкой 📌
 let quitting = false;
+
+// ---- Window state persistence ----
+
+function windowStatePath() {
+  return path.join(getConfigDir(), "window-state.json");
+}
+
+function loadWindowState() {
+  try {
+    return JSON.parse(fs.readFileSync(windowStatePath(), "utf-8"));
+  } catch {
+    return {};
+  }
+}
+
+function saveWindowState() {
+  try {
+    fs.writeFileSync(
+      windowStatePath(),
+      JSON.stringify(
+        {
+          main: mainWindow && !mainWindow.isDestroyed() ? mainWindow.getBounds() : null,
+          chat: chatWindow && !chatWindow.isDestroyed() ? chatWindow.getBounds() : null,
+        },
+        null,
+        2
+      )
+    );
+  } catch {}
+}
+
+// Защита от «окна за пределами экрана» (например, монитор был отключён).
+function isBoundsVisible(bounds) {
+  if (!bounds || !bounds.width || !bounds.height) return false;
+  const displays = screen.getAllDisplays();
+  return displays.some((d) => {
+    const a = d.workArea;
+    return (
+      bounds.x < a.x + a.width &&
+      bounds.x + bounds.width > a.x &&
+      bounds.y < a.y + a.height &&
+      bounds.y + bounds.height > a.y
+    );
+  });
+}
+
+function mergeBounds(defaults, saved) {
+  if (!isBoundsVisible(saved)) return defaults;
+  return { width: saved.width, height: saved.height, x: saved.x, y: saved.y };
+}
 
 function resolveConfigDir() {
   if (app.isPackaged) {
@@ -79,9 +130,11 @@ function createSplashWindow() {
 }
 
 function createWindow(port) {
+  const bounds = mergeBounds({ width: 1440, height: 900 }, (loadWindowState() || {}).main);
   mainWindow = new BrowserWindow({
-    width: 1440,
-    height: 900,
+    width: bounds.width,
+    height: bounds.height,
+    ...(bounds.x !== undefined ? { x: bounds.x, y: bounds.y } : {}),
     minWidth: 1100,
     minHeight: 700,
     backgroundColor: "#0e0b17",
@@ -153,9 +206,11 @@ function openChatWindow(port) {
     chatWindow.focus();
     return;
   }
+  const bounds = mergeBounds({ width: 380, height: 640 }, (loadWindowState() || {}).chat);
   chatWindow = new BrowserWindow({
-    width: 380,
-    height: 640,
+    width: bounds.width,
+    height: bounds.height,
+    ...(bounds.x !== undefined ? { x: bounds.x, y: bounds.y } : {}),
     minWidth: 300,
     minHeight: 320,
     alwaysOnTop: true,
@@ -176,6 +231,7 @@ function openChatWindow(port) {
   });
   chatWindow.on("closed", () => {
     chatWindow = null;
+    saveWindowState();
   });
 }
 
@@ -365,7 +421,11 @@ app.whenReady().then(() => {
     });
     if (canceled || !filePath) return { ok: false, canceled: true };
     try {
-      const config = { ...serverHandle.state.config, layout: db.getWidgets() };
+      const config = {
+        ...serverHandle.state.config,
+        layout: db.getWidgets(),
+        _media: collectMediaForExport(),
+      };
       fs.writeFileSync(filePath, JSON.stringify(config, null, 2));
       return { ok: true, filePath };
     } catch (err) {
@@ -383,6 +443,10 @@ app.whenReady().then(() => {
     try {
       const raw = fs.readFileSync(filePaths[0], "utf-8");
       const parsed = JSON.parse(raw);
+      if (parsed && parsed._media && typeof parsed._media === "object") {
+        importMedia(parsed._media);
+      }
+      delete parsed._media;
       serverHandle.importConfig(parsed);
       return { ok: true };
     } catch (err) {
@@ -397,6 +461,7 @@ app.whenReady().then(() => {
 
 app.on("before-quit", () => {
   quitting = true;
+  saveWindowState();
   if (serverHandle) serverHandle.stop();
   globalShortcut.unregisterAll();
 });
