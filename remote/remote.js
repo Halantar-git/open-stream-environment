@@ -34,6 +34,7 @@
     WHEEL_CONFIG: "wheel_config",
     WHEEL_SPEED_CONFIG: "wheel_speed_config",
     GIVEAWAY_UPDATE: "giveaway_update",
+    CHAT_MESSAGE: "chat_message",
     LOCALES: "locales",
     CMD_SET_PARTICIPANTS_CONFIG: "cmd_set_participants_config",
     CMD_SET_WHEEL_CONFIG: "cmd_set_wheel_config",
@@ -55,6 +56,7 @@
   const obsCommandGrid = document.getElementById("obsCommandGrid");
   const cameraGrid = document.getElementById("cameraGrid");
   const filterGrid = document.getElementById("filterGrid");
+  const chatList = document.getElementById("remoteChatList");
   const wheelCommand = document.getElementById("wheelCommand");
   const wheelElimination = document.getElementById("wheelElimination");
   const wsMaxNames = document.getElementById("wsMaxNames");
@@ -310,6 +312,30 @@
     });
   }
 
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  const MAX_CHAT_ROWS = 60;
+
+  function pushChat(msg) {
+    if (!chatList) return;
+    const empty = chatList.querySelector(".remote-chat__empty");
+    if (empty) empty.remove();
+
+    const row = document.createElement("div");
+    row.className = "remote-chat__msg";
+    const badges = (msg.badges || [])
+      .slice(0, 3)
+      .map((b) => `<span class="remote-chat__badge">${escapeHtml(String(b).slice(0, 1).toUpperCase())}</span>`)
+      .join("");
+    row.innerHTML = `${badges}<span class="remote-chat__user" style="color:${escapeHtml(msg.color || "#cac4d0")}">${escapeHtml(msg.user)}</span><span class="remote-chat__colon">:</span><span class="remote-chat__text">${escapeHtml(msg.message)}</span>`;
+
+    chatList.appendChild(row);
+    while (chatList.children.length > MAX_CHAT_ROWS) chatList.removeChild(chatList.firstChild);
+    chatList.scrollTop = chatList.scrollHeight;
+  }
+
   function handleMessage(msg) {
     switch (msg.type) {
       case EVENT_TYPES.STATE: {
@@ -367,6 +393,9 @@
         if (typeof p.count === "number") deathValue.textContent = String(p.count);
         break;
       }
+      case EVENT_TYPES.CHAT_MESSAGE:
+        pushChat(msg.payload);
+        break;
       case EVENT_TYPES.CAMERA_ANGLE_UPDATE: {
         activeCameraAngle = (msg.payload && msg.payload.activeCameraAngle) || null;
         renderCameras();
@@ -459,6 +488,20 @@
       send(btn.dataset.action, {});
     });
   });
+
+  // Tabs: control pad vs. live chat.
+  const remoteMain = document.getElementById("remoteMain");
+  const remoteTabs = document.getElementById("remoteTabs");
+  if (remoteTabs && remoteMain) {
+    remoteTabs.querySelectorAll(".remote-tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const name = tab.dataset.tab;
+        remoteTabs.querySelectorAll(".remote-tab").forEach((b) => b.classList.toggle("is-active", b === tab));
+        remoteMain.classList.toggle("is-chat", name === "chat");
+        if (chatList) chatList.scrollTop = chatList.scrollHeight;
+      });
+    });
+  }
 
   wireWheelSettings();
   renderWheelSettings();

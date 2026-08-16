@@ -540,7 +540,11 @@
     "cameras": "Cameras",
     "noCameras": "No camera angles",
     "filters": "Effects",
-    "noFilters": "No effects"
+    "noFilters": "No effects",
+    "chat": "Chat",
+    "chatEmpty": "No messages yet",
+    "tabControl": "Control",
+    "tabChat": "Chat"
   },
   "overlay": {
     "soundboardPlayed": "<b>{{user}}</b> played <b>{{title}}</b>"

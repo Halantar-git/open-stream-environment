@@ -20,7 +20,12 @@
     </div>
   </header>
 
-  <main class="remote-main">
+  <nav class="remote-tabs" id="remoteTabs">
+    <button class="remote-tab is-active" type="button" data-tab="control" data-i18n="remote.tabControl">Управление</button>
+    <button class="remote-tab" type="button" data-tab="chat" data-i18n="remote.tabChat">Чат</button>
+  </nav>
+
+  <main class="remote-main" id="remoteMain">
     <section class="grid-section">
       <h2 class="grid-section__title" data-i18n="remote.scenes">Сцены</h2>
       <div class="action-grid action-grid--scenes" id="sceneGrid"></div>
@@ -113,6 +118,15 @@
     <section class="grid-section">
       <h2 class="grid-section__title" data-i18n="remote.theme">Тема оверлея</h2>
       <div class="action-grid action-grid--themes" id="themeGrid"></div>
+    </section>
+
+    <section class="grid-section grid-section--chat">
+      <h2 class="grid-section__title" data-i18n="remote.chat">Чат</h2>
+      <div class="remote-chat">
+        <div class="remote-chat__list" id="remoteChatList">
+          <div class="remote-chat__empty" data-i18n="remote.chatEmpty">Сообщений пока нет</div>
+        </div>
+      </div>
     </section>
   </main>
 

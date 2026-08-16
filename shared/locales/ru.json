@@ -540,7 +540,11 @@
     "cameras": "Камеры",
     "noCameras": "Нет ракурсов",
     "filters": "Эффекты",
-    "noFilters": "Нет эффектов"
+    "noFilters": "Нет эффектов",
+    "chat": "Чат",
+    "chatEmpty": "Сообщений пока нет",
+    "tabControl": "Управление",
+    "tabChat": "Чат"
   },
   "overlay": {
     "soundboardPlayed": "<b>{{user}}</b> запустил <b>{{title}}</b>"
