@@ -539,7 +539,7 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 
 .soundboard-item {
   display: grid;
-  grid-template-columns: minmax(130px, 0.9fr) minmax(190px, 1.3fr) minmax(190px, 1.3fr) auto auto;
+  grid-template-columns: minmax(120px, 0.8fr) minmax(150px, 1fr) minmax(150px, 1fr) minmax(150px, 1fr) auto auto;
   gap: 8px;
   align-items: center;
 }

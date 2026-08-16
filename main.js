@@ -368,11 +368,14 @@ app.whenReady().then(() => {
 
   ipcMain.handle("app:pick-sound-file", async (_event, kind) => {
     const isImage = kind === "image";
+    const isVideo = kind === "video";
     const filters = isImage
       ? [{ name: "Изображения / GIF", extensions: ["png", "jpg", "jpeg", "gif", "webp"] }]
-      : [{ name: "Аудио", extensions: ["mp3", "wav", "ogg", "m4a", "aac"] }];
+      : isVideo
+        ? [{ name: "Видео", extensions: ["mp4", "webm", "mov"] }]
+        : [{ name: "Аудио", extensions: ["mp3", "wav", "ogg", "m4a", "aac"] }];
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
-      title: isImage ? "Выберите картинку / GIF" : "Выберите аудиофайл",
+      title: isImage ? "Выберите картинку / GIF" : isVideo ? "Выберите видео" : "Выберите аудиофайл",
       filters,
       properties: ["openFile"],
     });

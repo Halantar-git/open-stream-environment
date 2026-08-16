@@ -532,6 +532,11 @@ const { EVENT_TYPES } = window.SharedEvents;
       sendSoundboardConfig({ sounds });
     });
 
+    const videoWrap = makeSoundFileInput(sound.videoFile || "", "media/...mp4", "video", (v) => {
+      const sounds = (state.soundboard.sounds || []).map((s) => (s.id === sound.id ? { ...s, videoFile: v } : s));
+      sendSoundboardConfig({ sounds });
+    });
+
     const test = document.createElement("button");
     test.className = "md-button md-button--tonal";
     test.textContent = "▶";
@@ -547,7 +552,7 @@ const { EVENT_TYPES } = window.SharedEvents;
       sendSoundboardConfig({ sounds });
     });
 
-    row.append(reward, audioWrap, imageWrap, test, remove);
+    row.append(reward, audioWrap, imageWrap, videoWrap, test, remove);
     return row;
   }
 
@@ -559,7 +564,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   }
 
   addSoundBtn.addEventListener("click", () => {
-    const sounds = [...(state.soundboard.sounds || []), { id: "sound_" + Date.now(), rewardTitle: "", rewardId: "", audioFile: "", imageFile: "", title: "" }];
+    const sounds = [...(state.soundboard.sounds || []), { id: "sound_" + Date.now(), rewardTitle: "", rewardId: "", audioFile: "", imageFile: "", videoFile: "", title: "" }];
     sendSoundboardConfig({ sounds });
   });
 

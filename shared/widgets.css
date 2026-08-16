@@ -901,9 +901,9 @@
   border: 1px solid rgba(212, 154, 21, 0.4);
 }
 
-/* ---------- Grim HEX: dirty neon underbelly ----------
-   Asteroid slate + scratched steel, lit by hacker green, Old '38 pink and
-   syndicate purple, with weld rust and dirty-gold hazard stripes. */
+/* ---------- Grim HEX: subdued asteroid terminal ----------
+   Dark asteroid stone + steel frames, a single alarm-red neon,
+   amber warning accents and a faint CRT scanline — no loud pink/purple. */
 [data-decoration="grimhex"] .widget-alert,
 [data-decoration="grimhex"] .widget-goal,
 [data-decoration="grimhex"] .widget-recent,
@@ -915,22 +915,17 @@
   background-image:
     repeating-linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.02) 0px,
-      rgba(255, 255, 255, 0.02) 1px,
+      rgba(255, 255, 255, 0.015) 0px,
+      rgba(255, 255, 255, 0.015) 1px,
       transparent 1px,
       transparent 4px
     ),
-    radial-gradient(circle at 90% 8%, rgba(57, 255, 20, 0.08), transparent 32%),
-    radial-gradient(circle at 8% 92%, rgba(138, 43, 226, 0.10), transparent 32%),
-    radial-gradient(circle at 50% 50%, rgba(160, 82, 45, 0.06), transparent 60%);
-  /* steel frames with a rust-scarred bottom edge */
-  border-top-color: rgba(58, 61, 64, 0.9);
-  border-left-color: rgba(58, 61, 64, 0.85);
-  border-right-color: rgba(58, 61, 64, 0.85);
-  border-bottom-color: rgba(160, 82, 45, 0.65);
+    radial-gradient(circle at 50% -12%, rgba(255, 24, 0, 0.07), transparent 55%);
+  border-color: rgba(51, 20, 20, 0.9);
+  border-left: 3px solid var(--md-primary);
 }
 
-/* Damaged neon strip along the top — flickers like an old bar sign */
+/* Thin red status strip along the top — subtle damaged-tube flicker */
 [data-decoration="grimhex"] .widget-alert::before,
 [data-decoration="grimhex"] .widget-goal::before,
 [data-decoration="grimhex"] .widget-recent::before,
@@ -940,22 +935,17 @@
 [data-decoration="grimhex"] .widget-death::before {
   content: "";
   position: absolute;
-  left: 4px;
-  right: 4px;
-  top: 2px;
+  left: 3px;
+  right: 3px;
+  top: 0;
   height: 2px;
   pointer-events: none;
-  background: linear-gradient(
-    90deg,
-    var(--md-primary),
-    var(--md-secondary) 50%,
-    var(--md-tertiary)
-  );
-  box-shadow: 0 0 8px var(--md-primary), 0 0 14px var(--md-secondary);
-  animation: grimhex-neon-flicker 4.2s steps(1) infinite;
+  background: linear-gradient(90deg, var(--md-primary), var(--md-secondary));
+  opacity: 0.7;
+  animation: grimhex-neon-flicker 5s steps(1) infinite;
 }
 
-/* Dirty-gold hazard stripe — worn landing-pad markings along the bottom */
+/* Amber hazard notch in the bottom-right corner */
 [data-decoration="grimhex"] .widget-alert::after,
 [data-decoration="grimhex"] .widget-goal::after,
 [data-decoration="grimhex"] .widget-recent::after,
@@ -965,40 +955,35 @@
 [data-decoration="grimhex"] .widget-death::after {
   content: "";
   position: absolute;
-  left: 0;
   right: 0;
   bottom: 0;
-  height: 5px;
+  width: 16px;
+  height: 16px;
   pointer-events: none;
-  background: repeating-linear-gradient(
-    -45deg,
-    #D4AF37 0 8px,
-    rgba(27, 30, 31, 0.9) 8px 16px
-  );
-  opacity: 0.55;
+  background: repeating-linear-gradient(-45deg, var(--md-secondary) 0 5px, transparent 5px 10px);
+  opacity: 0.5;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
 }
 
 @keyframes grimhex-neon-flicker {
-  0%, 100% { opacity: 1; }
-  6% { opacity: 0.3; }
-  8% { opacity: 1; }
-  40% { opacity: 0.8; }
-  42% { opacity: 1; }
-  71% { opacity: 0.35; }
-  73% { opacity: 1; }
+  0%, 100% { opacity: 0.7; }
+  7% { opacity: 0.35; }
+  9% { opacity: 0.7; }
+  46% { opacity: 0.5; }
+  48% { opacity: 0.7; }
 }
 
-/* neon glow + rust accents for chat/chips */
+/* red neon glow on alert text + steel chat/chip edges */
 [data-decoration="grimhex"] .widget-alert__kicker {
-  text-shadow: 0 0 8px var(--md-primary);
+  text-shadow: 0 0 6px rgba(255, 24, 0, 0.55);
 }
 [data-decoration="grimhex"] .widget-chat__msg {
-  background: rgba(27, 30, 31, 0.7);
-  border-left: 3px solid #A0522D;
+  background: rgba(10, 11, 14, 0.72);
+  border-left: 3px solid var(--md-primary);
 }
 [data-decoration="grimhex"] .widget-participants__chip {
   border-radius: var(--shape-sm);
-  border: 1px solid rgba(160, 82, 45, 0.5);
+  border: 1px solid rgba(51, 20, 20, 0.9);
 }
 
 /* ---------- Levski: brutalist mining commune ----------

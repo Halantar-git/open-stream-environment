@@ -546,12 +546,25 @@
       if (!showBackground) card.classList.add("soundboard-popup--no-bg");
       if (!showBorder) card.classList.add("soundboard-popup--no-border");
 
+      let video = null;
+
       if (showImage) {
         const media = document.createElement("div");
         media.className = "soundboard-popup__media";
         media.style.width = imageSize + "px";
         media.style.height = imageSize + "px";
-        if (sound.imageFile) {
+        if (sound.videoFile) {
+          video = document.createElement("video");
+          video.src = resolveMediaUrl(sound.videoFile);
+          video.autoplay = true;
+          video.muted = true;
+          video.loop = false;
+          video.playsInline = true;
+          video.style.width = "100%";
+          video.style.height = "100%";
+          video.style.objectFit = "contain";
+          media.appendChild(video);
+        } else if (sound.imageFile) {
           const img = document.createElement("img");
           img.src = resolveMediaUrl(sound.imageFile);
           img.alt = "";
@@ -574,7 +587,17 @@
       }
 
       entry.inner.appendChild(card);
-      setTimeout(() => card.remove(), duration + 100);
+
+      const removeCard = () => card.remove();
+      if (video) {
+        // Close when the clip finishes; fall back to a safety timer in case
+        // the video never loads or plays.
+        video.addEventListener("ended", removeCard);
+        video.addEventListener("error", removeCard);
+        setTimeout(removeCard, 30000);
+      } else {
+        setTimeout(removeCard, duration + 100);
+      }
     }
   }
 
