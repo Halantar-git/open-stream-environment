@@ -337,6 +337,7 @@
     "target": "Goal",
     "currency": "Currency",
     "showPercent": "Show %",
+    "showBackground": "Background",
     "maxMessages": "Max messages",
     "showBadges": "Show badges",
     "maxItems": "Max items",

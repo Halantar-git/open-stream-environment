@@ -39,6 +39,7 @@
   let wheelConfig = { musicVolume: 50 };
   let wheelSpeedConfig = { speed: 3 };
   let micConfig = { sensitivity: 1.5, lineWidth: 2, color: "#0060A8", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2 };
+  let remoteMicData = null;
   let soundboardConfig = { volume: 0.8, queueMode: false };
   const sbQueue = [];
   let sbQueueBusy = false;
@@ -270,6 +271,7 @@
 
   function renderGoal(entry) {
     const pct = goal.target ? Math.min(100, Math.round((goal.current / goal.target) * 100)) : 0;
+    entry.inner.classList.toggle("widget-goal--no-bg", entry.config.showBackground === false);
     entry.inner.innerHTML = `
       <div class="widget-goal__row">
         <span class="widget-goal__title">${escapeHtml(goal.title || t("preview.goalTitle"))}</span>
@@ -669,6 +671,9 @@
       case EVENT_TYPES.OVERLAY_MIC_CONFIG:
         micConfig = (msg.payload && msg.payload.config) || micConfig;
         break;
+      case EVENT_TYPES.MIC_AUDIO_DATA:
+        remoteMicData = msg.payload || null;
+        break;
       case EVENT_TYPES.LOCALES:
         if (window.I18n) {
           window.I18n.setLocales(msg.payload && msg.payload.locales);
@@ -913,6 +918,7 @@
       entry.rafId = null;
       entry.audioCtx = null;
       entry.stream = null;
+      entry.micError = null;
       startMicAudio(entry);
     }
     if (!entry.rafId) {
@@ -930,7 +936,16 @@
 
   function startMicAudio(entry) {
     const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+    if (!Ctx) {
+      entry.micError = "unsupported";
+      console.warn("[mic] Web Audio API not supported");
+      return;
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      entry.micError = "insecure";
+      console.warn("[mic] getUserMedia unavailable — load the overlay via http://localhost (not a LAN IP) so it is a secure context");
+      return;
+    }
     navigator.mediaDevices
       .getUserMedia({ audio: true })
       .then((stream) => {
@@ -939,6 +954,9 @@
           return;
         }
         const ctx = new Ctx();
+        // Browser sources (OBS) and autoplay-restricted contexts start
+        // suspended — resume so the analyser actually receives samples.
+        if (ctx.state === "suspended") ctx.resume().catch(() => {});
         const source = ctx.createMediaStreamSource(stream);
         const analyser = ctx.createAnalyser();
         analyser.fftSize = 2048;
@@ -949,9 +967,11 @@
         entry.analyser = analyser;
         entry.dataArray = new Uint8Array(analyser.fftSize);
         entry.freqArray = new Uint8Array(analyser.frequencyBinCount);
+        entry.micError = null;
       })
-      .catch(() => {
-        /* mic unavailable — keep the idle wobble */
+      .catch((err) => {
+        entry.micError = (err && err.name) || "error";
+        console.warn("[mic] microphone unavailable:", (err && err.name) || "unknown", (err && err.message) || "");
       });
   }
 
@@ -1005,6 +1025,10 @@
         sum += v * v;
       }
       level = Math.sqrt(sum / entry.dataArray.length);
+    } else if (remoteMicData) {
+      level = remoteMicData.level || 0;
+      entry.dataArray = remoteMicData.wave;
+      entry.freqArray = remoteMicData.freq;
     }
     entry.level = level;
 
@@ -1019,10 +1043,24 @@
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
 
+    // If mic capture failed, show a short hint instead of a silent idle wave
+    // so it's obvious in OBS that audio isn't reaching the widget.
+    if (!entry.analyser && entry.micError && !remoteMicData) {
+      const hint = entry.micError === "NotAllowedError" || entry.micError === "insecure"
+        ? "🎤 нет доступа к микрофону"
+        : "🎤 микрофон недоступен";
+      ctx.font = `${Math.max(12, Math.round(ch * 0.18))}px system-ui, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(hint, cw / 2, ch / 2);
+      ctx.globalAlpha = 1;
+      return;
+    }
+
     if (mode === "bars") {
-      drawMicBars(ctx, cw, ch, entry);
+      drawMicBars(ctx, cw, ch, entry, cfg);
     } else if (mode === "ring") {
-      drawMicRing(ctx, cw, ch, entry);
+      drawMicRing(ctx, cw, ch, entry, cfg);
     } else {
       drawMicSine(ctx, cw, ch, entry, t, amp, level);
     }
@@ -1051,11 +1089,11 @@
     ctx.stroke();
   }
 
-  function drawMicBars(ctx, cw, ch, entry) {
+  function drawMicBars(ctx, cw, ch, entry, cfg) {
     const freq = entry.freqArray;
     if (!freq || !freq.length) return;
-    const barCount = Math.round(clampNum(micConfig.barCount, 10, 64, 32));
-    const gap = Math.max(0, Number(micConfig.barGap) || 0);
+    const barCount = Math.round(clampNum(cfg.barCount, 10, 64, 32));
+    const gap = Math.max(0, Number(cfg.barGap) || 0);
     const usable = Math.max(8, Math.floor(freq.length * 0.8));
     const slotW = cw / barCount;
     const barW = Math.max(1, slotW - gap);
@@ -1069,10 +1107,10 @@
     }
   }
 
-  function drawMicRing(ctx, cw, ch, entry) {
+  function drawMicRing(ctx, cw, ch, entry, cfg) {
     const freq = entry.freqArray;
     if (!freq || !freq.length) return;
-    const barCount = Math.round(clampNum(micConfig.barCount, 10, 64, 32));
+    const barCount = Math.round(clampNum(cfg.barCount, 10, 64, 32));
     const cx = cw / 2;
     const cy = ch / 2;
     const maxR = Math.min(cw, ch) / 2 - 2;

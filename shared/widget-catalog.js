@@ -39,9 +39,9 @@
       label: "Цель доната",
       description: "Прогресс-бар сбора",
       icon: "widgetGoal",
-      defaultGeometry: { x: 3, y: 84, w: 32, h: 11 },
+      defaultGeometry: { x: 3, y: 84, w: 32, h: 6 },
       minW: 16,
-      minH: 7,
+      minH: 4,
       defaultConfig: { showPercentage: false },
     },
     chat: {

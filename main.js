@@ -17,7 +17,7 @@
 
 const path = require("path");
 const fs = require("fs");
-const { app, BrowserWindow, ipcMain, shell, dialog, globalShortcut, screen } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, dialog, globalShortcut, screen, session } = require("electron");
 
 const { createServer } = require("./server");
 const { buildTwitchAuthorizeUrl, buildDonationAlertsAuthorizeUrl, buildYoutubeAuthorizeUrl } = require("./server/oauth");
@@ -144,7 +144,7 @@ function createWindow(port) {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
-      backgroundThrottling: true,
+      backgroundThrottling: false,
       spellcheck: false,
     },
   });
@@ -310,6 +310,12 @@ function registerGlobalHotkeys() {
 }
 
 app.whenReady().then(() => {
+  // Allow microphone access for the mic-visualizer bridge (the control panel
+  // captures audio and forwards levels to the overlay over WebSocket).
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
+    callback(permission === "media");
+  });
+
   configureStorage({ configDir: resolveConfigDir() });
   createSplashWindow();
 

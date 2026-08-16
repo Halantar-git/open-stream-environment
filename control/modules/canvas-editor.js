@@ -83,7 +83,8 @@ export function initCanvasEditor({
     switch (inst.type) {
       case "goal": {
         const pct = state.goal.target ? Math.min(100, Math.round((state.goal.current / state.goal.target) * 100)) : 0;
-        return `<div class="widget-goal">
+        const noBg = config.showBackground === false ? " widget-goal--no-bg" : "";
+        return `<div class="widget-goal${noBg}">
           <div class="widget-goal__row">
             <span class="widget-goal__title">${escapeHtml(state.goal.title || t("preview.goalTitle"))}</span>
             <span class="widget-goal__amounts"><b>${formatMoney(state.goal.current)}</b> / ${formatMoney(state.goal.target)} ${escapeHtml(currencySymbol(state.goal.currency))}</span>

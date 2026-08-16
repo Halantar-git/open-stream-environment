@@ -1286,6 +1286,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         syncIntegrationSwitches();
         renderGiveaway();
         selectScene(state.activeSceneId);
+        syncMicBridge();
         break;
       case EVENT_TYPES.LAYOUT_UPDATE:
         handleLayoutUpdate(msg.payload.layout || []);
@@ -1443,4 +1444,90 @@ const { EVENT_TYPES } = window.SharedEvents;
     canvasEditor.renderCanvas();
     canvasEditor.renderLayers();
     propertiesPanel.render();
+    syncMicBridge();
+  }
+
+  // ---- microphone bridge ----------------------------------------------
+  // The overlay can't reliably capture the mic inside OBS Browser Source
+  // (getUserMedia is blocked / insecure context). Instead, this control panel
+  // captures the mic (Electron grants media) and forwards downsampled levels
+  // to the server, which broadcasts them to the overlay visualizer.
+  const micBridge = {
+    running: false,
+    stream: null,
+    ctx: null,
+    analyser: null,
+    timer: null,
+    dataArray: null,
+    freqArray: null,
+    wave: null,
+    freq: null,
+
+    start() {
+      if (this.running) return;
+      this.running = true;
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.warn("[mic-bridge] getUserMedia unavailable in the control panel");
+        this.running = false;
+        return;
+      }
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then((stream) => {
+          if (!this.running) { stream.getTracks().forEach((tr) => tr.stop()); return; }
+          const ctx = new Ctx();
+          if (ctx.state === "suspended") ctx.resume().catch(() => {});
+          const source = ctx.createMediaStreamSource(stream);
+          const analyser = ctx.createAnalyser();
+          analyser.fftSize = 2048;
+          analyser.smoothingTimeConstant = 0.6;
+          source.connect(analyser);
+          this.stream = stream;
+          this.ctx = ctx;
+          this.analyser = analyser;
+          this.dataArray = new Uint8Array(analyser.fftSize);
+          this.freqArray = new Uint8Array(analyser.frequencyBinCount);
+          this.wave = new Uint8Array(240);
+          this.freq = new Uint8Array(64);
+          if (!this.timer) this.timer = setInterval(() => this.tick(), 33);
+        })
+        .catch((err) => {
+          this.running = false;
+          console.warn("[mic-bridge] microphone unavailable:", (err && err.name) || "unknown");
+        });
+    },
+
+    tick() {
+      if (!this.analyser) return;
+      const a = this.analyser;
+      a.getByteTimeDomainData(this.dataArray);
+      const d = this.dataArray;
+      const dl = d.length;
+      const w = this.wave;
+      for (let i = 0; i < 240; i++) w[i] = d[Math.floor((i / 240) * dl)];
+      a.getByteFrequencyData(this.freqArray);
+      const f = this.freqArray;
+      const fl = f.length;
+      const usable = Math.max(8, Math.floor(fl * 0.8));
+      const fr = this.freq;
+      for (let i = 0; i < 64; i++) fr[i] = f[Math.floor((i / 64) * (usable - 1))];
+      let sum = 0;
+      for (let i = 0; i < dl; i++) { const v = (d[i] - 128) / 128; sum += v * v; }
+      const level = Math.sqrt(sum / dl);
+      send(EVENT_TYPES.MIC_AUDIO_DATA, { level, wave: Array.from(w), freq: Array.from(fr) });
+    },
+
+    stop() {
+      this.running = false;
+      if (this.timer) { clearInterval(this.timer); this.timer = null; }
+      if (this.stream) { this.stream.getTracks().forEach((tr) => tr.stop()); this.stream = null; }
+      if (this.ctx) { this.ctx.close().catch(() => {}); this.ctx = null; }
+      this.analyser = null;
+    },
+  };
+
+  function syncMicBridge() {
+    const hasMic = Array.isArray(state.layout) && state.layout.some((w) => w.type === "mic");
+    if (hasMic) micBridge.start();
+    else micBridge.stop();
   }

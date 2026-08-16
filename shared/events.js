@@ -51,6 +51,7 @@
     CAMERA_ANGLE_UPDATE: "camera_angle_update", // { activeCameraAngle }
     CAMERA_FILTER_UPDATE: "camera_filter_update", // { filterId, active }
     SOUNDBOARD_PLAY: "soundboard_play", // { soundId, title, user, audioFile, imageFile }
+    MIC_AUDIO_DATA: "mic_audio_data", // { level, wave, freq } — mic bridge (control -> server -> overlay)
 
     // control -> server commands
     CMD_ADD_WIDGET: "cmd_add_widget", // { type }

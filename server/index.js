@@ -613,6 +613,13 @@ function createServer({ db } = {}) {
         broadcast(EVENT_TYPES.WHEEL_SPEED_CONFIG, { config });
         break;
       }
+      case EVENT_TYPES.MIC_AUDIO_DATA: {
+        // Mic bridge: the control panel captures audio (its getUserMedia works
+        // in Electron) and forwards it here so the overlay visualizer works
+        // even inside OBS Browser Source where mic capture is blocked.
+        broadcast(EVENT_TYPES.MIC_AUDIO_DATA, msg.payload || {});
+        break;
+      }
       case EVENT_TYPES.CMD_SET_MIC_CONFIG: {
         const patch = (msg.payload && msg.payload.config) || {};
         const config = db ? db.saveMicConfig(patch) : patch;

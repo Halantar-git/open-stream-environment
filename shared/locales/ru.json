@@ -337,6 +337,7 @@
     "target": "Цель",
     "currency": "Валюта",
     "showPercent": "Показывать %",
+    "showBackground": "Фон",
     "maxMessages": "Макс. сообщений",
     "showBadges": "Показывать бейджи",
     "maxItems": "Макс. элементов",
