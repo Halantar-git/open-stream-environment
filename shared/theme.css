@@ -97,14 +97,13 @@
   --easing-standard: cubic-bezier(0.2, 0, 0, 1);
 
   /* ---- Type ----
-     Display face: Roboto — the M3 default, used for names/headlines and
+     Display face: Manrope — clean OFL sans, used for names/headlines and
      big numbers.
-     Body/UI face: Roboto — kept for chat text and labels so the system
-     still reads as Material underneath the accent.
-     Data face: Roboto Mono — donation amounts, goal totals, timers. */
-  --font-display: "Roboto", "Segoe UI", sans-serif;
-  --font-body: "Roboto", "Segoe UI", sans-serif;
-  --font-mono: "Roboto Mono", "Consolas", monospace;
+     Body/UI face: Manrope — kept for chat text and labels.
+     Data face: JetBrains Mono — donation amounts, goal totals, timers. */
+  --font-display: "Manrope", "Segoe UI", sans-serif;
+  --font-body: "Manrope", "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "Consolas", monospace;
 
   /* ---- Panel shape (overridden per-theme at runtime; these are the
      Nebula defaults so pages still look right before JS applies a theme) ---- */
@@ -120,9 +119,7 @@
 }
 
 /* Pixel faces: disable font smoothing so the pixel grid stays crisp —
-   Grey's Market (Rubik Glitch / VT323) and Pixel Perfect (Pixelify Sans). */
-[data-theme="greysmarket"],
-[data-theme="greysmarket"] *,
+   Pixel Perfect (Pixelify Sans). */
 [data-theme="pixel"],
 [data-theme="pixel"] * {
   -webkit-font-smoothing: none;

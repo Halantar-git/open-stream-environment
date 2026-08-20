@@ -426,10 +426,20 @@
 [data-decoration="brackets2"] .widget-goal,
 [data-decoration="brackets2"] .widget-recent,
 [data-decoration="brackets2"] .widget-custom.has-card,
+[data-decoration="brackets2"] .star-citizen-goal-surface,
+[data-decoration="brackets2"] .star-citizen-chat-surface,
+[data-decoration="brackets2"] .star-citizen-holo-alert-surface,
+[data-decoration="brackets2"] .widget-stat,
+[data-decoration="brackets2"] .widget-social,
 [data-decoration="brackets4"] .widget-alert,
 [data-decoration="brackets4"] .widget-goal,
 [data-decoration="brackets4"] .widget-recent,
-[data-decoration="brackets4"] .widget-custom.has-card {
+[data-decoration="brackets4"] .widget-custom.has-card,
+[data-decoration="brackets4"] .star-citizen-goal-surface,
+[data-decoration="brackets4"] .star-citizen-chat-surface,
+[data-decoration="brackets4"] .star-citizen-holo-alert-surface,
+[data-decoration="brackets4"] .widget-stat,
+[data-decoration="brackets4"] .widget-social {
   position: relative;
   background-image: repeating-linear-gradient(
     180deg,
@@ -445,10 +455,20 @@
 [data-decoration="brackets2"] .widget-goal::before,
 [data-decoration="brackets2"] .widget-recent::before,
 [data-decoration="brackets2"] .widget-custom.has-card::before,
+[data-decoration="brackets2"] .star-citizen-goal-surface::before,
+[data-decoration="brackets2"] .star-citizen-chat-surface::before,
+[data-decoration="brackets2"] .star-citizen-holo-alert-surface::before,
+[data-decoration="brackets2"] .widget-stat::before,
+[data-decoration="brackets2"] .widget-social::before,
 [data-decoration="brackets2"] .widget-alert::after,
 [data-decoration="brackets2"] .widget-goal::after,
 [data-decoration="brackets2"] .widget-recent::after,
-[data-decoration="brackets2"] .widget-custom.has-card::after {
+[data-decoration="brackets2"] .widget-custom.has-card::after,
+[data-decoration="brackets2"] .star-citizen-goal-surface::after,
+[data-decoration="brackets2"] .star-citizen-chat-surface::after,
+[data-decoration="brackets2"] .star-citizen-holo-alert-surface::after,
+[data-decoration="brackets2"] .widget-stat::after,
+[data-decoration="brackets2"] .widget-social::after {
   content: "";
   position: absolute;
   width: 16px;
@@ -459,7 +479,12 @@
 [data-decoration="brackets2"] .widget-alert::before,
 [data-decoration="brackets2"] .widget-goal::before,
 [data-decoration="brackets2"] .widget-recent::before,
-[data-decoration="brackets2"] .widget-custom.has-card::before {
+[data-decoration="brackets2"] .widget-custom.has-card::before,
+[data-decoration="brackets2"] .star-citizen-goal-surface::before,
+[data-decoration="brackets2"] .star-citizen-chat-surface::before,
+[data-decoration="brackets2"] .star-citizen-holo-alert-surface::before,
+[data-decoration="brackets2"] .widget-stat::before,
+[data-decoration="brackets2"] .widget-social::before {
   top: -1px;
   left: -1px;
   border-top: 2px solid var(--md-primary);
@@ -468,7 +493,12 @@
 [data-decoration="brackets2"] .widget-alert::after,
 [data-decoration="brackets2"] .widget-goal::after,
 [data-decoration="brackets2"] .widget-recent::after,
-[data-decoration="brackets2"] .widget-custom.has-card::after {
+[data-decoration="brackets2"] .widget-custom.has-card::after,
+[data-decoration="brackets2"] .star-citizen-goal-surface::after,
+[data-decoration="brackets2"] .star-citizen-chat-surface::after,
+[data-decoration="brackets2"] .star-citizen-holo-alert-surface::after,
+[data-decoration="brackets2"] .widget-stat::after,
+[data-decoration="brackets2"] .widget-social::after {
   bottom: -1px;
   right: -1px;
   border-bottom: 2px solid var(--md-primary);
@@ -481,7 +511,12 @@
 [data-decoration="brackets4"] .widget-alert::before,
 [data-decoration="brackets4"] .widget-goal::before,
 [data-decoration="brackets4"] .widget-recent::before,
-[data-decoration="brackets4"] .widget-custom.has-card::before {
+[data-decoration="brackets4"] .widget-custom.has-card::before,
+[data-decoration="brackets4"] .star-citizen-goal-surface::before,
+[data-decoration="brackets4"] .star-citizen-chat-surface::before,
+[data-decoration="brackets4"] .star-citizen-holo-alert-surface::before,
+[data-decoration="brackets4"] .widget-stat::before,
+[data-decoration="brackets4"] .widget-social::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -984,6 +1019,55 @@
 [data-decoration="grimhex"] .widget-participants__chip {
   border-radius: var(--shape-sm);
   border: 1px solid rgba(51, 20, 20, 0.9);
+}
+
+/* Grim HEX: goal progress bar as a neon tube — dark unlit track + lit core */
+[data-decoration="grimhex"] .md-linear-progress {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(8, 9, 11, 0.92);
+  border: 1px solid rgba(51, 20, 20, 0.85);
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.9),
+    inset 0 0 10px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+
+[data-decoration="grimhex"] .md-linear-progress__bar {
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    #6e0a00 0%,
+    #ff1800 30%,
+    #ff8a7a 46%,
+    #fff2ef 50%,
+    #ff8a7a 54%,
+    #ff1800 70%,
+    #6e0a00 100%
+  );
+  box-shadow:
+    0 0 3px #ff1800,
+    0 0 10px rgba(255, 24, 0, 0.75),
+    0 0 22px rgba(255, 24, 0, 0.4),
+    inset 0 0 2px rgba(255, 255, 255, 0.85);
+}
+
+[data-decoration="grimhex"] .md-linear-progress::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    #0a0a0c 0 8px,
+    transparent 8px calc(33.333% - 3px),
+    #0a0a0c calc(33.333% - 3px) calc(33.333% + 3px),
+    transparent calc(33.333% + 3px) calc(66.667% - 3px),
+    #0a0a0c calc(66.667% - 3px) calc(66.667% + 3px),
+    transparent calc(66.667% + 3px) calc(100% - 8px),
+    #0a0a0c calc(100% - 8px) 100%
+  );
 }
 
 /* ---------- Levski: brutalist mining commune ----------

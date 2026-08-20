@@ -17,7 +17,7 @@
 
 const path = require("path");
 const fs = require("fs");
-const { app, BrowserWindow, ipcMain, shell, dialog, globalShortcut, screen, session } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, dialog, globalShortcut, screen, session, clipboard } = require("electron");
 
 const { createServer } = require("./server");
 const { buildTwitchAuthorizeUrl, buildDonationAlertsAuthorizeUrl, buildYoutubeAuthorizeUrl } = require("./server/oauth");
@@ -334,6 +334,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle("app:open-external", (_event, url) => {
     shell.openExternal(url);
+  });
+
+  ipcMain.handle("app:copy-to-clipboard", (_event, text) => {
+    clipboard.writeText(String(text ?? ""));
   });
 
   ipcMain.handle("app:open-chat-window", () => {

@@ -620,12 +620,14 @@ class AppState {
       name: t.name,
       builtin: true,
       category: t.category || "system",
+      dimension: t.dimension || "2d",
     }));
     const custom = this.config.appearance.customThemes.map((t) => ({
       id: t.id,
       name: t.name,
       builtin: false,
       category: "custom",
+      dimension: "2d",
       seeds: t.seeds,
     }));
     return [...builtins, ...custom];

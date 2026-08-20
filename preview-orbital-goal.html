@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Goal bar — тема Orbital (превью)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      /* Токены темы Orbital (из shared/themes.js) */
+      --md-primary: #00f0ff;
+      --md-on-primary: #00232b;
+      --md-secondary: #ffaa00;
+      --md-tertiary: #ff3860;
+      --md-surface-container-highest: #1c2e3d;
+      --md-on-surface: #dcebf5;
+      --md-on-surface-variant: #8ab4d0;
+      --font-display: "Orbitron", "Segoe UI", sans-serif;
+      --font-body: "Rajdhani", "Segoe UI", sans-serif;
+      --font-mono: "Orbitron", "Consolas", monospace;
+      --panel-radius: 0px;
+      --panel-clip: none;
+      --panel-glow: 0 0 15px rgba(0, 240, 255, 0.3), inset 0 0 30px rgba(0, 240, 255, 0.04);
+      --panel-bg: rgba(8, 14, 20, 0.92);
+      --panel-blur: 10px;
+      --panel-border: 1px solid rgba(0, 240, 255, 0.35);
+      --elev-2: 0 3px 8px rgba(0, 0, 0, 0.6), 0 1px 3px rgba(0, 0, 0, 0.4);
+      --shape-full: 999px;
+      --easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #0b0f14;
+      font-family: var(--font-body);
+      color: var(--md-on-surface);
+      padding: 48px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+      align-items: center;
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: 14px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--md-on-surface-variant);
+      margin: 0;
+      font-weight: 600;
+    }
+
+    .stage {
+      width: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .stage__label {
+      font-size: 11px;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: #5b7386;
+    }
+
+    /* Позиционированный инстанс виджета (контейнер для cqw) */
+    .widget-instance {
+      width: 100%;
+      height: 68px;
+      container-type: inline-size;
+      container-name: widget;
+    }
+
+    /* ===== .widget-goal (из shared/widgets.css) ===== */
+    .widget-goal {
+      width: 100%;
+      height: 100%;
+      background: var(--panel-bg);
+      backdrop-filter: blur(var(--panel-blur));
+      -webkit-backdrop-filter: blur(var(--panel-blur));
+      border: var(--panel-border);
+      border-radius: var(--panel-radius);
+      clip-path: var(--panel-clip);
+      box-shadow: var(--elev-2), var(--panel-glow);
+      padding: 6px 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 8px;
+    }
+    .widget-goal__row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+    .widget-goal__title {
+      font-family: var(--font-display);
+      font-size: clamp(11px, 3.4cqw, 15px);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--md-on-surface);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .widget-goal__amounts {
+      font-family: var(--font-mono);
+      font-size: clamp(11px, 3.2cqw, 14px);
+      color: var(--md-on-surface-variant);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+    .widget-goal__amounts b { color: var(--md-primary); font-weight: 700; }
+    .widget-goal__percent {
+      align-self: flex-end;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--md-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ===== .md-linear-progress (из shared/theme.css) ===== */
+    .md-linear-progress {
+      position: relative;
+      width: 100%;
+      height: 8px;
+      border-radius: var(--shape-full);
+      background: var(--md-surface-container-highest);
+      overflow: hidden;
+    }
+    .md-linear-progress__bar {
+      position: absolute;
+      inset: 0;
+      width: 0%;
+      border-radius: var(--shape-full);
+      background: linear-gradient(90deg, var(--md-secondary), var(--md-primary));
+      transition: width 700ms var(--easing-emphasized);
+    }
+
+    /* ===== HUD-декорация brackets4 (из shared/widgets.css) ===== */
+    [data-decoration="brackets4"] .widget-goal {
+      position: relative;
+      background-image: repeating-linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.035) 0px,
+        rgba(255, 255, 255, 0.035) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+    }
+    [data-decoration="brackets4"] .widget-goal::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.9;
+      background-image:
+        linear-gradient(var(--md-primary), var(--md-primary)),
+        linear-gradient(var(--md-primary), var(--md-primary)),
+        linear-gradient(var(--md-primary), var(--md-primary)),
+        linear-gradient(var(--md-primary), var(--md-primary)),
+        linear-gradient(var(--md-primary), var(--md-primary)),
+        linear-gradient(var(--md-primary), var(--md-primary)),
+        linear-gradient(var(--md-primary), var(--md-primary)),
+        linear-gradient(var(--md-primary), var(--md-primary));
+      background-repeat: no-repeat;
+      background-size: 14px 3px, 3px 14px, 14px 3px, 3px 14px, 14px 3px, 3px 14px, 14px 3px, 3px 14px;
+      background-position:
+        top -1px left -1px, top -1px left -1px,
+        top -1px right -1px, top -1px right -1px,
+        bottom -1px left -1px, bottom -1px left -1px,
+        bottom -1px right -1px, bottom -1px right -1px;
+    }
+  </style>
+</head>
+<body data-decoration="brackets4">
+  <h1>Goal</h1> bar · тема Orbital</h1>
+
+  <div class="stage">
+    <div class="stage__label">С процентами (42%)</div>
+    <div class="widget-instance">
+      <div class="widget-goal">
+        <div class="widget-goal__row">
+          <span class="widget-goal__title">Донат-цель</span>
+          <span class="widget-goal__amounts"><b>2 100</b></b> / 5 000 ₽</span>
+        </div>
+        <div class="md-linear-progress"><div class="md-linear-progress__bar" style="width:42%"></div></div>
+        <div class="widget-goal__percent">42%</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="stage__label">Без процентов (75%)</div>
+    <div class="widget-instance">
+      <div class="widget-goal">
+        <div class="widget-goal__row">
+          <span class="widget-goal__title">Сбор на флот</span>
+          <span class="widget-goal__amounts"><b>3</b> 750</b> / 5 000 ₽</span>
+        </div>
+        <div class="md-linear-progress"><div class="md-linear-progress__bar" style="width:75%"></div></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

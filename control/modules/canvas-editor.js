@@ -188,6 +188,64 @@ export function initCanvasEditor({
       case "soundboard": {
         return `<div class="widget-soundboard"><div class="widget-soundboard__placeholder">🔊 ${escapeHtml(t("widgets.soundboard"))}</div></div>`;
       }
+      case "grimhex": {
+        const primary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#FF1800";
+        return `<div class="widget-grimhex-preview">
+          <svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%">
+            <path d="M12 3l7.8 4.5v9L12 21l-7.8-4.5v-9L12 3z" fill="none" stroke="${escapeAttr(primary)}" stroke-width="1.2"/>
+            <path d="M12 8l4.5 2.6v5.2L12 18.4 7.5 15.8v-5.2L12 8z" fill="none" stroke="${escapeAttr(primary)}" stroke-width="0.8"/>
+          </svg>
+        </div>`;
+      }
+      case "grimhex-chat": {
+        const rows = [
+          { user: "nova_viewer", message: t("preview.chat1") },
+          { user: "star_gazer", message: t("preview.chat2") },
+          { user: "orbit_fan", message: t("preview.chat3") },
+        ]
+          .map(
+            (m) =>
+              `<div class="star-citizen-chat__row" style="display:flex;gap:7px;font-size:13px;line-height:1.55;color:#e9eef2;">
+                <span style="color:#64748b">[12:00]</span>
+                <span style="color:#F97316;font-weight:700">${escapeHtml(m.user)}</span>
+                <span style="color:#64748b">:</span>
+                <span style="color:#e9eef2">${escapeHtml(m.message)}</span>
+              </div>`
+          )
+          .join("");
+        return `<div class="star-citizen-chat" style="position:relative;height:100%;"><div class="chat-messages-container" style="position:absolute;overflow:hidden;left:0;right:0;top:0;bottom:0;display:flex;flex-direction:column;justify-content:flex-end;padding:22px 26px;box-sizing:border-box;">${rows}</div></div>`;
+      }
+      case "grimhex-goal": {
+        const pct = state.goal && state.goal.target ? Math.min(100, Math.round((state.goal.current / state.goal.target) * 100)) : 0;
+        const red = "#ff1800";
+        const green = "#00ff66";
+        const sectors = [0, 1, 2, 3, 4]
+          .map((i) => {
+            const fill = Math.max(0, Math.min(1, (pct - i * 20) / 20));
+            const x = 6 + i * 38;
+            return `<rect x="${x}" y="12" width="36" height="36" rx="3" fill="${red}"/>` +
+              (fill > 0.01 ? `<rect x="${x}" y="12" width="${Math.max(3, Math.round(36 * fill))}" height="36" rx="3" fill="${green}"/>` : "");
+          })
+          .join("");
+        return `<div class="star-citizen-goal-preview" style="position:relative;height:100%;display:flex;flex-direction:column;padding:4px;">
+          <div style="display:flex;justify-content:space-between;gap:10px;color:#e9eef2;font-size:11px;"><span style="font-family:'Orbitron','Segoe UI',sans-serif;">${escapeHtml(state.goal.title || t("preview.goalTitle"))}</span><span style="color:#64748b;font-family:'Orbitron','Consolas',monospace;">${formatMoney(state.goal.current)} / ${formatMoney(state.goal.target)}</span></div>
+          <svg viewBox="0 0 200 60" preserveAspectRatio="xMidYMid meet" style="flex:1;width:100%;min-height:0;">${sectors}</svg>
+        </div>`;
+      }
+      case "grimhex-holo-alert": {
+        const cyan = "#00f0ff";
+        return `<div class="star-citizen-holo-preview" style="position:relative;height:100%;display:flex;align-items:center;gap:8px;padding:6px 8px;box-sizing:border-box;">
+          <svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" style="flex-shrink:0;width:40px;height:40px;">
+            <path d="M12 2.8l7.6 4.4v7.6L12 19.2l-7.6-4.4V7.2L12 2.8z" fill="none" stroke="${cyan}" stroke-width="1.2"/>
+            <path d="M12 8.4c-1.2-1.7-3.4-1.6-4.2 0-0.7 1.4.1 3.1 1.2 4.1 1 .9 2.2 1.7 3 2.4.8-.7 2-1.5 3-2.4 1.1-1 1.9-2.7 1.2-4.1-0.8-1.6-3-1.7-4.2 0z" fill="none" stroke="${cyan}" stroke-width="0.9"/>
+          </svg>
+          <div style="min-width:0;display:flex;flex-direction:column;gap:2px;">
+            <span style="font-size:9px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#8ab4d0;">HOLO // TERMINAL</span>
+            <span style="font-size:13px;font-weight:700;color:#dcebf5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">star_gazer</span>
+            <span style="font-size:10px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:${cyan};">${escapeHtml(t("properties.testFollow"))}</span>
+          </div>
+        </div>`;
+      }
       default:
         return "";
     }

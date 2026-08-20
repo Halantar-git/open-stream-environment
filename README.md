@@ -5,7 +5,7 @@
 на Electron. Оверлей отдаётся локальным сервером как обычная веб-страница —
 её нужно добавить в OBS как Browser Source.
 
-Текущая версия: **2.2.1**.
+Текущая версия: **2.3.0**.
 
 ## Что внутри
 
@@ -46,7 +46,7 @@
   2K/4K) без потери качества графики и читаемости текста.
 - **Система тем оформления** — встроенные темы Nebula/Orbital/Pixel Perfect и
   набор производителей Star Citizen (Drake, Aegis, Anvil, Origin, RSI, MISC,
-  Crusader, Esperia, Consolidated Outland, Argo, Grey's Market, Grim HEX,
+  Crusader, Esperia, Consolidated Outland, Argo, Grey's Market, Star Citizen,
   Levski) с цветами и шрифтами HUD/MFD кораблей; в теме Pixel Perfect —
   пиксельный Pixelify Sans с кириллицей.
 - **Локализация (RU/EN)** — русский и английский интерфейс для панели

@@ -151,7 +151,7 @@
       ctx.rotate(start + slice / 2);
       ctx.textAlign = "right";
       ctx.fillStyle = pair.fg;
-      ctx.font = "600 15px Roboto, sans-serif";
+      ctx.font = "600 15px Manrope, sans-serif";
       ctx.fillText(truncate(wheelSectors[i], 18), r - 14, 6);
       ctx.restore();
     }

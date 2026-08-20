@@ -25,6 +25,7 @@
 
 import { initLoggerPanel } from "./modules/logger-panel.js";
 import { initHelpPanel } from "./modules/help-panel.js";
+import { initDebugPanel } from "./modules/debug-panel.js";
 import { initWsClient } from "./modules/ws-client.js";
 import { createStateManager } from "./modules/state-manager.js";
 import { initPropertiesPanel } from "./modules/properties-panel.js";
@@ -176,6 +177,8 @@ const { EVENT_TYPES } = window.SharedEvents;
   function renderLibrary() {
     libraryListEl.innerHTML = "";
     Object.values(WIDGET_TYPES).forEach((def) => {
+      // A theme-bound widget (3D) is only offered while its own theme is active.
+      if (def.theme && state.appearance.activeThemeId !== def.theme) return;
       const card = document.createElement("div");
       card.className = "library-card";
       card.draggable = true;
@@ -898,12 +901,11 @@ const { EVENT_TYPES } = window.SharedEvents;
     themeGridEl.innerHTML = "";
     const themes = state.appearance.themes || [];
     const groups = [
-      ["system", t("settings.themeCategorySystem")],
-      ["starcitizen", t("settings.themeCategoryStarCitizen")],
-      ["custom", t("settings.themeCategoryCustom")],
+      ["3d", t("settings.themeCategory3d")],
+      ["2d", t("settings.themeCategory2d")],
     ];
-    groups.forEach(([category, label]) => {
-      const items = themes.filter((theme) => (theme.category || "system") === category);
+    groups.forEach(([dimension, label]) => {
+      const items = themes.filter((theme) => (theme.dimension || "2d") === dimension);
       if (!items.length) return;
       const header = document.createElement("div");
       header.className = "theme-grid__category";
@@ -940,7 +942,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         </div>
         <div class="md-field"><label>${t("themeEditor.fonts")}</label>
           <select id="seedFont">
-            <option value="nebula" ${seeds.fontPreset !== "orbital" ? "selected" : ""}>Roboto (Material You)</option>
+            <option value="nebula" ${seeds.fontPreset !== "orbital" ? "selected" : ""}>Manrope / JetBrains Mono (Material You)</option>
             <option value="orbital" ${seeds.fontPreset === "orbital" ? "selected" : ""}>Orbitron / Rajdhani (Orbital)</option>
           </select>
         </div>
@@ -1193,18 +1195,40 @@ const { EVENT_TYPES } = window.SharedEvents;
     });
   }
 
+  const copyText = async (text) => {
+    if (window.desktop?.copyText) {
+      try {
+        await window.desktop.copyText(text);
+        return true;
+      } catch (_) {
+        /* fall through to the web API below */
+      }
+    }
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+    return false;
+  };
+
   copySceneUrlBtn.textContent = t("scenes.copyUrl");
-  copySceneUrlBtn.addEventListener("click", () => {
-    navigator.clipboard.writeText(sceneUrl(state.activeSceneId));
+  copySceneUrlBtn.addEventListener("click", async () => {
+    const ok = await copyText(sceneUrl(state.activeSceneId));
+    if (!ok) return;
     copySceneUrlBtn.textContent = t("scenes.copied");
     setTimeout(() => (copySceneUrlBtn.textContent = t("scenes.copyUrl")), 1400);
   });
 
   document.querySelectorAll("[data-copy]").forEach((btn) => {
     btn.textContent = t("common.copy");
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       const target = document.getElementById(btn.dataset.copy);
-      navigator.clipboard.writeText(target.textContent);
+      const ok = await copyText(target.textContent);
+      if (!ok) return;
       btn.textContent = t("editor.copied");
       setTimeout(() => (btn.textContent = t("common.copy")), 1400);
     });
@@ -1212,16 +1236,18 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   obsUrlLabel.textContent = overlayUrl;
   copyUrlBtn.textContent = t("editor.copyUrl");
-  copyUrlBtn.addEventListener("click", () => {
-    navigator.clipboard.writeText(overlayUrl);
+  copyUrlBtn.addEventListener("click", async () => {
+    const ok = await copyText(overlayUrl);
+    if (!ok) return;
     copyUrlBtn.textContent = t("editor.copied");
     setTimeout(() => (copyUrlBtn.textContent = t("editor.copyUrl")), 1400);
   });
 
-  remoteUrlHint.addEventListener("click", () => {
+  remoteUrlHint.addEventListener("click", async () => {
     const url = remoteUrlText.textContent;
     if (!url || url === "—") return;
-    navigator.clipboard.writeText(url);
+    const ok = await copyText(url);
+    if (!ok) return;
     remoteUrlText.textContent = t("editor.copied");
     setTimeout(() => (remoteUrlText.textContent = url), 1400);
   });
@@ -1229,12 +1255,6 @@ const { EVENT_TYPES } = window.SharedEvents;
   const openChatWindowBtn = document.getElementById("openChatWindowBtn");
   openChatWindowBtn.innerHTML = `${ICONS.widgetChat} ${t("editor.chat")}`;
   openChatWindowBtn.addEventListener("click", () => window.desktop?.openChatWindow());
-
-  const testChatBtn = document.getElementById("testChatBtn");
-  if (testChatBtn) {
-    testChatBtn.innerHTML = `${ICONS.widgetChat} ${t("editor.testChat")}`;
-    testChatBtn.addEventListener("click", () => send(EVENT_TYPES.CMD_TEST_CHAT, { count: 6 }));
-  }
 
   const openBoostyBtn = document.getElementById("openBoostyBtn");
   if (openBoostyBtn) {
@@ -1252,6 +1272,7 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   const loggerPanel = initLoggerPanel({ t, ICONS, send, EVENT_TYPES, state });
   const helpPanel = initHelpPanel({ t, ICONS });
+  const debugPanel = initDebugPanel({ t, ICONS, send, EVENT_TYPES });
 
   // ---- history console panel ----
   const historyPanelEl = document.getElementById("historyPanel");
@@ -1300,6 +1321,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         state.appearance = msg.payload;
         if (!state.editingThemeId) canvasEditor.applyThemeToCanvas(state.appearance.tokens, state.appearance.activeThemeId);
         renderThemeGrid();
+        renderLibrary();
         canvasEditor.renderCanvas();
         break;
       case EVENT_TYPES.EDITOR_PREFS_UPDATE:
@@ -1421,8 +1443,6 @@ const { EVENT_TYPES } = window.SharedEvents;
     importConfigBtn.textContent = t("settings.import");
     const chatBtn = document.getElementById("openChatWindowBtn");
     if (chatBtn) chatBtn.innerHTML = `${ICONS.widgetChat} ${t("editor.chat")}`;
-    const testChatBtn = document.getElementById("testChatBtn");
-    if (testChatBtn) testChatBtn.innerHTML = `${ICONS.widgetChat} ${t("editor.testChat")}`;
     const historyBtn = document.getElementById("toggleHistoryBtn");
     if (historyBtn) historyBtn.innerHTML = `${ICONS.widgetRecent} ${t("nav.history")}`;
     loggerPanel.refreshLabel();

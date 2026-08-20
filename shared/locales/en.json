@@ -28,6 +28,11 @@
     "inputPlaceholder": "Type command…",
     "searchPlaceholder": "Search logs…"
   },
+  "debug": {
+    "title": "Debug",
+    "alerts": "Alerts",
+    "chat": "Chat"
+  },
   "cli": {
     "availableCommands": "Available commands:",
     "unknownCommand": "Unknown command. Type \"help\" for the list of commands.",
@@ -156,6 +161,8 @@
     "themeCategorySystem": "System",
     "themeCategoryStarCitizen": "Star Citizen",
     "themeCategoryCustom": "Custom",
+    "themeCategory3d": "3D",
+    "themeCategory2d": "2D",
     "exportImport": "Export / import settings",
     "exportImportDesc": "Export saves the full config.json — layout, themes, goal, as well as Twitch/DonationAlerts tokens and keys. The file contains secrets — don't share it publicly.",
     "export": "Export to file",
@@ -287,7 +294,15 @@
     "death": "Death Counter",
     "deathDesc": "Big death counter for challenge streams",
     "soundboard": "Soundboard",
-    "soundboardDesc": "Sound and popup card for channel points"
+    "soundboardDesc": "Sound and popup card for channel points",
+    "grimhex": "Grim HEX Sign",
+    "grimhexDesc": "Animated neon 3D sign (Star Citizen theme only)",
+    "grimhex-chat": "Star Citizen Chat",
+    "grimhex-chatDesc": "Stream chat in a Star Citizen neon HUD",
+    "grimhex-goal": "Star Citizen Goal",
+    "grimhex-goalDesc": "Donation goal from 5 neon sectors (Star Citizen theme only)",
+    "grimhex-holo-alert": "Star Citizen Hologram",
+    "grimhex-holo-alertDesc": "Holographic terminal with a rotating 3D badge (Star Citizen theme only)"
   },
   "mic": {
     "mode": "Visualization mode",
@@ -340,6 +355,7 @@
     "showBackground": "Background",
     "maxMessages": "Max messages",
     "showBadges": "Show badges",
+    "perspective": "Perspective",
     "maxItems": "Max items",
     "testAlertHint": "The test alert will trigger on the real overlay in OBS (and in the browser via the link below):",
     "testFollow": "Follow",
@@ -573,7 +589,7 @@
     "themes": {
       "title": "Themes",
       "p1": "Pick the overlay theme in Settings → Appearance. The System category: Nebula (Material 3), Orbital (tech HUD) and Pixel Perfect (a pixel look inspired by ShestakUI).",
-      "p2": "The Star Citizen category includes manufacturer themes that reproduce in-ship HUD/MFD colors and fonts: Drake, Aegis, Anvil, Origin, RSI, MISC, Crusader, Consolidated Outland, Argo and Esperia, plus the locations Grey's Market, Grim HEX and Levski.",
+      "p2": "The Star Citizen category includes the Star Citizen (Grim HEX) terminal HUD theme.",
       "p3": "Pixel Perfect uses the Pixelify Sans pixel font with Cyrillic support; widget text is snapped to the pixel grid (12/16/24/32px)."
     },
     "scenes": {

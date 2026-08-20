@@ -114,9 +114,9 @@
 
   const FONT_PRESETS = {
     nebula: {
-      "--font-display": '"Roboto", "Segoe UI", sans-serif',
-      "--font-body": '"Roboto", "Segoe UI", sans-serif',
-      "--font-mono": '"Roboto Mono", "Consolas", monospace',
+      "--font-display": '"Manrope", "Segoe UI", sans-serif',
+      "--font-body": '"Manrope", "Segoe UI", sans-serif',
+      "--font-mono": '"JetBrains Mono", "Consolas", monospace',
     },
     orbital: {
       "--font-display": '"Orbitron", "Segoe UI", sans-serif',

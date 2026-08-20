@@ -28,6 +28,7 @@
       name: "Material You",
       builtin: true,
       category: "system",
+      dimension: "2d",
       borderRadius: "24px",
       tokens: {
         "--md-primary": "#d0bcff",
@@ -58,9 +59,9 @@
         "--md-on-surface-variant": "#cac4d0",
         "--md-outline": "#938f96",
         "--md-outline-variant": "#49454f",
-        "--font-display": '"Roboto", "Segoe UI", sans-serif',
-        "--font-body": '"Roboto", "Segoe UI", sans-serif',
-        "--font-mono": '"Roboto Mono", "Consolas", monospace',
+        "--font-display": '"Manrope", "Segoe UI", sans-serif',
+        "--font-body": '"Manrope", "Segoe UI", sans-serif',
+        "--font-mono": '"JetBrains Mono", "Consolas", monospace',
         "--panel-radius": "24px",
         "--panel-clip": "none",
         "--panel-decoration": "none",
@@ -77,6 +78,7 @@
       name: "Orbital",
       builtin: true,
       category: "system",
+      dimension: "2d",
       borderRadius: "0px",
       tokens: {
         "--md-primary": "#00f0ff",
@@ -121,11 +123,13 @@
         "--alert-enter-duration": "350ms",
       },
     },
+
     pixel: {
       id: "pixel",
       name: "Pixel Perfect",
       builtin: true,
       category: "system",
+      dimension: "2d",
       borderRadius: "0px",
       tokens: {
         // ShestakUI-inspired minimal dark UI: near-black neutral surfaces,
@@ -174,817 +178,65 @@
         "--alert-enter-duration": "240ms",
       },
     },
-    drake: {
-      id: "drake",
-      name: "Drake Interplanetary",
-      builtin: true,
-      category: "starcitizen",
-      borderRadius: "2px",
-      tokens: {
-        // Amber HUD (#FFB300) — like an old CRT industrial display.
-        "--md-primary": "#FFB300",
-        "--md-on-primary": "#2a1800",
-        "--md-primary-container": "#7a5200",
-        "--md-on-primary-container": "#ffe8b3",
-
-        // Alarm red (#FF1744) — critical warnings.
-        "--md-secondary": "#FF1744",
-        "--md-on-secondary": "#3a0008",
-        "--md-secondary-container": "#8c0f2a",
-        "--md-on-secondary-container": "#ffd3da",
-
-        // Dirty green (#7CB342) — status markers.
-        "--md-tertiary": "#7CB342",
-        "--md-on-tertiary": "#1a260a",
-        "--md-tertiary-container": "#3c4a22",
-        "--md-on-tertiary-container": "#dcebc8",
-
-        "--md-error": "#ffb4ab",
-        "--md-on-error": "#690005",
-        "--md-error-container": "#93000a",
-        "--md-on-error-container": "#ffdad6",
-
-        // Old amber CRT glass — dark, faintly warm, like a scavenged display.
-        "--md-surface-dim": "#0a0905",
-        "--md-surface": "#0e0c07",
-        "--md-surface-bright": "#261f10",
-        "--md-surface-container-lowest": "#050403",
-        "--md-surface-container-low": "#131009",
-        "--md-surface-container": "#161209",
-        "--md-surface-container-high": "#1b160b",
-        "--md-surface-container-highest": "#221d0f",
-
-        "--md-on-surface": "#ecf0f1",
-        "--md-on-surface-variant": "#b6bcc0",
-        "--md-outline": "#4e6a85",
-        "--md-outline-variant": "#33291a",
-
-        "--font-display": '"Teko", "Segoe UI", sans-serif',
-        "--font-body": '"Overpass Mono", "Consolas", monospace',
-        "--font-mono": '"Overpass Mono", "Consolas", monospace',
-
-        // Sharp utilitarian panels — no chamfered corners.
-        "--panel-radius": "2px",
-        "--panel-clip": "none",
-        "--panel-decoration": "hazard",
-        "--panel-glow": "0 0 0 1px rgba(255, 179, 0, 0.30), 0 0 22px rgba(255, 179, 0, 0.08)",
-        "--panel-bg": "rgba(14, 12, 7, 0.94)",
-        "--panel-blur": "0px",
-        "--panel-border": "1px solid rgba(255, 179, 0, 0.45)",
-        "--alert-enter-easing": "cubic-bezier(0.2, 0, 0, 1)",
-        "--alert-enter-duration": "260ms",
-
-        // Sharper global shape scale for the overlay + canvas preview.
-        "--shape-xs": "2px",
-        "--shape-sm": "3px",
-        "--shape-md": "4px",
-        "--shape-lg": "6px",
-        "--shape-xl": "10px",
-        "--shape-full": "999px",
-      },
-    },
-
-    aegis: {
-      id: "aegis",
-      name: "Aegis Dynamics",
-      builtin: true,
-      category: "starcitizen",
-      borderRadius: "4px",
-      tokens: {
-        // Emerald HUD (#00C853) — 4th/5th-gen fighter cockpit.
-        "--md-primary": "#00C853",
-        "--md-on-primary": "#00220d",
-        "--md-primary-container": "#0c6b33",
-        "--md-on-primary-container": "#a9f5c8",
-
-        // Amber (#FF8F00) — status / confirmation.
-        "--md-secondary": "#FF8F00",
-        "--md-on-secondary": "#2a1700",
-        "--md-secondary-container": "#7a4a00",
-        "--md-on-secondary-container": "#ffe0b3",
-
-        // Muted combat blue-grey for tertiary markers.
-        "--md-tertiary": "#8fb0c9",
-        "--md-on-tertiary": "#0a1c2a",
-        "--md-tertiary-container": "#24465e",
-        "--md-on-tertiary-container": "#c4e6ff",
-
-        "--md-error": "#ffb4ab",
-        "--md-on-error": "#690005",
-        "--md-error-container": "#93000a",
-        "--md-on-error-container": "#ffdad6",
-
-        // Emerald HUD glass — dark cockpit panel with a faint green cast.
-        "--md-surface-dim": "#050a07",
-        "--md-surface": "#091009",
-        "--md-surface-bright": "#1a2c1d",
-        "--md-surface-container-lowest": "#030603",
-        "--md-surface-container-low": "#0b130d",
-        "--md-surface-container": "#0e1710",
-        "--md-surface-container-high": "#111c13",
-        "--md-surface-container-highest": "#16261a",
-
-        "--md-on-surface": "#e6edf3",
-        "--md-on-surface-variant": "#b7c3cd",
-        "--md-outline": "#5b7488",
-        "--md-outline-variant": "#1a2a20",
-
-        "--font-display": '"Russo One", "Segoe UI", sans-serif',
-        "--font-body": '"Monda", "Segoe UI", sans-serif',
-        "--font-mono": '"Roboto Mono", "Consolas", monospace',
-
-        "--panel-radius": "4px",
-        "--panel-clip": "none",
-        "--panel-decoration": "brackets2",
-        "--panel-glow": "0 0 0 1px rgba(0, 200, 83, 0.30), 0 0 20px rgba(0, 200, 83, 0.08)",
-        "--panel-bg": "rgba(9, 16, 9, 0.95)",
-        "--panel-blur": "0px",
-        "--panel-border": "1px solid rgba(0, 200, 83, 0.45)",
-        "--alert-enter-easing": "cubic-bezier(0.2, 0, 0, 1)",
-        "--alert-enter-duration": "240ms",
-
-        "--shape-xs": "2px",
-        "--shape-sm": "3px",
-        "--shape-md": "4px",
-        "--shape-lg": "6px",
-        "--shape-xl": "10px",
-        "--shape-full": "999px",
-      },
-    },
-
-    anvil: {
-      id: "anvil",
-      name: "Anvil Aerospace",
-      builtin: true,
-      category: "starcitizen",
-      borderRadius: "3px",
-      tokens: {
-        // Tactical green HUD (#00E676) — max legibility under G-load.
-        "--md-primary": "#00E676",
-        "--md-on-primary": "#002e15",
-        "--md-primary-container": "#0f5c33",
-        "--md-on-primary-container": "#a9f5c8",
-
-        // Military orange (#FF9100) — critical warnings.
-        "--md-secondary": "#FF9100",
-        "--md-on-secondary": "#2a1300",
-        "--md-secondary-container": "#7a3d00",
-        "--md-on-secondary-container": "#ffe0c2",
-
-        // Hardened steel blue-grey.
-        "--md-tertiary": "#90a4ae",
-        "--md-on-tertiary": "#0a151b",
-        "--md-tertiary-container": "#2a3a42",
-        "--md-on-tertiary-container": "#d2e5ee",
-
-        "--md-error": "#ffb4ab",
-        "--md-on-error": "#690005",
-        "--md-error-container": "#93000a",
-        "--md-on-error-container": "#ffdad6",
-
-        // Tactical green HUD glass — dark with a faint military-green cast.
-        "--md-surface-dim": "#060a07",
-        "--md-surface": "#0a100b",
-        "--md-surface-bright": "#1b2a1e",
-        "--md-surface-container-lowest": "#030604",
-        "--md-surface-container-low": "#0c140e",
-        "--md-surface-container": "#0f1811",
-        "--md-surface-container-high": "#121c14",
-        "--md-surface-container-highest": "#17251b",
-
-        "--md-on-surface": "#eef1f4",
-        "--md-on-surface-variant": "#c0c9cf",
-        "--md-outline": "#62747f",
-        "--md-outline-variant": "#1a2a1e",
-
-        "--font-display": '"Orbitron", "Segoe UI", sans-serif',
-        "--font-body": '"Quantico", "Segoe UI", sans-serif',
-        "--font-mono": '"Roboto Mono", "Consolas", monospace',
-
-        "--panel-radius": "3px",
-        "--panel-clip": "none",
-        "--panel-decoration": "brackets2",
-        "--panel-glow": "0 0 0 1px rgba(0, 230, 118, 0.28), 0 0 18px rgba(0, 230, 118, 0.06)",
-        "--panel-bg": "rgba(10, 16, 11, 0.96)",
-        "--panel-blur": "0px",
-        "--panel-border": "1px solid rgba(0, 230, 118, 0.40)",
-        "--alert-enter-easing": "cubic-bezier(0.2, 0, 0, 1)",
-        "--alert-enter-duration": "280ms",
-
-        "--shape-xs": "2px",
-        "--shape-sm": "2px",
-        "--shape-md": "3px",
-        "--shape-lg": "6px",
-        "--shape-xl": "10px",
-        "--shape-full": "999px",
-      },
-    },
-
-    origin: {
-      id: "origin",
-      name: "Origin Jumpworks",
-      builtin: true,
-      category: "starcitizen",
-      borderRadius: "16px",
-      tokens: {
-        // Neon blue HUD (#00B0FF) — signature instrument glow.
-        "--md-primary": "#00B0FF",
-        "--md-on-primary": "#00263a",
-        "--md-primary-container": "#00506b",
-        "--md-on-primary-container": "#c4e8ff",
-
-        // Cold white / light cyan (#E0F7FA) — sterile luxury surfaces.
-        "--md-secondary": "#E0F7FA",
-        "--md-on-secondary": "#102028",
-        "--md-secondary-container": "#34505c",
-        "--md-on-secondary-container": "#eaf6f8",
-
-        // Soft platinum violet glow.
-        "--md-tertiary": "#b7c6d4",
-        "--md-on-tertiary": "#1a2430",
-        "--md-tertiary-container": "#2c3a4a",
-        "--md-on-tertiary-container": "#d9e6f2",
-
-        "--md-error": "#ffb4ab",
-        "--md-on-error": "#690005",
-        "--md-error-container": "#93000a",
-        "--md-on-error-container": "#ffdad6",
-
-        // Elegant near-black surfaces.
-        "--md-surface-dim": "#070a0e",
-        "--md-surface": "#0d1117",
-        "--md-surface-bright": "#2b313d",
-        "--md-surface-container-lowest": "#05080c",
-        "--md-surface-container-low": "#111722",
-        "--md-surface-container": "#141b27",
-        "--md-surface-container-high": "#182130",
-        "--md-surface-container-highest": "#1d2839",
-
-        "--md-on-surface": "#e8edf2",
-        "--md-on-surface-variant": "#bcc6d1",
-        "--md-outline": "#5e7185",
-        "--md-outline-variant": "#263546",
-
-        "--font-display": '"Geologica", "Segoe UI", sans-serif',
-        "--font-body": '"Geologica", "Segoe UI", sans-serif',
-        "--font-mono": '"Roboto Mono", "Consolas", monospace',
-
-        "--panel-radius": "20px",
-        "--panel-clip": "none",
-        "--panel-decoration": "none",
-        "--panel-glow": "0 0 0 1px rgba(0, 176, 255, 0.16), 0 18px 48px rgba(0, 176, 255, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
-        "--panel-bg": "rgba(10, 14, 20, 0.92)",
-        "--panel-blur": "18px",
-        "--panel-border": "1px solid rgba(0, 176, 255, 0.30)",
-        "--alert-enter-easing": "cubic-bezier(0.05, 0.7, 0.1, 1)",
-        "--alert-enter-duration": "480ms",
-
-        "--shape-xs": "6px",
-        "--shape-sm": "10px",
-        "--shape-md": "16px",
-        "--shape-lg": "22px",
-        "--shape-xl": "28px",
-        "--shape-full": "999px",
-      },
-    },
-
-    rsi: {
-      id: "rsi",
-      name: "Roberts Space Industries",
-      builtin: true,
-      category: "starcitizen",
-      borderRadius: "0px",
-      tokens: {
-        // Cyan HUD (#00E5FF) — explorer / pioneer interface.
-        "--md-primary": "#00E5FF",
-        "--md-on-primary": "#00232b",
-        "--md-primary-container": "#00556b",
-        "--md-on-primary-container": "#b0f4ff",
-
-        // Bright white (#FFFFFF) — digits and reticle.
-        "--md-secondary": "#FFFFFF",
-        "--md-on-secondary": "#1e293b",
-        "--md-secondary-container": "#3b4757",
-        "--md-on-secondary-container": "#eef2f7",
-
-        // Supporting cyan.
-        "--md-tertiary": "#22d3ee",
-        "--md-on-tertiary": "#002830",
-        "--md-tertiary-container": "#0e5a66",
-        "--md-on-tertiary-container": "#b0f4ff",
-
-        "--md-error": "#ffb4ab",
-        "--md-on-error": "#690005",
-        "--md-error-container": "#93000a",
-        "--md-on-error-container": "#ffdad6",
-
-        // Deep space blue surfaces.
-        "--md-surface-dim": "#0a101f",
-        "--md-surface": "#0f172a",
-        "--md-surface-bright": "#243a5e",
-        "--md-surface-container-lowest": "#070d19",
-        "--md-surface-container-low": "#131e36",
-        "--md-surface-container": "#16223c",
-        "--md-surface-container-high": "#1b2946",
-        "--md-surface-container-highest": "#223352",
-
-        "--md-on-surface": "#e6ecf5",
-        "--md-on-surface-variant": "#a8b8cf",
-        "--md-outline": "#58708e",
-        "--md-outline-variant": "#22344d",
-
-        "--font-display": '"Unbounded", "Segoe UI", sans-serif',
-        "--font-body": '"Jura", "Segoe UI", sans-serif',
-        "--font-mono": '"Roboto Mono", "Consolas", monospace',
-
-        "--panel-radius": "0px",
-        "--panel-clip": "none",
-        "--panel-decoration": "brackets4",
-        "--panel-glow": "0 0 22px rgba(0, 229, 255, 0.28), inset 0 0 28px rgba(0, 229, 255, 0.05)",
-        "--panel-bg": "rgba(33, 36, 42, 0.92)",
-        "--panel-blur": "10px",
-        "--panel-border": "1px solid rgba(0, 229, 255, 0.40)",
-        "--alert-enter-easing": "cubic-bezier(0.175, 0.885, 0.32, 1.2)",
-        "--alert-enter-duration": "350ms",
-
-        "--shape-xs": "0px",
-        "--shape-sm": "0px",
-        "--shape-md": "2px",
-        "--shape-lg": "2px",
-        "--shape-xl": "4px",
-        "--shape-full": "999px",
-      },
-    },
-
-    misc: {
-      id: "misc",
-      name: "MISC",
-      builtin: true,
-      category: "starcitizen",
-      borderRadius: "16px",
-      tokens: {
-        // Teal HUD (#00ACC1) — sea-wave industrial glow.
-        "--md-primary": "#00ACC1",
-        "--md-on-primary": "#00262e",
-        "--md-primary-container": "#00525f",
-        "--md-on-primary-container": "#a9f2fa",
-
-        // Orange accent (#FB8C00) — cargo / warning markers.
-        "--md-secondary": "#FB8C00",
-        "--md-on-secondary": "#2a1200",
-        "--md-secondary-container": "#7a3d00",
-        "--md-on-secondary-container": "#ffe0c2",
-
-        // Brushed silver.
-        "--md-tertiary": "#CBD5E1",
-        "--md-on-tertiary": "#1e293b",
-        "--md-tertiary-container": "#334155",
-        "--md-on-tertiary-container": "#eef2f7",
-
-        "--md-error": "#ffb4ab",
-        "--md-on-error": "#690005",
-        "--md-error-container": "#93000a",
-        "--md-on-error-container": "#ffdad6",
-
-        // Teal HUD glass — dark with a faint sea-wave cast.
-        "--md-surface-dim": "#05090a",
-        "--md-surface": "#0a1214",
-        "--md-surface-bright": "#1c272a",
-        "--md-surface-container-lowest": "#030506",
-        "--md-surface-container-low": "#0d1618",
-        "--md-surface-container": "#101a1c",
-        "--md-surface-container-high": "#131f21",
-        "--md-surface-container-highest": "#19282b",
-
-        "--md-on-surface": "#e8edf2",
-        "--md-on-surface-variant": "#b9c4cf",
-        "--md-outline": "#637382",
-        "--md-outline-variant": "#1a262a",
-
-        "--font-display": '"Prompt", "Segoe UI", sans-serif',
-        "--font-body": '"Prompt", "Segoe UI", sans-serif',
-        "--font-mono": '"Roboto Mono", "Consolas", monospace',
-
-        "--panel-radius": "16px",
-        "--panel-clip": "none",
-        "--panel-decoration": "none",
-        "--panel-glow": "0 0 0 1px rgba(0, 172, 193, 0.16), 0 16px 40px rgba(0, 172, 193, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.05)",
-        "--panel-bg": "rgba(10, 18, 20, 0.92)",
-        "--panel-blur": "14px",
-        "--panel-border": "1px solid rgba(0, 172, 193, 0.30)",
-        "--alert-enter-easing": "cubic-bezier(0.05, 0.7, 0.1, 1)",
-        "--alert-enter-duration": "440ms",
-
-        "--shape-xs": "6px",
-        "--shape-sm": "10px",
-        "--shape-md": "16px",
-        "--shape-lg": "22px",
-        "--shape-xl": "28px",
-        "--shape-full": "999px",
-      },
-    },
-
-    crusader: {
-      id: "crusader",
-      name: "Crusader Industries",
-      builtin: true,
-      category: "starcitizen",
-      borderRadius: "0px",
-      tokens: {
-        // Deep aviation blue (#29B6F6) — calm civil-flight cockpit.
-        "--md-primary": "#29B6F6",
-        "--md-on-primary": "#00263a",
-        "--md-primary-container": "#0a4a6e",
-        "--md-on-primary-container": "#c4e8ff",
-
-        // Soft gold (#FFD54F) — accent stripe.
-        "--md-secondary": "#FFD54F",
-        "--md-on-secondary": "#2a1d00",
-        "--md-secondary-container": "#6b5100",
-        "--md-on-secondary-container": "#ffe9a8",
-
-        // Bright white — clean commercial surfaces.
-        "--md-tertiary": "#F8FAFC",
-        "--md-on-tertiary": "#1e293b",
-        "--md-tertiary-container": "#475569",
-        "--md-on-tertiary-container": "#eef2f7",
-
-        "--md-error": "#ffb4ab",
-        "--md-on-error": "#690005",
-        "--md-error-container": "#93000a",
-        "--md-on-error-container": "#ffdad6",
-
-        // Clean dark blue-grey surfaces.
-        "--md-surface-dim": "#131c29",
-        "--md-surface": "#1e293b",
-        "--md-surface-bright": "#334155",
-        "--md-surface-container-lowest": "#0d1521",
-        "--md-surface-container-low": "#202d42",
-        "--md-surface-container": "#243244",
-        "--md-surface-container-high": "#2a3a4e",
-        "--md-surface-container-highest": "#314356",
-
-        "--md-on-surface": "#eef2f7",
-        "--md-on-surface-variant": "#bcc8d6",
-        "--md-outline": "#61718a",
-        "--md-outline-variant": "#2a3a4e",
-
-        "--font-display": '"Space Grotesk", "Segoe UI", sans-serif',
-        "--font-body": '"Space Grotesk", "Segoe UI", sans-serif',
-        "--font-mono": '"Roboto Mono", "Consolas", monospace',
-
-        "--panel-radius": "0px",
-        "--panel-clip": "none",
-        "--panel-decoration": "brackets2",
-        "--panel-glow": "0 0 0 1px rgba(41, 182, 246, 0.22), 0 14px 34px rgba(41, 182, 246, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.05)",
-        "--panel-bg": "rgba(24, 34, 52, 0.92)",
-        "--panel-blur": "10px",
-        "--panel-border": "1px solid rgba(41, 182, 246, 0.40)",
-        "--alert-enter-easing": "cubic-bezier(0.175, 0.885, 0.32, 1.2)",
-        "--alert-enter-duration": "320ms",
-
-        "--shape-xs": "0px",
-        "--shape-sm": "0px",
-        "--shape-md": "2px",
-        "--shape-lg": "2px",
-        "--shape-xl": "4px",
-        "--shape-full": "999px",
-      },
-    },
-
-    esperia: {
-      id: "esperia",
-      name: "Esperia / Banu",
-      builtin: true,
-      category: "starcitizen",
-      borderRadius: "14px",
-      tokens: {
-        // Blood-red HUD (#D50000) — Vanduul bio-capsule projection.
-        "--md-primary": "#FF5A4E",
-        "--md-on-primary": "#3a0505",
-        "--md-primary-container": "#8c1a14",
-        "--md-on-primary-container": "#ffd6d4",
-
-        // Banu purple glow.
-        "--md-secondary": "#D4A5FF",
-        "--md-on-secondary": "#2a1050",
-        "--md-secondary-container": "#4a2a7a",
-        "--md-on-secondary-container": "#eddcff",
-
-        // Banu warm gold.
-        "--md-tertiary": "#C98A4A",
-        "--md-on-tertiary": "#2a1a05",
-        "--md-tertiary-container": "#5e3a1a",
-        "--md-on-tertiary-container": "#ffd9b0",
-
-        "--md-error": "#ffb4ab",
-        "--md-on-error": "#690005",
-        "--md-error-container": "#93000a",
-        "--md-on-error-container": "#ffdad6",
-
-        // Blood-red HUD glass — dark bio-capsule projection.
-        "--md-surface-dim": "#0c0707",
-        "--md-surface": "#140b0b",
-        "--md-surface-bright": "#2a1818",
-        "--md-surface-container-lowest": "#060303",
-        "--md-surface-container-low": "#180f0f",
-        "--md-surface-container": "#1b1111",
-        "--md-surface-container-high": "#201414",
-        "--md-surface-container-highest": "#291a1a",
-
-        "--md-on-surface": "#f3ede6",
-        "--md-on-surface-variant": "#d4c4b4",
-        "--md-outline": "#8a7460",
-        "--md-outline-variant": "#3a2020",
-
-        "--font-display": '"Michroma", "Segoe UI", sans-serif',
-        "--font-body": '"Space Grotesk", "Segoe UI", sans-serif',
-        "--font-mono": '"Roboto Mono", "Consolas", monospace',
-
-        "--panel-radius": "18px",
-        "--panel-clip": "none",
-        "--panel-decoration": "none",
-        "--panel-glow": "0 0 0 1px rgba(255, 90, 78, 0.22), 0 0 30px rgba(255, 90, 78, 0.12), 0 0 50px rgba(255, 90, 78, 0.05)",
-        "--panel-bg": "rgba(20, 11, 11, 0.92)",
-        "--panel-blur": "10px",
-        "--panel-border": "1px solid rgba(255, 90, 78, 0.40)",
-        "--alert-enter-easing": "cubic-bezier(0.175, 0.885, 0.32, 1.2)",
-        "--alert-enter-duration": "400ms",
-
-        "--shape-xs": "6px",
-        "--shape-sm": "10px",
-        "--shape-md": "14px",
-        "--shape-lg": "20px",
-        "--shape-xl": "26px",
-        "--shape-full": "999px",
-      },
-    },
-
-    consolidatedoutland: {
-      id: "consolidatedoutland",
-      name: "Consolidated Outland",
-      builtin: true,
-      category: "starcitizen",
-      borderRadius: "2px",
-      tokens: {
-        // Neon cyan HUD (#00F5FF) — the aggressive startup signature.
-        "--md-primary": "#00F5FF",
-        "--md-on-primary": "#00262e",
-        "--md-primary-container": "#00525f",
-        "--md-on-primary-container": "#b3f6ff",
-
-        // Magenta (#FF00FF) — accent / warnings.
-        "--md-secondary": "#FF00FF",
-        "--md-on-secondary": "#3a003a",
-        "--md-secondary-container": "#7a1f7a",
-        "--md-on-secondary-container": "#ffd6ff",
-
-        // Neon violet accent — broken-line hi-tech detail.
-        "--md-tertiary": "#a78bfa",
-        "--md-on-tertiary": "#241055",
-        "--md-tertiary-container": "#3a2a68",
-        "--md-on-tertiary-container": "#e6ddff",
-
-        "--md-error": "#ffb4ab",
-        "--md-on-error": "#690005",
-        "--md-error-container": "#93000a",
-        "--md-on-error-container": "#ffdad6",
-
-        // Neon-cyan HUD glass — dark startup rig with a cool cast.
-        "--md-surface-dim": "#05090a",
-        "--md-surface": "#0a1113",
-        "--md-surface-bright": "#1a2528",
-        "--md-surface-container-lowest": "#030506",
-        "--md-surface-container-low": "#0d1517",
-        "--md-surface-container": "#10191b",
-        "--md-surface-container-high": "#131d1f",
-        "--md-surface-container-highest": "#192528",
-
-        "--md-on-surface": "#e6edf3",
-        "--md-on-surface-variant": "#b6c2cc",
-        "--md-outline": "#5e7280",
-        "--md-outline-variant": "#1a2628",
-
-        "--font-display": '"Chakra Petch", "Segoe UI", sans-serif',
-        "--font-body": '"Tomorrow", "Consolas", monospace',
-        "--font-mono": '"Tomorrow", "Consolas", monospace',
-
-        "--panel-radius": "2px",
-        "--panel-clip": "none",
-        "--panel-decoration": "brackets2",
-        "--panel-glow": "0 0 0 1px rgba(0, 245, 255, 0.26), 0 0 22px rgba(255, 0, 255, 0.10)",
-        "--panel-bg": "rgba(10, 17, 19, 0.92)",
-        "--panel-blur": "0px",
-        "--panel-border": "1px solid rgba(0, 245, 255, 0.40)",
-        "--alert-enter-easing": "cubic-bezier(0.2, 0, 0, 1)",
-        "--alert-enter-duration": "220ms",
-
-        "--shape-xs": "2px",
-        "--shape-sm": "3px",
-        "--shape-md": "4px",
-        "--shape-lg": "6px",
-        "--shape-xl": "10px",
-        "--shape-full": "999px",
-      },
-    },
-
-    argo: {
-      id: "argo",
-      name: "Argo Astronautics",
-      builtin: true,
-      category: "starcitizen",
-      borderRadius: "2px",
-      tokens: {
-        // Radiation orange (#FF6D00) — miner's HUD.
-        "--md-primary": "#FF6D00",
-        "--md-on-primary": "#2a0d00",
-        "--md-primary-container": "#7a2e00",
-        "--md-on-primary-container": "#ffdcc4",
-
-        // Yellow hazard (#FFD600) — warning markings.
-        "--md-secondary": "#FFD600",
-        "--md-on-secondary": "#2a1d00",
-        "--md-secondary-container": "#6b5100",
-        "--md-on-secondary-container": "#ffe9a8",
-
-        // Unpainted steel / dark underbody metal.
-        "--md-tertiary": "#9aa0a6",
-        "--md-on-tertiary": "#1a1c1e",
-        "--md-tertiary-container": "#3a3e42",
-        "--md-on-tertiary-container": "#d8dde2",
-
-        "--md-error": "#ffb4ab",
-        "--md-on-error": "#690005",
-        "--md-error-container": "#93000a",
-        "--md-on-error-container": "#ffdad6",
-
-        // Radiation-orange HUD glass — dark mining rig with a warm cast.
-        "--md-surface-dim": "#0a0705",
-        "--md-surface": "#0f0b07",
-        "--md-surface-bright": "#241a10",
-        "--md-surface-container-lowest": "#050302",
-        "--md-surface-container-low": "#131008",
-        "--md-surface-container": "#161208",
-        "--md-surface-container-high": "#1b150a",
-        "--md-surface-container-highest": "#221c0e",
-
-        "--md-on-surface": "#ececec",
-        "--md-on-surface-variant": "#b8b8b8",
-        "--md-outline": "#8a8a8d",
-        "--md-outline-variant": "#3a3a3e",
-
-        "--font-display": '"Black Ops One", "Segoe UI", sans-serif',
-        "--font-body": '"Ubuntu Mono", "Consolas", monospace',
-        "--font-mono": '"Ubuntu Mono", "Consolas", monospace',
-
-        "--panel-radius": "2px",
-        "--panel-clip": "none",
-        "--panel-decoration": "hazard",
-        "--panel-glow": "0 0 0 1px rgba(255, 109, 0, 0.30), 0 0 20px rgba(255, 109, 0, 0.08)",
-        "--panel-bg": "rgba(15, 11, 7, 0.94)",
-        "--panel-blur": "0px",
-        "--panel-border": "1px solid rgba(255, 109, 0, 0.45)",
-        "--alert-enter-easing": "cubic-bezier(0.2, 0, 0, 1)",
-        "--alert-enter-duration": "240ms",
-
-        "--shape-xs": "2px",
-        "--shape-sm": "3px",
-        "--shape-md": "4px",
-        "--shape-lg": "6px",
-        "--shape-xl": "10px",
-        "--shape-full": "999px",
-      },
-    },
-
-    greysmarket: {
-      id: "greysmarket",
-      name: "Grey's Market",
-      builtin: true,
-      category: "starcitizen",
-      borderRadius: "2px",
-      tokens: {
-        // Dirty amber-yellow (#D49A15) — the janky pirate MFD glow.
-        "--md-primary": "#D49A15",
-        "--md-on-primary": "#2a1c00",
-        "--md-primary-container": "#6b4a00",
-        "--md-on-primary-container": "#ffe9b3",
-
-        // Blood-red (#990000) — system warnings. A readable red carries the
-        // text accent; the deep blood-red lives in the container below.
-        "--md-secondary": "#FF6B5E",
-        "--md-on-secondary": "#3a0505",
-        "--md-secondary-container": "#7a1414",
-        "--md-on-secondary-container": "#ffd6d4",
-
-        // Glitchy white (#E8ECE9) — corrupted text / scanlines.
-        "--md-tertiary": "#E8ECE9",
-        "--md-on-tertiary": "#1a1c1a",
-        "--md-tertiary-container": "#3c403c",
-        "--md-on-tertiary-container": "#f0f3f0",
-
-        "--md-error": "#ffb4ab",
-        "--md-on-error": "#690005",
-        "--md-error-container": "#93000a",
-        "--md-on-error-container": "#ffdad6",
-
-        // Soot / oil dark surfaces.
-        "--md-surface-dim": "#0c0c0a",
-        "--md-surface": "#121210",
-        "--md-surface-bright": "#2e2c28",
-        "--md-surface-container-lowest": "#060604",
-        "--md-surface-container-low": "#181712",
-        "--md-surface-container": "#1c1b16",
-        "--md-surface-container-high": "#22211b",
-        "--md-surface-container-highest": "#2a2821",
-
-        "--md-on-surface": "#ece9e2",
-        "--md-on-surface-variant": "#b8b5ac",
-        "--md-outline": "#8a877e",
-        "--md-outline-variant": "#3a3833",
-
-        "--font-display": '"Rubik Glitch", "Stardos Stencil", monospace',
-        "--font-body": '"VT323", monospace',
-        "--font-mono": '"VT323", monospace',
-
-        // Scrapyard panels: no smooth glass, just soot-covered steel with a
-        // faint ember glow and mismatched salvaged edges (see widgets.css).
-        "--panel-radius": "2px",
-        "--panel-clip": "none",
-        "--panel-decoration": "scrapyard",
-        "--panel-glow": "0 0 0 1px rgba(212, 154, 21, 0.28), 0 0 20px rgba(212, 154, 21, 0.10), 0 0 46px rgba(255, 107, 94, 0.08)",
-        "--panel-bg": "rgba(14, 14, 12, 0.96)",
-        "--panel-blur": "0px",
-        "--panel-border": "1px solid rgba(212, 154, 21, 0.42)",
-        "--alert-enter-easing": "cubic-bezier(0.2, 0, 0, 1)",
-        "--alert-enter-duration": "240ms",
-
-        "--shape-xs": "2px",
-        "--shape-sm": "3px",
-        "--shape-md": "4px",
-        "--shape-lg": "6px",
-        "--shape-xl": "10px",
-        "--shape-full": "999px",
-      },
-    },
 
     grimhex: {
       id: "grimhex",
-      name: "Grim HEX",
+      name: "Star Citizen",
       builtin: true,
       category: "starcitizen",
+      dimension: "3d",
       borderRadius: "0px",
       tokens: {
-        // Alarm-red neon (#FF1800) — the station's core marker: airlocks,
-        // ASOP terminals, weapon/armor shops and signage.
-        "--md-primary": "#FF1800",
-        "--md-on-primary": "#2b0300",
-        "--md-primary-container": "#4d0d00",
-        "--md-on-primary-container": "#ffd9d1",
+        // HUD cyan (#00F0FF) — the station's terminal accent, matching Orbital.
+        "--md-primary": "#00f0ff",
+        "--md-on-primary": "#00232b",
+        "--md-primary-container": "#003544",
+        "--md-on-primary-container": "#baf5ff",
 
-        // Dirty amber/orange (#F97316) — warning lamps, industrial sensors.
-        "--md-secondary": "#F97316",
-        "--md-on-secondary": "#2a1000",
-        "--md-secondary-container": "#5c2800",
-        "--md-on-secondary-container": "#ffe0bf",
+        // Amber/gold (#FFAA00) — warning lamps, industrial sensors.
+        "--md-secondary": "#ffaa00",
+        "--md-on-secondary": "#3d2900",
+        "--md-secondary-container": "#543800",
+        "--md-on-secondary-container": "#ffddab",
 
-        // Technical blue-grey (#94A3B8 / #1E293B) — dividers, muted labels.
-        "--md-tertiary": "#94A3B8",
-        "--md-on-tertiary": "#10161f",
-        "--md-tertiary-container": "#1E293B",
-        "--md-on-tertiary-container": "#d9e4f0",
+        // Signal pink/red (#FF3860) — alarm accents.
+        "--md-tertiary": "#ff3860",
+        "--md-on-tertiary": "#400010",
+        "--md-tertiary-container": "#63001f",
+        "--md-on-tertiary-container": "#ffd9dc",
 
-        "--md-error": "#ff4530",
-        "--md-on-error": "#2a0000",
-        "--md-error-container": "#7a1010",
-        "--md-on-error-container": "#ffd6d4",
+        "--md-error": "#ffb4ab",
+        "--md-on-error": "#690005",
+        "--md-error-container": "#93000a",
+        "--md-on-error-container": "#ffdad6",
 
-        // Dark asteroid metal + worn rock (#0A0B0E / #13161C).
-        "--md-surface-dim": "#07080a",
-        "--md-surface": "#0a0b0e",
-        "--md-surface-bright": "#161920",
-        "--md-surface-container-lowest": "#050506",
-        "--md-surface-container-low": "#0d0f13",
-        "--md-surface-container": "#13161c",
-        "--md-surface-container-high": "#181c23",
-        "--md-surface-container-highest": "#20262e",
+        // Dark blue-black HUD surfaces.
+        "--md-surface-dim": "#02060a",
+        "--md-surface": "#050b10",
+        "--md-surface-bright": "#26414f",
+        "--md-surface-container-lowest": "#020608",
+        "--md-surface-container-low": "#0a141c",
+        "--md-surface-container": "#0e1a24",
+        "--md-surface-container-high": "#142330",
+        "--md-surface-container-highest": "#1c2e3d",
 
-        "--md-on-surface": "#f1f5f9",
-        "--md-on-surface-variant": "#7f8ea3",
-        "--md-outline": "#3a1c1c",
-        "--md-outline-variant": "#2a1010",
+        "--md-on-surface": "#dcebf5",
+        "--md-on-surface-variant": "#8ab4d0",
+        "--md-outline": "#4a6b80",
+        "--md-outline-variant": "#1a4a55",
 
-        "--font-display": '"Overpass Mono", "Consolas", monospace',
-        "--font-body": '"Overpass Mono", "Consolas", monospace',
-        "--font-mono": '"Overpass Mono", "Consolas", monospace',
+        "--font-display": '"Orbitron", "Segoe UI", sans-serif',
+        "--font-body": '"Rajdhani", "Segoe UI", sans-serif',
+        "--font-mono": '"Orbitron", "Consolas", monospace',
 
-        // Lawless terminal: red-tinted frames, red neon accent, amber warnings.
+        // HUD terminal: cyan-tinted frames, cyan neon accent, amber warnings.
         "--panel-radius": "0px",
         "--panel-clip": "none",
-        "--panel-decoration": "grimhex",
-        "--panel-glow": "0 0 0 1px rgba(255, 24, 0, 0.22), 0 0 18px rgba(255, 24, 0, 0.08)",
-        "--panel-bg": "rgba(19, 22, 28, 0.94)",
+        "--panel-decoration": "brackets4",
+        "--panel-glow": "0 0 15px rgba(0,240,255,0.3), inset 0 0 30px rgba(0,240,255,0.04)",
+        "--panel-bg": "rgba(8, 14, 20, 0.92)",
         "--panel-blur": "0px",
-        "--panel-border": "1px solid rgba(51, 20, 20, 0.9)",
+        "--panel-border": "1px solid rgba(0, 240, 255, 0.35)",
         "--alert-enter-easing": "cubic-bezier(0.2, 0, 0, 1)",
         "--alert-enter-duration": "240ms",
 
@@ -993,77 +245,6 @@
         "--shape-md": "0px",
         "--shape-lg": "0px",
         "--shape-xl": "0px",
-        "--shape-full": "999px",
-      },
-    },
-
-    levski: {
-      id: "levski",
-      name: "Levski",
-      builtin: true,
-      category: "starcitizen",
-      borderRadius: "0px",
-      tokens: {
-        // Miner's amber (#F4A460) — borehole spotlights, Grand Barter signage.
-        "--md-primary": "#F4A460",
-        "--md-on-primary": "#2B1600",
-        "--md-primary-container": "#5C3A14",
-        "--md-on-primary-container": "#FFE0B8",
-
-        // Crimson flag (#B22222) — People's Alliance banners, murals, slogans.
-        // The deep crimson lives in the widget beam + container below; a
-        // readable light-red carries the text accent.
-        "--md-secondary": "#FF8A80",
-        "--md-on-secondary": "#3A0505",
-        "--md-secondary-container": "#7A2A26",
-        "--md-on-secondary-container": "#FFD6D4",
-
-        // Hydroponic olive (#556B2F) — militia + green oases.
-        "--md-tertiary": "#A8C26A",
-        "--md-on-tertiary": "#1A260A",
-        "--md-tertiary-container": "#3C4A22",
-        "--md-on-tertiary-container": "#DFEBC8",
-
-        "--md-error": "#ffb4ab",
-        "--md-on-error": "#690005",
-        "--md-error-container": "#93000a",
-        "--md-on-error-container": "#ffdad6",
-
-        // Basalt rock (#1C1F1D) + Delamar dust (#2B2E2C).
-        "--md-surface-dim": "#141614",
-        "--md-surface": "#1C1F1D",
-        "--md-surface-bright": "#2B2E2C",
-        "--md-surface-container-lowest": "#0E100E",
-        "--md-surface-container-low": "#171917",
-        "--md-surface-container": "#1C1F1D",
-        "--md-surface-container-high": "#242724",
-        "--md-surface-container-highest": "#2B2E2C",
-
-        "--md-on-surface": "#B8BEBA",
-        "--md-on-surface-variant": "#8A928C",
-        "--md-outline": "#8A928C",
-        "--md-outline-variant": "#3A403C",
-
-        "--font-display": '"Russo One", "Segoe UI", sans-serif',
-        "--font-body": '"Jura", "Segoe UI", sans-serif',
-        "--font-mono": '"Roboto Mono", "Consolas", monospace',
-
-        // Brutalist steel: sharp corners, warm amber glow, steel frame.
-        "--panel-radius": "0px",
-        "--panel-clip": "none",
-        "--panel-decoration": "levski",
-        "--panel-glow": "0 0 0 1px rgba(244, 164, 96, 0.22), 0 0 26px rgba(244, 164, 96, 0.10), 0 0 44px rgba(178, 34, 34, 0.06)",
-        "--panel-bg": "rgba(28, 31, 29, 0.95)",
-        "--panel-blur": "0px",
-        "--panel-border": "1px solid rgba(138, 146, 140, 0.85)",
-        "--alert-enter-easing": "cubic-bezier(0.2, 0, 0, 1)",
-        "--alert-enter-duration": "260ms",
-
-        "--shape-xs": "0px",
-        "--shape-sm": "2px",
-        "--shape-md": "2px",
-        "--shape-lg": "4px",
-        "--shape-xl": "8px",
         "--shape-full": "999px",
       },
     },
