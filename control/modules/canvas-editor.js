@@ -78,6 +78,40 @@ export function initCanvasEditor({
     return `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:transparent;color:#e8e1f0;font-family:sans-serif;}${cfg.css || ""}</style></head><body>${cfg.html || ""}<script>${cfg.js || ""}</script></body></html>`;
   }
 
+  function buildEqualizerPreview({ width, height, opacity }) {
+    const barCount = 24;
+    const cellCount = 14;
+    const cellGap = 2;
+    const slotW = width / barCount;
+    const barW = Math.max(1, slotW - 2);
+    const cellH = Math.max(1, (height - (cellCount - 1) * cellGap) / cellCount);
+    const green = "#2ecc40";
+    const yellow = "#ffdc00";
+    const red = "#ff4136";
+    const off = "rgba(255,255,255,0.08)";
+    const colorFor = (c) => (c < (cellCount * 8) / 14 ? green : c < (cellCount * 12) / 14 ? yellow : red);
+    const levels = [];
+    for (let i = 0; i < barCount; i++) {
+      const v = Math.abs(Math.sin(i * 0.55) * 0.7 + Math.sin(i * 0.23) * 0.3);
+      const level = Math.round(v * cellCount);
+      const peak = Math.min(cellCount - 1, level + 1);
+      levels.push({ level, peak });
+    }
+    const rects = [];
+    for (let b = 0; b < barCount; b++) {
+      const x = b * slotW + (slotW - barW) / 2;
+      const { level, peak } = levels[b];
+      for (let c = 0; c < cellCount; c++) {
+        const y = height - (c + 1) * cellH - c * cellGap;
+        const on = c < level || c === peak;
+        rects.push(`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${cellH.toFixed(1)}" rx="1" fill="${on ? colorFor(c) : off}"/>`);
+      }
+    }
+    return `<div class="widget-mic widget-mic--preview">
+      <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="width:100%;height:100%;opacity:${opacity}">${rects.join("")}</svg>
+    </div>`;
+  }
+
   function buildPreviewHtml(inst) {
     const config = inst.config || {};
     switch (inst.type) {
@@ -168,6 +202,9 @@ export function initCanvasEditor({
         const opacity = state.micConfig.opacity ?? 0.9;
         const width = 400;
         const height = 80;
+        if (state.micConfig.visualizer_mode === "equalizer") {
+          return buildEqualizerPreview({ width, height, opacity });
+        }
         const pts = [];
         for (let x = 0; x <= width; x += 6) {
           const y = height / 2 + Math.sin(x * 0.045) * 22 + Math.sin(x * 0.012) * 9;
@@ -194,6 +231,16 @@ export function initCanvasEditor({
           <svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%">
             <path d="M12 3l7.8 4.5v9L12 21l-7.8-4.5v-9L12 3z" fill="none" stroke="${escapeAttr(primary)}" stroke-width="1.2"/>
             <path d="M12 8l4.5 2.6v5.2L12 18.4 7.5 15.8v-5.2L12 8z" fill="none" stroke="${escapeAttr(primary)}" stroke-width="0.8"/>
+          </svg>
+        </div>`;
+      }
+      case "musain": {
+        const amber = "#ffb300";
+        return `<div class="widget-grimhex-preview" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" style="width:72%;height:72%;">
+            <path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V9z" fill="none" stroke="${amber}" stroke-width="1.2"/>
+            <path d="M17 10h1a2.5 2.5 0 0 1 0 5h-1" fill="none" stroke="${amber}" stroke-width="1.2"/>
+            <path d="M8 4c0 1-.8 1-.8 2M12 4c0 1-.8 1-.8 2" fill="none" stroke="${amber}" stroke-width="1.2"/>
           </svg>
         </div>`;
       }

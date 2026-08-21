@@ -53,7 +53,7 @@
     soundboardConfig: { volume: 0.8, queueMode: false },
     participantsState: { count: 0, participants: [] },
     participantsConfig: { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82 },
-    micConfig: { sensitivity: 1.5, lineWidth: 2, color: "#0060A8", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2 },
+    micConfig: { sensitivity: 1.5, lineWidth: 2, color: "#0060A8", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2, peakFall: 2.5 },
     remoteMicData: null,
   };
 
@@ -408,7 +408,11 @@
     Object.entries(appearance.tokens).forEach(([k, v]) => root.style.setProperty(k, v));
     document.body.dataset.decoration = appearance.tokens["--panel-decoration"] || "none";
     document.body.dataset.theme = appearance.activeThemeId || "";
-    context.theme = appearance.activeThemeId || "";
+    // `context.theme` gates the 3D (Star Citizen) widgets only. When the 3D
+    // theme is active the global tokens above are already the Star Citizen
+    // HUD token set (3D overrides the base 2D theme), so 2D and 3D widgets
+    // share one coherent look.
+    context.theme = appearance.activeThemeId3d || "";
     if (wheelSectors.length) drawWheel();
   }
 
@@ -455,6 +459,7 @@
   manager.register("soundboard", OW.SoundboardWidget);
   manager.register("custom", OW.CustomWidget);
   manager.register("grimhex", OW.WidgetGrimHex);
+  manager.register("musain", OW.WidgetMusain);
   manager.register("grimhex-chat", OW.WidgetStarCitizenChat);
   manager.register("grimhex-goal", OW.WidgetStarCitizenGoal);
   manager.register("grimhex-holo-alert", OW.WidgetStarCitizenHoloAlert);

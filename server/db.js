@@ -25,6 +25,8 @@ function defaultData() {
   return {
     // Единый источник истины для раскладки оверлея.
     overlay: { widgets: [] },
+    // Сохранённые пользовательские пресеты раскладки (виджеты + геометрия).
+    layout_presets: [],
     // Сессии стрима.
     sessions: [],
     // История чата / логов, привязанная к sessionId.
@@ -57,9 +59,10 @@ function defaultData() {
       lineWidth: 2,
       color: "", // пусто = цвет берётся из активной темы (--md-primary)
       opacity: 0.9,
-      visualizer_mode: "sine", // "sine" | "bars" | "ring"
+      visualizer_mode: "sine", // "sine" | "bars" | "ring" | "equalizer"
       barCount: 32,
       barGap: 2,
+      peakFall: 2.5, // скорость спада пика эквалайзера (ячеек/сек)
     },
     // Язык интерфейса ("en" | "ru").
     language: "en",
@@ -134,6 +137,17 @@ function createDatabase(dbPath = getDbPath()) {
     set("overlay.widgets", widgets);
     persist();
     return widgets;
+  }
+
+  function getLayoutPresets() {
+    const raw = get("layout_presets");
+    return Array.isArray(raw) ? raw : [];
+  }
+
+  function saveLayoutPresets(presets) {
+    set("layout_presets", Array.isArray(presets) ? presets : []);
+    persist();
+    return getLayoutPresets();
   }
 
   function startSession(channel) {
@@ -272,7 +286,12 @@ function createDatabase(dbPath = getDbPath()) {
 
   function getMicConfig() {
     const raw = get("overlay_mic_config") || {};
-    const mode = raw.visualizer_mode === "bars" || raw.visualizer_mode === "ring" ? raw.visualizer_mode : "sine";
+    const mode =
+      raw.visualizer_mode === "bars" ||
+      raw.visualizer_mode === "ring" ||
+      raw.visualizer_mode === "equalizer"
+        ? raw.visualizer_mode
+        : "sine";
     return {
       sensitivity: typeof raw.sensitivity === "number" ? raw.sensitivity : 1.5,
       lineWidth: typeof raw.lineWidth === "number" ? raw.lineWidth : 2,
@@ -281,6 +300,7 @@ function createDatabase(dbPath = getDbPath()) {
       visualizer_mode: mode,
       barCount: Math.min(64, Math.max(10, Math.round(Number(raw.barCount) || 32))),
       barGap: typeof raw.barGap === "number" ? raw.barGap : 2,
+      peakFall: Math.min(10, Math.max(0.5, Number(raw.peakFall) || 2.5)),
     };
   }
 
@@ -325,6 +345,8 @@ function createDatabase(dbPath = getDbPath()) {
   return {
     getWidgets,
     saveWidgets,
+    getLayoutPresets,
+    saveLayoutPresets,
     startSession,
     endSession,
     appendChat,

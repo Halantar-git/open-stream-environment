@@ -163,6 +163,7 @@
     "themeCategoryCustom": "Custom",
     "themeCategory3d": "3D",
     "themeCategory2d": "2D",
+    "themeNone": "Off",
     "exportImport": "Export / import settings",
     "exportImportDesc": "Export saves the full config.json — layout, themes, goal, as well as Twitch/DonationAlerts tokens and keys. The file contains secrets — don't share it publicly.",
     "export": "Export to file",
@@ -223,6 +224,15 @@
     "cameraFilterDuration": "Duration (sec)",
     "ru": "Русский",
     "en": "English"
+  },
+  "presets": {
+    "title": "Presets",
+    "placeholder": "—",
+    "save": "Save",
+    "delete": "Delete",
+    "promptName": "Preset name",
+    "deleteConfirm": "Delete preset \"{{name}}\"?",
+    "overwriteConfirm": "Preset \"{{name}}\" already exists. Overwrite?"
   },
   "giveaway": {
     "command": "Entry command",
@@ -302,17 +312,21 @@
     "grimhex-goal": "Star Citizen Goal",
     "grimhex-goalDesc": "Donation goal from 5 neon sectors (Star Citizen theme only)",
     "grimhex-holo-alert": "Star Citizen Hologram",
-    "grimhex-holo-alertDesc": "Holographic terminal with a rotating 3D badge (Star Citizen theme only)"
+    "grimhex-holo-alertDesc": "Holographic terminal with a rotating 3D badge (Star Citizen theme only)",
+    "musain": "Café Musain Sign",
+    "musainDesc": "Animated neon Café Musain sign (Star Citizen theme only)"
   },
   "mic": {
     "mode": "Visualization mode",
     "modeSine": "Sine wave",
     "modeBars": "Frequency bars",
     "modeRing": "Circular wave",
+    "modeEqualizer": "Classic equalizer",
     "sensitivity": "Sensitivity",
     "lineWidth": "Line width",
     "barCount": "Bar count",
     "barGap": "Bar gap",
+    "peakFall": "Peak fall speed",
     "color": "Wave color",
     "colorAuto": "Auto",
     "opacity": "Opacity"
@@ -344,7 +358,8 @@
     "fonts": "Fonts",
     "save": "Save theme",
     "cancel": "Cancel",
-    "myTheme": "My theme"
+    "myTheme": "My theme",
+    "overwriteConfirm": "Overwrite this theme?"
   },
   "properties": {
     "goalTitle": "Goal title",

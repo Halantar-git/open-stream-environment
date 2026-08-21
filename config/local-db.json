@@ -4,8 +4,8 @@
       {
         "id": "default-recent",
         "type": "recent",
-        "x": 2,
-        "y": 10,
+        "x": 1,
+        "y": 6,
         "w": 16,
         "h": 12,
         "z": 1,
@@ -18,7 +18,7 @@
         "id": "f4ec5bac-710d-498b-a117-080e946a73ed",
         "type": "stat",
         "x": 86,
-        "y": 84,
+        "y": 2,
         "w": 12,
         "h": 6,
         "z": 5,
@@ -32,7 +32,7 @@
         "id": "90c5d777-0a25-45ca-abb1-ea9d8950d022",
         "type": "social",
         "x": 86,
-        "y": 92,
+        "y": 10,
         "w": 12,
         "h": 6,
         "z": 6,
@@ -58,8 +58,8 @@
       {
         "id": "679a09a2-c5f6-48ae-87a3-1d6f6aad5a7b",
         "type": "participants",
-        "x": 68,
-        "y": 0,
+        "x": 86,
+        "y": 2,
         "w": 12,
         "h": 32,
         "z": 7,
@@ -71,97 +71,46 @@
         "type": "mic",
         "x": 2,
         "y": 26,
-        "w": 16,
-        "h": 4,
+        "w": 14,
+        "h": 6,
         "z": 8,
         "visible": true,
-        "config": {}
-      },
-      {
-        "id": "bce28d0d-9ee2-45f9-9453-d848d8fc5836",
-        "type": "grimhex-chat",
-        "x": 82,
-        "y": 32,
-        "w": 16,
-        "h": 40,
-        "z": 12,
-        "visible": true,
         "config": {
-          "maxMessages": 50,
-          "pseudo3d": true,
-          "perspective": 100
+          "color": "#00f0ff"
         }
       },
       {
-        "id": "e6fec507-5ad4-4adc-a4f9-d0c069c7453d",
-        "type": "grimhex-goal",
-        "x": 2,
-        "y": 2,
-        "w": 16,
-        "h": 6,
-        "z": 13,
-        "visible": true,
-        "config": {
-          "showPercentage": false,
-          "showBackground": true
-        }
-      },
-      {
-        "id": "45172af3-2134-4489-b9dc-655c9eb4a70a",
-        "type": "grimhex",
-        "x": 80,
-        "y": 0,
-        "w": 20,
-        "h": 32,
-        "z": 14,
-        "visible": true,
-        "config": {
-          "perspective": 100
-        }
-      },
-      {
-        "id": "7b65cafc-5a83-44c1-a29b-a6202b553243",
-        "type": "grimhex-holo-alert",
+        "id": "16eca737-fc2e-42c3-b62b-c22bea53e8aa",
+        "type": "alerts",
         "x": 40,
         "y": 1,
         "w": 20,
-        "h": 15,
-        "z": 16,
+        "h": 12,
+        "z": 9,
         "visible": true,
         "config": {}
       },
       {
-        "id": "8896c64a-fca5-4d1f-bbaa-c83495c900df",
+        "id": "f491ba96-4246-45e2-ad5c-2b0e281ca398",
         "type": "goal",
-        "x": 6,
-        "y": 46,
-        "w": 22,
-        "h": 6,
-        "z": 17,
+        "x": 1,
+        "y": 1,
+        "w": 16,
+        "h": 4,
+        "z": 10,
         "visible": true,
         "config": {
           "showPercentage": false
         }
       },
       {
-        "id": "0fe5598e-2576-41bc-85ec-b2937578a868",
-        "type": "alerts",
-        "x": 30,
-        "y": 66,
-        "w": 40,
-        "h": 20,
-        "z": 18,
-        "visible": true,
-        "config": {}
-      },
-      {
-        "id": "2193d1e0-20b9-4812-a73d-eaa4bf6d6943",
+        "id": "fe03ff84-c1cb-42fa-8968-20c00aeb3341",
         "type": "chat",
-        "x": 41.3,
-        "y": 16.5,
-        "w": 29,
+        "x": 84,
+        "y": 52,
+        "w": 16,
         "h": 46,
-        "z": 19,
+        "z": 11,
         "visible": true,
         "config": {
           "maxMessages": 8,
@@ -1346,6 +1295,48 @@
       "channel": "halantar",
       "startedAt": 1787252650329,
       "endedAt": 1787252843322
+    },
+    {
+      "id": "7ef4a333-a48c-4532-931c-626d82d7bc49",
+      "channel": "halantar",
+      "startedAt": 1787326775415,
+      "endedAt": 1787327056668
+    },
+    {
+      "id": "202a3f1b-9927-4a89-a159-6fcd6192d7fb",
+      "channel": "halantar",
+      "startedAt": 1787328745291,
+      "endedAt": 1787328868808
+    },
+    {
+      "id": "b417c4a9-623b-4fd5-933b-f99b1f9e33f5",
+      "channel": "halantar",
+      "startedAt": 1787329003833,
+      "endedAt": 1787329038062
+    },
+    {
+      "id": "592308d5-909c-46aa-91fa-5eaabe2eca0c",
+      "channel": "halantar",
+      "startedAt": 1787329282521,
+      "endedAt": 1787329369741
+    },
+    {
+      "id": "0f2f38a4-c453-4209-964d-36a850710171",
+      "channel": "halantar",
+      "startedAt": 1787332033185,
+      "endedAt": 1787332309838
+    },
+    {
+      "id": "e770578f-1873-493d-8e8f-a4979ecde913",
+      "channel": "halantar",
+      "startedAt": 1787333155950,
+      "endedAt": 1787333603715
+    },
+    {
+      "id": "c3aed85b-50d9-49f5-9043-71749fbacb99",
+      "channel": "halantar",
+      "startedAt": 1787334361302,
+      "endedAt": 1787334551712
     }
   ],
   "chatMessages": [
@@ -3479,6 +3470,162 @@
       "is_test": true,
       "count": null,
       "tier": "1000"
+    },
+    {
+      "id": "4b5d879b-43bf-4793-a814-890415d5c337",
+      "timestamp": 1787332109941,
+      "type": "donation",
+      "kind": "donation",
+      "username": "star_gazer",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "aa599b57-26a2-45c8-a7a6-e5810737dde9",
+      "timestamp": 1787332112596,
+      "type": "subscription",
+      "kind": "gift_sub",
+      "username": "star_gazer",
+      "amount": null,
+      "currency": null,
+      "message": "",
+      "is_test": true,
+      "count": 3,
+      "tier": null
+    },
+    {
+      "id": "cbd58801-2bb5-4ee2-a6a3-01a7dfea9f01",
+      "timestamp": 1787332114260,
+      "type": "follow",
+      "kind": "follow",
+      "username": "orbit_fan",
+      "amount": null,
+      "currency": null,
+      "message": "",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "3905ab75-1f0c-4cff-8ecf-ba4c5ff7034a",
+      "timestamp": 1787332114915,
+      "type": "subscription",
+      "kind": "sub",
+      "username": "comet_watcher",
+      "amount": null,
+      "currency": null,
+      "message": "",
+      "is_test": true,
+      "count": null,
+      "tier": "1000"
+    },
+    {
+      "id": "34367972-2e88-4475-8764-01d084df5097",
+      "timestamp": 1787332115292,
+      "type": "cheer",
+      "kind": "cheer",
+      "username": "star_gazer",
+      "amount": 250,
+      "currency": null,
+      "message": "",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "35756086-ba50-4f61-b1c4-5120242ddf13",
+      "timestamp": 1787332130283,
+      "type": "donation",
+      "kind": "donation",
+      "username": "comet_watcher",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "de7b467a-fffd-48e2-8784-9c07fa069350",
+      "timestamp": 1787333301322,
+      "type": "donation",
+      "kind": "donation",
+      "username": "orbit_fan",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "948d7ac6-f0c8-437f-a16b-87cf9694b15b",
+      "timestamp": 1787333310930,
+      "type": "donation",
+      "kind": "donation",
+      "username": "nova_viewer",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "5358c172-d676-4cac-99a9-1c04cd2aefc4",
+      "timestamp": 1787333526328,
+      "type": "donation",
+      "kind": "donation",
+      "username": "comet_watcher",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "d51c780e-5568-43f0-bbcf-c3130e4f45ef",
+      "timestamp": 1787333534984,
+      "type": "donation",
+      "kind": "donation",
+      "username": "comet_watcher",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "8caa8401-6273-422e-bd3a-96bbd7c86a8c",
+      "timestamp": 1787333553323,
+      "type": "donation",
+      "kind": "donation",
+      "username": "star_gazer",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "149e2e27-5c00-4701-a074-87636065cb46",
+      "timestamp": 1787333566613,
+      "type": "donation",
+      "kind": "donation",
+      "username": "orbit_fan",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
     }
   ],
   "overlay_participants_config": {
@@ -3750,12 +3897,419 @@
   },
   "language": "ru",
   "overlay_mic_config": {
-    "sensitivity": 1.5,
-    "lineWidth": 2,
+    "sensitivity": 6,
+    "lineWidth": 1,
     "color": "#0060A8",
     "opacity": 0.9,
     "visualizer_mode": "bars",
-    "barCount": 32,
-    "barGap": 2
-  }
+    "barCount": 50,
+    "barGap": 3,
+    "peakFall": 1
+  },
+  "layout_presets": [
+    {
+      "id": "952a9e33-b08c-4fb1-8c89-b72a3145ebb7",
+      "name": "MD3",
+      "widgets": [
+        {
+          "id": "default-recent",
+          "type": "recent",
+          "x": 1,
+          "y": 6,
+          "w": 16,
+          "h": 12,
+          "z": 1,
+          "visible": true,
+          "config": {
+            "maxItems": 4
+          }
+        },
+        {
+          "id": "f4ec5bac-710d-498b-a117-080e946a73ed",
+          "type": "stat",
+          "x": 86,
+          "y": 2,
+          "w": 12,
+          "h": 6,
+          "z": 5,
+          "visible": true,
+          "config": {
+            "metric": "followers",
+            "label": ""
+          }
+        },
+        {
+          "id": "90c5d777-0a25-45ca-abb1-ea9d8950d022",
+          "type": "social",
+          "x": 86,
+          "y": 10,
+          "w": 12,
+          "h": 6,
+          "z": 6,
+          "visible": true,
+          "config": {
+            "rotateIntervalSec": 8,
+            "socials": [
+              {
+                "platform": "TG",
+                "text": "t.me/your_channel"
+              },
+              {
+                "platform": "DC",
+                "text": "discord.gg/your_server"
+              },
+              {
+                "platform": "YT",
+                "text": "youtube.com/@channel"
+              }
+            ]
+          }
+        },
+        {
+          "id": "679a09a2-c5f6-48ae-87a3-1d6f6aad5a7b",
+          "type": "participants",
+          "x": 86,
+          "y": 2,
+          "w": 12,
+          "h": 32,
+          "z": 7,
+          "visible": true,
+          "config": {}
+        },
+        {
+          "id": "76f55e6d-7527-4928-95ba-51c1158d27cc",
+          "type": "mic",
+          "x": 2,
+          "y": 26,
+          "w": 14,
+          "h": 6,
+          "z": 8,
+          "visible": true,
+          "config": {
+            "color": "#00f0ff"
+          }
+        },
+        {
+          "id": "16eca737-fc2e-42c3-b62b-c22bea53e8aa",
+          "type": "alerts",
+          "x": 40,
+          "y": 1,
+          "w": 20,
+          "h": 12,
+          "z": 9,
+          "visible": true,
+          "config": {}
+        },
+        {
+          "id": "f491ba96-4246-45e2-ad5c-2b0e281ca398",
+          "type": "goal",
+          "x": 1,
+          "y": 1,
+          "w": 16,
+          "h": 4,
+          "z": 10,
+          "visible": true,
+          "config": {
+            "showPercentage": false
+          }
+        },
+        {
+          "id": "fe03ff84-c1cb-42fa-8968-20c00aeb3341",
+          "type": "chat",
+          "x": 84,
+          "y": 52,
+          "w": 16,
+          "h": 46,
+          "z": 11,
+          "visible": true,
+          "config": {
+            "maxMessages": 8,
+            "showBadges": true
+          }
+        }
+      ],
+      "theme2d": "nebula",
+      "theme3d": "",
+      "createdAt": 1787333366791,
+      "updatedAt": 1787334548890
+    },
+    {
+      "id": "f26d1242-1054-4f98-8c56-d16ea6c7a9f0",
+      "name": "Hex",
+      "widgets": [
+        {
+          "id": "default-recent",
+          "type": "recent",
+          "x": 1,
+          "y": 8,
+          "w": 16,
+          "h": 12,
+          "z": 1,
+          "visible": true,
+          "config": {
+            "maxItems": 4
+          }
+        },
+        {
+          "id": "f4ec5bac-710d-498b-a117-080e946a73ed",
+          "type": "stat",
+          "x": 86,
+          "y": 2,
+          "w": 12,
+          "h": 6,
+          "z": 5,
+          "visible": true,
+          "config": {
+            "metric": "followers",
+            "label": ""
+          }
+        },
+        {
+          "id": "90c5d777-0a25-45ca-abb1-ea9d8950d022",
+          "type": "social",
+          "x": 86,
+          "y": 10,
+          "w": 12,
+          "h": 6,
+          "z": 6,
+          "visible": true,
+          "config": {
+            "rotateIntervalSec": 8,
+            "socials": [
+              {
+                "platform": "TG",
+                "text": "t.me/your_channel"
+              },
+              {
+                "platform": "DC",
+                "text": "discord.gg/your_server"
+              },
+              {
+                "platform": "YT",
+                "text": "youtube.com/@channel"
+              }
+            ]
+          }
+        },
+        {
+          "id": "679a09a2-c5f6-48ae-87a3-1d6f6aad5a7b",
+          "type": "participants",
+          "x": 86,
+          "y": 2,
+          "w": 12,
+          "h": 32,
+          "z": 7,
+          "visible": true,
+          "config": {}
+        },
+        {
+          "id": "76f55e6d-7527-4928-95ba-51c1158d27cc",
+          "type": "mic",
+          "x": 1,
+          "y": 20,
+          "w": 14,
+          "h": 6,
+          "z": 8,
+          "visible": true,
+          "config": {
+            "color": "#00f0ff"
+          }
+        },
+        {
+          "id": "47cac86c-48ea-4302-99f4-27ad4e044420",
+          "type": "grimhex-chat",
+          "x": 82,
+          "y": 52,
+          "w": 16,
+          "h": 44,
+          "z": 9,
+          "visible": true,
+          "config": {
+            "maxMessages": 50,
+            "perspective": 100
+          }
+        },
+        {
+          "id": "b3cfb6ac-b72c-41cf-92dc-b0de04636e55",
+          "type": "grimhex",
+          "x": 75,
+          "y": 0,
+          "w": 10,
+          "h": 18,
+          "z": 10,
+          "visible": true,
+          "config": {
+            "perspective": 0
+          }
+        },
+        {
+          "id": "3b9ee2b6-9807-45c0-a058-499f4f63c8da",
+          "type": "grimhex-goal",
+          "x": 1,
+          "y": 1,
+          "w": 16,
+          "h": 6,
+          "z": 11,
+          "visible": true,
+          "config": {
+            "showPercentage": false
+          }
+        },
+        {
+          "id": "fe3e0d6c-efce-4d26-84a6-6269651d58f6",
+          "type": "grimhex-holo-alert",
+          "x": 38,
+          "y": 1,
+          "w": 26,
+          "h": 14,
+          "z": 12,
+          "visible": true,
+          "config": {}
+        }
+      ],
+      "theme2d": "nebula",
+      "theme3d": "grimhex",
+      "createdAt": 1787333583429,
+      "updatedAt": 1787333583429
+    },
+    {
+      "id": "56ca3da5-2ba8-44cc-aa7b-c7899211cf12",
+      "name": "Musa",
+      "widgets": [
+        {
+          "id": "default-recent",
+          "type": "recent",
+          "x": 1,
+          "y": 8,
+          "w": 16,
+          "h": 12,
+          "z": 1,
+          "visible": true,
+          "config": {
+            "maxItems": 4
+          }
+        },
+        {
+          "id": "f4ec5bac-710d-498b-a117-080e946a73ed",
+          "type": "stat",
+          "x": 86,
+          "y": 2,
+          "w": 12,
+          "h": 6,
+          "z": 5,
+          "visible": true,
+          "config": {
+            "metric": "followers",
+            "label": ""
+          }
+        },
+        {
+          "id": "90c5d777-0a25-45ca-abb1-ea9d8950d022",
+          "type": "social",
+          "x": 86,
+          "y": 10,
+          "w": 12,
+          "h": 6,
+          "z": 6,
+          "visible": true,
+          "config": {
+            "rotateIntervalSec": 8,
+            "socials": [
+              {
+                "platform": "TG",
+                "text": "t.me/your_channel"
+              },
+              {
+                "platform": "DC",
+                "text": "discord.gg/your_server"
+              },
+              {
+                "platform": "YT",
+                "text": "youtube.com/@channel"
+              }
+            ]
+          }
+        },
+        {
+          "id": "679a09a2-c5f6-48ae-87a3-1d6f6aad5a7b",
+          "type": "participants",
+          "x": 86,
+          "y": 2,
+          "w": 12,
+          "h": 32,
+          "z": 7,
+          "visible": true,
+          "config": {}
+        },
+        {
+          "id": "76f55e6d-7527-4928-95ba-51c1158d27cc",
+          "type": "mic",
+          "x": 1,
+          "y": 20,
+          "w": 14,
+          "h": 6,
+          "z": 8,
+          "visible": true,
+          "config": {
+            "color": "#00f0ff"
+          }
+        },
+        {
+          "id": "47cac86c-48ea-4302-99f4-27ad4e044420",
+          "type": "grimhex-chat",
+          "x": 82,
+          "y": 52,
+          "w": 16,
+          "h": 44,
+          "z": 9,
+          "visible": true,
+          "config": {
+            "maxMessages": 50,
+            "perspective": 100
+          }
+        },
+        {
+          "id": "3b9ee2b6-9807-45c0-a058-499f4f63c8da",
+          "type": "grimhex-goal",
+          "x": 1,
+          "y": 1,
+          "w": 16,
+          "h": 6,
+          "z": 11,
+          "visible": true,
+          "config": {
+            "showPercentage": false
+          }
+        },
+        {
+          "id": "fe3e0d6c-efce-4d26-84a6-6269651d58f6",
+          "type": "grimhex-holo-alert",
+          "x": 38,
+          "y": 1,
+          "w": 26,
+          "h": 14,
+          "z": 12,
+          "visible": true,
+          "config": {}
+        },
+        {
+          "id": "8af3eeea-90d8-4675-95d8-0e0ea79fb5e2",
+          "type": "musain",
+          "x": 84,
+          "y": 18,
+          "w": 16,
+          "h": 12,
+          "z": 13,
+          "visible": true,
+          "config": {
+            "perspective": 0
+          }
+        }
+      ],
+      "theme2d": "nebula",
+      "theme3d": "grimhex",
+      "createdAt": 1787334411414,
+      "updatedAt": 1787334480079
+    }
+  ]
 }

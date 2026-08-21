@@ -58,6 +58,10 @@ const { EVENT_TYPES } = window.SharedEvents;
   const remoteUrlHint = document.getElementById("remoteUrlHint");
   const remoteUrlText = document.getElementById("remoteUrlText");
   const gridSizeSelect = document.getElementById("gridSizeSelect");
+  const layoutPresetSelect = document.getElementById("layoutPresetSelect");
+  const layoutPresetName = document.getElementById("layoutPresetName");
+  const saveLayoutPresetBtn = document.getElementById("saveLayoutPresetBtn");
+  const deleteLayoutPresetBtn = document.getElementById("deleteLayoutPresetBtn");
   const themeGridEl = document.getElementById("themeGrid");
   const themeEditorEl = document.getElementById("themeEditor");
   const newThemeBtn = document.getElementById("newThemeBtn");
@@ -177,8 +181,8 @@ const { EVENT_TYPES } = window.SharedEvents;
   function renderLibrary() {
     libraryListEl.innerHTML = "";
     Object.values(WIDGET_TYPES).forEach((def) => {
-      // A theme-bound widget (3D) is only offered while its own theme is active.
-      if (def.theme && state.appearance.activeThemeId !== def.theme) return;
+      // A theme-bound widget (3D) is only offered while its own 3D theme is active.
+      if (def.theme && state.appearance.activeThemeId3d !== def.theme) return;
       const card = document.createElement("div");
       card.className = "library-card";
       card.draggable = true;
@@ -856,9 +860,10 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   // ---- appearance: theme picker + custom theme editor ----
 
-  function renderThemeSwatch(theme) {
+  function renderThemeSwatch(theme, dimension) {
+    const activeId = dimension === "3d" ? state.appearance.activeThemeId3d : state.appearance.activeThemeId2d;
     const card = document.createElement("div");
-    card.className = "theme-swatch" + (theme.id === state.appearance.activeThemeId ? " is-active" : "");
+    card.className = "theme-swatch" + (theme.id === activeId ? " is-active" : "");
     const dotColors = theme.builtin
       ? BuiltinThemes.BUILTIN_THEMES[theme.id].tokens
       : null;
@@ -897,6 +902,16 @@ const { EVENT_TYPES } = window.SharedEvents;
     return card;
   }
 
+  function renderThemeNoneSwatch() {
+    const card = document.createElement("div");
+    card.className = "theme-swatch" + (state.appearance.activeThemeId3d ? "" : " is-active");
+    card.innerHTML = `
+      <div class="theme-swatch__dots"><span class="theme-swatch__dot" style="background:transparent;border:1px dashed currentColor"></span></div>
+      <div class="theme-swatch__row"><span class="theme-swatch__name">${t("settings.themeNone")}</span></div>`;
+    card.addEventListener("click", () => send(EVENT_TYPES.CMD_SET_ACTIVE_THEME, { id: "" }));
+    return card;
+  }
+
   function renderThemeGrid() {
     themeGridEl.innerHTML = "";
     const themes = state.appearance.themes || [];
@@ -913,7 +928,8 @@ const { EVENT_TYPES } = window.SharedEvents;
       themeGridEl.appendChild(header);
       const grid = document.createElement("div");
       grid.className = "theme-grid__items";
-      items.forEach((theme) => grid.appendChild(renderThemeSwatch(theme)));
+      if (dimension === "3d") grid.appendChild(renderThemeNoneSwatch());
+      items.forEach((theme) => grid.appendChild(renderThemeSwatch(theme, dimension)));
       themeGridEl.appendChild(grid);
     });
   }
@@ -967,6 +983,8 @@ const { EVENT_TYPES } = window.SharedEvents;
     themeEditorEl.querySelectorAll("input, select").forEach((el) => el.addEventListener("input", previewFromForm));
 
     document.getElementById("saveThemeBtn").addEventListener("click", () => {
+      // При редактировании существующей темы предупреждаем о перезаписи.
+      if (state.editingThemeId && !confirm(t("themeEditor.overwriteConfirm"))) return;
       const liveSeeds = previewFromForm();
       send(EVENT_TYPES.CMD_SAVE_CUSTOM_THEME, {
         id: state.editingThemeId,
@@ -1019,6 +1037,85 @@ const { EVENT_TYPES } = window.SharedEvents;
       showExportImportStatus(t("settings.importFailed", { error: res.error }), true);
     }
   });
+
+  // ---- layout presets ----
+
+  function renderLayoutPresets() {
+    if (!layoutPresetSelect) return;
+    const presets = state.layoutPresets || [];
+    const current = layoutPresetSelect.value;
+    layoutPresetSelect.innerHTML =
+      `<option value="">${escapeHtml(t("presets.placeholder"))}</option>` +
+      presets.map((p) => `<option value="${escapeAttr(p.id)}">${escapeHtml(p.name)}</option>`).join("");
+    layoutPresetSelect.value = presets.some((p) => p.id === current) ? current : "";
+    if (deleteLayoutPresetBtn) deleteLayoutPresetBtn.hidden = !layoutPresetSelect.value;
+  }
+
+  if (saveLayoutPresetBtn) {
+    const createFromName = () => {
+      // Создание нового пресета по имени (без дублей названий).
+      const clean = layoutPresetName ? String(layoutPresetName.value).trim() : "";
+      if (!clean) return;
+      const existing = (state.layoutPresets || []).find((p) => p.name === clean);
+      if (existing) {
+        if (!confirm(t("presets.overwriteConfirm", { name: clean }))) return;
+        send(EVENT_TYPES.CMD_SAVE_LAYOUT_PRESET, { id: existing.id, name: clean });
+      } else {
+        send(EVENT_TYPES.CMD_SAVE_LAYOUT_PRESET, { name: clean });
+      }
+      if (layoutPresetName) layoutPresetName.value = "";
+    };
+
+    saveLayoutPresetBtn.addEventListener("click", () => {
+      // Если в выпадающем списке выбран пресет — перезаписываем именно его.
+      const selectedId = layoutPresetSelect ? layoutPresetSelect.value : "";
+      if (selectedId) {
+        const preset = (state.layoutPresets || []).find((p) => p.id === selectedId);
+        if (preset) {
+          if (confirm(t("presets.overwriteConfirm", { name: preset.name }))) {
+            send(EVENT_TYPES.CMD_SAVE_LAYOUT_PRESET, { id: preset.id, name: preset.name });
+          }
+          return;
+        }
+      }
+      createFromName();
+    });
+
+    if (layoutPresetName) {
+      // Когда пользователь начинает вводить имя — снимаем выбор, чтобы "Сохранить"
+      // создавал новый пресет, а не перезаписывал выбранный.
+      layoutPresetName.addEventListener("input", () => {
+        if (layoutPresetSelect) {
+          layoutPresetSelect.value = "";
+          if (deleteLayoutPresetBtn) deleteLayoutPresetBtn.hidden = true;
+        }
+      });
+      layoutPresetName.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          createFromName();
+        }
+      });
+    }
+  }
+
+  if (layoutPresetSelect) {
+    layoutPresetSelect.addEventListener("change", () => {
+      const id = layoutPresetSelect.value;
+      if (deleteLayoutPresetBtn) deleteLayoutPresetBtn.hidden = !id;
+      if (id) send(EVENT_TYPES.CMD_APPLY_LAYOUT_PRESET, { id });
+    });
+  }
+
+  if (deleteLayoutPresetBtn) {
+    deleteLayoutPresetBtn.addEventListener("click", () => {
+      const id = layoutPresetSelect.value;
+      if (!id) return;
+      const preset = (state.layoutPresets || []).find((p) => p.id === id);
+      if (!confirm(t("presets.deleteConfirm", { name: preset ? preset.name : "" }))) return;
+      send(EVENT_TYPES.CMD_DELETE_LAYOUT_PRESET, { id });
+    });
+  }
 
   // ---- scenes ----
 
@@ -1304,6 +1401,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         canvasEditor.applyThemeToCanvas(state.appearance.tokens, state.appearance.activeThemeId);
         canvasEditor.applyGridToCanvas();
         renderThemeGrid();
+        renderLayoutPresets();
         renderLibrary();
         canvasEditor.renderCanvas();
         canvasEditor.renderLayers();
@@ -1316,6 +1414,10 @@ const { EVENT_TYPES } = window.SharedEvents;
         break;
       case EVENT_TYPES.LAYOUT_UPDATE:
         handleLayoutUpdate(msg.payload.layout || []);
+        break;
+      case EVENT_TYPES.LAYOUT_PRESETS_UPDATE:
+        state.layoutPresets = (msg.payload && msg.payload.presets) || [];
+        renderLayoutPresets();
         break;
       case EVENT_TYPES.THEME_UPDATE:
         state.appearance = msg.payload;
@@ -1434,6 +1536,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     renderSceneForm();
     renderGiveaway();
     renderThemeGrid();
+    renderLayoutPresets();
     wsClient.refreshStatusChips();
     updateEventsFilterButtons();
     renderStreamEvents(true);

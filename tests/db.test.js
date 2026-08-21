@@ -46,6 +46,14 @@ describe("server/db", () => {
     expect(db.getStreamEvents({ limit: 50 })).toEqual({ items: [], total: 0 });
   });
 
+  test("сохраняет и читает пресеты раскладки", () => {
+    expect(db.getLayoutPresets()).toEqual([]);
+
+    const saved = db.saveLayoutPresets([{ id: "p1", name: "Основной", widgets: [{ id: "w1" }] }]);
+    expect(saved).toHaveLength(1);
+    expect(db.getLayoutPresets()[0].name).toBe("Основной");
+  });
+
   test("записывает и читает донат из истории", () => {
     const row = db.appendStreamEvent({
       type: "donation",

@@ -67,7 +67,8 @@
     "currency": "RUB"
   },
   "appearance": {
-    "activeThemeId": "nebula",
+    "activeThemeId2d": "nebula",
+    "activeThemeId3d": "",
     "customThemes": []
   },
   "editor": {

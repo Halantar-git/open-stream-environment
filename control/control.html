@@ -134,6 +134,15 @@
               <option value="10">10%</option>
             </select>
           </label>
+          <label class="canvas-toolbar__grid" id="layoutPresetWrap">
+            <span data-i18n="presets.title">Пресеты</span>
+            <select id="layoutPresetSelect">
+              <option value="" data-i18n="presets.placeholder">—</option>
+            </select>
+          </label>
+          <input type="text" id="layoutPresetName" data-i18n-placeholder="presets.promptName" placeholder="Название пресета" autocomplete="off" />
+          <button class="md-button md-button--tonal" id="saveLayoutPresetBtn" data-i18n="presets.save">Сохранить</button>
+          <button class="md-button md-button--tonal" id="deleteLayoutPresetBtn" data-i18n="presets.delete" hidden>Удалить</button></button>
         </div>
       </div>
 

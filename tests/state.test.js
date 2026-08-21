@@ -21,6 +21,7 @@ const path = require("path");
 
 const { configureStorage } = require("../server/storage-paths");
 const { AppState } = require("../server/state");
+const { BUILTIN_THEMES } = require("../shared/themes");
 
 function makeConfig() {
   return {
@@ -38,7 +39,7 @@ function makeConfig() {
     soundboard: { enabled: true, volume: 0.8, queueMode: false, sounds: [] },
     streamdeck: { icons: { scene: "", soundboard: "", counter: "", wheel: "" } },
     goal: { title: "", current: 0, target: 1, currency: "RUB" },
-    appearance: { activeThemeId: "nebula", customThemes: [] },
+    appearance: { activeThemeId2d: "nebula", activeThemeId3d: "", customThemes: [] },
     editor: { gridSize: 5, snapEnabled: true },
     scenes: {},
     topDonation: {},
@@ -180,6 +181,94 @@ describe("AppState config + runtime", () => {
     expect(state.config.streamdeck.icons.wheel).toBe("media/w.png");
     expect(state.config.streamdeck.icons).toHaveProperty("start"); // существующие иконки сохранены
     expect(state.config.obs.customCommands).toEqual([]); // невалидный массив -> []
+  });
+
+  test("2D и 3D темы хранятся в отдельных ячейках", () => {
+    state.setActiveTheme("orbital");
+    expect(state.config.appearance.activeThemeId2d).toBe("orbital");
+    expect(state.config.appearance.activeThemeId3d).toBe("");
+
+    // Пока 3D выключена, глобальные токены берутся из 2D темы.
+    let snap = state.snapshot();
+    expect(snap.appearance.activeThemeId).toBe("orbital");
+    expect(snap.appearance.tokens).toEqual(BUILTIN_THEMES.orbital.tokens);
+
+    state.setActiveTheme("grimhex");
+    expect(state.config.appearance.activeThemeId3d).toBe("grimhex");
+    expect(state.config.appearance.activeThemeId2d).toBe("orbital");
+
+    // При включённой 3D теме она перекрывает 2D для всего оверлея.
+    snap = state.snapshot();
+    expect(snap.appearance.activeThemeId2d).toBe("orbital");
+    expect(snap.appearance.activeThemeId3d).toBe("grimhex");
+    expect(snap.appearance.activeThemeId).toBe("grimhex");
+    expect(snap.appearance.tokens).toEqual(BUILTIN_THEMES.grimhex.tokens);
+  });
+
+  test("setActiveTheme('') выключает 3D-тему", () => {
+    state.setActiveTheme("grimhex");
+    expect(state.config.appearance.activeThemeId3d).toBe("grimhex");
+
+    expect(state.setActiveTheme("")).toBe(true);
+    expect(state.config.appearance.activeThemeId3d).toBe("");
+    expect(state.config.appearance.activeThemeId2d).toBe("nebula");
+  });
+
+  test("legacy activeThemeId мигрирует в соответствующий слот", () => {
+    const legacy = makeConfig();
+    legacy.appearance = { activeThemeId: "grimhex", customThemes: [] };
+    const migrated = new AppState(null, legacy);
+    expect(migrated.config.appearance.activeThemeId3d).toBe("grimhex");
+    expect(migrated.config.appearance.activeThemeId2d).toBe("nebula");
+    expect(migrated.config.appearance.activeThemeId).toBeUndefined();
+  });
+
+  test("сохранение/загрузка/удаление пресетов раскладки", () => {
+    state.addWidget("recent");
+    state.addWidget("chat");
+    state.setActiveTheme("orbital");
+    state.setActiveTheme("grimhex");
+    expect(state.layout).toHaveLength(2);
+
+    const saved = state.saveLayoutPreset({ name: "  Мой пресет  " });
+    expect(saved).toHaveLength(1);
+    expect(saved[0].name).toBe("Мой пресет");
+    expect(saved[0].widgetCount).toBe(2);
+    expect(saved[0].theme2d).toBe("orbital");
+    expect(saved[0].theme3d).toBe("grimhex");
+
+    // Меняем раскладку и тему, затем возвращаем их из пресета.
+    state.removeWidget(state.layout[0].id);
+    state.setActiveTheme("pixel");
+    state.setActiveTheme(""); // выключаем 3D
+    expect(state.layout).toHaveLength(1);
+
+    const applied = state.applyLayoutPreset(saved[0].id);
+    expect(applied).toHaveLength(2);
+    expect(state.config.appearance.activeThemeId2d).toBe("orbital");
+    expect(state.config.appearance.activeThemeId3d).toBe("grimhex");
+
+    const snap = state.snapshot();
+    expect(snap.layoutPresets).toHaveLength(1);
+    expect(snap.layoutPresets[0].name).toBe("Мой пресет");
+
+    const deleted = state.deleteLayoutPreset(saved[0].id);
+    expect(deleted).toHaveLength(0);
+    expect(state.applyLayoutPreset(saved[0].id)).toBeNull();
+  });
+
+  test("перезапись пресета по id не создаёт дубль", () => {
+    state.addWidget("recent");
+    const created = state.saveLayoutPreset({ name: "Пресет" });
+    const id = created[0].id;
+
+    state.addWidget("chat");
+    const updated = state.saveLayoutPreset({ id, name: "Пресет v2" });
+
+    expect(updated).toHaveLength(1);
+    expect(updated[0].id).toBe(id);
+    expect(updated[0].name).toBe("Пресет v2");
+    expect(updated[0].widgetCount).toBe(2);
   });
 
   test("snapshot включает новые поля состояния", () => {

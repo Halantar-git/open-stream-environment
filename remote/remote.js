@@ -75,7 +75,8 @@
   let isConnected = false;
   let hasLocales = false;
   let themes = [];
-  let activeThemeId = null;
+  let activeThemeId2d = null;
+  let activeThemeId3d = null;
   let activeScene = null;
   let obsCommands = [];
   let cameraAngles = [];
@@ -261,7 +262,7 @@
     }
     themes.forEach((theme) => {
       const btn = makeButton(theme.name, "THEME_SET", { themeId: theme.id });
-      if (theme.id === activeThemeId) btn.classList.add("is-active");
+      if (theme.id === activeThemeId2d || theme.id === activeThemeId3d) btn.classList.add("is-active");
       themeGrid.appendChild(btn);
     });
   }
@@ -342,7 +343,8 @@
         const p = msg.payload || {};
         if (p.appearance) {
           themes = p.appearance.themes || [];
-          activeThemeId = p.appearance.activeThemeId || null;
+          activeThemeId2d = p.appearance.activeThemeId2d || null;
+          activeThemeId3d = p.appearance.activeThemeId3d || null;
           renderThemes();
         }
         if (p.obs) {
@@ -384,7 +386,8 @@
       case EVENT_TYPES.THEME_UPDATE: {
         const p = msg.payload || {};
         if (p.themes) themes = p.themes;
-        activeThemeId = p.activeThemeId || null;
+        activeThemeId2d = p.activeThemeId2d || null;
+        activeThemeId3d = p.activeThemeId3d || null;
         renderThemes();
         break;
       }

@@ -43,6 +43,7 @@
     widgetDeath: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 3a8 8 0 0 0-8 8c0 2.6 1.1 4.3 2.4 5.6V19a1 1 0 0 0 1 1h2.6v-2h4v2H16a1 1 0 0 0 1-1v-2.4C18.9 15.3 20 13.6 20 11a8 8 0 0 0-8-8z"/><circle cx="9" cy="10.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="10.5" r="1.3" fill="currentColor" stroke="none"/><path d="M9 14h6"/></svg>`,
     widgetSoundboard: `<svg viewBox="0 0 24 24" ${stroke}><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>`,
     widgetGrimHex: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 3l7.8 4.5v9L12 21l-7.8-4.5v-9L12 3z"/><path d="M12 8l4.5 2.6v5.2L12 18.4 7.5 15.8v-5.2L12 8z"/></svg>`,
+    widgetMusain: `<svg viewBox="0 0 24 24" ${stroke}><path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V9z"/><path d="M17 10h1a2.5 2.5 0 0 1 0 5h-1"/><path d="M8 4c0 1-.8 1-.8 2M12 4c0 1-.8 1-.8 2"/></svg>`,
     widgetStarCitizenChat: `<svg viewBox="0 0 24 24" ${stroke}><path d="M4 5h16v11H8l-4 4V5z"/><path d="M8 9h8M8 12h5"/></svg>`,
     widgetStarCitizenGoal: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="6" cy="12" r="3.2"/><circle cx="12" cy="12" r="3.2"/><circle cx="18" cy="12" r="3.2"/></svg>`,
     widgetStarCitizenHoloAlert: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="9" r="5"/><path d="M9 13l-2 8 5-3 5 3-2-8"/></svg>`,

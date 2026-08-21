@@ -56,6 +56,8 @@
       this.audioCtx = null;
       this.stream = null;
       this.micError = null;
+      this._eqBars = null;
+      this._eqLast = null;
 
       this._startAudio();
       this._loop();
@@ -166,6 +168,8 @@
 
       const amp = (ch / 2) * 0.92 * sensitivity;
       const t = (now - this.t0) / 1000;
+      const dt = this._eqLast == null ? 0 : Math.min(0.1, (now - this._eqLast) / 1000);
+      this._eqLast = now;
 
       let level = 0;
       if (this.analyser && this.dataArray) {
@@ -211,6 +215,8 @@
         this._drawBars(ctx, cw, ch, cfg);
       } else if (mode === "ring") {
         this._drawRing(ctx, cw, ch, cfg);
+      } else if (mode === "equalizer") {
+        this._drawEqualizer(ctx, cw, ch, cfg, dt);
       } else {
         this._drawSine(ctx, cw, ch, t, amp, level);
       }
@@ -255,6 +261,76 @@
         const y = (ch - h) / 2;
         ctx.fillRect(x, y, barW, h);
       }
+    }
+
+    _drawEqualizer(ctx, cw, ch, cfg, dt) {
+      const freq = this.freqArray;
+      if (!freq || !freq.length) return;
+      const barCount = Math.round(this._clamp(cfg.barCount, 10, 64, 32));
+      const gap = Math.max(0, Number(cfg.barGap) || 0);
+
+      // Vertical LED segments: ~8px cells with 2px gaps, scaled to the host
+      // height. The classic palette (green → yellow → red) matches the reference.
+      const cellCount = Math.max(2, Math.round(ch / 10));
+      const cellGap = 2;
+      const cellH = Math.max(1, (ch - (cellCount - 1) * cellGap) / cellCount);
+      const GREEN = "#2ecc40";
+      const YELLOW = "#ffdc00";
+      const RED = "#ff4136";
+      const read = this.context.readCssVar;
+      const off = (read && read("--md-surface-container-high")) || "rgba(255,255,255,0.08)";
+
+      // Falling-peak physics, expressed in cells/second so it is independent of
+      // the host frame rate. `level` rises instantly to the live value and
+      // decays smoothly; `peak` holds for a moment, then falls back down.
+      const levelDecay = 10;
+      const peakFall = this._clamp(cfg.peakFall, 0.5, 10, 2.5);
+      const holdSec = 0.54;
+
+      if (!this._eqBars || this._eqBars.length !== barCount) {
+        this._eqBars = [];
+        for (let i = 0; i < barCount; i++) this._eqBars.push({ level: 0, peak: 0, hold: 0 });
+      }
+
+      const usable = Math.max(8, Math.floor(freq.length * 0.8));
+      const slotW = cw / barCount;
+      const barW = Math.max(1, slotW - gap);
+
+      for (let i = 0; i < barCount; i++) {
+        const idx = Math.floor((i / (barCount - 1)) * (usable - 1));
+        const v = freq[idx] / 255;
+        const target = v * cellCount;
+        const bar = this._eqBars[i];
+
+        if (target > bar.level) bar.level = target;
+        else bar.level = Math.max(target, bar.level - levelDecay * dt);
+
+        if (bar.level >= bar.peak) {
+          bar.peak = bar.level;
+          bar.hold = holdSec;
+        } else if (bar.hold > 0) {
+          bar.hold -= dt;
+        } else {
+          bar.peak = Math.max(bar.level, bar.peak - peakFall * dt);
+        }
+
+        const x = i * slotW + (slotW - barW) / 2;
+        const lit = Math.round(bar.level);
+        const peakIndex = Math.round(bar.peak) - 1;
+
+        for (let c = 0; c < cellCount; c++) {
+          const y = ch - (c + 1) * cellH - c * cellGap;
+          const on = c < lit || c === peakIndex;
+          ctx.fillStyle = on ? this._eqColor(c, cellCount, GREEN, YELLOW, RED) : off;
+          ctx.fillRect(x, y, barW, cellH);
+        }
+      }
+    }
+
+    _eqColor(c, count, green, yellow, red) {
+      if (c < (count * 8) / 14) return green;
+      if (c < (count * 12) / 14) return yellow;
+      return red;
     }
 
     _drawRing(ctx, cw, ch, cfg) {

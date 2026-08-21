@@ -449,6 +449,26 @@ function createServer({ db } = {}) {
         if (state.reorderWidget(id, direction)) broadcast(EVENT_TYPES.LAYOUT_UPDATE, { layout: state.layout });
         break;
       }
+      case EVENT_TYPES.CMD_SAVE_LAYOUT_PRESET: {
+        const presets = state.saveLayoutPreset(msg.payload || {});
+        if (presets) broadcast(EVENT_TYPES.LAYOUT_PRESETS_UPDATE, { presets });
+        break;
+      }
+      case EVENT_TYPES.CMD_APPLY_LAYOUT_PRESET: {
+        const layout = state.applyLayoutPreset((msg.payload && msg.payload.id) || "");
+        if (layout) {
+          broadcast(EVENT_TYPES.LAYOUT_UPDATE, { layout });
+          // Applying a preset can also restore the 2D/3D theme, so notify
+          // clients to refresh the theme grid, library and overlay gating.
+          broadcast(EVENT_TYPES.THEME_UPDATE, state.snapshot().appearance);
+        }
+        break;
+      }
+      case EVENT_TYPES.CMD_DELETE_LAYOUT_PRESET: {
+        const presets = state.deleteLayoutPreset((msg.payload && msg.payload.id) || "");
+        if (presets) broadcast(EVENT_TYPES.LAYOUT_PRESETS_UPDATE, { presets });
+        break;
+      }
       case EVENT_TYPES.CMD_SET_GOAL: {
         const goal = state.setGoal(msg.payload || {});
         broadcast(EVENT_TYPES.GOAL_UPDATE, goal);

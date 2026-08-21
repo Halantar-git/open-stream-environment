@@ -116,7 +116,10 @@ function fisherYates(arr) {
 }
 
 function defaultAppearance() {
-  return { activeThemeId: "nebula", customThemes: [] };
+  // 2D and 3D theme selections are stored in separate slots. The 2D slot is
+  // the base theme; the 3D slot (Star Citizen) is an optional override that,
+  // when set, replaces the 2D theme's tokens and enables the 3D widgets.
+  return { activeThemeId2d: "nebula", activeThemeId3d: "", customThemes: [] };
 }
 
 function defaultEditor() {
@@ -129,6 +132,7 @@ class AppState {
     this.config = config || loadConfig();
     if (!this.config.appearance) this.config.appearance = defaultAppearance();
     if (!Array.isArray(this.config.appearance.customThemes)) this.config.appearance.customThemes = [];
+    this._migrateAppearance();
     if (!this.config.editor) this.config.editor = defaultEditor();
     const scenesDefaults = defaultScenes();
     this.config.scenes = this.config.scenes || {};
@@ -224,6 +228,27 @@ class AppState {
     }
   }
 
+  // Migrates the pre-2.3.1 single `activeThemeId` into the separate 2D/3D
+  // slots so existing config files keep working after the split.
+  _migrateAppearance() {
+    const a = this.config.appearance;
+    if (a.activeThemeId) {
+      const dim = BUILTIN_THEMES[a.activeThemeId] && BUILTIN_THEMES[a.activeThemeId].dimension === "3d" ? "3d" : "2d";
+      if (!a.activeThemeId2d && !a.activeThemeId3d) {
+        if (dim === "3d") {
+          a.activeThemeId3d = a.activeThemeId;
+          a.activeThemeId2d = "nebula";
+        } else {
+          a.activeThemeId2d = a.activeThemeId;
+          a.activeThemeId3d = "";
+        }
+      }
+      delete a.activeThemeId;
+    }
+    if (!a.activeThemeId2d) a.activeThemeId2d = "nebula";
+    if (typeof a.activeThemeId3d !== "string") a.activeThemeId3d = "";
+  }
+
   get goal() {
     return this.config.goal;
   }
@@ -284,6 +309,78 @@ class AppState {
     b.z = za;
     this._persistLayout();
     return true;
+  }
+
+  // ---- Layout presets ----
+
+  _getLayoutPresets() {
+    if (this.db) return this.db.getLayoutPresets();
+    if (!this._memoryPresets) this._memoryPresets = [];
+    return this._memoryPresets;
+  }
+
+  _setLayoutPresets(presets) {
+    if (this.db) return this.db.saveLayoutPresets(presets);
+    this._memoryPresets = presets;
+    return this._memoryPresets;
+  }
+
+  listLayoutPresets() {
+    return this._getLayoutPresets().map((p) => ({
+      id: p.id,
+      name: p.name,
+      widgetCount: Array.isArray(p.widgets) ? p.widgets.length : 0,
+      theme2d: p.theme2d || "",
+      theme3d: p.theme3d || "",
+      createdAt: p.createdAt || 0,
+      updatedAt: p.updatedAt || 0,
+    }));
+  }
+
+  saveLayoutPreset({ id, name } = {}) {
+    const cleanName = String(name || "").trim().slice(0, 60);
+    if (!cleanName) return null;
+    const presets = this._getLayoutPresets();
+    const widgets = this._layout.map((w) => ({ ...w, config: { ...(w.config || {}) } }));
+    const theme2d = this.config.appearance.activeThemeId2d || "nebula";
+    const theme3d = this.config.appearance.activeThemeId3d || "";
+    if (id) {
+      const existing = presets.find((p) => p.id === id);
+      if (!existing) return null;
+      existing.name = cleanName;
+      existing.widgets = widgets;
+      existing.theme2d = theme2d;
+      existing.theme3d = theme3d;
+      existing.updatedAt = Date.now();
+    } else {
+      presets.push({ id: crypto.randomUUID(), name: cleanName, widgets, theme2d, theme3d, createdAt: Date.now(), updatedAt: Date.now() });
+    }
+    this._setLayoutPresets(presets);
+    return this.listLayoutPresets();
+  }
+
+  applyLayoutPreset(id) {
+    const preset = this._getLayoutPresets().find((p) => p.id === id);
+    if (!preset || !Array.isArray(preset.widgets)) return null;
+    this._layout = preset.widgets.map((w) => ({ ...w, config: { ...(w.config || {}) } }));
+    // Restore the theme the preset was saved with so theme-bound (3D) widgets
+    // actually become visible again.
+    if (preset.theme2d && this.themeDimension(preset.theme2d)) {
+      this.config.appearance.activeThemeId2d = preset.theme2d;
+    }
+    if (typeof preset.theme3d === "string") {
+      const dim3d = preset.theme3d === "" ? "" : this.themeDimension(preset.theme3d);
+      if (dim3d === "" || dim3d === "3d") this.config.appearance.activeThemeId3d = preset.theme3d;
+    }
+    saveConfig(this.config);
+    this._persistLayout();
+    return this._layout;
+  }
+
+  deleteLayoutPreset(id) {
+    const before = this._getLayoutPresets().length;
+    this._setLayoutPresets(this._getLayoutPresets().filter((p) => p.id !== id));
+    return this._getLayoutPresets().length !== before ? this.listLayoutPresets() : null;
   }
 
   // ---- Goal / app config ----
@@ -606,12 +703,28 @@ class AppState {
     return this.config.appearance.customThemes.find((t) => t.id === id);
   }
 
-  resolvedTheme() {
-    const id = this.config.appearance.activeThemeId;
+  themeDimension(id) {
+    if (BUILTIN_THEMES[id]) return BUILTIN_THEMES[id].dimension || "2d";
+    if (this.findCustomTheme(id)) return "2d";
+    return null;
+  }
+
+  resolveTheme(id) {
     if (BUILTIN_THEMES[id]) return BUILTIN_THEMES[id];
     const custom = this.findCustomTheme(id);
     if (custom) return { id: custom.id, name: custom.name, builtin: false, tokens: custom.tokens };
-    return BUILTIN_THEMES.nebula;
+    return null;
+  }
+
+  // The base 2D theme, used when the 3D theme is off.
+  resolvedTheme() {
+    return this.resolveTheme(this.config.appearance.activeThemeId2d) || BUILTIN_THEMES.nebula;
+  }
+
+  // The optional 3D theme (Star Citizen). An empty id means "no 3D theme", so
+  // those widgets stay hidden and the 2D theme drives the overlay.
+  resolvedTheme3d() {
+    return this.resolveTheme(this.config.appearance.activeThemeId3d) || null;
   }
 
   listThemes() {
@@ -634,8 +747,17 @@ class AppState {
   }
 
   setActiveTheme(id) {
-    if (!BUILTIN_THEMES[id] && !this.findCustomTheme(id)) return false;
-    this.config.appearance.activeThemeId = id;
+    // Empty id means "no 3D theme" — used by the theme picker's off swatch to
+    // hide the Star Citizen widgets without touching the selected 2D theme.
+    if (!id) {
+      this.config.appearance.activeThemeId3d = "";
+      saveConfig(this.config);
+      return true;
+    }
+    const dim = this.themeDimension(id);
+    if (!dim) return false;
+    if (dim === "3d") this.config.appearance.activeThemeId3d = id;
+    else this.config.appearance.activeThemeId2d = id;
     saveConfig(this.config);
     return true;
   }
@@ -671,7 +793,7 @@ class AppState {
   deleteCustomTheme(id) {
     const before = this.config.appearance.customThemes.length;
     this.config.appearance.customThemes = this.config.appearance.customThemes.filter((t) => t.id !== id);
-    if (this.config.appearance.activeThemeId === id) this.config.appearance.activeThemeId = "nebula";
+    if (this.config.appearance.activeThemeId2d === id) this.config.appearance.activeThemeId2d = "nebula";
     saveConfig(this.config);
     return this.config.appearance.customThemes.length !== before;
   }
@@ -766,6 +888,8 @@ class AppState {
       topDonation: newConfig.topDonation || this.config.topDonation,
     };
 
+    this._migrateAppearance();
+
     if (Array.isArray(newConfig.layout)) this._layout = newConfig.layout;
     if (this.db) {
       this.db.saveWidgets(this._layout);
@@ -776,9 +900,16 @@ class AppState {
   }
 
   snapshot() {
-    const theme = this.resolvedTheme();
+    // The 3D theme, when active, overrides the 2D theme for the whole overlay:
+    // it supplies the global token set (so 2D widgets, scenes and the wheel
+    // follow the Star Citizen HUD) and enables the 3D widgets via
+    // `appearance.activeThemeId3d`. When it is off, the 2D theme drives tokens.
+    const theme2d = this.resolvedTheme();
+    const theme3d = this.resolvedTheme3d();
+    const effective = theme3d || theme2d;
     return {
       layout: this._layout,
+      layoutPresets: this.listLayoutPresets(),
       goal: this.config.goal,
       port: this.config.port,
       twitchChannel: this.config.twitch.channel,
@@ -801,8 +932,10 @@ class AppState {
       activeFilters: this.getActiveFilters(),
       giveaway: this.giveawaySnapshot(),
       appearance: {
-        activeThemeId: this.config.appearance.activeThemeId,
-        tokens: theme.tokens,
+        activeThemeId: effective.id,
+        activeThemeId2d: this.config.appearance.activeThemeId2d,
+        activeThemeId3d: this.config.appearance.activeThemeId3d || "",
+        tokens: effective.tokens,
         themes: this.listThemes(),
       },
       editor: this.config.editor,

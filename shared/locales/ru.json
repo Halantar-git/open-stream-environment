@@ -163,6 +163,7 @@
     "themeCategoryCustom": "Свои",
     "themeCategory3d": "3D",
     "themeCategory2d": "2D",
+    "themeNone": "Выкл",
     "exportImport": "Экспорт / импорт настроек",
     "exportImportDesc": "Экспорт сохраняет полный config.json — раскладку, темы, цель, а также токены и ключи Twitch/DonationAlerts. Файл содержит секреты — не выкладывайте его публично.",
     "export": "Экспортировать в файл",
@@ -223,6 +224,15 @@
     "cameraFilterDuration": "Длительность (сек)",
     "ru": "Русский",
     "en": "English"
+  },
+  "presets": {
+    "title": "Пресеты",
+    "placeholder": "—",
+    "save": "Сохранить",
+    "delete": "Удалить",
+    "promptName": "Название пресета",
+    "deleteConfirm": "Удалить пресет «{{name}}»?",
+    "overwriteConfirm": "Пресет «{{name}}» уже существует. Перезаписать?"
   },
   "giveaway": {
     "command": "Команда для участия",
@@ -302,17 +312,21 @@
     "grimhex-goal": "Цель Star Citizen",
     "grimhex-goalDesc": "Донат-цель из 5 неоновых секторов (только для темы Star Citizen)",
     "grimhex-holo-alert": "Голограмма Star Citizen",
-    "grimhex-holo-alertDesc": "Голографический терминал с вращающимся 3D-значком (только для темы Star Citizen)"
+    "grimhex-holo-alertDesc": "Голографический терминал с вращающимся 3D-значком (только для темы Star Citizen)",
+    "musain": "Вывеска Café Musain",
+    "musainDesc": "Анимированная неоновая вывеска Café Musain (только для темы Star Citizen)"
   },
   "mic": {
     "mode": "Режим визуализации",
     "modeSine": "Плавная синусоида",
     "modeBars": "Частотные столбики",
     "modeRing": "Круговой визуализатор",
+    "modeEqualizer": "Классический эквалайзер",
     "sensitivity": "Чувствительность",
     "lineWidth": "Толщина линии",
     "barCount": "Количество полос",
     "barGap": "Расстояние между полосами",
+    "peakFall": "Скорость спада пика",
     "color": "Цвет волны",
     "colorAuto": "Авто",
     "opacity": "Прозрачность"
@@ -344,7 +358,8 @@
     "fonts": "Шрифты",
     "save": "Сохранить тему",
     "cancel": "Отмена",
-    "myTheme": "Моя тема"
+    "myTheme": "Моя тема",
+    "overwriteConfirm": "Перезаписать эту тему?"
   },
   "properties": {
     "goalTitle": "Название цели",

@@ -156,7 +156,7 @@ export function initPropertiesPanel({
       extraHtml = `
         <div class="md-field"><label>${t("properties.maxMessages")}</label><input type="number" id="pMaxMessages" min="1" max="100" value="${config.maxMessages || 50}"></div>
         <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>`;
-    } else if (inst.type === "grimhex") {
+    } else if (inst.type === "grimhex" || inst.type === "musain") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>`;
     } else if (inst.type === "recent") {
@@ -201,12 +201,14 @@ export function initPropertiesPanel({
             <option value="sine" ${mode === "sine" ? "selected" : ""}>${t("mic.modeSine")}</option>
             <option value="bars" ${mode === "bars" ? "selected" : ""}>${t("mic.modeBars")}</option>
             <option value="ring" ${mode === "ring" ? "selected" : ""}>${t("mic.modeRing")}</option>
+            <option value="equalizer" ${mode === "equalizer" ? "selected" : ""}>${t("mic.modeEqualizer")}</option>
           </select>
         </div>
         <div class="md-field"><label>${t("mic.sensitivity")}: <span id="pMicSensitivityValue">${state.micConfig.sensitivity ?? 1.5}</span></label><input type="range" id="pMicSensitivity" min="0.2" max="6" step="0.1" value="${state.micConfig.sensitivity ?? 1.5}"></div>
         <div class="md-field"><label>${t("mic.lineWidth")}: <span id="pMicLineWidthValue">${state.micConfig.lineWidth ?? 2}</span></label><input type="range" id="pMicLineWidth" min="1" max="12" step="0.5" value="${state.micConfig.lineWidth ?? 2}"></div>
         <div class="md-field"><label>${t("mic.barCount")}: <span id="pMicBarCountValue">${state.micConfig.barCount ?? 32}</span></label><input type="range" id="pMicBarCount" min="10" max="64" step="1" value="${state.micConfig.barCount ?? 32}"></div>
         <div class="md-field"><label>${t("mic.barGap")}: <span id="pMicBarGapValue">${state.micConfig.barGap ?? 2}</span></label><input type="range" id="pMicBarGap" min="0" max="12" step="0.5" value="${state.micConfig.barGap ?? 2}"></div>
+        <div class="md-field"><label>${t("mic.peakFall")}: <span id="pMicPeakFallValue">${state.micConfig.peakFall ?? 2.5}</span></label><input type="range" id="pMicPeakFall" min="0.5" max="10" step="0.1" value="${state.micConfig.peakFall ?? 2.5}"></div>
         <div class="md-field"><label>${t("mic.color")}</label>
           <div class="properties__color-row">
             <input type="color" id="pMicColor" value="${escapeAttr(micColor)}">
@@ -277,7 +279,7 @@ export function initPropertiesPanel({
         if (label) label.textContent = String(v);
         send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { perspective: v } } });
       });
-    } else if (inst.type === "grimhex") {
+    } else if (inst.type === "grimhex" || inst.type === "musain") {
       propertiesEl.querySelector("#pPerspective").addEventListener("input", (e) => {
         const v = Number(e.target.value);
         const label = propertiesEl.querySelector("#pPerspectiveValue");
@@ -339,6 +341,12 @@ export function initPropertiesPanel({
         const label = propertiesEl.querySelector("#pMicBarGapValue");
         if (label) label.textContent = v.toFixed(1);
         sendMicConfig({ barGap: v });
+      });
+      propertiesEl.querySelector("#pMicPeakFall").addEventListener("input", (e) => {
+        const v = Number(e.target.value);
+        const label = propertiesEl.querySelector("#pMicPeakFallValue");
+        if (label) label.textContent = v.toFixed(1);
+        sendMicConfig({ peakFall: v });
       });
     } else if (inst.type === "death") {
       propertiesEl.querySelector("#pDeathLabel").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { label: e.target.value } } }));

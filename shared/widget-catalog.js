@@ -165,6 +165,18 @@
       minH: 6,
       defaultConfig: { perspective: 0 },
     },
+    musain: {
+      type: "musain",
+      label: "Вывеска Café Musain",
+      description: "Анимированная неоновая вывеска Café Musain (только для темы Star Citizen)",
+      icon: "widgetMusain",
+      dimension: "3d",
+      theme: "grimhex",
+      defaultGeometry: { x: 34, y: 8, w: 28, h: 21 },
+      minW: 12,
+      minH: 6,
+      defaultConfig: { perspective: 0 },
+    },
     "grimhex-chat": {
       type: "grimhex-chat",
       label: "Чат Star Citizen",

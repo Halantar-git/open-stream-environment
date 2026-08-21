@@ -25,12 +25,13 @@
     // Broadcast from server -> overlay + control
     STATE: "state", // full state snapshot, sent on connect
     LAYOUT_UPDATE: "layout_update", // full layout array, sent after any add/update/remove/reorder
+    LAYOUT_PRESETS_UPDATE: "layout_presets_update", // { presets: [{ id, name, widgetCount, createdAt, updatedAt }] }
     ALERT: "alert", // { kind: 'follow'|'sub'|'gift_sub'|'cheer'|'donation', ... }
     CHAT_MESSAGE: "chat_message",
     RECENT_EVENT: "recent_event",
     GOAL_UPDATE: "goal_update", // { current, target, title, currency }
     CONNECTION_STATUS: "connection_status", // { service, status }
-    THEME_UPDATE: "theme_update", // { activeThemeId, tokens, themes }
+    THEME_UPDATE: "theme_update", // { activeThemeId, activeThemeId2d, activeThemeId3d, tokens, themes }
     EDITOR_PREFS_UPDATE: "editor_prefs_update", // { gridSize, snapEnabled }
     SCENES_UPDATE: "scenes_update", // { start, brb, end }
     TOP_DONATION_UPDATE: "top_donation_update", // { user, amount, currency }
@@ -58,6 +59,9 @@
     CMD_UPDATE_WIDGET: "cmd_update_widget", // { id, patch: { x?,y?,w?,h?,visible?,z?,config? } }
     CMD_REMOVE_WIDGET: "cmd_remove_widget", // { id }
     CMD_REORDER_WIDGET: "cmd_reorder_widget", // { id, direction: 'forward'|'backward' }
+    CMD_SAVE_LAYOUT_PRESET: "cmd_save_layout_preset", // { id?, name }
+    CMD_APPLY_LAYOUT_PRESET: "cmd_apply_layout_preset", // { id }
+    CMD_DELETE_LAYOUT_PRESET: "cmd_delete_layout_preset", // { id }
     CMD_SET_GOAL: "cmd_set_goal", // { title?, current?, target?, currency? }
     CMD_TEST_ALERT: "cmd_test_alert", // { kind }
     CMD_TEST_CHAT: "cmd_test_chat", // { message? }

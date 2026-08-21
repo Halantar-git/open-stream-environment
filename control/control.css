@@ -166,6 +166,17 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   border-radius: var(--shape-sm);
   padding: 6px 8px;
 }
+.canvas-toolbar input[type="text"] {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--md-on-surface);
+  background: var(--md-surface-container-highest);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-sm);
+  padding: 6px 8px;
+  width: 160px;
+  flex-shrink: 1;
+}
 .canvas.show-grid {
   background-image:
     linear-gradient(90deg, rgba(198, 184, 255, 0.14) 1px, transparent 1px),

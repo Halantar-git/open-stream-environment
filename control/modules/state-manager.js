@@ -27,6 +27,7 @@
 export function createStateManager() {
   const state = {
     layout: [],
+    layoutPresets: [],
     goal: { title: "Цель", current: 0, target: 1, currency: "RUB" },
     twitchChannel: "",
     twitchClientId: "",
@@ -41,7 +42,7 @@ export function createStateManager() {
     streamdeck: { icons: { start: "", brb: "", wheel: "", talk: "", end: "" } },
     selectedId: null,
     pendingAdd: null,
-    appearance: { activeThemeId: "nebula", tokens: {}, themes: [] },
+    appearance: { activeThemeId: "nebula", activeThemeId2d: "nebula", activeThemeId3d: "", tokens: {}, themes: [] },
     editorPrefs: { gridSize: 5, snapEnabled: true },
     editingThemeId: null,
     scenes: {},
@@ -55,12 +56,13 @@ export function createStateManager() {
     participantsConfig: { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82 },
     wheelConfig: { musicVolume: 50 },
     wheelSpeedConfig: { speed: 3 },
-    micConfig: { sensitivity: 1.5, lineWidth: 2, color: "", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2 },
+    micConfig: { sensitivity: 1.5, lineWidth: 2, color: "", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2, peakFall: 2.5 },
   };
 
   // Maps the server's `state` snapshot payload into this object.
   state.applySnapshot = (payload) => {
     state.layout = payload.layout || [];
+    state.layoutPresets = payload.layoutPresets || [];
     state.goal = payload.goal;
     state.twitchChannel = payload.twitchChannel;
     state.twitchClientId = payload.twitchClientId;
