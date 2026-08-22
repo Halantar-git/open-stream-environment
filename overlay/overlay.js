@@ -69,6 +69,9 @@
   let spinAudioEl = null;
   let spinFallback = null;
 
+  // Длительность wheel-spin.mp3 (roulettevision) в мс — вращение подгоняется под неё.
+  const WHEEL_SPIN_MS = 5300;
+
   // ---- pure utils ----
   function formatMoney(n) {
     return Number(n || 0).toLocaleString("ru-RU");
@@ -144,7 +147,7 @@
 
   function playWinSound() {
     try {
-      const a = new Audio("/assets/audio/win.mp3");
+      const a = new Audio("/assets/audio/win.wav");
       a.volume = 0.9;
       const p = a.play();
       if (p && p.catch) p.catch(() => playFanfare());
@@ -155,7 +158,7 @@
 
   function playEliminationAudio() {
     try {
-      const a = new Audio("/assets/audio/elimination.mp3");
+      const a = new Audio("/assets/audio/elimination.wav");
       a.volume = 0.9;
       const p = a.play();
       if (p && p.catch) p.catch(() => playEliminationSound());
@@ -274,15 +277,17 @@
 
     const startRotation = wheelRotation;
     const startTime = performance.now();
-    const duration = Math.max(2600, 6800 - speed * 700);
+    const duration = WHEEL_SPIN_MS;
 
     function frame(now) {
       const progress = Math.min(1, (now - startTime) / duration);
       const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
       wheelRotation = startRotation + (target - startRotation) * eased;
       drawWheel();
-      const spinFade = progress < 0.7 ? 1 : Math.max(0, 1 - (progress - 0.7) / 0.3);
-      setSpinVolume(((wheelConfig.musicVolume ?? 50) / 100) * spinFade);
+      if (spinFallback) {
+        const spinFade = progress < 0.7 ? 1 : Math.max(0, 1 - (progress - 0.7) / 0.3);
+        setSpinVolume(((wheelConfig.musicVolume ?? 50) / 100) * spinFade);
+      }
       if (progress < 1) {
         requestAnimationFrame(frame);
       } else {
@@ -319,7 +324,6 @@
     const vol = Math.max(0, Math.min(1, (wheelConfig.musicVolume ?? 50) / 100));
     if (!spinAudioEl) {
       spinAudioEl = new Audio("/assets/audio/wheel-spin.mp3");
-      spinAudioEl.loop = true;
     }
     spinAudioEl.volume = vol;
     spinAudioEl.currentTime = 0;
@@ -463,6 +467,10 @@
   manager.register("grimhex-chat", OW.WidgetStarCitizenChat);
   manager.register("grimhex-goal", OW.WidgetStarCitizenGoal);
   manager.register("grimhex-holo-alert", OW.WidgetStarCitizenHoloAlert);
+  manager.register("nuclear", OW.WidgetNuclear);
+  manager.register("nuclear-chat", OW.WidgetNuclearChat);
+  manager.register("nuclear-goal", OW.WidgetNuclearGoal);
+  manager.register("nuclear-holo-alert", OW.WidgetNuclearHoloAlert);
 
   // ---- socket ----
   function handleMessage(msg) {

@@ -150,14 +150,22 @@ const { EVENT_TYPES } = window.SharedEvents;
   }
 
   // ---- tabs ----
-  function switchView(view) {
+  function setActiveTab(view) {
     tabsEl.querySelectorAll(".topbar__tab").forEach((b) => {
       b.classList.toggle("is-active", b.dataset.view === view);
     });
-    viewEditor.hidden = view !== "editor";
-    viewScenes.hidden = view !== "scenes";
-    viewSettings.hidden = view !== "settings";
-    if (view === "settings") renderStreamEvents();
+  }
+
+  function switchView(view) {
+    // «Колесо» — ярлык: открывает сцену колеса внутри раздела «Сцены».
+    const isWheel = view === "wheel";
+    const targetView = isWheel ? "scenes" : view;
+    setActiveTab(view);
+    viewEditor.hidden = targetView !== "editor";
+    viewScenes.hidden = targetView !== "scenes";
+    viewSettings.hidden = targetView !== "settings";
+    if (isWheel) selectScene("wheel");
+    if (targetView === "settings") renderStreamEvents();
   }
 
   tabsEl.querySelectorAll(".topbar__tab").forEach((btn) => {
@@ -1130,7 +1138,10 @@ const { EVENT_TYPES } = window.SharedEvents;
       const card = document.createElement("div");
       card.className = "library-card" + (def.id === state.activeSceneId ? " is-active" : "");
       card.innerHTML = `<span class="library-card__icon">${ICONS[def.icon] || ""}</span><span class="library-card__text"><span class="library-card__label">${t("scene." + def.id + "Label")}</span></span>`;
-      card.addEventListener("click", () => selectScene(def.id));
+      card.addEventListener("click", () => {
+        selectScene(def.id);
+        setActiveTab(def.id === "wheel" ? "wheel" : "scenes");
+      });
       scenesNavListEl.appendChild(card);
     });
   }
@@ -1549,6 +1560,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     const historyBtn = document.getElementById("toggleHistoryBtn");
     if (historyBtn) historyBtn.innerHTML = `${ICONS.widgetRecent} ${t("nav.history")}`;
     loggerPanel.refreshLabel();
+    debugPanel.refresh();
     helpPanel.refresh();
     const boostyBtn = document.getElementById("openBoostyBtn");
     if (boostyBtn) boostyBtn.innerHTML = `${ICONS.heart} ${t("boosty.support")}`;

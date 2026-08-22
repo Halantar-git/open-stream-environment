@@ -65,7 +65,10 @@
   const LAYERS = [
     { key: "outer", blur: 14, alpha: 0.55 },
     { key: "mid", blur: 5.5, alpha: 0.85 },
-    { key: "core", blur: 0.9, alpha: 1 },
+    // Core is drawn source-over (blur 0 skips the additive `lighter` path) so
+    // the near-white tube centre doesn't sum with the glow layers and blow
+    // out to pure white on screen.
+    { key: "core", blur: 0, alpha: 1 },
   ];
 
   // Per-tube palette, matching the reference's three stacked <use> fills.

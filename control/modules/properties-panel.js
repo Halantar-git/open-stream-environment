@@ -138,7 +138,7 @@ export function initPropertiesPanel({
     const config = inst.config || {};
 
     let extraHtml = "";
-    if (inst.type === "goal" || inst.type === "grimhex-goal") {
+    if (inst.type === "goal" || inst.type === "grimhex-goal" || inst.type === "nuclear-goal") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.goalTitle")}</label><input type="text" id="pGoalTitle" value="${escapeAttr(state.goal.title || "")}"></div>
         <div class="properties__row">
@@ -152,11 +152,11 @@ export function initPropertiesPanel({
       extraHtml = `
         <div class="md-field"><label>${t("properties.maxMessages")}</label><input type="number" id="pMaxMessages" min="1" max="20" value="${config.maxMessages || 8}"></div>
         <div class="properties__toggle-row"><label>${t("properties.showBadges")}</label>${switchHtml("pShowBadges", config.showBadges !== false)}</div>`;
-    } else if (inst.type === "grimhex-chat") {
+    } else if (inst.type === "grimhex-chat" || inst.type === "nuclear-chat") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.maxMessages")}</label><input type="number" id="pMaxMessages" min="1" max="100" value="${config.maxMessages || 50}"></div>
         <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>`;
-    } else if (inst.type === "grimhex" || inst.type === "musain") {
+    } else if (inst.type === "grimhex" || inst.type === "musain" || inst.type === "nuclear") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>`;
     } else if (inst.type === "recent") {
@@ -261,7 +261,7 @@ export function initPropertiesPanel({
     });
     wireSwitch(propertiesEl.querySelector("#pVisible"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { visible: on } }));
 
-    if (inst.type === "goal" || inst.type === "grimhex-goal") {
+    if (inst.type === "goal" || inst.type === "grimhex-goal" || inst.type === "nuclear-goal") {
       propertiesEl.querySelector("#pGoalTitle").addEventListener("change", (e) => send(EVENT_TYPES.CMD_SET_GOAL, { title: e.target.value }));
       propertiesEl.querySelector("#pGoalCurrent").addEventListener("change", (e) => send(EVENT_TYPES.CMD_SET_GOAL, { current: Number(e.target.value) }));
       propertiesEl.querySelector("#pGoalTarget").addEventListener("change", (e) => send(EVENT_TYPES.CMD_SET_GOAL, { target: Number(e.target.value) }));
@@ -271,7 +271,7 @@ export function initPropertiesPanel({
     } else if (inst.type === "chat") {
       propertiesEl.querySelector("#pMaxMessages").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { maxMessages: Number(e.target.value) } } }));
       wireSwitch(propertiesEl.querySelector("#pShowBadges"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showBadges: on } } }));
-    } else if (inst.type === "grimhex-chat") {
+    } else if (inst.type === "grimhex-chat" || inst.type === "nuclear-chat") {
       propertiesEl.querySelector("#pMaxMessages").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { maxMessages: Number(e.target.value) } } }));
       propertiesEl.querySelector("#pPerspective").addEventListener("input", (e) => {
         const v = Number(e.target.value);
@@ -279,7 +279,7 @@ export function initPropertiesPanel({
         if (label) label.textContent = String(v);
         send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { perspective: v } } });
       });
-    } else if (inst.type === "grimhex" || inst.type === "musain") {
+    } else if (inst.type === "grimhex" || inst.type === "musain" || inst.type === "nuclear") {
       propertiesEl.querySelector("#pPerspective").addEventListener("input", (e) => {
         const v = Number(e.target.value);
         const label = propertiesEl.querySelector("#pPerspectiveValue");

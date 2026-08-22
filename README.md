@@ -5,7 +5,7 @@
 на Electron. Оверлей отдаётся локальным сервером как обычная веб-страница —
 её нужно добавить в OBS как Browser Source.
 
-Текущая версия: **2.3.1**.
+Текущая версия: **2.3.3**.
 
 ## Что внутри
 
@@ -388,3 +388,9 @@ config/
   соотношение сторон 16:9.
 - Если поменять канал Twitch после подключения алертов, EventSub нужно
   переподключить заново на вкладке «Настройки» (кнопка «Подключить Twitch»).
+
+## Credits / Благодарности
+
+Этот проект использует бесплатные аудиоматериалы с платформы Freesound.org (лицензия Creative Commons Attribution):
+* **Wheel Spin sound** — автор [roulettevision](https://freesound.org) (CC BY 3.0)
+* **Jingle_Win_00 & Jingle_Lose_01** — автор [LittleRobotSoundFactory](https://freesound.org) (CC BY 4.0)

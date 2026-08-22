@@ -151,6 +151,16 @@ body {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.remote-theme-group {
+  grid-column: 1 / -1;
+  margin: 6px 0 2px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--md-on-surface-variant);
+}
+
 .action-btn {
   appearance: none;
   border: 1px solid var(--md-outline-variant);

@@ -260,11 +260,37 @@
       themeGrid.appendChild(empty);
       return;
     }
-    themes.forEach((theme) => {
-      const btn = makeButton(theme.name, "THEME_SET", { themeId: theme.id });
-      if (theme.id === activeThemeId2d || theme.id === activeThemeId3d) btn.classList.add("is-active");
-      themeGrid.appendChild(btn);
-    });
+
+    const themes2d = themes.filter((th) => (th.dimension || "2d") === "2d");
+    const themes3d = themes.filter((th) => th.dimension === "3d");
+
+    const addGroupLabel = (text) => {
+      const label = document.createElement("div");
+      label.className = "remote-theme-group";
+      label.textContent = text;
+      themeGrid.appendChild(label);
+    };
+
+    if (themes2d.length) {
+      addGroupLabel(t("settings.themeCategory2d"));
+      themes2d.forEach((theme) => {
+        const btn = makeButton(theme.name, "THEME_SET", { themeId: theme.id });
+        if (theme.id === activeThemeId2d) btn.classList.add("is-active");
+        themeGrid.appendChild(btn);
+      });
+    }
+
+    if (themes3d.length) {
+      addGroupLabel(t("settings.themeCategory3d"));
+      const offBtn = makeButton(t("settings.themeNone"), "THEME_SET", { themeId: "" });
+      if (!activeThemeId3d) offBtn.classList.add("is-active");
+      themeGrid.appendChild(offBtn);
+      themes3d.forEach((theme) => {
+        const btn = makeButton(theme.name, "THEME_SET", { themeId: theme.id });
+        if (theme.id === activeThemeId3d) btn.classList.add("is-active");
+        themeGrid.appendChild(btn);
+      });
+    }
   }
 
   function renderObsCommands() {

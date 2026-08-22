@@ -30,6 +30,8 @@
 const WebSocket = require("ws");
 const http = require("http");
 const https = require("https");
+const fs = require("fs");
+const path = require("path");
 
 // ---- Command-line arguments passed by the Stream Deck application ----
 const args = {};
@@ -61,6 +63,7 @@ const SCENES = [
 let sd = null; // Stream Deck app
 let ose = null; // OSE bus
 let oseReconnectTimer = null;
+let pendingAction = null; // queued remote_action while OSE is offline
 
 // context -> { settings, action }
 const instances = new Map();
@@ -83,6 +86,10 @@ function connectOse() {
 
   ose.on("open", () => {
     console.log("[OSE] connected");
+    if (pendingAction) {
+      ose.send(JSON.stringify({ type: "remote_action", action: pendingAction.action, payload: pendingAction.payload || {} }));
+      pendingAction = null;
+    }
   });
 
   ose.on("message", (raw) => {
@@ -107,8 +114,12 @@ function connectOse() {
 }
 
 function sendRemoteAction(action, payload) {
+  const message = JSON.stringify({ type: "remote_action", action, payload: payload || {} });
   if (ose && ose.readyState === WebSocket.OPEN) {
-    ose.send(JSON.stringify({ type: "remote_action", action, payload: payload || {} }));
+    ose.send(message);
+    pendingAction = null;
+  } else {
+    pendingAction = { action, payload: payload || {} };
   }
 }
 
@@ -175,8 +186,8 @@ function setState(context, state) {
   sdSend({ event: "setState", context, payload: { state: Number(state) || 0 } });
 }
 
-function setImage(context, image) {
-  sdSend({ event: "setImage", context, payload: { image, target: 0 } });
+function setImage(context, image, state) {
+  sdSend({ event: "setImage", context, payload: { image, target: 0, state: Number(state) || 0 } });
 }
 
 function fetchImageAsDataUrl(url) {
@@ -206,23 +217,53 @@ function fetchImageAsDataUrl(url) {
   });
 }
 
+// Default manifest icons, pre-read so we can restore them after a custom icon
+// is cleared. Try both `__dirname` (unbundled) and `process.cwd()` (bundled into
+// dist/app.js) since the plugin runs from the plugin root directory.
+const DEFAULT_IMAGES = { 0: null, 1: null };
+
+function loadDefaultIcon(file) {
+  for (const base of [__dirname, process.cwd()]) {
+    try {
+      return "data:image/png;base64," + fs.readFileSync(path.join(base, file)).toString("base64");
+    } catch {
+      // keep trying the next candidate
+    }
+  }
+  return null;
+}
+
+DEFAULT_IMAGES[0] = loadDefaultIcon("assets/scene.png");
+DEFAULT_IMAGES[1] = loadDefaultIcon("assets/scene-active.png");
+
 function applyCustomIcon(context, iconPath) {
   const prev = appliedIcon.get(context);
   if (prev === iconPath) return;
-  appliedIcon.set(context, iconPath);
 
-  if (!iconPath) return; // keep the default manifest icon
+  if (!iconPath) {
+    // Restore the manifest defaults, but only if we had pushed a custom icon.
+    if (prev) {
+      if (DEFAULT_IMAGES[0]) setImage(context, DEFAULT_IMAGES[0], 0);
+      if (DEFAULT_IMAGES[1]) setImage(context, DEFAULT_IMAGES[1], 1);
+    }
+    appliedIcon.set(context, "");
+    return;
+  }
+
+  appliedIcon.set(context, iconPath);
 
   const cached = iconCache.get(iconPath);
   if (cached) {
-    setImage(context, cached);
+    setImage(context, cached, 0);
+    setImage(context, cached, 1);
     return;
   }
   const url = OSE_HTTP_BASE + "/" + String(iconPath).replace(/^\/+/, "");
   fetchImageAsDataUrl(url)
     .then((dataUrl) => {
       iconCache.set(iconPath, dataUrl);
-      setImage(context, dataUrl);
+      setImage(context, dataUrl, 0);
+      setImage(context, dataUrl, 1);
     })
     .catch((err) => console.warn("[OSE] icon fetch failed", iconPath, err.message));
 }

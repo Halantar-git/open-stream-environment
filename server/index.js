@@ -44,8 +44,44 @@ I18n.setLocales(LOCALES);
 
 const bus = new EventEmitter();
 
+function isPrivateIPv4(ip) {
+  const parts = String(ip).split(".");
+  if (parts.length !== 4) return false;
+  const a = Number(parts[0]);
+  const b = Number(parts[1]);
+  return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+}
+
 function getLocalIp() {
+  // Interface names that are virtual/software adapters, not the physical LAN
+  // (VPN, Hyper-V/WSL, VirtualBox/VMware, Docker, TAP/TUN, Tailscale/ZeroTier,
+  // Hamachi/Radmin, bridges). These are skipped so the remote URL points at the
+  // real local-network address.
+  const VIRTUAL = /virtual|vmware|vbox|veth|docker|wsl|hyper|vethernet|tap|tun|vpn|zerotier|tailscale|hamachi|radmin|loopback|bridge|br-/i;
+  const PHYSICAL = /(^|[\s_-])(eth|en|wlan|wi-?fi|wireless|ethernet|local area|realtek|intel|enp|wlp)/i;
+
   const interfaces = os.networkInterfaces();
+  const candidates = [];
+
+  for (const name of Object.keys(interfaces)) {
+    if (VIRTUAL.test(name)) continue;
+    for (const iface of interfaces[name] || []) {
+      if (iface.family !== "IPv4" || iface.internal) continue;
+      const ip = iface.address;
+      let score = 0;
+      if (PHYSICAL.test(name)) score += 2;
+      if (isPrivateIPv4(ip)) score += 3;
+      if (/^169\.254\./.test(ip)) score -= 2; // link-local (APIPA) — not routable
+      candidates.push({ address: ip, score });
+    }
+  }
+
+  if (candidates.length) {
+    candidates.sort((a, b) => b.score - a.score);
+    return candidates[0].address;
+  }
+
+  // Last resort: any non-internal IPv4.
   for (const name of Object.keys(interfaces)) {
     for (const iface of interfaces[name] || []) {
       if (iface.family === "IPv4" && !iface.internal) return iface.address;
@@ -393,8 +429,8 @@ function createServer({ db } = {}) {
         break;
       }
       case "THEME_SET": {
-        const id = payload && (payload.themeId || payload.id);
-        if (id && state.setActiveTheme(id)) broadcastTheme();
+        const id = payload && (typeof payload.themeId === "string" ? payload.themeId : payload.id);
+        if (typeof id === "string" && state.setActiveTheme(id)) broadcastTheme();
         break;
       }
       case "OBS_RAW_COMMAND": {

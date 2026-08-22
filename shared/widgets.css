@@ -807,6 +807,116 @@
   animation: widget-alert-lock-pulse 1.2s infinite linear;
 }
 
+/* ---------- Nuclear: cold-war CRT terminal ----------
+   Neutral dark-metal surfaces with gray phosphor text; green (#39FF14) is
+   only an accent (frames, status, progress). The CRT effect is a neutral
+   grain/scanline overlay, never a green filter. */
+[data-decoration="nuclear"] .widget-alert,
+[data-decoration="nuclear"] .widget-goal,
+[data-decoration="nuclear"] .widget-recent,
+[data-decoration="nuclear"] .widget-custom.has-card,
+[data-decoration="nuclear"] .widget-stat,
+[data-decoration="nuclear"] .widget-social,
+[data-decoration="nuclear"] .widget-death,
+[data-decoration="nuclear"] .nuclear-chat-surface,
+[data-decoration="nuclear"] .nuclear-goal-surface,
+[data-decoration="nuclear"] .nuclear-holo-alert-surface {
+  position: relative;
+  background-image: repeating-linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.028) 0px,
+    rgba(255, 255, 255, 0.028) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  border-color: rgba(167, 173, 168, 0.2);
+}
+
+/* Terminal corner brackets (top-left + bottom-right) — green accent frame. */
+[data-decoration="nuclear"] .widget-alert::before,
+[data-decoration="nuclear"] .widget-goal::before,
+[data-decoration="nuclear"] .widget-recent::before,
+[data-decoration="nuclear"] .widget-custom.has-card::before,
+[data-decoration="nuclear"] .widget-stat::before,
+[data-decoration="nuclear"] .widget-social::before,
+[data-decoration="nuclear"] .widget-death::before,
+[data-decoration="nuclear"] .nuclear-chat-surface::before,
+[data-decoration="nuclear"] .nuclear-goal-surface::before,
+[data-decoration="nuclear"] .nuclear-holo-alert-surface::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  border-top: 2px solid var(--md-primary);
+  border-left: 2px solid var(--md-primary);
+  opacity: 0.5;
+  animation: nuclear-phosphor-flicker 6s steps(1) infinite;
+}
+[data-decoration="nuclear"] .widget-alert::after,
+[data-decoration="nuclear"] .widget-goal::after,
+[data-decoration="nuclear"] .widget-recent::after,
+[data-decoration="nuclear"] .widget-custom.has-card::after,
+[data-decoration="nuclear"] .widget-stat::after,
+[data-decoration="nuclear"] .widget-social::after,
+[data-decoration="nuclear"] .widget-death::after,
+[data-decoration="nuclear"] .nuclear-chat-surface::after,
+[data-decoration="nuclear"] .nuclear-goal-surface::after,
+[data-decoration="nuclear"] .nuclear-holo-alert-surface::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  border-bottom: 2px solid var(--md-primary);
+  border-right: 2px solid var(--md-primary);
+  opacity: 0.5;
+  animation: nuclear-phosphor-flicker 6s steps(1) infinite;
+}
+
+@keyframes nuclear-phosphor-flicker {
+  0%, 100% { opacity: 0.45; }
+  8% { opacity: 0.32; }
+  10% { opacity: 0.45; }
+  52% { opacity: 0.38; }
+  54% { opacity: 0.45; }
+}
+
+/* Soft green glow + faint horizontal ghosting on accent labels. */
+[data-decoration="nuclear"] .widget-alert__kicker {
+  text-shadow:
+    1px 0 0 rgba(57, 255, 20, 0.14),
+    0 0 5px rgba(57, 255, 20, 0.35);
+}
+[data-decoration="nuclear"] .widget-chat__msg {
+  background: rgba(13, 16, 14, 0.72);
+  border-left: 2px solid rgba(167, 173, 168, 0.22);
+}
+[data-decoration="nuclear"] .widget-participants__chip {
+  border-radius: 0;
+  border: 1px solid rgba(167, 173, 168, 0.2);
+}
+
+/* Nuclear: flat progress bar — green phosphor fill on a neutral track. */
+[data-decoration="nuclear"] .md-linear-progress {
+  height: 10px;
+  border-radius: 0;
+  background: rgba(13, 16, 14, 0.94);
+  border: 1px solid rgba(167, 173, 168, 0.2);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
+  overflow: hidden;
+}
+[data-decoration="nuclear"] .md-linear-progress__bar {
+  border-radius: 0;
+  background: #39ff14;
+  box-shadow: 0 0 8px rgba(57, 255, 20, 0.45);
+  transition: width 160ms steps(2, end);
+}
+
 /* ---------- Grey's Market: welded scrap / kitbash ----------
    The "scrapyard on orbit" brand: mismatched panels salvaged from dead
    ships, visible weld seams, rust + olive patina, and a glitchy scavenged

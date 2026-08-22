@@ -2,6 +2,7 @@
   "nav": {
     "editor": "Editor",
     "scenes": "Scenes",
+    "wheel": "Wheel",
     "settings": "Settings",
     "history": "History"
   },
@@ -314,7 +315,15 @@
     "grimhex-holo-alert": "Star Citizen Hologram",
     "grimhex-holo-alertDesc": "Holographic terminal with a rotating 3D badge (Star Citizen theme only)",
     "musain": "Café Musain Sign",
-    "musainDesc": "Animated neon Café Musain sign (Star Citizen theme only)"
+    "musainDesc": "Animated neon Café Musain sign (Star Citizen theme only)",
+    "nuclear": "Radiation Sign",
+    "nuclearDesc": "Animated 3D radiation trefoil (Nuclear theme only)",
+    "nuclear-chat": "Nuclear Chat",
+    "nuclear-chatDesc": "Stream chat in a cold-war CRT terminal",
+    "nuclear-goal": "Nuclear Goal",
+    "nuclear-goalDesc": "Donation goal from 5 phosphor sectors (Nuclear theme only)",
+    "nuclear-holo-alert": "Nuclear Hologram",
+    "nuclear-holo-alertDesc": "Radioactive terminal with a rotating trefoil badge (Nuclear theme only)"
   },
   "mic": {
     "mode": "Visualization mode",
@@ -601,11 +610,18 @@
       "p2": "Select a widget to edit its properties on the right. Drag to move it, use the corner handle to resize.",
       "p3": "The Layers panel controls z-order; the Grid toggle helps with alignment. Copy this URL into an OBS Browser Source:"
     },
+    "presets": {
+      "title": "Layout presets",
+      "p1": "The Presets block in the toolbar under the canvas saves the current widget layout under a name for quick layout switching.",
+      "p2": "A preset also saves the active 2D/3D themes, so loading one brings back its 3D widgets automatically.",
+      "p3": "Save overwrites the selected preset or creates a new one from the entered name; Delete removes a preset. Presets live in local-db.json and don't touch other settings."
+    },
     "themes": {
       "title": "Themes",
-      "p1": "Pick the overlay theme in Settings → Appearance. The System category: Nebula (Material 3), Orbital (tech HUD) and Pixel Perfect (a pixel look inspired by ShestakUI).",
-      "p2": "The Star Citizen category includes the Star Citizen (Grim HEX) terminal HUD theme.",
-      "p3": "Pixel Perfect uses the Pixelify Sans pixel font with Cyrillic support; widget text is snapped to the pixel grid (12/16/24/32px)."
+      "p1": "In Settings → Appearance themes are split into 2D and 3D groups. 2D themes set the base overlay palette: Material You (Material 3, default), Orbital (a Star Citizen HUD) and Pixel Perfect (a pixel look inspired by ShestakUI).",
+      "p2": "3D themes are enabled separately and add neon 3D widgets: Star Citizen (Grim HEX) and Nuclear (a cold-war CRT terminal). The 3D group has an Off option that hides the 3D widgets entirely.",
+      "p3": "An active 3D theme overrides the 2D theme: the overlay, scenes and Wheel switch to its HUD and the 3D widgets become visible. Choosing Off returns to the saved 2D theme.",
+      "p4": "Create custom theme opens the 2D theme editor (4 seed colors, panel shape and a font pair). Pixel Perfect snaps widget text to the pixel grid (12/16/24/32px)."
     },
     "scenes": {
       "title": "Scenes",

@@ -293,6 +293,109 @@ export function initCanvasEditor({
           </div>
         </div>`;
       }
+      case "nuclear": {
+        const green = "#39ff14";
+        const cx = 12;
+        const cy = 12;
+        const rOut = 10;
+        const rIn = 4.6;
+        const rDot = 2.6;
+        const pt = (r, ang) =>
+          (cx + r * Math.cos(ang)).toFixed(2) + " " + (cy + r * Math.sin(ang)).toFixed(2);
+        const blades = [0, 1, 2]
+          .map((i) => {
+            const a = -Math.PI / 2 + i * ((Math.PI * 2) / 3);
+            const a0 = a - Math.PI / 6;
+            const a1 = a + Math.PI / 6;
+            return (
+              "M" + pt(rIn, a0) +
+              "L" + pt(rOut, a0) +
+              "A" + rOut + " " + rOut + " 0 0 1 " + pt(rOut, a1) +
+              "L" + pt(rIn, a1) +
+              "A" + rIn + " " + rIn + " 0 0 0 " + pt(rIn, a0) +
+              "Z"
+            );
+          })
+          .join("");
+        return `<div class="widget-nuclear-preview" style="position:relative;height:100%;display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" style="width:72%;height:72%;">
+            <circle cx="12" cy="12" r="10" fill="none" stroke="${green}" stroke-width="1.1"/>
+            <path d="${blades}" fill="${green}"/>
+            <circle cx="12" cy="12" r="${rDot}" fill="${green}"/>
+          </svg>
+        </div>`;
+      }
+      case "nuclear-chat": {
+        const rows = [
+          { user: "nova_viewer", message: t("preview.chat1") },
+          { user: "star_gazer", message: t("preview.chat2") },
+          { user: "orbit_fan", message: t("preview.chat3") },
+        ]
+          .map(
+            (m) =>
+              `<div class="nuclear-chat__row" style="display:flex;gap:7px;font-size:13px;line-height:1.55;color:#a7ada8;">
+                <span style="color:#59615b">[12:00]</span>
+                <span style="color:#d3d8d4;font-weight:700">${escapeHtml(m.user)}</span>
+                <span style="color:#59615b">:</span>
+                <span style="color:#a7ada8">${escapeHtml(m.message)}</span>
+              </div>`
+          )
+          .join("");
+        return `<div class="nuclear-chat" style="position:relative;height:100%;"><div class="chat-messages-container" style="position:absolute;overflow:hidden;left:0;right:0;top:0;bottom:0;display:flex;flex-direction:column;justify-content:flex-end;padding:22px 26px;box-sizing:border-box;">${rows}</div></div>`;
+      }
+      case "nuclear-goal": {
+        const pct = state.goal && state.goal.target ? Math.min(100, Math.round((state.goal.current / state.goal.target) * 100)) : 0;
+        const green = "#39ff14";
+        const track = "#242a26";
+        const sectors = [0, 1, 2, 3, 4]
+          .map((i) => {
+            const fill = Math.max(0, Math.min(1, (pct - i * 20) / 20));
+            const x = 6 + i * 38;
+            return `<rect x="${x}" y="12" width="36" height="36" rx="3" fill="${track}"/>` +
+              (fill > 0.01 ? `<rect x="${x}" y="12" width="${Math.max(3, Math.round(36 * fill))}" height="36" rx="3" fill="${green}"/>` : "");
+          })
+          .join("");
+        return `<div class="nuclear-goal-preview" style="position:relative;height:100%;display:flex;flex-direction:column;padding:4px;">
+          <div style="display:flex;justify-content:space-between;gap:10px;color:#a7ada8;font-size:11px;"><span style="font-family:'IBM Plex Mono','Consolas',monospace;">${escapeHtml(state.goal.title || t("preview.goalTitle"))}</span><span style="color:#59615b;font-family:'IBM Plex Mono','Consolas',monospace;">${formatMoney(state.goal.current)} / ${formatMoney(state.goal.target)}</span></div>
+          <svg viewBox="0 0 200 60" preserveAspectRatio="xMidYMid meet" style="flex:1;width:100%;min-height:0;">${sectors}</svg>
+        </div>`;
+      }
+      case "nuclear-holo-alert": {
+        const green = "#39ff14";
+        const cx = 12;
+        const cy = 12;
+        const rOut = 10;
+        const rIn = 4.6;
+        const pt = (r, ang) =>
+          (cx + r * Math.cos(ang)).toFixed(2) + " " + (cy + r * Math.sin(ang)).toFixed(2);
+        const blades = [0, 1, 2]
+          .map((i) => {
+            const a = -Math.PI / 2 + i * ((Math.PI * 2) / 3);
+            const a0 = a - Math.PI / 6;
+            const a1 = a + Math.PI / 6;
+            return (
+              "M" + pt(rIn, a0) +
+              "L" + pt(rOut, a0) +
+              "A" + rOut + " " + rOut + " 0 0 1 " + pt(rOut, a1) +
+              "L" + pt(rIn, a1) +
+              "A" + rIn + " " + rIn + " 0 0 0 " + pt(rIn, a0) +
+              "Z"
+            );
+          })
+          .join("");
+        return `<div class="nuclear-holo-preview" style="position:relative;height:100%;display:flex;align-items:center;gap:8px;padding:6px 8px;box-sizing:border-box;">
+          <svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" style="flex-shrink:0;width:40px;height:40px;">
+            <circle cx="12" cy="12" r="10" fill="none" stroke="${green}" stroke-width="1.2"/>
+            <path d="${blades}" fill="${green}"/>
+            <circle cx="12" cy="12" r="2.4" fill="#0d100e" stroke="${green}" stroke-width="0.8"/>
+          </svg>
+          <div style="min-width:0;display:flex;flex-direction:column;gap:2px;">
+            <span style="font-family:'IBM Plex Mono','Consolas',monospace;font-size:9px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#59615b;">NUC // TERMINAL</span>
+            <span style="font-family:'IBM Plex Mono','Consolas',monospace;font-size:13px;font-weight:700;color:#a7ada8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">nova_viewer</span>
+            <span style="font-family:'IBM Plex Mono','Consolas',monospace;font-size:10px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:${green};">${escapeHtml(t("properties.testFollow"))}</span>
+          </div>
+        </div>`;
+      }
       default:
         return "";
     }

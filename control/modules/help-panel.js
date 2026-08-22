@@ -20,7 +20,7 @@
 
   Single responsibility: render the localized user guide into a slide-out
   panel, provide a section nav with a light scroll-spy, and toggle the panel
-  from the floating action button. Content lives entirely in the locale
+  from the top bar help button. Content lives entirely in the locale
   dictionaries (see `help.*`), so it follows the selected language.
 */
 
@@ -59,12 +59,22 @@ const SECTIONS = [
     ],
   },
   {
+    id: "presets",
+    title: "help.presets.title",
+    blocks: [
+      { type: "p", key: "help.presets.p1" },
+      { type: "p", key: "help.presets.p2" },
+      { type: "p", key: "help.presets.p3" },
+    ],
+  },
+  {
     id: "themes",
     title: "help.themes.title",
     blocks: [
       { type: "p", key: "help.themes.p1" },
       { type: "p", key: "help.themes.p2" },
       { type: "p", key: "help.themes.p3" },
+      { type: "p", key: "help.themes.p4" },
     ],
   },
   {
@@ -177,8 +187,7 @@ export function initHelpPanel({ t, ICONS }) {
   const panel = el("helpPanel");
   const body = el("helpBody");
   const nav = el("helpNav");
-  const fab = el("helpFabBtn");
-  const fabIcon = el("helpFabIcon");
+  const toggleBtn = el("toggleHelpBtn");
 
   function blockHtml(block) {
     if (block.type === "code") {
@@ -217,9 +226,9 @@ export function initHelpPanel({ t, ICONS }) {
   }
 
   function setOpen(open) {
-    if (!panel || !fab) return;
+    if (!panel || !toggleBtn) return;
     panel.hidden = !open;
-    fab.classList.toggle("is-active", open);
+    toggleBtn.classList.toggle("is-active", open);
   }
 
   function toggle() {
@@ -227,9 +236,7 @@ export function initHelpPanel({ t, ICONS }) {
   }
 
   function refreshLabel() {
-    if (fabIcon) fabIcon.innerHTML = ICONS.help;
-    const label = fab && fab.querySelector(".help-fab__label");
-    if (label) label.textContent = t("help.title");
+    if (toggleBtn) toggleBtn.innerHTML = `${ICONS.help} ${t("help.title")}`;
   }
 
   function refresh() {
@@ -256,7 +263,7 @@ export function initHelpPanel({ t, ICONS }) {
   refreshLabel();
   render();
 
-  on("helpFabBtn", "click", toggle);
+  on("toggleHelpBtn", "click", toggle);
   on("helpCloseBtn", "click", () => setOpen(false));
 
   return { toggle, setOpen, refreshLabel, refresh };

@@ -79,11 +79,16 @@ export function initDebugPanel({ t, ICONS, send, EVENT_TYPES }) {
     });
   }
 
+  function refresh() {
+    refreshLabel();
+    render();
+  }
+
   refreshLabel();
   render();
 
   on("toggleDebugBtn", "click", toggle);
   on("debugCloseBtn", "click", () => setOpen(false));
 
-  return { setOpen, toggle, refreshLabel };
+  return { setOpen, toggle, refreshLabel, refresh };
 }

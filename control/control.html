@@ -23,7 +23,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&family=Pixelify+Sans:wght@400;500;600;700&family=VT323&display=block"
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&family=Pixelify+Sans:wght@400;500;600;700&family=VT323&family=IBM+Plex+Mono:wght@400;500;600;700&display=block"
     rel="stylesheet"
   />
   <link rel="stylesheet" href="../shared/theme.css" />
@@ -40,6 +40,7 @@
       <nav class="topbar__tabs" id="tabs">
         <button class="topbar__tab is-active" data-view="editor" data-i18n="nav.editor">Редактор</button>
         <button class="topbar__tab" data-view="scenes" data-i18n="nav.scenes">Сцены</button>
+        <button class="topbar__tab" data-view="wheel" data-i18n="nav.wheel">Колесо</button>
         <button class="topbar__tab" data-view="settings" data-i18n="nav.settings">Настройки</button>
       </nav>
       <div class="topbar__actions">
@@ -52,6 +53,7 @@
         <button class="md-button md-button--tonal topbar__debug-btn" id="toggleDebugBtn" data-i18n-title="debug.title"></button>
         <button class="md-button md-button--tonal topbar__terminal-btn" id="toggleTerminalBtn" data-i18n-title="editor.terminal"></button>
         <button class="md-button md-button--tonal topbar__history-btn" id="toggleHistoryBtn" data-i18n-title="settings.history"></button>
+        <button class="md-button md-button--tonal topbar__help-btn" id="toggleHelpBtn" data-i18n-title="help.title"></button>
       </div>
     </header>
 
@@ -419,11 +421,6 @@
       </button>
       <div class="status-fab-stack__list" id="statusFabList"></div>
     </div>
-
-    <button class="help-fab" id="helpFabBtn" type="button" data-i18n-title="help.title" title="Справка">
-      <span class="help-fab__icon" id="helpFabIcon"></span>
-      <span class="help-fab__label" data-i18n="help.title">Справка</span>
-    </button>
   </div>
 
   <script src="../shared/events.js"></script>

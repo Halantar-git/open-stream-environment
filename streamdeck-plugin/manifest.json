@@ -1,7 +1,7 @@
 {
   "Name": "Open Stream Environment",
   "Category": "Open Stream Environment",
-  "Author": "Halanar",
+  "Author": "Halantar",
   "Description": "Переключение сцен OSE: старт, BRB, Колесо, Разговор и окончание стрима.",
   "Icon": "assets/plugin",
   "Version": "1.0.0",

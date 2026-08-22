@@ -290,6 +290,9 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .topbar__history-btn { margin-left: 10px; font-size: 12px; padding: 7px 14px; }
 .topbar__history-btn svg { width: 14px; height: 14px; }
 .topbar__history-btn.is-active { background: var(--md-primary-container); color: var(--md-on-primary-container); }
+.topbar__help-btn { margin-left: 10px; font-size: 12px; padding: 7px 14px; }
+.topbar__help-btn svg { width: 14px; height: 14px; }
+.topbar__help-btn.is-active { background: var(--md-primary-container); color: var(--md-on-primary-container); }
 
 .topbar__boosty-btn {
   margin-left: 10px;
@@ -940,15 +943,14 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .debug-panel__btn:hover { background: #30363d; border-color: #58a6ff; }
 .debug-panel__btn:active { transform: translateY(1px); }
 
-/* ---------- Status FAB stack ---------- */
+/* ---------- Status FABs (horizontal row under the top bar) ---------- */
 .status-fab-stack {
   position: fixed;
-  top: 68px;
-  left: 220px;
+  top: 64px;
+  left: 232px;
   z-index: 46;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
   pointer-events: none;
 }
@@ -969,7 +971,7 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   box-shadow: var(--elev-2);
   transition: transform 150ms var(--easing-standard), box-shadow 150ms, border-color 150ms;
 }
-.status-fab:hover { transform: translateX(2px); box-shadow: var(--elev-3); border-color: var(--md-primary); }
+.status-fab:hover { transform: translateY(-1px); box-shadow: var(--elev-3); border-color: var(--md-primary); }
 .status-fab__dot {
   width: 9px;
   height: 9px;
@@ -984,10 +986,7 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .status-fab.is-error .status-fab__dot { background: #f85149; box-shadow: 0 0 0 3px rgba(248, 81, 73, 0.22); }
 .status-fab.is-pending .status-fab__dot { background: #d29922; box-shadow: 0 0 0 3px rgba(210, 153, 34, 0.22); }
 .status-fab-stack__list {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
+  display: contents;
 }
 .status-fab[hidden] { display: none; }
 .status-fab--remote {
@@ -1005,32 +1004,6 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   background: #4caf50;
   box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.22);
 }
-
-/* ---------- Help FAB ---------- */
-.help-fab {
-  position: fixed;
-  left: 20px;
-  bottom: 64px;
-  z-index: 45;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 18px;
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--shape-full);
-  background: var(--md-primary-container);
-  color: var(--md-on-primary-container);
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: var(--elev-3);
-  transition: transform 150ms var(--easing-standard), box-shadow 150ms;
-}
-.help-fab:hover { transform: translateY(-2px); box-shadow: var(--elev-4); }
-.help-fab.is-active { background: var(--md-primary); color: var(--md-on-primary); }
-.help-fab__icon { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; }
-.help-fab__icon svg { width: 18px; height: 18px; }
 
 /* ---------- Help panel ---------- */
 .help-panel {

@@ -248,6 +248,87 @@
         "--shape-full": "999px",
       },
     },
+
+    nuclear: {
+      id: "nuclear",
+      name: "Nuclear",
+      builtin: true,
+      category: "nuclear",
+      dimension: "3d",
+      borderRadius: "0px",
+      tokens: {
+        // CRT green (#39FF14) — the accent, not a full-screen tint.
+        "--md-primary": "#39ff14",
+        "--md-on-primary": "#062400",
+        "--md-primary-container": "#167a12",
+        "--md-on-primary-container": "#c9ffc0",
+
+        // Green accent for "connected" / positive status (same green family).
+        "--md-secondary": "#39ff14",
+        "--md-on-secondary": "#062400",
+        "--md-secondary-container": "#167a12",
+        "--md-on-secondary-container": "#c9ffc0",
+
+        // Amber (#FFB000) — pending / warning accent.
+        "--md-tertiary": "#ffb000",
+        "--md-on-tertiary": "#2a1a00",
+        "--md-tertiary-container": "#3d2a00",
+        "--md-on-tertiary-container": "#ffe2a6",
+
+        // Critical (red, #FF3030) — errors only.
+        "--md-error": "#ff3030",
+        "--md-on-error": "#2e0000",
+        "--md-error-container": "#4d0000",
+        "--md-on-error-container": "#ffd1d1",
+
+        // Warning (amber, #FFB000) — explicit warning token.
+        "--md-warning": "#ffb000",
+        "--md-on-warning": "#2a1a00",
+        "--md-warning-container": "#3d2a00",
+        "--md-on-warning-container": "#ffe2a6",
+
+        // Neutral dark-metal surfaces (no green cast).
+        "--md-surface-dim": "#050605",
+        "--md-surface": "#0d100e",
+        "--md-surface-bright": "#171a18",
+        "--md-surface-container-lowest": "#020302",
+        "--md-surface-container-low": "#080a09",
+        "--md-surface-container": "#0d100e",
+        "--md-surface-container-high": "#121514",
+        "--md-surface-container-highest": "#171a18",
+
+        // Gray text — the CRT phosphor reads as gray, not green.
+        "--md-on-surface": "#a7ada8",
+        "--md-on-surface-variant": "#59615b",
+        "--md-outline": "#4a514c",
+        "--md-outline-variant": "#242a26",
+
+        // Terminal monospace: IBM Plex Mono as the primary face (cold-war
+        // computing), JetBrains Mono as the Cyrillic-capable fallback.
+        "--font-display": '"IBM Plex Mono", "JetBrains Mono", "Consolas", monospace',
+        "--font-body": '"IBM Plex Mono", "JetBrains Mono", "Consolas", monospace',
+        "--font-mono": '"IBM Plex Mono", "JetBrains Mono", "Consolas", monospace',
+
+        // CRT console: flat neutral panels, a faint gray frame and a neutral
+        // drop shadow — the glow lives only on bright accent elements.
+        "--panel-radius": "0px",
+        "--panel-clip": "none",
+        "--panel-decoration": "nuclear",
+        "--panel-glow": "0 8px 24px rgba(0, 0, 0, 0.5)",
+        "--panel-bg": "rgba(13, 16, 14, 0.92)",
+        "--panel-blur": "0px",
+        "--panel-border": "1px solid rgba(167, 173, 168, 0.18)",
+        "--alert-enter-easing": "steps(1, end)",
+        "--alert-enter-duration": "120ms",
+
+        "--shape-xs": "0px",
+        "--shape-sm": "0px",
+        "--shape-md": "0px",
+        "--shape-lg": "0px",
+        "--shape-xl": "0px",
+        "--shape-full": "999px",
+      },
+    },
   };
 
   const api = { BUILTIN_THEMES };

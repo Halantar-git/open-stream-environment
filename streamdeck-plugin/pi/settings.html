@@ -71,7 +71,7 @@
 
       try {
         const info = JSON.parse(inActionInfo || "{}");
-        context = info.action || null;
+        context = info.context || null;
       } catch {
         context = null;
       }
