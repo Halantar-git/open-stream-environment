@@ -83,14 +83,25 @@ export function initPropertiesPanel({
     const host = document.getElementById("pCustomFields");
     if (mode === "image") {
       host.innerHTML = `
-        <div class="md-field"><label>${t("custom.imageUrl")}</label><input type="text" id="pImageUrl" value="${escapeAttr(config.imageUrl || "")}" placeholder="https://..."></div>
+        <div class="md-field"><label>${t("custom.imageUrl")}</label>
+          <div class="sb-file"><input type="text" id="pImageUrl" value="${escapeAttr(config.imageUrl || "")}" placeholder="https://..."><button class="md-button md-button--text" type="button" id="pImageBrowse" title="${t("custom.imageFromDisk")}">📁</button></div>
+        </div>
         <div class="md-field"><label>${t("custom.imageFit")}</label>
           <select id="pImageFit">
             <option value="contain" ${config.imageFit !== "cover" ? "selected" : ""}>${t("custom.fitContain")}</option>
             <option value="cover" ${config.imageFit === "cover" ? "selected" : ""}>${t("custom.fitCover")}</option>
           </select>
         </div>`;
-      host.querySelector("#pImageUrl").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { imageUrl: e.target.value.trim() } } }));
+      const imageUrlInput = host.querySelector("#pImageUrl");
+      imageUrlInput.addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { imageUrl: e.target.value.trim() } } }));
+      host.querySelector("#pImageBrowse").addEventListener("click", async () => {
+        if (!window.desktop || !window.desktop.pickSoundFile) return;
+        const res = await window.desktop.pickSoundFile("image");
+        if (res && res.ok && res.relativePath) {
+          imageUrlInput.value = res.relativePath;
+          send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { imageUrl: res.relativePath } } });
+        }
+      });
       host.querySelector("#pImageFit").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { imageFit: e.target.value } } }));
     } else if (mode === "html") {
       host.innerHTML = `

@@ -464,6 +464,7 @@
   },
   "custom": {
     "imageUrl": "URL изображения",
+    "imageFromDisk": "Выбрать картинку с диска",
     "imageFit": "Вписывание",
     "fitContain": "Целиком (contain)",
     "fitCover": "Заполнить (cover)",

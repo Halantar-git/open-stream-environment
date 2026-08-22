@@ -40,6 +40,11 @@ const { EVENT_TYPES } = window.SharedEvents;
   const port = params.get("port") || "8710";
   const wsUrl = `ws://localhost:${port}/ws`;
   const overlayUrl = `http://localhost:${port}/overlay/overlay.html`;
+  function resolveMediaUrl(p) {
+    if (!p) return "";
+    if (/^(https?:)?\/\//i.test(p) || p.startsWith("data:")) return p;
+    return `http://localhost:${port}/${String(p).replace(/^\/+/, "")}`;
+  }
 
   const wsClient = initWsClient({ url: wsUrl, t, onMessage: handleMessage, onStatusClick });
   const send = wsClient.send;
@@ -863,6 +868,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     escapeAttr,
     formatMoney,
     currencySymbol,
+    resolveMediaUrl,
     onSelectionChange: () => propertiesPanel.render(),
   });
 

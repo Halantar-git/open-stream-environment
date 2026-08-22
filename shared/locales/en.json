@@ -464,6 +464,7 @@
   },
   "custom": {
     "imageUrl": "Image URL",
+    "imageFromDisk": "Choose image from disk",
     "imageFit": "Fit",
     "fitContain": "Contain",
     "fitCover": "Cover",

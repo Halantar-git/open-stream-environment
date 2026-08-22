@@ -43,6 +43,7 @@ export function initCanvasEditor({
   escapeAttr,
   formatMoney,
   currencySymbol,
+  resolveMediaUrl,
   onSelectionChange,
 }) {
   const canvasWrapEl = el("canvasWrap");
@@ -157,8 +158,9 @@ export function initCanvasEditor({
         const mode = config.mode || "text";
         const withCard = mode !== "image" && config.showBackground !== false;
         if (mode === "image") {
-          return config.imageUrl
-            ? `<div class="widget-custom"><img class="widget-custom__image" src="${escapeAttr(config.imageUrl)}" style="object-fit:${escapeAttr(config.imageFit || "contain")}" alt=""></div>`
+          const src = resolveMediaUrl ? resolveMediaUrl(config.imageUrl) : config.imageUrl;
+          return src
+            ? `<div class="widget-custom"><img class="widget-custom__image" src="${escapeAttr(src)}" style="object-fit:${escapeAttr(config.imageFit || "contain")}" alt=""></div>`
             : `<div class="widget-custom"></div>`;
         }
         if (mode === "html") {

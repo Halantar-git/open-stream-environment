@@ -56,8 +56,11 @@
 
       if (mode === "image") {
         this._codeKey = null;
-        this.host.innerHTML = cfg.imageUrl
-          ? `<img class="widget-custom__image" src="${escapeAttr(cfg.imageUrl)}" style="object-fit:${escapeAttr(cfg.imageFit || "contain")}" alt="">`
+        const src = this.context.resolveMediaUrl
+          ? this.context.resolveMediaUrl(cfg.imageUrl)
+          : cfg.imageUrl;
+        this.host.innerHTML = src
+          ? `<img class="widget-custom__image" src="${escapeAttr(src)}" style="object-fit:${escapeAttr(cfg.imageFit || "contain")}" alt="">`
           : "";
       } else if (mode === "html") {
         const key = `${cfg.html || ""}\u0000${cfg.css || ""}\u0000${cfg.js || ""}`;

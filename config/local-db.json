@@ -129,6 +129,29 @@
         "config": {
           "perspective": 0
         }
+      },
+      {
+        "id": "e64f058e-ccf6-4dd2-8aac-495b6c1c3993",
+        "type": "custom",
+        "x": 18,
+        "y": 38,
+        "w": 34,
+        "h": 50,
+        "z": 14,
+        "visible": true,
+        "config": {
+          "mode": "image",
+          "showBackground": true,
+          "textTitle": "",
+          "text": "Новый текст",
+          "textAlign": "center",
+          "textSize": "medium",
+          "imageUrl": "media/shop_items_catalog_image13203.jpg",
+          "imageFit": "contain",
+          "html": "",
+          "css": "",
+          "js": ""
+        }
       }
     ]
   },
@@ -1506,6 +1529,12 @@
       "channel": "halantar",
       "startedAt": 1787417815868,
       "endedAt": 1787417856212
+    },
+    {
+      "id": "2dff0a6e-4fac-41b6-867b-508ad82d031b",
+      "channel": "halantar",
+      "startedAt": 1787420366051,
+      "endedAt": 1787420398709
     }
   ],
   "chatMessages": [
