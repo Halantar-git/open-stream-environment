@@ -88,6 +88,13 @@ describe("buildCameraSwitchPlan (план включения/выключени�
     expect(plan.length).toBeGreaterThan(0);
     expect(plan.every((op) => op.enabled === false)).toBe(true);
   });
+
+  test("исключает источник веб-камеры из плана переключения", () => {
+    const plan = buildCameraSwitchPlan(ANGLES, "cam_side", ["Cam_Main"]);
+    expect(plan).toEqual([
+      { sceneName: "Main", cameraSource: "Cam_Side", enabled: true },
+    ]);
+  });
 });
 
 describe("setCameraAngle (валидация входных данных)", () => {

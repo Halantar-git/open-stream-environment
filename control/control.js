@@ -98,6 +98,8 @@ const { EVENT_TYPES } = window.SharedEvents;
   const obsHostInput = document.getElementById("obsHost");
   const obsPortInput = document.getElementById("obsPort");
   const obsPasswordInput = document.getElementById("obsPassword");
+  const obsWebcamSourceInput = document.getElementById("obsWebcamSource");
+  const obsMicSourceInput = document.getElementById("obsMicSource");
   const obsSceneMainInput = document.getElementById("obsSceneMain");
   const obsSceneStartInput = document.getElementById("obsSceneStart");
   const obsSceneBrbInput = document.getElementById("obsSceneBrb");
@@ -131,6 +133,14 @@ const { EVENT_TYPES } = window.SharedEvents;
   const eventsSearchInput = document.getElementById("eventsSearch");
   const clearEventsBtn = document.getElementById("clearEventsBtn");
   const eventsMetaEl = document.getElementById("eventsMeta");
+  const wheelPanelEl = document.getElementById("wheelPanel");
+  const wheelPanelBody = document.getElementById("wheelPanelBody");
+  const participantsPanelEl = document.getElementById("participantsPanel");
+  const participantsPanelBody = document.getElementById("participantsPanelBody");
+  const participantsSearchInput = document.getElementById("participantsSearch");
+  const clearParticipantsBtn = document.getElementById("clearParticipantsBtn");
+  const toggleWheelBtn = document.getElementById("toggleWheelBtn");
+  const wheelCloseBtn = document.getElementById("wheelCloseBtn");
 
   // ---- helpers ----
   function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
@@ -225,6 +235,8 @@ const { EVENT_TYPES } = window.SharedEvents;
       obsHostInput.value = state.obs.host || "";
       obsPortInput.value = state.obs.port || 4455;
       obsPasswordInput.value = state.obs.password || "";
+      obsWebcamSourceInput.value = state.obs.webcamSource || "";
+      obsMicSourceInput.value = state.obs.micSource || "";
       const sm = state.obs.sceneMap || {};
       obsSceneMainInput.value = sm.main || "";
       obsSceneStartInput.value = sm.start || "";
@@ -272,6 +284,8 @@ const { EVENT_TYPES } = window.SharedEvents;
   obsHostInput.addEventListener("change", () => sendObsConfig({ host: obsHostInput.value.trim() }));
   obsPortInput.addEventListener("change", () => sendObsConfig({ port: Number(obsPortInput.value) || 4455 }));
   obsPasswordInput.addEventListener("change", () => sendObsConfig({ password: obsPasswordInput.value }));
+  obsWebcamSourceInput.addEventListener("change", () => sendObsConfig({ webcamSource: obsWebcamSourceInput.value.trim() }));
+  obsMicSourceInput.addEventListener("change", () => sendObsConfig({ micSource: obsMicSourceInput.value.trim() }));
   obsSceneMainInput.addEventListener("change", () => sendObsConfig({ sceneMap: { main: obsSceneMainInput.value.trim() } }));
   obsSceneStartInput.addEventListener("change", () => sendObsConfig({ sceneMap: { start: obsSceneStartInput.value.trim() } }));
   obsSceneBrbInput.addEventListener("change", () => sendObsConfig({ sceneMap: { brb: obsSceneBrbInput.value.trim() } }));
@@ -658,6 +672,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   let eventsFilter = "all";
   let eventsSearch = "";
   let eventsSearchTimer = null;
+  let giveawaySearch = "";
 
   function formatEventTime(ts) {
     const locale = (window.I18n && window.I18n.getLang() === "ru") ? "ru-RU" : "en-US";
@@ -768,10 +783,97 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   renderStreamEvents(true);
 
+  // ---- wheel settings panels ----
+  function renderWheelPanel() {
+    if (!wheelPanelBody) return;
+    wheelPanelBody.innerHTML = `
+      <div class="md-field"><label>${t("giveaway.command")}</label><input type="text" id="giveawayCommand" placeholder="!go" value="${escapeAttr(state.giveaway.command || "!go")}"></div>
+      <div class="properties__test-grid">
+        <button class="md-button md-button--filled" id="startGiveawayBtn">${t("giveaway.start")}</button>
+        <button class="md-button md-button--outlined" id="stopGiveawayBtn">${t("giveaway.stop")}</button>
+        <button class="md-button md-button--tonal" id="shuffleGiveawayBtn">${t("giveaway.shuffle")}</button>
+        <button class="md-button md-button--tonal" id="generateWheelBtn">${t("giveaway.generateWheel")}</button>
+        <button class="md-button md-button--filled" id="spinWheelBtn">${t("giveaway.spinWheel")}</button>
+      </div>
+      <div class="properties__toggle-row"><label>${t("giveaway.eliminationMode")}</label>${switchHtml("giveawayElimination", !!state.giveaway.eliminationMode)}</div>
+
+      <div class="inspector__title" style="margin-top:10px;">${t("giveaway.participantsWidgetTitle")}</div>
+      <div class="properties__row">
+        <div class="md-field"><label>${t("giveaway.showNames")}</label><input type="number" id="wsMaxNames" min="1" max="200" value="${state.participantsConfig.maxNames ?? 10}"></div>
+        <div class="md-field"><label>${t("giveaway.fontSize")} (px)</label><input type="number" id="wsFontSize" min="10" max="48" value="${state.participantsConfig.fontSize ?? 16}"></div>
+      </div>
+      <div class="md-field"><label>${t("giveaway.textColor")}</label><input type="color" id="wsTextColor" value="${escapeAttr(state.participantsConfig.textColor || "#e8e1f0")}"></div>
+      <div class="md-field"><label>${t("giveaway.backgroundOpacity")}: <span id="wsBgOpacityValue">${state.participantsConfig.backgroundOpacity ?? 82}%</span></label><input type="range" id="wsBgOpacity" min="0" max="100" value="${state.participantsConfig.backgroundOpacity ?? 82}"></div>
+      <div class="properties__row">
+        <div class="md-field"><label>X: <span id="wsXValue">${state.participantsConfig.x ?? 1.25}%</span></label><input type="range" id="wsX" min="0" max="100" step="0.25" value="${state.participantsConfig.x ?? 1.25}"></div>
+        <div class="md-field"><label>Y: <span id="wsYValue">${state.participantsConfig.y ?? 50}%</span></label><input type="range" id="wsY" min="0" max="100" step="0.25" value="${state.participantsConfig.y ?? 50}"></div>
+      </div>
+      <div class="properties__toggle-row"><label>${t("giveaway.marquee")}</label>${switchHtml("wsMarquee", !!state.participantsConfig.marquee)}</div>
+
+      <div class="inspector__title" style="margin-top:10px;">${t("giveaway.wheelSettings")}</div>
+      <div class="md-field"><label>${t("giveaway.musicVolume")}: <span id="wsMusicVolumeValue">${state.wheelConfig.musicVolume ?? 50}%</span></label><input type="range" id="wsMusicVolume" min="0" max="100" value="${state.wheelConfig.musicVolume ?? 50}"></div>
+      <div class="md-field"><label>${t("giveaway.spinSpeed")}: <span id="wsSpeedValue">${state.wheelSpeedConfig.speed ?? 3}</span></label><input type="range" id="wsSpeed" min="1" max="5" value="${state.wheelSpeedConfig.speed ?? 3}"></div>
+    `;
+
+    wireWheelControls();
+
+    wheelPanelBody.querySelector("#wsMaxNames").addEventListener("change", (e) => sendParticipantsConfig({ maxNames: Number(e.target.value) || 10 }));
+    wheelPanelBody.querySelector("#wsFontSize").addEventListener("change", (e) => sendParticipantsConfig({ fontSize: Number(e.target.value) || 16 }));
+    wheelPanelBody.querySelector("#wsTextColor").addEventListener("input", (e) => sendParticipantsConfig({ textColor: e.target.value }));
+    wheelPanelBody.querySelector("#wsBgOpacity").addEventListener("input", (e) => {
+      const v = Number(e.target.value);
+      wheelPanelBody.querySelector("#wsBgOpacityValue").textContent = `${v}%`;
+      sendParticipantsConfig({ backgroundOpacity: v });
+    });
+    wheelPanelBody.querySelector("#wsX").addEventListener("input", (e) => {
+      const v = Number(e.target.value);
+      wheelPanelBody.querySelector("#wsXValue").textContent = `${v}%`;
+      sendParticipantsConfig({ x: v });
+    });
+    wheelPanelBody.querySelector("#wsY").addEventListener("input", (e) => {
+      const v = Number(e.target.value);
+      wheelPanelBody.querySelector("#wsYValue").textContent = `${v}%`;
+      sendParticipantsConfig({ y: v });
+    });
+    wireSwitch(wheelPanelBody.querySelector("#wsMarquee"), (on) => sendParticipantsConfig({ marquee: on }));
+
+    wheelPanelBody.querySelector("#wsMusicVolume").addEventListener("input", (e) => {
+      const v = Number(e.target.value);
+      wheelPanelBody.querySelector("#wsMusicVolumeValue").textContent = `${v}%`;
+      state.wheelConfig = { ...state.wheelConfig, musicVolume: v };
+      send(EVENT_TYPES.CMD_SET_WHEEL_CONFIG, { config: state.wheelConfig });
+    });
+    wheelPanelBody.querySelector("#wsSpeed").addEventListener("input", (e) => {
+      const v = Number(e.target.value);
+      wheelPanelBody.querySelector("#wsSpeedValue").textContent = `${v}`;
+      state.wheelSpeedConfig = { ...state.wheelSpeedConfig, speed: v };
+      send(EVENT_TYPES.CMD_SET_WHEEL_SPEED_CONFIG, { config: state.wheelSpeedConfig });
+    });
+  }
+
+  function renderParticipantsPanel() {
+    if (!participantsPanelBody) return;
+    participantsPanelBody.innerHTML = `
+      <div class="settings__statuses"><span class="md-chip" id="giveawayChip"><span class="md-chip__dot"></span><span id="giveawayCount">${t("giveaway.participants")}: ${state.giveaway.count}</span></span></div>
+      <div class="giveaway-manual">
+        <input type="text" id="giveawayManualName" placeholder="${t("giveaway.participantPlaceholder")}" />
+      </div>
+      <button class="md-button md-button--tonal" id="addParticipantBtn" title="${t("giveaway.addParticipant")}">+ ${t("giveaway.addParticipant")}</button>
+      <div class="giveaway-participants" id="giveawayParticipants"></div>
+    `;
+    wireParticipantsControls();
+  }
+
+  function renderWheelPanels() {
+    renderWheelPanel();
+    renderParticipantsPanel();
+    renderGiveaway();
+  }
+
   // ---- giveaway / fortune wheel ----
   function renderGiveaway() {
     const commandEl = document.getElementById("giveawayCommand");
-    if (!commandEl) return; // wheel scene form not currently rendered
+    if (!commandEl) return; // wheel settings panel not currently rendered
     if (document.activeElement !== commandEl) {
       commandEl.value = state.giveaway.command || "!go";
     }
@@ -782,14 +884,19 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (countEl) countEl.textContent = `${t("giveaway.participants")}: ${state.giveaway.count}`;
     if (chipEl) chipEl.className = "md-chip " + (state.giveaway.active ? "is-pending" : "");
 
-    const items = state.giveaway.participants || [];
+    const rawItems = state.giveaway.participants || [];
+    const items = giveawaySearch
+      ? rawItems.filter((u) => String(u).toLowerCase().includes(giveawaySearch))
+      : rawItems;
     if (listEl) {
-      listEl.innerHTML = items.length
-        ? items.map((u) => `
+      listEl.innerHTML = rawItems.length
+        ? (items.length
+          ? items.map((u) => `
             <div class="giveaway-participant-row">
               <span class="giveaway-participant__name">${escapeHtml(u)}</span>
               <button class="giveaway-participant__remove" data-remove-name="${escapeAttr(u)}" title="${t("giveaway.removeParticipant")}">✕</button>
             </div>`).join("")
+          : '<div class="events-history__empty">' + t("giveaway.noMatches") + '</div>')
         : '<div class="events-history__empty">' + t("giveaway.noParticipants") + '</div>';
     }
 
@@ -798,7 +905,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     }
   }
 
-  function wireGiveawayControls() {
+  function wireWheelControls() {
     document.getElementById("startGiveawayBtn")?.addEventListener("click", () => {
       const commandEl = document.getElementById("giveawayCommand");
       send(EVENT_TYPES.CMD_START_GIVEAWAY, { command: commandEl ? commandEl.value.trim() : "!go" });
@@ -809,7 +916,9 @@ const { EVENT_TYPES } = window.SharedEvents;
     document.getElementById("spinWheelBtn")?.addEventListener("click", () => send(EVENT_TYPES.CMD_SPIN_WHEEL, {}));
     const eliminationEl = document.getElementById("giveawayElimination");
     if (eliminationEl) wireSwitch(eliminationEl, (on) => send(EVENT_TYPES.CMD_SET_GIVEAWAY_ELIMINATION, { enabled: on }));
+  }
 
+  function wireParticipantsControls() {
     document.getElementById("addParticipantBtn")?.addEventListener("click", () => {
       const input = document.getElementById("giveawayManualName");
       if (!input) return;
@@ -1146,7 +1255,7 @@ const { EVENT_TYPES } = window.SharedEvents;
       card.innerHTML = `<span class="library-card__icon">${ICONS[def.icon] || ""}</span><span class="library-card__text"><span class="library-card__label">${t("scene." + def.id + "Label")}</span></span>`;
       card.addEventListener("click", () => {
         selectScene(def.id);
-        setActiveTab(def.id === "wheel" ? "wheel" : "scenes");
+        setActiveTab("scenes");
       });
       scenesNavListEl.appendChild(card);
     });
@@ -1173,75 +1282,10 @@ const { EVENT_TYPES } = window.SharedEvents;
 
     if (state.activeSceneId === "wheel") {
       sceneFormEl.innerHTML = `
-        <div class="md-field"><label>${t("giveaway.command")}</label><input type="text" id="giveawayCommand" placeholder="!go" value="${escapeAttr(state.giveaway.command || "!go")}"></div>
-        <div class="settings__statuses"><span class="md-chip" id="giveawayChip"><span class="md-chip__dot"></span><span id="giveawayCount">${t("giveaway.participants")}: ${state.giveaway.count}</span></span></div>
-        <div class="properties__test-grid">
-          <button class="md-button md-button--filled" id="startGiveawayBtn">${t("giveaway.start")}</button>
-          <button class="md-button md-button--outlined" id="stopGiveawayBtn">${t("giveaway.stop")}</button>
-          <button class="md-button md-button--tonal" id="shuffleGiveawayBtn">${t("giveaway.shuffle")}</button>
-          <button class="md-button md-button--tonal" id="generateWheelBtn">${t("giveaway.generateWheel")}</button>
-          <button class="md-button md-button--filled" id="spinWheelBtn">${t("giveaway.spinWheel")}</button>
-        </div>
-        <div class="properties__toggle-row"><label>${t("giveaway.eliminationMode")}</label>${switchHtml("giveawayElimination", !!state.giveaway.eliminationMode)}</div>
-        <div class="giveaway-manual">
-          <input type="text" id="giveawayManualName" placeholder="${t("giveaway.participantPlaceholder")}" />
-        </div>
-        <button class="md-button md-button--tonal" id="addParticipantBtn" title="${t("giveaway.addParticipant")}">+ ${t("giveaway.addParticipant")}</button>
-        <div class="giveaway-participants" id="giveawayParticipants"></div>
-
-        <div class="inspector__title" style="margin-top:10px;">${t("giveaway.participantsWidgetTitle")}</div>
-        <div class="properties__row">
-          <div class="md-field"><label>${t("giveaway.showNames")}</label><input type="number" id="wsMaxNames" min="1" max="200" value="${state.participantsConfig.maxNames ?? 10}"></div>
-          <div class="md-field"><label>${t("giveaway.fontSize")} (px)</label><input type="number" id="wsFontSize" min="10" max="48" value="${state.participantsConfig.fontSize ?? 16}"></div>
-        </div>
-        <div class="md-field"><label>${t("giveaway.textColor")}</label><input type="color" id="wsTextColor" value="${escapeAttr(state.participantsConfig.textColor || "#e8e1f0")}"></div>
-        <div class="md-field"><label>${t("giveaway.backgroundOpacity")}: <span id="wsBgOpacityValue">${state.participantsConfig.backgroundOpacity ?? 82}%</span></label><input type="range" id="wsBgOpacity" min="0" max="100" value="${state.participantsConfig.backgroundOpacity ?? 82}"></div>
-        <div class="properties__row">
-          <div class="md-field"><label>X: <span id="wsXValue">${state.participantsConfig.x ?? 1.25}%</span></label><input type="range" id="wsX" min="0" max="100" step="0.25" value="${state.participantsConfig.x ?? 1.25}"></div>
-          <div class="md-field"><label>Y: <span id="wsYValue">${state.participantsConfig.y ?? 50}%</span></label><input type="range" id="wsY" min="0" max="100" step="0.25" value="${state.participantsConfig.y ?? 50}"></div>
-        </div>
-        <div class="properties__toggle-row"><label>${t("giveaway.marquee")}</label>${switchHtml("wsMarquee", !!state.participantsConfig.marquee)}</div>
-
-        <div class="inspector__title" style="margin-top:10px;">${t("giveaway.wheelSettings")}</div>
-        <div class="md-field"><label>${t("giveaway.musicVolume")}: <span id="wsMusicVolumeValue">${state.wheelConfig.musicVolume ?? 50}%</span></label><input type="range" id="wsMusicVolume" min="0" max="100" value="${state.wheelConfig.musicVolume ?? 50}"></div>
-        <div class="md-field"><label>${t("giveaway.spinSpeed")}: <span id="wsSpeedValue">${state.wheelSpeedConfig.speed ?? 3}</span></label><input type="range" id="wsSpeed" min="1" max="5" value="${state.wheelSpeedConfig.speed ?? 3}"></div>
+        <div class="wheel-panel__hint">${t("giveaway.wheelPanelHint")}</div>
+        <button class="md-button md-button--tonal" id="openWheelSettingsBtn" style="margin-top:10px;">${t("giveaway.openWheelSettings")}</button>
       `;
-
-      renderGiveaway();
-      wireGiveawayControls();
-
-      sceneFormEl.querySelector("#wsMaxNames").addEventListener("change", (e) => sendParticipantsConfig({ maxNames: Number(e.target.value) || 10 }));
-      sceneFormEl.querySelector("#wsFontSize").addEventListener("change", (e) => sendParticipantsConfig({ fontSize: Number(e.target.value) || 16 }));
-      sceneFormEl.querySelector("#wsTextColor").addEventListener("input", (e) => sendParticipantsConfig({ textColor: e.target.value }));
-      sceneFormEl.querySelector("#wsBgOpacity").addEventListener("input", (e) => {
-        const v = Number(e.target.value);
-        sceneFormEl.querySelector("#wsBgOpacityValue").textContent = `${v}%`;
-        sendParticipantsConfig({ backgroundOpacity: v });
-      });
-      sceneFormEl.querySelector("#wsX").addEventListener("input", (e) => {
-        const v = Number(e.target.value);
-        sceneFormEl.querySelector("#wsXValue").textContent = `${v}%`;
-        sendParticipantsConfig({ x: v });
-      });
-      sceneFormEl.querySelector("#wsY").addEventListener("input", (e) => {
-        const v = Number(e.target.value);
-        sceneFormEl.querySelector("#wsYValue").textContent = `${v}%`;
-        sendParticipantsConfig({ y: v });
-      });
-      wireSwitch(sceneFormEl.querySelector("#wsMarquee"), (on) => sendParticipantsConfig({ marquee: on }));
-
-      sceneFormEl.querySelector("#wsMusicVolume").addEventListener("input", (e) => {
-        const v = Number(e.target.value);
-        sceneFormEl.querySelector("#wsMusicVolumeValue").textContent = `${v}%`;
-        state.wheelConfig = { ...state.wheelConfig, musicVolume: v };
-        send(EVENT_TYPES.CMD_SET_WHEEL_CONFIG, { config: state.wheelConfig });
-      });
-      sceneFormEl.querySelector("#wsSpeed").addEventListener("input", (e) => {
-        const v = Number(e.target.value);
-        sceneFormEl.querySelector("#wsSpeedValue").textContent = `${v}`;
-        state.wheelSpeedConfig = { ...state.wheelSpeedConfig, speed: v };
-        send(EVENT_TYPES.CMD_SET_WHEEL_SPEED_CONFIG, { config: state.wheelSpeedConfig });
-      });
+      sceneFormEl.querySelector("#openWheelSettingsBtn").addEventListener("click", () => setWheelOpen(true));
       return;
     }
 
@@ -1399,10 +1443,71 @@ const { EVENT_TYPES } = window.SharedEvents;
   }
   if (toggleHistoryBtn) {
     toggleHistoryBtn.innerHTML = `${ICONS.widgetRecent} ${t("nav.history")}`;
-    toggleHistoryBtn.addEventListener("click", () => setHistoryOpen(historyPanelEl && historyPanelEl.hidden));
   }
   const historyCloseBtn = document.getElementById("historyCloseBtn");
   if (historyCloseBtn) historyCloseBtn.addEventListener("click", () => setHistoryOpen(false));
+
+  // ---- wheel settings panels ----
+  function setWheelOpen(open) {
+    if (!wheelPanelEl || !participantsPanelEl || !toggleWheelBtn) return;
+    wheelPanelEl.hidden = !open;
+    participantsPanelEl.hidden = !open;
+    toggleWheelBtn.classList.toggle("is-active", open);
+    if (open) renderWheelPanels();
+  }
+  if (toggleWheelBtn) {
+    toggleWheelBtn.innerHTML = `${ICONS.sceneWheel} ${t("nav.wheel")}`;
+  }
+  if (wheelCloseBtn) wheelCloseBtn.addEventListener("click", () => setWheelOpen(false));
+  if (participantsSearchInput) {
+    participantsSearchInput.addEventListener("input", () => {
+      giveawaySearch = participantsSearchInput.value.trim().toLowerCase();
+      renderGiveaway();
+    });
+  }
+  if (clearParticipantsBtn) {
+    clearParticipantsBtn.addEventListener("click", () => {
+      if (confirm(t("giveaway.clearParticipantsConfirm"))) {
+        send(EVENT_TYPES.CMD_CLEAR_GIVEAWAY_PARTICIPANTS, {});
+      }
+    });
+  }
+
+  // ---- panel manager: keep only one panel open at a time ----
+  const panelRegistry = [
+    { id: "terminalPanel", setOpen: loggerPanel.setOpen },
+    { id: "debugPanel", setOpen: debugPanel.setOpen },
+    { id: "helpPanel", setOpen: helpPanel.setOpen },
+    { id: "historyPanel", setOpen: setHistoryOpen },
+    { id: "wheelPanel", setOpen: setWheelOpen },
+  ];
+
+  function panelIsOpen(id) {
+    const el = document.getElementById(id);
+    return !!el && !el.hidden;
+  }
+
+  function togglePanelById(id) {
+    const entry = panelRegistry.find((p) => p.id === id);
+    if (!entry) return;
+    if (panelIsOpen(id)) {
+      entry.setOpen(false);
+    } else {
+      panelRegistry.forEach((p) => p.setOpen(false));
+      entry.setOpen(true);
+    }
+  }
+
+  [
+    ["toggleTerminalBtn", "terminalPanel"],
+    ["toggleDebugBtn", "debugPanel"],
+    ["toggleHelpBtn", "helpPanel"],
+    ["toggleHistoryBtn", "historyPanel"],
+    ["toggleWheelBtn", "wheelPanel"],
+  ].forEach(([btnId, panelId]) => {
+    const btn = document.getElementById(btnId);
+    if (btn) btn.addEventListener("click", () => togglePanelById(panelId));
+  });
 
   // ---- websocket ----
   function handleMessage(msg) {
@@ -1425,7 +1530,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         propertiesPanel.render();
         populateSettings();
         syncIntegrationSwitches();
-        renderGiveaway();
+        renderWheelPanels();
         selectScene(state.activeSceneId);
         syncMicBridge();
         break;
@@ -1486,15 +1591,15 @@ const { EVENT_TYPES } = window.SharedEvents;
         state.participantsConfig = (msg.payload && msg.payload.config) || state.participantsConfig;
         canvasEditor.renderCanvas();
         propertiesPanel.render();
-        if (state.activeSceneId === "wheel") renderSceneForm();
+        renderWheelPanel();
         break;
       case EVENT_TYPES.WHEEL_CONFIG:
         state.wheelConfig = (msg.payload && msg.payload.config) || state.wheelConfig;
-        if (state.activeSceneId === "wheel") renderSceneForm();
+        renderWheelPanel();
         break;
       case EVENT_TYPES.WHEEL_SPEED_CONFIG:
         state.wheelSpeedConfig = (msg.payload && msg.payload.config) || state.wheelSpeedConfig;
-        if (state.activeSceneId === "wheel") renderSceneForm();
+        renderWheelPanel();
         break;
       case EVENT_TYPES.OVERLAY_MIC_CONFIG:
         state.micConfig = (msg.payload && msg.payload.config) || state.micConfig;
@@ -1514,6 +1619,9 @@ const { EVENT_TYPES } = window.SharedEvents;
         break;
       case EVENT_TYPES.TERMINAL_LOG:
         loggerPanel.append(msg.payload);
+        break;
+      case EVENT_TYPES.DEBUG_LOG:
+        debugPanel.appendDebug(msg.payload);
         break;
       case EVENT_TYPES.CLEAR_TERMINAL:
         loggerPanel.clear();
@@ -1551,7 +1659,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     canvasEditor.renderLayers();
     propertiesPanel.render();
     renderSceneForm();
-    renderGiveaway();
+    renderWheelPanels();
     renderThemeGrid();
     renderLayoutPresets();
     wsClient.refreshStatusChips();
@@ -1565,6 +1673,8 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (chatBtn) chatBtn.innerHTML = `${ICONS.widgetChat} ${t("editor.chat")}`;
     const historyBtn = document.getElementById("toggleHistoryBtn");
     if (historyBtn) historyBtn.innerHTML = `${ICONS.widgetRecent} ${t("nav.history")}`;
+    const wheelBtn = document.getElementById("toggleWheelBtn");
+    if (wheelBtn) wheelBtn.innerHTML = `${ICONS.sceneWheel} ${t("nav.wheel")}`;
     loggerPanel.refreshLabel();
     debugPanel.refresh();
     helpPanel.refresh();

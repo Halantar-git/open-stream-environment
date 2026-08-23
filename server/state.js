@@ -147,6 +147,8 @@ class AppState {
       port: 4455,
       password: "",
       ...(this.config.obs || {}),
+      webcamSource: String((this.config.obs && this.config.obs.webcamSource) || ""),
+      micSource: String((this.config.obs && this.config.obs.micSource) || ""),
       sceneMap: { main: "", start: "", brb: "", talk: "", end: "", wheel: "", ...((this.config.obs && this.config.obs.sceneMap) || {}) },
       customCommands: Array.isArray(this.config.obs && this.config.obs.customCommands) ? this.config.obs.customCommands : [],
       cameraAngles: Array.isArray(this.config.obs && this.config.obs.cameraAngles) ? this.config.obs.cameraAngles : [],
@@ -410,6 +412,8 @@ class AppState {
     if (patch.host !== undefined) this.config.obs.host = String(patch.host).trim();
     if (patch.port !== undefined) this.config.obs.port = Number(patch.port) || 4455;
     if (patch.password !== undefined) this.config.obs.password = String(patch.password);
+    if (patch.webcamSource !== undefined) this.config.obs.webcamSource = String(patch.webcamSource).trim();
+    if (patch.micSource !== undefined) this.config.obs.micSource = String(patch.micSource).trim();
     if (patch.sceneMap && typeof patch.sceneMap === "object") {
       this.config.obs.sceneMap = { ...this.config.obs.sceneMap, ...patch.sceneMap };
     }

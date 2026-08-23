@@ -449,6 +449,34 @@ function createServer({ db } = {}) {
         setCameraFilter(payload && payload.filterId);
         break;
       }
+      case "WEBCAM_TOGGLE": {
+        const sourceName = (state.config.obs && state.config.obs.webcamSource) || "";
+        if (!sourceName) {
+          serverLog.warn("webcam toggle skipped (no webcam source configured)");
+          break;
+        }
+        if (obsCtrl) {
+          obsCtrl
+            .toggleWebcam(sourceName)
+            .then((enabled) => serverLog.info("webcam toggled", { sourceName, enabled }))
+            .catch((err) => serverLog.warn("webcam toggle failed", { message: err.message }));
+        }
+        break;
+      }
+      case "MIC_TOGGLE": {
+        const sourceName = (state.config.obs && state.config.obs.micSource) || "";
+        if (!sourceName) {
+          serverLog.warn("mic toggle skipped (no mic source configured)");
+          break;
+        }
+        if (obsCtrl) {
+          obsCtrl
+            .toggleMicMute(sourceName)
+            .then((muted) => serverLog.info("mic toggled", { sourceName, muted }))
+            .catch((err) => serverLog.warn("mic toggle failed", { message: err.message }));
+        }
+        break;
+      }
       default:
         serverLog.warn("unknown remote action", { action });
     }
@@ -651,6 +679,13 @@ function createServer({ db } = {}) {
         broadcastGiveaway(state.removeGiveawayParticipant(msg.payload && msg.payload.username));
         break;
       }
+      case EVENT_TYPES.CMD_CLEAR_GIVEAWAY_PARTICIPANTS: {
+        clearAutoSpin();
+        isSpinning = false;
+        broadcastGiveaway(state.clearGiveawayParticipants());
+        broadcast(EVENT_TYPES.GIVEAWAY_WHEEL, { sectors: [] });
+        break;
+      }
       case EVENT_TYPES.CMD_SET_PARTICIPANTS_CONFIG: {
         const patch = (msg.payload && msg.payload.config) || {};
         const config = db ? db.saveParticipantsConfig(patch) : patch;
@@ -804,6 +839,10 @@ function createServer({ db } = {}) {
 
   bus.on("terminal_log", (entry) => {
     broadcast(EVENT_TYPES.TERMINAL_LOG, entry);
+  });
+
+  bus.on("debug_log", (entry) => {
+    broadcast(EVENT_TYPES.DEBUG_LOG, entry);
   });
 
   bus.on("soundboard_play", (payload) => {

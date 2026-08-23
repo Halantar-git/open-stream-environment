@@ -266,6 +266,7 @@ function startYoutube({ bus, state }) {
       }
 
       const interval = Number(json.pollingIntervalMillis) || FALLBACK_POLL_MS;
+      logger.debug("poll ok", { items: (json.items || []).length, interval });
       scheduleTick(Math.max(MIN_POLL_MS, interval));
     } catch (err) {
       if (stopped) return;

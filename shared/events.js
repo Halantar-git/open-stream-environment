@@ -46,6 +46,7 @@
     OVERLAY_MIC_CONFIG: "overlay_mic_config", // { config }
     LOCALES: "locales", // { lang, locales: { ru, en } }
     TERMINAL_LOG: "terminal_log", // { timestamp, service, level, message, data }
+    DEBUG_LOG: "debug_log", // { timestamp, service, level: "debug", message, data }
     CLEAR_TERMINAL: "clear_terminal", // server -> client: clear the log panel
     REMOTE_ACTION: "remote_action", // { action, payload } — remote quick action (command + broadcast)
     DEATH_COUNT_UPDATE: "death_count_update", // { count }
@@ -81,6 +82,7 @@
     CMD_SET_GIVEAWAY_WINNER: "cmd_set_giveaway_winner", // { username }
     CMD_ADD_GIVEAWAY_PARTICIPANT: "cmd_add_giveaway_participant", // { username }
     CMD_REMOVE_GIVEAWAY_PARTICIPANT: "cmd_remove_giveaway_participant", // { username }
+    CMD_CLEAR_GIVEAWAY_PARTICIPANTS: "cmd_clear_giveaway_participants",
     CMD_SET_PARTICIPANTS_CONFIG: "cmd_set_participants_config", // { config }
     CMD_SET_WHEEL_CONFIG: "cmd_set_wheel_config", // { config }
     CMD_SET_WHEEL_SPEED_CONFIG: "cmd_set_wheel_speed_config", // { config }

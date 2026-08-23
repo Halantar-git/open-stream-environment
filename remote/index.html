@@ -22,16 +22,17 @@
 
   <nav class="remote-tabs" id="remoteTabs">
     <button class="remote-tab is-active" type="button" data-tab="control" data-i18n="remote.tabControl">Управление</button>
+    <button class="remote-tab" type="button" data-tab="wheel" data-i18n="remote.tabWheel">Колесо</button>
     <button class="remote-tab" type="button" data-tab="chat" data-i18n="remote.tabChat">Чат</button>
   </nav>
 
   <main class="remote-main" id="remoteMain">
-    <section class="grid-section">
+    <section class="grid-section grid-section--scenes">
       <h2 class="grid-section__title" data-i18n="remote.scenes">Сцены</h2>
       <div class="action-grid action-grid--scenes" id="sceneGrid"></div>
     </section>
 
-    <section class="grid-section">
+    <section class="grid-section grid-section--wheel">
       <h2 class="grid-section__title" data-i18n="remote.wheel">Колесо Фортуны</h2>
       <div class="action-grid" id="wheelGrid"></div>
 
@@ -66,6 +67,16 @@
           <input class="remote-range" id="wsBgOpacity" type="range" min="0" max="100" />
         </div>
 
+        <div class="remote-field">
+          <label class="remote-field__label" for="wsX"><span data-i18n="giveaway.positionX">Позиция X</span>: <span id="wsXValue">1.25%</span></label>
+          <input class="remote-range" id="wsX" type="range" min="0" max="100" step="0.25" />
+        </div>
+
+        <div class="remote-field">
+          <label class="remote-field__label" for="wsY"><span data-i18n="giveaway.positionY">Позиция Y</span>: <span id="wsYValue">50%</span></label>
+          <input class="remote-range" id="wsY" type="range" min="0" max="100" step="0.25" />
+        </div>
+
         <div class="remote-field remote-field--inline">
           <span class="remote-field__label" data-i18n="giveaway.marquee">Бегущая строка</span>
           <button class="remote-switch" id="wsMarquee" role="switch" aria-checked="false"></button>
@@ -80,6 +91,18 @@
           <label class="remote-field__label" for="wsSpeed"><span data-i18n="giveaway.spinSpeed">Скорость вращения</span>: <span id="wsSpeedValue">3</span></label>
           <input class="remote-range" id="wsSpeed" type="range" min="1" max="5" step="1" />
         </div>
+      </div>
+
+      <div class="remote-participants">
+        <div class="remote-participants__header">
+          <span class="remote-participants__count" id="wheelParticipantsCount"></span>
+          <button class="remote-participants__clear" id="wheelClearParticipants" type="button" data-i18n="giveaway.clearParticipants">Очистить участников</button>
+        </div>
+        <div class="remote-participants__add">
+          <input class="remote-input" id="wheelParticipantName" type="text" data-i18n-placeholder="giveaway.participantPlaceholder" placeholder="Никнейм зрителя" autocomplete="off" />
+          <button class="remote-participants__add-btn" id="wheelAddParticipant" type="button" data-i18n="giveaway.addParticipant">Добавить</button>
+        </div>
+        <div class="remote-participants__list" id="wheelParticipantsList"></div>
       </div>
     </section>
 
@@ -103,6 +126,14 @@
     <section class="grid-section">
       <h2 class="grid-section__title" data-i18n="remote.obsCommands">OBS команды</h2>
       <div class="action-grid" id="obsCommandGrid"></div>
+    </section>
+
+    <section class="grid-section">
+      <h2 class="grid-section__title" data-i18n="remote.webcam">Веб-камера</h2>
+      <div class="action-grid action-grid--scenes">
+        <button class="action-btn" type="button" data-action="WEBCAM_TOGGLE" data-i18n="remote.webcamToggle">Вкл/Выкл камеру</button>
+        <button class="action-btn" type="button" data-action="MIC_TOGGLE" data-i18n="remote.micToggle">Вкл/Выкл микрофон</button>
+      </div>
     </section>
 
     <section class="grid-section">

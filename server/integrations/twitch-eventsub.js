@@ -221,10 +221,13 @@ function startTwitchEvents({ bus, state }) {
         const old = socket;
         connect(reconnectUrl);
         if (old) setTimeout(() => { try { old.close(); } catch {} }, 5000);
+      } else if (type === "session_keepalive") {
+        logger.debug("keepalive received");
       } else if (type === "notification") {
+        logger.debug("notification", { type: (msg.payload && msg.payload.subscription && msg.payload.subscription.type) || "unknown" });
         handleNotification(msg.payload, bus, state);
       }
-      // session_keepalive: no action needed; lastMessageAt is refreshed above.
+      // lastMessageAt is refreshed above.
     });
 
     socket.on("close", (code, reason) => {

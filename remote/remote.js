@@ -34,12 +34,16 @@
     WHEEL_CONFIG: "wheel_config",
     WHEEL_SPEED_CONFIG: "wheel_speed_config",
     GIVEAWAY_UPDATE: "giveaway_update",
+    GIVEAWAY_PARTICIPANTS: "giveaway_participants",
     CHAT_MESSAGE: "chat_message",
     LOCALES: "locales",
     CMD_SET_PARTICIPANTS_CONFIG: "cmd_set_participants_config",
     CMD_SET_WHEEL_CONFIG: "cmd_set_wheel_config",
     CMD_SET_WHEEL_SPEED_CONFIG: "cmd_set_wheel_speed_config",
     CMD_SET_GIVEAWAY_ELIMINATION: "cmd_set_giveaway_elimination",
+    CMD_ADD_GIVEAWAY_PARTICIPANT: "cmd_add_giveaway_participant",
+    CMD_REMOVE_GIVEAWAY_PARTICIPANT: "cmd_remove_giveaway_participant",
+    CMD_CLEAR_GIVEAWAY_PARTICIPANTS: "cmd_clear_giveaway_participants",
   };
 
   const wsUrl = (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws";
@@ -64,11 +68,20 @@
   const wsTextColor = document.getElementById("wsTextColor");
   const wsBgOpacity = document.getElementById("wsBgOpacity");
   const wsBgOpacityValue = document.getElementById("wsBgOpacityValue");
+  const wsX = document.getElementById("wsX");
+  const wsXValue = document.getElementById("wsXValue");
+  const wsY = document.getElementById("wsY");
+  const wsYValue = document.getElementById("wsYValue");
   const wsMarquee = document.getElementById("wsMarquee");
   const wsMusicVolume = document.getElementById("wsMusicVolume");
   const wsMusicVolumeValue = document.getElementById("wsMusicVolumeValue");
   const wsSpeed = document.getElementById("wsSpeed");
   const wsSpeedValue = document.getElementById("wsSpeedValue");
+  const wheelParticipantsCount = document.getElementById("wheelParticipantsCount");
+  const wheelParticipantsList = document.getElementById("wheelParticipantsList");
+  const wheelParticipantName = document.getElementById("wheelParticipantName");
+  const wheelAddParticipant = document.getElementById("wheelAddParticipant");
+  const wheelClearParticipants = document.getElementById("wheelClearParticipants");
 
   let ws = null;
   let reconnectTimer = null;
@@ -83,10 +96,10 @@
   let activeCameraAngle = null;
   let cameraFilters = [];
   let activeFilters = [];
-  let participantsConfig = { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82 };
+  let participantsConfig = { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82, x: 1.25, y: 50 };
   let wheelConfig = { musicVolume: 50 };
   let wheelSpeedConfig = { speed: 3 };
-  let giveaway = { command: "!go", eliminationMode: false };
+  let giveaway = { command: "!go", eliminationMode: false, participants: [], count: 0 };
 
   function setStatus(connected) {
     isConnected = connected;
@@ -181,6 +194,10 @@
     wsTextColor.value = participantsConfig.textColor || "#e8e1f0";
     wsBgOpacity.value = participantsConfig.backgroundOpacity ?? 82;
     wsBgOpacityValue.textContent = `${participantsConfig.backgroundOpacity ?? 82}%`;
+    wsX.value = participantsConfig.x ?? 1.25;
+    wsXValue.textContent = `${participantsConfig.x ?? 1.25}%`;
+    wsY.value = participantsConfig.y ?? 50;
+    wsYValue.textContent = `${participantsConfig.y ?? 50}%`;
     setSwitch(wsMarquee, !!participantsConfig.marquee);
     wsMusicVolume.value = wheelConfig.musicVolume ?? 50;
     wsMusicVolumeValue.textContent = `${wheelConfig.musicVolume ?? 50}%`;
@@ -222,6 +239,20 @@
       sendCommand(EVENT_TYPES.CMD_SET_PARTICIPANTS_CONFIG, { config: participantsConfig });
     });
 
+    wsX.addEventListener("input", () => {
+      const v = Number(wsX.value);
+      participantsConfig.x = v;
+      wsXValue.textContent = `${v}%`;
+      sendCommand(EVENT_TYPES.CMD_SET_PARTICIPANTS_CONFIG, { config: participantsConfig });
+    });
+
+    wsY.addEventListener("input", () => {
+      const v = Number(wsY.value);
+      participantsConfig.y = v;
+      wsYValue.textContent = `${v}%`;
+      sendCommand(EVENT_TYPES.CMD_SET_PARTICIPANTS_CONFIG, { config: participantsConfig });
+    });
+
     wsMarquee.addEventListener("click", () => {
       const on = !participantsConfig.marquee;
       participantsConfig.marquee = on;
@@ -242,6 +273,49 @@
       wsSpeedValue.textContent = `${v}`;
       sendCommand(EVENT_TYPES.CMD_SET_WHEEL_SPEED_CONFIG, { config: wheelSpeedConfig });
     });
+  }
+
+  function renderParticipants() {
+    if (!wheelParticipantsList) return;
+    const participants = giveaway.participants || [];
+    if (wheelParticipantsCount) {
+      wheelParticipantsCount.textContent = `${t("giveaway.participants")}: ${participants.length}`;
+    }
+    if (!participants.length) {
+      wheelParticipantsList.innerHTML = `<div class="remote-participants__empty">${t("giveaway.noParticipants")}</div>`;
+      return;
+    }
+    wheelParticipantsList.innerHTML = participants
+      .map((name) => `<div class="remote-participants__row"><span class="remote-participants__name">${escapeHtml(name)}</span><button class="remote-participants__remove" type="button" data-remove-name="${escapeHtml(name)}" title="${escapeHtml(t("giveaway.removeParticipant"))}">✕</button></div>`)
+      .join("");
+  }
+
+  function wireParticipants() {
+    if (!wheelAddParticipant || !wheelParticipantName) return;
+    const add = () => {
+      const name = (wheelParticipantName.value || "").trim();
+      if (!name) return;
+      sendCommand(EVENT_TYPES.CMD_ADD_GIVEAWAY_PARTICIPANT, { username: name });
+      wheelParticipantName.value = "";
+    };
+    wheelAddParticipant.addEventListener("click", add);
+    wheelParticipantName.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") add();
+    });
+    if (wheelClearParticipants) {
+      wheelClearParticipants.addEventListener("click", () => {
+        if (confirm(t("giveaway.clearParticipantsConfirm"))) {
+          sendCommand(EVENT_TYPES.CMD_CLEAR_GIVEAWAY_PARTICIPANTS, {});
+        }
+      });
+    }
+    if (wheelParticipantsList) {
+      wheelParticipantsList.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-remove-name]");
+        if (!btn) return;
+        sendCommand(EVENT_TYPES.CMD_REMOVE_GIVEAWAY_PARTICIPANT, { username: btn.dataset.removeName });
+      });
+    }
   }
 
   function renderAlerts() {
@@ -404,8 +478,11 @@
           giveaway = {
             command: p.giveaway.command || giveaway.command || "!go",
             eliminationMode: !!p.giveaway.eliminationMode,
+            participants: Array.isArray(p.giveaway.participants) ? p.giveaway.participants : (giveaway.participants || []),
+            count: typeof p.giveaway.count === "number" ? p.giveaway.count : (Array.isArray(p.giveaway.participants) ? p.giveaway.participants.length : (giveaway.count || 0)),
           };
           renderWheelSettings();
+          renderParticipants();
         }
         break;
       }
@@ -444,7 +521,18 @@
         const g = (msg.payload && msg.payload.giveaway) || {};
         giveaway.command = g.command || giveaway.command || "!go";
         giveaway.eliminationMode = !!g.eliminationMode;
+        if (Array.isArray(g.participants)) giveaway.participants = g.participants;
+        if (typeof g.count === "number") giveaway.count = g.count;
+        else if (Array.isArray(g.participants)) giveaway.count = g.participants.length;
         renderWheelSettings();
+        renderParticipants();
+        break;
+      }
+      case EVENT_TYPES.GIVEAWAY_PARTICIPANTS: {
+        const p = msg.payload || {};
+        giveaway.participants = Array.isArray(p.participants) ? p.participants : [];
+        giveaway.count = typeof p.count === "number" ? p.count : giveaway.participants.length;
+        renderParticipants();
         break;
       }
       case EVENT_TYPES.OVERLAY_PARTICIPANTS_CONFIG:
@@ -469,6 +557,7 @@
         renderScenes();
         renderWheel();
         renderWheelSettings();
+        renderParticipants();
         renderAlerts();
         renderThemes();
         renderObsCommands();
@@ -518,7 +607,7 @@
     });
   });
 
-  // Tabs: control pad vs. live chat.
+  // Tabs: control pad, wheel, and live chat.
   const remoteMain = document.getElementById("remoteMain");
   const remoteTabs = document.getElementById("remoteTabs");
   if (remoteTabs && remoteMain) {
@@ -527,6 +616,7 @@
         const name = tab.dataset.tab;
         remoteTabs.querySelectorAll(".remote-tab").forEach((b) => b.classList.toggle("is-active", b === tab));
         remoteMain.classList.toggle("is-chat", name === "chat");
+        remoteMain.classList.toggle("is-wheel", name === "wheel");
         if (chatList) chatList.scrollTop = chatList.scrollHeight;
       });
     });
@@ -534,5 +624,7 @@
 
   wireWheelSettings();
   renderWheelSettings();
+  wireParticipants();
+  renderParticipants();
   connect();
 })();

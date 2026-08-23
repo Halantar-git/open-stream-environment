@@ -40,7 +40,6 @@
       <nav class="topbar__tabs" id="tabs">
         <button class="topbar__tab is-active" data-view="editor" data-i18n="nav.editor">Редактор</button>
         <button class="topbar__tab" data-view="scenes" data-i18n="nav.scenes">Сцены</button>
-        <button class="topbar__tab" data-view="wheel" data-i18n="nav.wheel">Колесо</button>
         <button class="topbar__tab" data-view="settings" data-i18n="nav.settings">Настройки</button>
       </nav>
       <div class="topbar__actions">
@@ -51,6 +50,7 @@
         <button class="md-button md-button--filled topbar__boosty-btn" id="openBoostyBtn" title="Boosty" data-i18n="boosty.support">Поддержать автора</button>
         <button class="md-button md-button--tonal topbar__chat-btn" id="openChatWindowBtn"></button>
         <button class="md-button md-button--tonal topbar__debug-btn" id="toggleDebugBtn" data-i18n-title="debug.title"></button>
+        <button class="md-button md-button--tonal topbar__wheel-btn" id="toggleWheelBtn" data-i18n-title="nav.wheel"></button>
         <button class="md-button md-button--tonal topbar__terminal-btn" id="toggleTerminalBtn" data-i18n-title="editor.terminal"></button>
         <button class="md-button md-button--tonal topbar__history-btn" id="toggleHistoryBtn" data-i18n-title="settings.history"></button>
         <button class="md-button md-button--tonal topbar__help-btn" id="toggleHelpBtn" data-i18n-title="help.title"></button>
@@ -77,9 +77,14 @@
     <aside class="debug-panel" id="debugPanel" hidden>
       <header class="debug-panel__header">
         <span class="debug-panel__title" data-i18n="debug.title">Отладка</span>
+        <button class="debug-panel__clear" id="debugClearBtn" data-i18n="debug.clear">Очистить</button>
         <button class="debug-panel__close" id="debugCloseBtn" aria-label="Закрыть" data-i18n-title="common.close">×</button>
       </header>
-      <div class="debug-panel__body" id="debugBody"></div>
+      <div class="debug-panel__body" id="debugBody">
+        <div id="debugTests"></div>
+        <div class="debug-panel__group" data-i18n="debug.logs">Логи</div>
+        <div class="debug-panel__log" id="debugLogList"></div>
+      </div>
     </aside>
 
     <aside class="help-panel" id="helpPanel" hidden>
@@ -111,6 +116,23 @@
       <div class="history-panel__footer">
         <button class="history-panel__btn" id="loadMoreEventsBtn" hidden data-i18n="settings.showMore">Показать ещё</button>
       </div>
+    </aside>
+
+    <aside class="participants-panel" id="participantsPanel" hidden>
+      <header class="participants-panel__header">
+        <span class="participants-panel__title" data-i18n="giveaway.participantsTitle">Участники</span>
+        <input class="participants-panel__search" id="participantsSearch" type="text" data-i18n-placeholder="giveaway.searchPlaceholder" placeholder="Поиск по участникам…" autocomplete="off" spellcheck="false" />
+        <button class="participants-panel__btn" id="clearParticipantsBtn" data-i18n="giveaway.clearParticipants">Очистить</button>
+      </header>
+      <div class="participants-panel__body" id="participantsPanelBody"></div>
+    </aside>
+
+    <aside class="wheel-panel" id="wheelPanel" hidden>
+      <header class="wheel-panel__header">
+        <span class="wheel-panel__title" data-i18n="giveaway.wheelSettings">Настройки колеса</span>
+        <button class="wheel-panel__close" id="wheelCloseBtn" aria-label="Закрыть" data-i18n-title="common.close">×</button>
+      </header>
+      <div class="wheel-panel__body" id="wheelPanelBody"></div>
     </aside>
 
     <section class="view" id="view-editor">
@@ -302,6 +324,14 @@
           <div class="md-field">
             <label data-i18n="settings.obsPassword">Пароль</label>
             <input type="password" id="obsPassword" placeholder="••••••••" />
+          </div>
+          <div class="md-field">
+            <label data-i18n="settings.obsWebcamSource">Камера</label>
+            <input type="text" id="obsWebcamSource" placeholder="Webcam" />
+          </div>
+          <div class="md-field">
+            <label data-i18n="settings.obsMicSource">Микрофон</label>
+            <input type="text" id="obsMicSource" placeholder="Mic/Aux" />
           </div>
           <p class="settings__desc" data-i18n="settings.obsSceneMapping">Маппинг сцен: логическое имя пульта → имя сцены в OBS.</p>
           <div class="md-field"><label>Main</label><input type="text" id="obsSceneMain" placeholder="Основной" /></div>

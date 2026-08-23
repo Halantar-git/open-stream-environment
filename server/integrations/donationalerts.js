@@ -76,8 +76,9 @@ function startDonationAlerts({ bus, state }) {
   let subscribeMode = SUBSCRIBE_MODE;
 
   const logger = createLogger(bus, "donationalerts");
-  // Высокочастотные отладочные события (ping/pong) не засоряют терминал.
-  const debug = (...args) => console.log(`[donationalerts] ${new Date().toISOString()}`, ...args);
+  // Высокочастотные отладочные события (ping/pong) не засоряют терминал,
+  // а уходят в панель «Отладка» отдельным потоком debug_log.
+  const debug = (message, data) => logger.debug(message, data);
 
   function setStatus(status) {
     bus.emit("connection_status", { service: "donationAlerts", status });

@@ -155,12 +155,21 @@ const SECTIONS = [
     ],
   },
   {
+    id: "debug",
+    title: "help.debug.title",
+    blocks: [
+      { type: "p", key: "help.debug.p1" },
+      { type: "p", key: "help.debug.p2" },
+    ],
+  },
+  {
     id: "wheel",
     title: "help.wheel.title",
     blocks: [
       { type: "p", key: "help.wheel.p1" },
       { type: "p", key: "help.wheel.p2" },
       { type: "p", key: "help.wheel.p3" },
+      { type: "p", key: "help.wheel.p4" },
     ],
   },
   {
@@ -263,7 +272,6 @@ export function initHelpPanel({ t, ICONS }) {
   refreshLabel();
   render();
 
-  on("toggleHelpBtn", "click", toggle);
   on("helpCloseBtn", "click", () => setOpen(false));
 
   return { toggle, setOpen, refreshLabel, refresh };

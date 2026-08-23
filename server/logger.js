@@ -132,6 +132,31 @@ function createLogger(bus, service) {
     }
   }
 
+  function emitDebug(message, data) {
+    const entry = {
+      timestamp: Date.now(),
+      service,
+      level: "debug",
+      message: String(message),
+      data: data === undefined ? null : data,
+    };
+
+    const label = `[${service}] [debug]`;
+    console.log(label, entry.message, data === undefined ? "" : data);
+
+    if (bus) bus.emit("debug_log", entry);
+
+    const stream = ensureFileStream();
+    if (stream) {
+      try {
+        const iso = new Date(entry.timestamp).toISOString();
+        stream.write(`[${iso}] [${service}] [debug] ${entry.message}${serializeData(data)}\n`);
+      } catch {
+        // Файловое логирование не должно ронять приложение.
+      }
+    }
+  }
+
   return {
     info(message, data) {
       emit("info", message, data);
@@ -144,6 +169,9 @@ function createLogger(bus, service) {
     },
     error(message, data) {
       emit("error", message, data);
+    },
+    debug(message, data) {
+      emitDebug(message, data);
     },
   };
 }

@@ -32,7 +32,9 @@
   "debug": {
     "title": "Debug",
     "alerts": "Alerts",
-    "chat": "Chat"
+    "chat": "Chat",
+    "logs": "Logs",
+    "clear": "Clear"
   },
   "cli": {
     "availableCommands": "Available commands:",
@@ -182,6 +184,8 @@
     "obsHost": "Host",
     "obsPort": "Port",
     "obsPassword": "Password",
+    "obsWebcamSource": "Camera",
+    "obsMicSource": "Microphone",
     "obsSceneMapping": "Scene mapping: remote logical name → OBS scene name.",
     "obsCommands": "Custom OBS commands (RAW Requests, obs-websocket v5).",
     "addObsCommand": "+ Add command",
@@ -238,6 +242,7 @@
   "giveaway": {
     "command": "Entry command",
     "participants": "Participants",
+    "participantsTitle": "Participants",
     "start": "Start collecting",
     "stop": "Stop",
     "shuffle": "Shuffle",
@@ -248,12 +253,20 @@
     "participantPlaceholder": "Viewer nickname",
     "removeParticipant": "Remove",
     "noParticipants": "No participants yet",
+    "noMatches": "No matches",
+    "clearParticipants": "Clear participants",
+    "clearParticipantsConfirm": "Remove all participants?",
+    "searchPlaceholder": "Search participants…",
+    "openWheelSettings": "Open wheel settings",
+    "wheelPanelHint": "Wheel settings now live in a dedicated panel.",
     "participantsWidgetTitle": "Participants widget settings",
     "showNames": "Show names",
     "fontSize": "Font size",
     "textColor": "Text color",
     "backgroundOpacity": "Background opacity",
     "marquee": "Marquee",
+    "positionX": "Position X",
+    "positionY": "Position Y",
     "wheelSettings": "Wheel settings",
     "musicVolume": "Music volume",
     "spinSpeed": "Spin speed"
@@ -568,6 +581,9 @@
     "testAlerts": "Test alerts",
     "obsCommands": "OBS commands",
     "theme": "Overlay theme",
+    "webcam": "Webcam",
+    "webcamToggle": "Toggle webcam",
+    "micToggle": "Toggle microphone",
     "wheelStart": "Start giveaway",
     "wheelStop": "Stop",
     "wheelSpin": "Spin",
@@ -586,6 +602,7 @@
     "chat": "Chat",
     "chatEmpty": "No messages yet",
     "tabControl": "Control",
+    "tabWheel": "Wheel",
     "tabChat": "Chat"
   },
   "overlay": {
@@ -659,7 +676,8 @@
       "title": "OBS WebSocket",
       "p1": "Requires OBS 28+ with the WebSocket server enabled (Tools → WebSocket Server Settings).",
       "p2": "Scene mapping translates logical remote names into your actual OBS scene names.",
-      "p3": "You can also define custom RAW commands, camera angles (multicam) and camera filters, triggered by Twitch points or manually."
+      "p3": "You can also define custom RAW commands, camera angles (multicam) and camera filters, triggered by Twitch points or manually.",
+      "p4": "The Camera and Microphone fields set the sources for the webcam and microphone toggle buttons in the remote."
     },
     "soundboard": {
       "title": "Soundboard",
@@ -674,7 +692,9 @@
     "remote": {
       "title": "Web Remote",
       "p1": "Open from a phone or tablet on the same Wi-Fi network using the address shown in the header.",
-      "p2": "From the remote you can switch scenes, control the wheel and death counter, send test alerts, run OBS commands, change the theme, switch cameras and trigger effects."
+      "p2": "From the remote you can switch scenes, control the wheel and death counter, send test alerts, run OBS commands, change the theme, switch cameras and trigger effects.",
+      "p3": "The Wheel tab holds the wheel settings (command, participants, list position, volume, speed) and the participant list: add and remove viewers right from the remote.",
+      "p4": "Next to the webcam there is a microphone mute button — set the audio input name in Settings → OBS."
     },
     "terminal": {
       "title": "Terminal and commands",
@@ -686,7 +706,14 @@
       "title": "Fortune Wheel",
       "p1": "Viewers join by typing the entry command in Twitch chat.",
       "p2": "Elimination mode removes one participant per spin until the final winner.",
-      "p3": "Use Generate wheel, Spin, Reset participants and Clear result to run a giveaway."
+      "p3": "The Wheel button in the header opens the wheel settings panel, with a participants panel (search and clear) next to it.",
+      "p4": "Use Generate wheel and Spin the wheel, plus the music volume and spin speed settings.",
+      "p5": "In the Web Remote, the Wheel tab mirrors these settings and lets you manage participants from your phone."
+    },
+    "debug": {
+      "title": "Debug",
+      "p1": "The Debug button in the header opens a panel with test buttons: alerts (follow, sub, gift, cheer, donation) and a test chat.",
+      "p2": "Integration debug logs (such as heartbeat events) are shown below. Use Clear to remove accumulated logs."
     },
     "settings": {
       "title": "Application settings",

@@ -129,29 +129,6 @@
         "config": {
           "perspective": 0
         }
-      },
-      {
-        "id": "e64f058e-ccf6-4dd2-8aac-495b6c1c3993",
-        "type": "custom",
-        "x": 18,
-        "y": 38,
-        "w": 34,
-        "h": 50,
-        "z": 14,
-        "visible": true,
-        "config": {
-          "mode": "image",
-          "showBackground": true,
-          "textTitle": "",
-          "text": "Новый текст",
-          "textAlign": "center",
-          "textSize": "medium",
-          "imageUrl": "media/shop_items_catalog_image13203.jpg",
-          "imageFit": "contain",
-          "html": "",
-          "css": "",
-          "js": ""
-        }
       }
     ]
   },
@@ -1535,6 +1512,132 @@
       "channel": "halantar",
       "startedAt": 1787420366051,
       "endedAt": 1787420398709
+    },
+    {
+      "id": "e39a4cac-9f13-40a6-b61a-ac45d3976b00",
+      "channel": "halantar",
+      "startedAt": 1787474721098,
+      "endedAt": 1787474836306
+    },
+    {
+      "id": "f77d5e94-c3ec-4751-912e-dc66c8be8af0",
+      "channel": "halantar",
+      "startedAt": 1787475004900,
+      "endedAt": 1787475027698
+    },
+    {
+      "id": "c29266f5-fc39-478f-9790-68bfdd132f0f",
+      "channel": "halantar",
+      "startedAt": 1787475074117,
+      "endedAt": 1787475083398
+    },
+    {
+      "id": "408cd1dc-b95d-43e2-a898-65764643566a",
+      "channel": "halantar",
+      "startedAt": 1787475198662,
+      "endedAt": 1787475288995
+    },
+    {
+      "id": "9636ddbb-046b-445b-8670-5b5309777c0e",
+      "channel": "halantar",
+      "startedAt": 1787475670627,
+      "endedAt": 1787475706002
+    },
+    {
+      "id": "80073836-b0ec-42ee-a745-a1f730b985e7",
+      "channel": "halantar",
+      "startedAt": 1787475797834,
+      "endedAt": 1787475836631
+    },
+    {
+      "id": "0aa23387-9baf-4cf0-a7f0-4708a73b7382",
+      "channel": "halantar",
+      "startedAt": 1787475967598,
+      "endedAt": 1787476015998
+    },
+    {
+      "id": "d92d8647-d067-4fc6-9064-ea720d872389",
+      "channel": "halantar",
+      "startedAt": 1787476142642,
+      "endedAt": 1787476165669
+    },
+    {
+      "id": "eca0bba4-8e36-4b15-a789-f0b768792d2d",
+      "channel": "halantar",
+      "startedAt": 1787476303050,
+      "endedAt": 1787476314423
+    },
+    {
+      "id": "8dc93faf-48fe-42df-a0c0-1ca6f64a4549",
+      "channel": "halantar",
+      "startedAt": 1787476337748,
+      "endedAt": 1787476421588
+    },
+    {
+      "id": "253ecfec-3e15-4103-87bd-0656e3d66433",
+      "channel": "halantar",
+      "startedAt": 1787476607463,
+      "endedAt": 1787476628531
+    },
+    {
+      "id": "f7826674-1c93-46ac-a99c-60b052146740",
+      "channel": "halantar",
+      "startedAt": 1787476677704,
+      "endedAt": 1787476693932
+    },
+    {
+      "id": "1bdcb08f-9549-468b-96dc-ea3b4d67de5a",
+      "channel": "halantar",
+      "startedAt": 1787477011051,
+      "endedAt": 1787477057932
+    },
+    {
+      "id": "39f005e1-eefd-4c58-b725-7ce87d59ba0d",
+      "channel": "halantar",
+      "startedAt": 1787477402599,
+      "endedAt": 1787477495033
+    },
+    {
+      "id": "602705d5-d0cc-4cfb-a648-70c17a351e16",
+      "channel": "halantar",
+      "startedAt": 1787477668954,
+      "endedAt": 1787477756960
+    },
+    {
+      "id": "7947a6fa-d447-4dc1-bea2-18e4f2a59e81",
+      "channel": "halantar",
+      "startedAt": 1787477979688,
+      "endedAt": 1787478024520
+    },
+    {
+      "id": "b3aa0028-1eb0-4630-b599-ad85b58f4381",
+      "channel": "halantar",
+      "startedAt": 1787478711926,
+      "endedAt": 1787478738554
+    },
+    {
+      "id": "365f6499-6755-4db3-8b19-cfa7028f91a7",
+      "channel": "halantar",
+      "startedAt": 1787479122140,
+      "endedAt": 1787479189414
+    },
+    {
+      "id": "3a2e18a6-5eb8-49da-b928-5d515e8efeb6",
+      "channel": "halantar",
+      "startedAt": 1787479300645,
+      "endedAt": 1787479326788
+    },
+    {
+      "id": "25889302-da3b-4979-b0d7-2d651ccbbcf2",
+      "channel": "halantar",
+      "startedAt": 1787479474853,
+      "endedAt": 1787479509620
+    },
+    {
+      "id": "d68faa23-ef8b-4f08-a96d-8574e21f781a",
+      "channel": "halantar",
+      "startedAt": 1787480249389,
+      "endedAt": 1787480308568
     }
   ],
   "chatMessages": [

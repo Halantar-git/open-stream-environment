@@ -41,9 +41,14 @@ function computeAuth(password, challenge, salt) {
 
 // План переключения: для целевого ракурса включаем источник, для остальных —
 // выключаем. Углы без sceneName/cameraSource пропускаются.
-function buildCameraSwitchPlan(angles, angleId) {
+function buildCameraSwitchPlan(angles, angleId, excludeSources = []) {
+  const exclude = new Set(
+    (Array.isArray(excludeSources) ? excludeSources : [])
+      .map((s) => String(s || "").trim())
+      .filter(Boolean)
+  );
   return (Array.isArray(angles) ? angles : [])
-    .filter((a) => a.sceneName && a.cameraSource)
+    .filter((a) => a.sceneName && a.cameraSource && !exclude.has(String(a.cameraSource).trim()))
     .map((a) => ({
       sceneName: a.sceneName,
       cameraSource: a.cameraSource,
@@ -62,6 +67,10 @@ function startObsWebSocket({ bus, config }) {
 
   function log(level, message, data) {
     bus.emit("terminal_log", { timestamp: Date.now(), service: "obs", level, message, data: data ?? null });
+  }
+
+  function debug(message, data) {
+    bus.emit("debug_log", { timestamp: Date.now(), service: "obs", level: "debug", message, data: data ?? null });
   }
 
   function setStatus(status) {
@@ -90,6 +99,7 @@ function startObsWebSocket({ bus, config }) {
       if (msg.op === 0) {
         // Hello — identify now that we have the optional auth challenge/salt.
         const challengeInfo = msg.d && msg.d.authentication;
+        debug("hello received", { authRequired: !!(challengeInfo && challengeInfo.challenge && challengeInfo.salt) });
         if (challengeInfo && challengeInfo.challenge && challengeInfo.salt) {
           if (password) {
             const token = computeAuth(password, challengeInfo.challenge, challengeInfo.salt);
@@ -108,6 +118,7 @@ function startObsWebSocket({ bus, config }) {
         log("success", "connected to OBS WebSocket", { host, port });
       } else if (msg.op === 7 && msg.d) {
         const requestId = String(msg.d.requestId);
+        debug("response received", { requestType: msg.d.requestType, requestId });
         const entry = pending.get(requestId);
         if (!entry) return;
         clearTimeout(entry.timeout);
@@ -198,7 +209,8 @@ function startObsWebSocket({ bus, config }) {
       return Promise.reject(new Error("OBS не подключен"));
     }
 
-    const plan = buildCameraSwitchPlan(angles, angleId);
+    const webcamSource = (config.obs && config.obs.webcamSource) || "";
+    const plan = buildCameraSwitchPlan(angles, angleId, [webcamSource]);
     const jobs = plan.map(async (op) => {
       const { sceneItemId } = await sendRawRequest("GetSceneItemId", {
         sceneName: op.sceneName,
@@ -269,6 +281,47 @@ function startObsWebSocket({ bus, config }) {
     });
   }
 
+  function toggleWebcam(sourceName) {
+    if (!sourceName) return Promise.reject(new Error("Webcam source name is empty"));
+    if (!connected || !ws || ws.readyState !== WebSocket.OPEN) {
+      return Promise.reject(new Error("OBS не подключен"));
+    }
+
+    let sceneName = null;
+    return sendRawRequest("GetCurrentProgramScene", {})
+      .then((data) => {
+        sceneName = data && data.currentProgramSceneName;
+        if (!sceneName) throw new Error("Cannot determine current scene");
+        return sendRawRequest("GetSceneItemId", { sceneName, sourceName });
+      })
+      .then((data) => {
+        const sceneItemId = data && data.sceneItemId;
+        if (sceneItemId == null) throw new Error("Webcam source not found in current scene");
+        return sendRawRequest("GetSceneItemEnabled", { sceneName, sceneItemId }).then((en) => ({
+          sceneName,
+          sceneItemId,
+          enabled: !!(en && en.sceneItemEnabled),
+        }));
+      })
+      .then(({ sceneName, sceneItemId, enabled }) =>
+        sendRawRequest("SetSceneItemEnabled", {
+          sceneName,
+          sceneItemId,
+          sceneItemEnabled: !enabled,
+        }).then(() => !enabled)
+      );
+  }
+
+  function toggleMicMute(sourceName) {
+    if (!sourceName) return Promise.reject(new Error("Mic source name is empty"));
+    if (!connected || !ws || ws.readyState !== WebSocket.OPEN) {
+      return Promise.reject(new Error("OBS не подключен"));
+    }
+    return sendRawRequest("ToggleInputMute", { inputName: sourceName }).then(
+      (data) => !!(data && data.inputMuted)
+    );
+  }
+
   function stop() {
     stopped = true;
     clearTimeout(reconnectTimer);
@@ -287,7 +340,7 @@ function startObsWebSocket({ bus, config }) {
 
   connect();
 
-  return { stop, switchScene, sendRawRequest, setCameraAngle, triggerCameraFilter, isConnected: () => connected };
+  return { stop, switchScene, sendRawRequest, setCameraAngle, triggerCameraFilter, toggleWebcam, toggleMicMute, isConnected: () => connected };
 }
 
 module.exports = { startObsWebSocket, computeAuth, sha256Base64, buildCameraSwitchPlan };

@@ -34,7 +34,16 @@ const ALERT_TESTS = [
 export function initDebugPanel({ t, ICONS, send, EVENT_TYPES }) {
   const panel = el("debugPanel");
   const body = el("debugBody");
+  const testsEl = el("debugTests");
+  const logEl = el("debugLogList");
   const toggleBtn = el("toggleDebugBtn");
+
+  const MAX_DEBUG_LINES = 200;
+
+  function formatTime(ts) {
+    const d = new Date(Number(ts) || Date.now());
+    return d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
 
   function setOpen(open) {
     if (!panel || !toggleBtn) return;
@@ -51,7 +60,7 @@ export function initDebugPanel({ t, ICONS, send, EVENT_TYPES }) {
   }
 
   function render() {
-    if (!body) return;
+    if (!testsEl) return;
 
     const alertButtons = ALERT_TESTS.map(
       ([kind, key]) =>
@@ -60,14 +69,14 @@ export function initDebugPanel({ t, ICONS, send, EVENT_TYPES }) {
     const chatButton =
       `<button class="debug-panel__btn" data-test="chat">${t("editor.testChat")}</button>`;
 
-    body.innerHTML = `
+    testsEl.innerHTML = `
       <div class="debug-panel__group">${t("debug.alerts")}</div>
       <div class="debug-panel__grid">${alertButtons}</div>
       <div class="debug-panel__group">${t("debug.chat")}</div>
       <div class="debug-panel__grid">${chatButton}</div>
     `;
 
-    body.querySelectorAll("[data-test]").forEach((btn) => {
+    testsEl.querySelectorAll("[data-test]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const kind = btn.dataset.test;
         if (kind === "chat") {
@@ -79,6 +88,44 @@ export function initDebugPanel({ t, ICONS, send, EVENT_TYPES }) {
     });
   }
 
+  function appendDebug(entry) {
+    if (!logEl || !entry) return;
+
+    const line = document.createElement("div");
+    line.className = "debug-panel__line";
+
+    const time = document.createElement("span");
+    time.className = "debug-panel__line__time";
+    time.textContent = formatTime(entry.timestamp);
+
+    const service = document.createElement("span");
+    service.className = "debug-panel__line__service";
+    service.textContent = entry.service || "server";
+
+    const message = document.createElement("span");
+    message.className = "debug-panel__line__message";
+    message.textContent = entry.message || "";
+
+    line.append(time, service, message);
+
+    if (entry.data != null && entry.data !== "") {
+      const data = document.createElement("span");
+      data.className = "debug-panel__line__data";
+      data.textContent = typeof entry.data === "string" ? entry.data : JSON.stringify(entry.data);
+      line.appendChild(data);
+    }
+
+    logEl.appendChild(line);
+    while (logEl.children.length > MAX_DEBUG_LINES) {
+      logEl.removeChild(logEl.firstChild);
+    }
+    if (body) body.scrollTop = body.scrollHeight;
+  }
+
+  function clearDebug() {
+    if (logEl) logEl.innerHTML = "";
+  }
+
   function refresh() {
     refreshLabel();
     render();
@@ -87,8 +134,8 @@ export function initDebugPanel({ t, ICONS, send, EVENT_TYPES }) {
   refreshLabel();
   render();
 
-  on("toggleDebugBtn", "click", toggle);
+  on("debugClearBtn", "click", clearDebug);
   on("debugCloseBtn", "click", () => setOpen(false));
 
-  return { setOpen, toggle, refreshLabel, refresh };
+  return { setOpen, toggle, refreshLabel, refresh, appendDebug, clearDebug };
 }

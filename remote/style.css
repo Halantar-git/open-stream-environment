@@ -35,6 +35,9 @@ body {
   touch-action: manipulation;
 }
 
+/* Fluid scaling: the remote is used on phones, tablets, and large touch
+   displays (Corsair Xeneon Edge / Stream Deck / 1080p dashboards). All key
+   metrics scale with the viewport so a 1920×1080 panel is comfortable. */
 .remote-header {
   position: sticky;
   top: 0;
@@ -43,7 +46,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 16px;
+  padding: clamp(12px, 1vw, 20px) clamp(14px, 1.2vw, 24px);
   background: color-mix(in srgb, var(--md-surface) 88%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -51,12 +54,12 @@ body {
 }
 
 .remote-header__title {
-  font-size: 16px;
+  font-size: clamp(16px, 1.1vw, 24px);
   font-weight: 700;
 }
 
 .remote-header__subtitle {
-  font-size: 12px;
+  font-size: clamp(12px, 0.7vw, 14px);
   color: var(--md-on-surface-variant);
 }
 
@@ -64,7 +67,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: clamp(12px, 0.7vw, 14px);
   color: var(--md-on-surface-variant);
 }
 
@@ -83,21 +86,21 @@ body {
 
 .remote-tabs {
   display: flex;
-  gap: 8px;
-  padding: 12px 16px;
+  gap: clamp(8px, 0.6vw, 12px);
+  padding: clamp(12px, 1vw, 18px) clamp(14px, 1.2vw, 24px);
 }
 
 .remote-tab {
   appearance: none;
   flex: 1;
   padding: 10px 12px;
-  min-height: 44px;
+  min-height: clamp(44px, 3.2vw, 60px);
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--shape-md);
   background: var(--md-surface-container);
   color: var(--md-on-surface-variant);
   font: inherit;
-  font-size: 14px;
+  font-size: clamp(13px, 0.8vw, 17px);
   font-weight: 600;
   text-align: center;
   cursor: pointer;
@@ -110,23 +113,25 @@ body {
   border-color: var(--md-primary);
 }
 
-/* Tab visibility: chat is a separate view, not stacked with the controls. */
-.remote-main:not(.is-chat) .grid-section--chat { display: none; }
+/* Tab visibility: wheel and chat are separate views, not stacked with the controls. */
+.remote-main:not(.is-chat):not(.is-wheel) .grid-section--chat,
+.remote-main:not(.is-chat):not(.is-wheel) .grid-section--wheel { display: none; }
 .remote-main.is-chat .grid-section:not(.grid-section--chat) { display: none; }
+.remote-main.is-wheel .grid-section:not(.grid-section--wheel) { display: none; }
 
 .remote-main {
-  padding: 16px;
+  padding: clamp(14px, 1.4vw, 28px);
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: clamp(18px, 1.6vw, 30px);
   max-width: 560px;
   margin: 0 auto;
   padding-bottom: max(24px, env(safe-area-inset-bottom));
 }
 
 .grid-section__title {
-  margin: 0 0 10px;
-  font-size: 13px;
+  margin: 0 0 clamp(10px, 0.8vw, 14px);
+  font-size: clamp(12px, 0.8vw, 16px);
   font-weight: 600;
   letter-spacing: 0.4px;
   text-transform: uppercase;
@@ -136,7 +141,7 @@ body {
 .action-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: clamp(8px, 0.7vw, 16px);
 }
 
 .action-grid--scenes {
@@ -167,14 +172,15 @@ body {
   border-radius: var(--shape-md);
   background: var(--md-surface-container);
   color: var(--md-on-surface);
-  padding: 14px 12px;
+  padding: clamp(12px, 0.9vw, 18px) clamp(10px, 0.8vw, 16px);
   font: inherit;
-  font-size: 14px;
+  font-size: clamp(13px, 0.85vw, 17px);
   font-weight: 600;
   text-align: center;
+  overflow-wrap: break-word;
   cursor: pointer;
   touch-action: manipulation;
-  min-height: 52px;
+  min-height: clamp(50px, 3.8vw, 72px);
   transition: background 120ms var(--easing), border-color 120ms var(--easing), transform 80ms var(--easing);
 }
 
@@ -204,8 +210,8 @@ body {
 .death-counter {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px;
+  gap: clamp(10px, 0.8vw, 16px);
+  padding: clamp(12px, 1vw, 18px);
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--shape-lg);
   background: var(--md-surface-container);
@@ -213,10 +219,10 @@ body {
 
 .death-counter__value {
   flex: 0 0 auto;
-  min-width: 64px;
+  min-width: clamp(56px, 5vw, 96px);
   text-align: center;
   font-family: "Consolas", "Roboto Mono", monospace;
-  font-size: 34px;
+  font-size: clamp(28px, 2.4vw, 46px);
   font-weight: 700;
   color: var(--md-primary);
   font-variant-numeric: tabular-nums;
@@ -234,9 +240,9 @@ body {
 .remote-settings {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-top: 14px;
-  padding: 14px;
+  gap: clamp(10px, 0.8vw, 16px);
+  margin-top: clamp(12px, 1vw, 20px);
+  padding: clamp(12px, 1vw, 20px);
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--shape-lg);
   background: var(--md-surface-container);
@@ -255,32 +261,32 @@ body {
 }
 
 .remote-field__label {
-  font-size: 12px;
+  font-size: clamp(12px, 0.7vw, 15px);
   color: var(--md-on-surface-variant);
 }
 
 .remote-input {
   width: 100%;
-  padding: 10px 12px;
+  padding: clamp(10px, 0.8vw, 14px) clamp(12px, 0.9vw, 16px);
   background: var(--md-surface-container-high);
   color: var(--md-on-surface);
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--shape-sm);
   font: inherit;
-  font-size: 14px;
-  min-height: 44px;
+  font-size: clamp(14px, 0.85vw, 17px);
+  min-height: clamp(44px, 3.2vw, 60px);
 }
 
 .remote-input--color {
   padding: 4px 6px;
-  height: 44px;
+  height: clamp(44px, 3.2vw, 60px);
   cursor: pointer;
 }
 
 .remote-range {
   width: 100%;
   accent-color: var(--md-primary);
-  min-height: 44px;
+  min-height: clamp(44px, 3.2vw, 60px);
 }
 
 .remote-switch {
@@ -318,6 +324,137 @@ body {
   background: var(--md-on-primary);
 }
 
+.remote-participants {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 0.8vw, 16px);
+  margin-top: clamp(12px, 1vw, 20px);
+  padding: clamp(12px, 1vw, 20px);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-lg);
+  background: var(--md-surface-container);
+}
+
+.remote-participants__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.remote-participants__count {
+  font-size: clamp(12px, 0.7vw, 15px);
+  font-weight: 600;
+  color: var(--md-on-surface-variant);
+}
+
+.remote-participants__clear {
+  appearance: none;
+  border: 1px solid color-mix(in srgb, var(--md-error) 45%, var(--md-outline-variant));
+  border-radius: var(--shape-sm);
+  background: transparent;
+  color: var(--md-error);
+  font: inherit;
+  font-size: clamp(12px, 0.7vw, 14px);
+  font-weight: 600;
+  padding: 8px 12px;
+  min-height: 36px;
+  cursor: pointer;
+}
+
+.remote-participants__clear:active {
+  background: var(--md-error-container);
+  color: var(--md-on-error-container);
+  border-color: var(--md-error);
+}
+
+.remote-participants__add {
+  display: flex;
+  gap: 8px;
+}
+
+.remote-participants__add .remote-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.remote-participants__add-btn {
+  appearance: none;
+  flex: 0 0 auto;
+  border: 1px solid var(--md-primary);
+  border-radius: var(--shape-sm);
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  font: inherit;
+  font-size: clamp(13px, 0.8vw, 15px);
+  font-weight: 700;
+  padding: 0 14px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.remote-participants__add-btn:active {
+  background: var(--md-on-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+.remote-participants__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.remote-participants__empty {
+  padding: 12px;
+  text-align: center;
+  color: var(--md-on-surface-variant);
+  font-size: 13px;
+  border: 1px dashed var(--md-outline-variant);
+  border-radius: var(--shape-md);
+}
+
+.remote-participants__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--md-surface-container-high);
+  border-radius: var(--shape-sm);
+  font-size: clamp(13px, 0.8vw, 15px);
+}
+
+.remote-participants__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.remote-participants__remove {
+  appearance: none;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 50%;
+  background: var(--md-surface-container);
+  color: var(--md-on-surface-variant);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.remote-participants__remove:active {
+  background: var(--md-error-container);
+  color: var(--md-on-error-container);
+  border-color: var(--md-error);
+}
+
 .remote-chat {
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--shape-lg);
@@ -326,7 +463,7 @@ body {
 }
 
 .remote-chat__list {
-  max-height: 640px;
+  max-height: clamp(360px, 70vh, 900px);
   overflow-y: auto;
   padding: 10px 12px;
   display: flex;
@@ -348,7 +485,7 @@ body {
   align-items: baseline;
   gap: 5px;
   flex-wrap: wrap;
-  font-size: 14px;
+  font-size: clamp(14px, 0.9vw, 18px);
   line-height: 1.35;
   word-break: break-word;
 }
@@ -412,15 +549,16 @@ body {
     padding: 20px;
   }
 
-  .grid-section:first-child {
+  .grid-section--scenes {
     grid-column: 1 / -1;
   }
 
-  .action-grid--scenes {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+  .grid-section--scenes .action-grid--scenes {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .grid-section--chat {
+  .grid-section--chat,
+  .grid-section--wheel {
     grid-column: 1 / -1;
   }
 
@@ -430,11 +568,11 @@ body {
   }
 }
 
-/* Wide landscape touch display (Corsair Xeneon Edge / Stream Deck dashboard) */
+/* Wide landscape touch display (Corsair Xeneon Edge / Stream Deck / 1080p) */
 @media (min-width: 960px) {
   .remote-header {
     position: static;
-    padding: 10px 20px;
+    padding: clamp(12px, 1vw, 20px) clamp(20px, 1.6vw, 32px);
   }
 
   .remote-main {
@@ -442,45 +580,69 @@ body {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: flex-start;
-    gap: 16px;
-    padding: 16px 20px;
+    gap: clamp(14px, 1.2vw, 24px);
+    padding: clamp(16px, 1.4vw, 28px) clamp(20px, 1.6vw, 32px);
   }
 
   .grid-section {
     flex: 1 1 0;
-    min-width: 220px;
+    min-width: clamp(220px, 18vw, 340px);
   }
 
   .grid-section__title {
-    margin-bottom: 8px;
-    font-size: 12px;
+    margin-bottom: clamp(8px, 0.6vw, 12px);
+    font-size: clamp(12px, 0.8vw, 16px);
   }
 
   .action-grid {
-    gap: 8px;
+    gap: clamp(8px, 0.7vw, 16px);
   }
 
-  .action-grid--scenes {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+  .grid-section--scenes {
+    flex: 1 1 100%;
+  }
+
+  .grid-section--scenes .action-grid--scenes {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .grid-section--scenes .action-grid--scenes .action-btn {
+    min-height: clamp(52px, 4vw, 84px);
+    font-size: clamp(13px, 0.9vw, 18px);
   }
 
   .grid-section--chat {
     flex: 1 1 100%;
   }
 
+  .grid-section--wheel {
+    flex: 1 1 100%;
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  .grid-section--wheel .remote-settings {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: clamp(12px, 1vw, 20px);
+  }
+
   .action-btn {
-    min-height: 46px;
-    padding: 10px 12px;
-    font-size: 13px;
+    min-height: clamp(46px, 3.6vw, 72px);
+    padding: clamp(10px, 0.8vw, 16px) clamp(12px, 0.9vw, 16px);
+    font-size: clamp(13px, 0.85vw, 17px);
   }
 
   .death-counter {
-    padding: 10px 12px;
-    gap: 10px;
+    padding: clamp(10px, 0.8vw, 16px) clamp(12px, 0.9vw, 16px);
+    gap: clamp(10px, 0.8vw, 14px);
   }
 
   .death-counter__value {
-    min-width: 56px;
-    font-size: 28px;
+    min-width: clamp(56px, 5vw, 96px);
+    font-size: clamp(28px, 2.4vw, 46px);
   }
 }
+
+

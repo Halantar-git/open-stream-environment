@@ -310,7 +310,6 @@ export function initLoggerPanel({ t, ICONS, send, EVENT_TYPES, state }) {
 
   refreshLabel();
 
-  if (toggleBtn) on("toggleTerminalBtn", "click", toggle);
   on("terminalCloseBtn", "click", () => setOpen(false));
   on("terminalClearBtn", "click", clear);
 
