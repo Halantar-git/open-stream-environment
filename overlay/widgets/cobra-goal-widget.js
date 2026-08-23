@@ -1,0 +1,295 @@
+/*
+ * Copyright (C) 2026  Halantar
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://gnu.org>.
+ */
+
+/*
+  WidgetCobraGoal — donation goal as a ten-segment orange bar for the Elite
+  Dangerous "Cobra Mk II" theme.
+
+  Each segment is a dark hull-panel track while empty and fills with the
+  cockpit-orange accent as the goal grows, like a credit/fuel readout on the
+  Cobra's HUD. The fill is smoothed and driven only by the goal state (never by
+  chat): the widget subscribes to GOAL_UPDATE / LOCALES and runs a self-contained
+  flicker.
+
+  The background matches the Recent events widget: a filled panel surface
+  (var(--panel-bg) + border + radius + shadow), with no neon HUD frame.
+*/
+(function (root, factory) {
+  const BaseWidget =
+    typeof module !== "undefined" && module.exports
+      ? require("./base-widget")
+      : root.OSEWidgets && root.OSEWidgets.BaseWidget;
+  const WidgetCobraGoal = factory(BaseWidget);
+
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = WidgetCobraGoal;
+  } else {
+    root.OSEWidgets = root.OSEWidgets || {};
+    root.OSEWidgets.WidgetCobraGoal = WidgetCobraGoal;
+  }
+})(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
+  "use strict";
+
+  const SECTOR_COUNT = 10;
+  const TRACK = "#33261a"; // empty hull-panel track
+  const FILL = "#ff7605"; // cockpit-orange fill
+
+  // Elite HUD fonts (Orbitron for display/mono, Rajdhani for body).
+  const FONT_DISPLAY = "'Orbitron', 'Segoe UI', sans-serif";
+  const FONT_MONO = "'Orbitron', 'Consolas', monospace";
+
+  const clamp = (v, min, max) => (v < min ? min : v > max ? max : v);
+
+  class WidgetCobraGoal extends BaseWidget {
+    constructor(config, context) {
+      super(config, context);
+      this.theme = (context && (context.theme || context.activeThemeId)) || "";
+
+      this.canvas = null; // bar canvas
+      this.ctx = null;
+      this.layoutEl = null;
+      this.contentEl = null;
+      this.barWrap = null;
+
+      this._pct = 0; // target progress (from goal state)
+      this._displayPct = 0; // smoothed progress
+      this._nextFlickerAt = 0;
+      this._flickerUntil = 0;
+    }
+
+    // The bar animates even though the root element is a <div> (2D).
+    _isAnimated() {
+      return true;
+    }
+
+    onMount() {
+      // HARD theme gate: no canvas, no loop, no events on a non-Cobra Mk II theme.
+      if (this.theme !== "cobra-mk2") return;
+
+      // Inner flex layout (keeps the BaseWidget geometry untouched).
+      this.layoutEl = document.createElement("div");
+      this.layoutEl.className = "cobra-goal";
+      this.layoutEl.style.cssText =
+        "position:absolute;inset:0;display:flex;flex-direction:column;box-sizing:border-box;padding:12px 14px;";
+      this.element.appendChild(this.layoutEl);
+
+      // Title + amounts row.
+      this.contentEl = document.createElement("div");
+      this.contentEl.className = "cobra-goal__content";
+      this.contentEl.style.cssText =
+        "display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-shrink:0;padding:0 4px;";
+      this.layoutEl.appendChild(this.contentEl);
+
+      // Bar area (canvas fills it).
+      this.barWrap = document.createElement("div");
+      this.barWrap.className = "cobra-goal__bar";
+      this.barWrap.style.cssText = "position:relative;flex:1;min-height:0;";
+      this.layoutEl.appendChild(this.barWrap);
+
+      this.canvas = document.createElement("canvas");
+      this.canvas.className = "cobra-goal__canvas";
+      Object.assign(this.canvas.style, {
+        position: "absolute",
+        left: "0",
+        top: "0",
+        width: "100%",
+        height: "100%",
+      });
+      this.barWrap.appendChild(this.canvas);
+      this.ctx = this.canvas.getContext("2d");
+
+      // Corner brackets driven by the active theme's --panel-decoration token
+      // (same decoration language as the Recent events widget).
+      this.element.classList.add("elite-surface");
+      this._applySurface();
+      this._updateDom();
+      this._nextFlickerAt = performance.now() + 1500 + Math.random() * 2500;
+
+      const { EVENT_TYPES } = this.context;
+      this.subscribe(EVENT_TYPES.GOAL_UPDATE, () => this._updateDom());
+      this.subscribe(EVENT_TYPES.LOCALES, () => this._updateDom());
+
+      this.startRenderLoop(30); // strictly 30 FPS
+    }
+
+    onUnmount() {
+      this._flickerUntil = 0;
+      if (this.element) this.element.innerHTML = "";
+      this.layoutEl = null;
+      this.contentEl = null;
+      this.barWrap = null;
+      this.ctx = null;
+      this.canvas = null;
+    }
+
+    // React to config/layout patches pushed through update() (e.g. the
+    // "Показывать %" and "Фон" toggles in the inspector).
+    onUpdate(prev, next) {
+      if (prev.showPercentage !== next.showPercentage) this._updateDom();
+      if (prev.showBackground !== next.showBackground) this._applySurface();
+    }
+
+    // Panel surface matching the Recent events widget: filled panel, border,
+    // radius and drop shadow/glow (no neon HUD frame). Cleared entirely when
+    // showBackground is false.
+    _applySurface() {
+      const read = this.context.readCssVar;
+      const s = this.element.style;
+
+      if (this.config.showBackground === false) {
+        s.backgroundColor = "transparent";
+        s.backgroundImage = "none";
+        s.backdropFilter = "none";
+        s.webkitBackdropFilter = "none";
+        s.border = "none";
+        s.borderRadius = "0";
+        s.clipPath = "none";
+        s.boxShadow = "none";
+        return;
+      }
+
+      const bg = (read && read("--panel-bg")) || "rgba(10, 8, 6, 0.92)";
+      const blur = (read && read("--panel-blur")) || "0px";
+      const border = (read && read("--panel-border")) || "1px solid rgba(255, 118, 5, 0.35)";
+      const radius = (read && read("--panel-radius")) || "0px";
+      const clip = (read && read("--panel-clip")) || "none";
+      const elev =
+        (read && read("--elev-1")) ||
+        "0 1px 3px rgba(0,0,0,0.55), 0 1px 2px rgba(0,0,0,0.35)";
+      const glow =
+        (read && read("--panel-glow")) ||
+        "0 0 15px rgba(255,118,5,0.28), inset 0 0 30px rgba(255,118,5,0.04)";
+
+      // Set only backgroundColor so the scanline background-image from the
+      // HUD decoration ([data-decoration]) can layer on top, like Recent events.
+      s.backgroundColor = bg;
+      s.backgroundImage = "";
+      s.backdropFilter = blur === "0px" ? "none" : `blur(${blur})`;
+      s.webkitBackdropFilter = blur === "0px" ? "none" : `blur(${blur})`;
+      s.border = border;
+      s.borderRadius = radius;
+      s.clipPath = clip;
+      s.boxShadow = `${elev}, ${glow}`;
+    }
+
+    // ---- data -> DOM ----
+
+    _updateDom() {
+      if (!this.contentEl) return;
+      const { escapeHtml, formatMoney, currencySymbol, t, state } = this.context;
+      const goal = (state && state.goal) || {};
+      const pct = goal.target ? Math.min(100, Math.round((goal.current / goal.target) * 100)) : 0;
+      this._pct = pct;
+
+      const pctStr = this.config.showPercentage
+        ? `<span style="color:${FILL};"> ${pct}%</span>`
+        : "";
+
+      this.contentEl.innerHTML =
+        `<span style="color:#ffb07c;font-family:${FONT_DISPLAY};font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(goal.title || t("preview.goalTitle"))}</span>` +
+        `<span style="color:#bdb0a1;font-family:${FONT_MONO};font-size:12px;white-space:nowrap;"><b style="color:${FILL};">${formatMoney(goal.current)}</b> / ${formatMoney(goal.target)} ${escapeHtml(currencySymbol(goal.currency))}${pctStr}</span>`;
+    }
+
+    // ---- rendering ----
+
+    render() {
+      if (this.theme !== "cobra-mk2") return;
+
+      const now = performance.now();
+      const t = now / 1000;
+
+      // --- Flicker State Machine (drives the neon sectors) ---
+      if (now >= this._nextFlickerAt) {
+        this._flickerUntil = now + 100 + Math.random() * 180;
+        this._nextFlickerAt = now + 1800 + Math.random() * 2800;
+      }
+      let flicker = 0.85 + 0.15 * Math.sin(t * 2.2) * Math.sin(t * 1.1);
+      if (now < this._flickerUntil) flicker *= 0.4 + 0.6 * Math.abs(Math.sin(now * 0.06));
+      flicker = clamp(flicker, 0.15, 1);
+
+      this._drawBarLayer(flicker);
+    }
+
+    _drawBarLayer(flicker) {
+      const ctx = this.ctx;
+      if (!ctx || !this.canvas) return;
+
+      const cw = this.canvas.clientWidth || 300;
+      const ch = this.canvas.clientHeight || 40;
+      const dpr = window.devicePixelRatio || 1;
+
+      const bw = Math.max(1, Math.round(cw * dpr));
+      const bh = Math.max(1, Math.round(ch * dpr));
+      if (this.canvas.width !== bw || this.canvas.height !== bh) {
+        this.canvas.width = bw;
+        this.canvas.height = bh;
+      }
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, cw, ch);
+
+      // Smoothly approach the target progress on each donation.
+      this._displayPct += (this._pct - this._displayPct) * 0.08;
+      const pct = clamp(this._displayPct, 0, 100);
+
+      // Ten equal sectors with a 1px gap between them (sharp, square corners).
+      const pad = 6;
+      const gap = 1;
+      const x = pad;
+      const y = pad;
+      const w = Math.max(1, cw - pad * 2);
+      const h = Math.max(1, ch - pad * 2);
+      const sectorW = Math.max(1, (w - gap * (SECTOR_COUNT - 1)) / SECTOR_COUNT);
+
+      for (let i = 0; i < SECTOR_COUNT; i++) {
+        const sx = x + i * (sectorW + gap);
+        const segStart = (i * 100) / SECTOR_COUNT;
+        const segSize = 100 / SECTOR_COUNT;
+        const fill = clamp((pct - segStart) / segSize, 0, 1);
+        this._drawSector(ctx, sx, y, sectorW, h, fill, flicker);
+      }
+    }
+
+    _drawSector(ctx, x, y, w, h, fill, flicker) {
+      // Dark hull-panel track (empty), sharp-edged (no rounding).
+      ctx.save();
+      ctx.fillStyle = TRACK;
+      ctx.globalAlpha = 0.95;
+      ctx.beginPath();
+      ctx.rect(x, y, w, h);
+      ctx.fill();
+      ctx.restore();
+
+      if (fill <= 0.01) return;
+
+      const fw = Math.max(1, w * fill);
+
+      // Orange fill (from the left), with a soft cockpit glow.
+      ctx.save();
+      ctx.fillStyle = FILL;
+      ctx.shadowColor = FILL;
+      ctx.shadowBlur = 12 * flicker;
+      ctx.globalAlpha = fill;
+      ctx.beginPath();
+      ctx.rect(x, y, fw, h);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  return WidgetCobraGoal;
+});

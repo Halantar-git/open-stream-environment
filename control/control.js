@@ -805,12 +805,20 @@ const { EVENT_TYPES } = window.SharedEvents;
       <div class="md-field"><label>${t("giveaway.textColor")}</label><input type="color" id="wsTextColor" value="${escapeAttr(state.participantsConfig.textColor || "#e8e1f0")}"></div>
       <div class="md-field"><label>${t("giveaway.backgroundOpacity")}: <span id="wsBgOpacityValue">${state.participantsConfig.backgroundOpacity ?? 82}%</span></label><input type="range" id="wsBgOpacity" min="0" max="100" value="${state.participantsConfig.backgroundOpacity ?? 82}"></div>
       <div class="properties__row">
-        <div class="md-field"><label>X: <span id="wsXValue">${state.participantsConfig.x ?? 1.25}%</span></label><input type="range" id="wsX" min="0" max="100" step="0.25" value="${state.participantsConfig.x ?? 1.25}"></div>
-        <div class="md-field"><label>Y: <span id="wsYValue">${state.participantsConfig.y ?? 50}%</span></label><input type="range" id="wsY" min="0" max="100" step="0.25" value="${state.participantsConfig.y ?? 50}"></div>
+        <div class="md-field"><label>X (px)</label><input type="number" id="wsX" step="1" value="${state.participantsConfig.x ?? 24}"></div>
+        <div class="md-field"><label>Y (px)</label><input type="number" id="wsY" step="1" value="${state.participantsConfig.y ?? 340}"></div>
+      </div>
+      <div class="properties__row">
+        <div class="md-field"><label>${t("giveaway.widgetWidth")}</label><input type="number" id="wsW" min="1" step="1" value="${state.participantsConfig.w ?? 340}"></div>
+        <div class="md-field"><label>${t("giveaway.widgetHeight")}</label><input type="number" id="wsH" min="1" step="1" value="${state.participantsConfig.h ?? 400}"></div>
       </div>
       <div class="properties__toggle-row"><label>${t("giveaway.marquee")}</label>${switchHtml("wsMarquee", !!state.participantsConfig.marquee)}</div>
 
       <div class="inspector__title" style="margin-top:10px;">${t("giveaway.wheelSettings")}</div>
+      <div class="properties__row">
+        <div class="md-field"><label>X (px)</label><input type="number" id="wheelX" step="1" value="${state.wheelConfig.x ?? 960}"></div>
+        <div class="md-field"><label>Y (px)</label><input type="number" id="wheelY" step="1" value="${state.wheelConfig.y ?? 540}"></div>
+      </div>
       <div class="md-field"><label>${t("giveaway.musicVolume")}: <span id="wsMusicVolumeValue">${state.wheelConfig.musicVolume ?? 50}%</span></label><input type="range" id="wsMusicVolume" min="0" max="100" value="${state.wheelConfig.musicVolume ?? 50}"></div>
       <div class="md-field"><label>${t("giveaway.spinSpeed")}: <span id="wsSpeedValue">${state.wheelSpeedConfig.speed ?? 3}</span></label><input type="range" id="wsSpeed" min="1" max="5" value="${state.wheelSpeedConfig.speed ?? 3}"></div>
     `;
@@ -825,18 +833,40 @@ const { EVENT_TYPES } = window.SharedEvents;
       wheelPanelBody.querySelector("#wsBgOpacityValue").textContent = `${v}%`;
       sendParticipantsConfig({ backgroundOpacity: v });
     });
-    wheelPanelBody.querySelector("#wsX").addEventListener("input", (e) => {
+    wheelPanelBody.querySelector("#wsX").addEventListener("change", (e) => {
       const v = Number(e.target.value);
-      wheelPanelBody.querySelector("#wsXValue").textContent = `${v}%`;
+      if (!Number.isFinite(v)) return;
       sendParticipantsConfig({ x: v });
     });
-    wheelPanelBody.querySelector("#wsY").addEventListener("input", (e) => {
+    wheelPanelBody.querySelector("#wsY").addEventListener("change", (e) => {
       const v = Number(e.target.value);
-      wheelPanelBody.querySelector("#wsYValue").textContent = `${v}%`;
+      if (!Number.isFinite(v)) return;
       sendParticipantsConfig({ y: v });
+    });
+    wheelPanelBody.querySelector("#wsW").addEventListener("change", (e) => {
+      const v = Number(e.target.value);
+      if (!Number.isFinite(v) || v <= 0) return;
+      sendParticipantsConfig({ w: v });
+    });
+    wheelPanelBody.querySelector("#wsH").addEventListener("change", (e) => {
+      const v = Number(e.target.value);
+      if (!Number.isFinite(v) || v <= 0) return;
+      sendParticipantsConfig({ h: v });
     });
     wireSwitch(wheelPanelBody.querySelector("#wsMarquee"), (on) => sendParticipantsConfig({ marquee: on }));
 
+    wheelPanelBody.querySelector("#wheelX").addEventListener("change", (e) => {
+      const v = Number(e.target.value);
+      if (!Number.isFinite(v)) return;
+      state.wheelConfig = { ...state.wheelConfig, x: v };
+      send(EVENT_TYPES.CMD_SET_WHEEL_CONFIG, { config: state.wheelConfig });
+    });
+    wheelPanelBody.querySelector("#wheelY").addEventListener("change", (e) => {
+      const v = Number(e.target.value);
+      if (!Number.isFinite(v)) return;
+      state.wheelConfig = { ...state.wheelConfig, y: v };
+      send(EVENT_TYPES.CMD_SET_WHEEL_CONFIG, { config: state.wheelConfig });
+    });
     wheelPanelBody.querySelector("#wsMusicVolume").addEventListener("input", (e) => {
       const v = Number(e.target.value);
       wheelPanelBody.querySelector("#wsMusicVolumeValue").textContent = `${v}%`;

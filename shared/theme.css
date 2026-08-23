@@ -168,6 +168,18 @@
   transition: width 700ms var(--easing-emphasized);
 }
 
+/* Elite (2D): paint the goal bar like the Cobra Mk II readout — a dark
+   hull-panel track with a solid cockpit-orange fill and a soft glow. */
+[data-theme="elite"] .md-linear-progress {
+  border-radius: 0;
+  background: #33261a;
+}
+[data-theme="elite"] .md-linear-progress__bar {
+  border-radius: 0;
+  background: #ff7605;
+  box-shadow: 0 0 12px rgba(255, 118, 5, 0.55);
+}
+
 /* Generic M3 filled button, used across control panel. */
 .md-button {
   font-family: var(--font-body);

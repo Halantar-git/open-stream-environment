@@ -53,8 +53,8 @@ export function createStateManager() {
     activeFilters: [],
     activeSceneId: "start",
     giveaway: { active: false, command: "!go", eliminationMode: false, winner: null, count: 0, participants: [] },
-    participantsConfig: { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82 },
-    wheelConfig: { musicVolume: 50 },
+    participantsConfig: { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82, x: 24, y: 340, w: 340, h: 400 },
+    wheelConfig: { musicVolume: 50, x: 960, y: 540 },
     wheelSpeedConfig: { speed: 3 },
     micConfig: { sensitivity: 1.5, lineWidth: 2, color: "", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2, peakFall: 2.5 },
   };

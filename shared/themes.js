@@ -22,6 +22,65 @@
   stored separately in config.json.
 */
 (function (root) {
+  // Elite Dangerous HUD palette: signature orange cockpit readouts on a warm
+  // near-black space surface. Shared verbatim by the 2D "Elite" theme and the
+  // 3D "Cobra Mk II" theme so the base overlay and the 3D widgets stay in one
+  // coherent look (same relationship as Orbital ↔ Star Citizen).
+  const ELITE_TOKENS = {
+    // HUD orange (#ff7605) — the cockpit accent.
+    "--md-primary": "#ff7605",
+    "--md-on-primary": "#2a1000",
+    "--md-primary-container": "#b35100",
+    "--md-on-primary-container": "#ffd7b0",
+
+    // Info blue (#00d2ff) — shields, radar, friendly contacts.
+    "--md-secondary": "#00d2ff",
+    "--md-on-secondary": "#001f33",
+    "--md-secondary-container": "#00354f",
+    "--md-on-secondary-container": "#c7ecff",
+
+    // Hostile red (#ff3b30) — alerts, hostile contacts.
+    "--md-tertiary": "#ff3b30",
+    "--md-on-tertiary": "#3c000a",
+    "--md-tertiary-container": "#63000f",
+    "--md-on-tertiary-container": "#ffd9dc",
+
+    "--md-error": "#ffb4ab",
+    "--md-on-error": "#690005",
+    "--md-error-container": "#93000a",
+    "--md-on-error-container": "#ffdad6",
+
+    // Dark-space surfaces (cool blue-black).
+    "--md-surface-dim": "#05080c",
+    "--md-surface": "#0a0f14",
+    "--md-surface-bright": "#26201a",
+    "--md-surface-container-lowest": "#030303",
+    "--md-surface-container-low": "#0c0c0c",
+    "--md-surface-container": "#100f0e",
+    "--md-surface-container-high": "#161412",
+    "--md-surface-container-highest": "#1c1916",
+
+    "--md-on-surface": "#ffb07c",
+    "--md-on-surface-variant": "#bdb0a1",
+    "--md-outline": "#7a6e5f",
+    "--md-outline-variant": "#3a3329",
+
+    "--font-display": '"Orbitron", "Segoe UI", sans-serif',
+    "--font-body": '"Rajdhani", "Segoe UI", sans-serif',
+    "--font-mono": '"Orbitron", "Consolas", monospace',
+
+    // Angular HUD panels: four-corner brackets, orange neon accent, no blur.
+    "--panel-radius": "0px",
+    "--panel-clip": "none",
+    "--panel-decoration": "brackets4",
+    "--panel-glow": "0 0 15px rgba(255,118,5,0.28), inset 0 0 30px rgba(255,118,5,0.04)",
+    "--panel-bg": "rgba(10, 8, 6, 0.92)",
+    "--panel-blur": "0px",
+    "--panel-border": "1px solid rgba(255, 118, 5, 0.35)",
+    "--alert-enter-easing": "cubic-bezier(0.175, 0.885, 0.32, 1.2)",
+    "--alert-enter-duration": "320ms",
+  };
+
   const BUILTIN_THEMES = {
     nebula: {
       id: "nebula",
@@ -321,6 +380,34 @@
         "--alert-enter-easing": "steps(1, end)",
         "--alert-enter-duration": "120ms",
 
+        "--shape-xs": "0px",
+        "--shape-sm": "0px",
+        "--shape-md": "0px",
+        "--shape-lg": "0px",
+        "--shape-xl": "0px",
+        "--shape-full": "999px",
+      },
+    },
+
+    elite: {
+      id: "elite",
+      name: "Elite",
+      builtin: true,
+      category: "system",
+      dimension: "2d",
+      borderRadius: "0px",
+      tokens: ELITE_TOKENS,
+    },
+
+    "cobra-mk2": {
+      id: "cobra-mk2",
+      name: "Cobra Mk II",
+      builtin: true,
+      category: "elite",
+      dimension: "3d",
+      borderRadius: "0px",
+      tokens: {
+        ...ELITE_TOKENS,
         "--shape-xs": "0px",
         "--shape-sm": "0px",
         "--shape-md": "0px",

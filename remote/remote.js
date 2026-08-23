@@ -72,6 +72,8 @@
   const wsXValue = document.getElementById("wsXValue");
   const wsY = document.getElementById("wsY");
   const wsYValue = document.getElementById("wsYValue");
+  const wsW = document.getElementById("wsW");
+  const wsH = document.getElementById("wsH");
   const wsMarquee = document.getElementById("wsMarquee");
   const wsMusicVolume = document.getElementById("wsMusicVolume");
   const wsMusicVolumeValue = document.getElementById("wsMusicVolumeValue");
@@ -96,7 +98,7 @@
   let activeCameraAngle = null;
   let cameraFilters = [];
   let activeFilters = [];
-  let participantsConfig = { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82, x: 1.25, y: 50 };
+  let participantsConfig = { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82, x: 24, y: 340, w: 340, h: 400 };
   let wheelConfig = { musicVolume: 50 };
   let wheelSpeedConfig = { speed: 3 };
   let giveaway = { command: "!go", eliminationMode: false, participants: [], count: 0 };
@@ -194,10 +196,12 @@
     wsTextColor.value = participantsConfig.textColor || "#e8e1f0";
     wsBgOpacity.value = participantsConfig.backgroundOpacity ?? 82;
     wsBgOpacityValue.textContent = `${participantsConfig.backgroundOpacity ?? 82}%`;
-    wsX.value = participantsConfig.x ?? 1.25;
-    wsXValue.textContent = `${participantsConfig.x ?? 1.25}%`;
-    wsY.value = participantsConfig.y ?? 50;
-    wsYValue.textContent = `${participantsConfig.y ?? 50}%`;
+    wsX.value = participantsConfig.x ?? 24;
+    wsXValue.textContent = `${participantsConfig.x ?? 24}px`;
+    wsY.value = participantsConfig.y ?? 340;
+    wsYValue.textContent = `${participantsConfig.y ?? 340}px`;
+    wsW.value = participantsConfig.w ?? 340;
+    wsH.value = participantsConfig.h ?? 400;
     setSwitch(wsMarquee, !!participantsConfig.marquee);
     wsMusicVolume.value = wheelConfig.musicVolume ?? 50;
     wsMusicVolumeValue.textContent = `${wheelConfig.musicVolume ?? 50}%`;
@@ -242,14 +246,28 @@
     wsX.addEventListener("input", () => {
       const v = Number(wsX.value);
       participantsConfig.x = v;
-      wsXValue.textContent = `${v}%`;
+      wsXValue.textContent = `${v}px`;
       sendCommand(EVENT_TYPES.CMD_SET_PARTICIPANTS_CONFIG, { config: participantsConfig });
     });
 
     wsY.addEventListener("input", () => {
       const v = Number(wsY.value);
       participantsConfig.y = v;
-      wsYValue.textContent = `${v}%`;
+      wsYValue.textContent = `${v}px`;
+      sendCommand(EVENT_TYPES.CMD_SET_PARTICIPANTS_CONFIG, { config: participantsConfig });
+    });
+
+    wsW.addEventListener("change", () => {
+      const v = Number(wsW.value);
+      if (!Number.isFinite(v) || v <= 0) return;
+      participantsConfig.w = v;
+      sendCommand(EVENT_TYPES.CMD_SET_PARTICIPANTS_CONFIG, { config: participantsConfig });
+    });
+
+    wsH.addEventListener("change", () => {
+      const v = Number(wsH.value);
+      if (!Number.isFinite(v) || v <= 0) return;
+      participantsConfig.h = v;
       sendCommand(EVENT_TYPES.CMD_SET_PARTICIPANTS_CONFIG, { config: participantsConfig });
     });
 

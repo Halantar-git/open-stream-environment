@@ -53,7 +53,7 @@
     soundboardConfig: { volume: 0.8, queueMode: false },
     participantsState: { count: 0, participants: [] },
     participantsConfig: { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82 },
-    micConfig: { sensitivity: 1.5, lineWidth: 2, color: "#0060A8", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2, peakFall: 2.5 },
+    micConfig: { sensitivity: 1.5, lineWidth: 2, color: "", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2, peakFall: 2.5 },
     remoteMicData: null,
   };
 
@@ -64,7 +64,7 @@
   let wheelRotation = 0;
   let wheelSpinning = false;
   let wheelVisible = false;
-  let wheelConfig = { musicVolume: 50 };
+  let wheelConfig = { musicVolume: 50, x: 960, y: 540 };
   let wheelSpeedConfig = { speed: 3 };
   let spinAudioEl = null;
   let spinFallback = null;
@@ -210,6 +210,13 @@
     wheelEl.style.setProperty("--wheel-scale", String(scale));
   }
 
+  function applyWheelLayout() {
+    const wheelEl = document.getElementById("wheel");
+    if (!wheelEl) return;
+    wheelEl.style.left = (wheelConfig.x ?? 960) + "px";
+    wheelEl.style.top = (wheelConfig.y ?? 540) + "px";
+  }
+
   function drawWheel() {
     const wheelCanvas = document.getElementById("wheelCanvas");
     if (!wheelCanvas) return;
@@ -312,6 +319,7 @@
     wheelRotation = 0;
     wheelSpinning = false;
     resizeWheel();
+    applyWheelLayout();
     drawWheel();
   }
 
@@ -417,6 +425,7 @@
     // HUD token set (3D overrides the base 2D theme), so 2D and 3D widgets
     // share one coherent look.
     context.theme = appearance.activeThemeId3d || "";
+    context.activeThemeId = appearance.activeThemeId || "";
     if (wheelSectors.length) drawWheel();
   }
 
@@ -471,6 +480,12 @@
   manager.register("nuclear-chat", OW.WidgetNuclearChat);
   manager.register("nuclear-goal", OW.WidgetNuclearGoal);
   manager.register("nuclear-holo-alert", OW.WidgetNuclearHoloAlert);
+  manager.register("cobra", OW.WidgetCobra);
+  manager.register("cobra-chat", OW.WidgetCobraChat);
+  manager.register("cobra-goal", OW.WidgetCobraGoal);
+  manager.register("cobra-holo-alert", OW.WidgetCobraHoloAlert);
+  manager.register("cobra-shield", OW.WidgetCobraShield);
+  manager.register("cobra-radar", OW.WidgetCobraRadar);
 
   // ---- socket ----
   function handleMessage(msg) {
@@ -550,6 +565,7 @@
         break;
       case EVENT_TYPES.WHEEL_CONFIG:
         wheelConfig = (msg.payload && msg.payload.config) || wheelConfig;
+        applyWheelLayout();
         break;
       case EVENT_TYPES.WHEEL_SPEED_CONFIG:
         wheelSpeedConfig = (msg.payload && msg.payload.config) || wheelSpeedConfig;

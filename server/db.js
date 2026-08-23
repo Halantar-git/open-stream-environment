@@ -35,19 +35,23 @@ function defaultData() {
     chatMessages: [],
     // История всех входящих событий (донаты, подписки, фоллоу).
     stream_events: [],
-    // Настройки виджета списка участников розыгрыша.
+    // Настройки виджета списка участников розыгрыша (позиция и размер в пикселях).
     overlay_participants_config: {
       maxNames: 10,
       marquee: false,
       fontSize: 16,
       textColor: "#e8e1f0",
       backgroundOpacity: 82,
-      x: 1.25,
-      y: 50,
+      x: 24,
+      y: 340,
+      w: 340,
+      h: 400,
     },
-    // Настройки Колеса Фортуны (звук).
+    // Настройки Колеса Фортуны (звук и позиция на сцене, в пикселях).
     wheel_config: {
       musicVolume: 50,
+      x: 960,
+      y: 540,
     },
     // Настройки скорости вращения Колеса Фортуны.
     wheel_speed_config: {
@@ -248,8 +252,10 @@ function createDatabase(dbPath = getDbPath()) {
       fontSize: typeof raw.fontSize === "number" ? raw.fontSize : 16,
       textColor: typeof raw.textColor === "string" ? raw.textColor : "#e8e1f0",
       backgroundOpacity: typeof raw.backgroundOpacity === "number" ? raw.backgroundOpacity : 82,
-      x: typeof raw.x === "number" ? raw.x : 1.25,
-      y: typeof raw.y === "number" ? raw.y : 50,
+      x: typeof raw.x === "number" ? raw.x : 24,
+      y: typeof raw.y === "number" ? raw.y : 340,
+      w: typeof raw.w === "number" ? raw.w : 340,
+      h: typeof raw.h === "number" ? raw.h : 400,
     };
   }
 
@@ -262,7 +268,11 @@ function createDatabase(dbPath = getDbPath()) {
 
   function getWheelConfig() {
     const raw = get("wheel_config") || {};
-    return { musicVolume: typeof raw.musicVolume === "number" ? raw.musicVolume : 50 };
+    return {
+      musicVolume: typeof raw.musicVolume === "number" ? raw.musicVolume : 50,
+      x: typeof raw.x === "number" ? raw.x : 960,
+      y: typeof raw.y === "number" ? raw.y : 540,
+    };
   }
 
   function saveWheelConfig(config) {

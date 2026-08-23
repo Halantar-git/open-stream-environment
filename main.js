@@ -17,7 +17,7 @@
 
 const path = require("path");
 const fs = require("fs");
-const { app, BrowserWindow, ipcMain, shell, dialog, globalShortcut, screen, session, clipboard } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, dialog, globalShortcut, screen, session, clipboard, Tray, Menu, nativeImage, Notification } = require("electron");
 
 const { createServer } = require("./server");
 const { buildTwitchAuthorizeUrl, buildDonationAlertsAuthorizeUrl, buildYoutubeAuthorizeUrl } = require("./server/oauth");
@@ -36,6 +36,8 @@ let db;
 let gameMode = false;
 let chatPinned = true; // выбор пользователя кнопкой 📌
 let quitting = false;
+let tray = null;
+let trayNotificationShown = false;
 
 // ---- Window state persistence ----
 
@@ -159,44 +161,32 @@ function createWindow(port) {
     const remaining = Math.max(0, SPLASH_MIN_MS - elapsed);
     setTimeout(() => {
       if (splashWindow) splashWindow.destroy();
+      mainWindow.maximize(); // open maximized instead of fullscreen
       mainWindow.show();
     }, remaining);
+  });
+
+  mainWindow.webContents.on("before-input-event", (event, input) => {
+    if (input.type === "keyDown" && String(input.key).toLowerCase() === "f11") {
+      event.preventDefault();
+      mainWindow.setFullScreen(!mainWindow.isFullScreen());
+    }
   });
 
   mainWindow.on("close", (event) => {
     if (quitting) return;
     event.preventDefault();
+    mainWindow.hide();
 
-    const isRu = db && db.getLanguage() === "ru";
-    const texts = isRu
-      ? {
-          title: "Выход из Open Stream Environment",
-          message: "Закрыть приложение?",
-          detail: "Сервер оверлея и подключения Twitch/DonationAlerts будут остановлены.",
-          confirm: "Выйти",
-          cancel: "Отмена",
-        }
-      : {
-          title: "Quit Open Stream Environment",
-          message: "Close the application?",
-          detail: "The overlay server and Twitch/DonationAlerts connections will be stopped.",
-          confirm: "Quit",
-          cancel: "Cancel",
-        };
-
-    const choice = dialog.showMessageBoxSync(mainWindow, {
-      type: "question",
-      buttons: [texts.confirm, texts.cancel],
-      defaultId: 0,
-      cancelId: 1,
-      title: texts.title,
-      message: texts.message,
-      detail: texts.detail,
-    });
-
-    if (choice === 0) {
-      quitting = true;
-      app.quit();
+    if (!trayNotificationShown) {
+      const isRu = db && db.getLanguage() === "ru";
+      new Notification({
+        title: "Open Stream Environment",
+        body: isRu
+          ? "Приложение свёрнуто в трей. Нажмите на значок в трее, чтобы открыть."
+          : "App minimized to tray. Click the tray icon to open it.",
+      }).show();
+      trayNotificationShown = true;
     }
   });
 }
@@ -298,6 +288,45 @@ function toggleGameMode() {
   }
 }
 
+function showMainWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+function trayMenuLabels() {
+  const isRu = db && db.getLanguage() === "ru";
+  return isRu
+    ? { open: "Открыть", quit: "Выйти" }
+    : { open: "Open", quit: "Quit" };
+}
+
+function buildTrayMenu() {
+  const labels = trayMenuLabels();
+  return Menu.buildFromTemplate([
+    { label: labels.open, click: showMainWindow },
+    { type: "separator" },
+    { label: labels.quit, click: () => { quitting = true; app.quit(); } },
+  ]);
+}
+
+function refreshTrayMenu() {
+  if (tray) tray.setContextMenu(buildTrayMenu());
+}
+
+function createTray() {
+  const iconPath = path.join(__dirname, "assets", "icons", "icon.png");
+  let icon = nativeImage.createFromPath(iconPath);
+  if (!icon.isEmpty() && process.platform === "win32") {
+    icon = icon.resize({ width: 16, height: 16 });
+  }
+  tray = new Tray(icon);
+  tray.setToolTip("Open Stream Environment");
+  refreshTrayMenu();
+  tray.on("click", showMainWindow);
+}
+
 function registerGlobalHotkeys() {
   globalShortcut.register("CommandOrControl+Shift+C", () => {
     if (!chatWindow) return;
@@ -325,6 +354,7 @@ app.whenReady().then(() => {
   const { port } = serverHandle.start();
 
   createWindow(port);
+  createTray();
   registerGlobalHotkeys();
 
   ipcMain.handle("app:get-info", () => ({
@@ -357,7 +387,9 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle("app:change-language", (_event, lang) => {
-    return serverHandle.setLanguage(lang);
+    const result = serverHandle.setLanguage(lang);
+    refreshTrayMenu();
+    return result;
   });
 
   ipcMain.handle("db:get-sessions", () => db.getSessions());
@@ -477,6 +509,10 @@ app.on("before-quit", () => {
   saveWindowState();
   if (serverHandle) serverHandle.stop();
   globalShortcut.unregisterAll();
+  if (tray) {
+    tray.destroy();
+    tray = null;
+  }
 });
 
 app.on("window-all-closed", () => {

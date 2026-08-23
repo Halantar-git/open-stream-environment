@@ -119,12 +119,25 @@ export function initCanvasEditor({
       case "goal": {
         const pct = state.goal.target ? Math.min(100, Math.round((state.goal.current / state.goal.target) * 100)) : 0;
         const noBg = config.showBackground === false ? " widget-goal--no-bg" : "";
+
+        // Elite (2D) previews the Cobra-style 10-segment readout.
+        let barHtml = `<div class="md-linear-progress"><div class="md-linear-progress__bar" style="width:${pct}%"></div></div>`;
+        if (state.appearance.activeThemeId === "elite") {
+          let cells = "";
+          for (let i = 0; i < 10; i++) {
+            const segStart = (i * 100) / 10;
+            const fill = Math.max(0, Math.min(1, (pct - segStart) / 10));
+            cells += `<div class="widget-goal__seg"><div class="widget-goal__seg-fill" style="width:${Math.round(fill * 100)}%"></div></div>`;
+          }
+          barHtml = `<div class="widget-goal__segments">${cells}</div>`;
+        }
+
         return `<div class="widget-goal${noBg}">
           <div class="widget-goal__row">
             <span class="widget-goal__title">${escapeHtml(state.goal.title || t("preview.goalTitle"))}</span>
             <span class="widget-goal__amounts"><b>${formatMoney(state.goal.current)}</b> / ${formatMoney(state.goal.target)} ${escapeHtml(currencySymbol(state.goal.currency))}</span>
           </div>
-          <div class="md-linear-progress"><div class="md-linear-progress__bar" style="width:${pct}%"></div></div>
+          ${barHtml}
           ${config.showPercentage ? `<div class="widget-goal__percent">${pct}%</div>` : ""}
         </div>`;
       }
@@ -396,6 +409,99 @@ export function initCanvasEditor({
             <span style="font-family:'IBM Plex Mono','Consolas',monospace;font-size:13px;font-weight:700;color:#a7ada8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">nova_viewer</span>
             <span style="font-family:'IBM Plex Mono','Consolas',monospace;font-size:10px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:${green};">${escapeHtml(t("properties.testFollow"))}</span>
           </div>
+        </div>`;
+      }
+      case "cobra": {
+        const orange = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#ff7605";
+        return `<div class="widget-cobra-preview" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" style="width:72%;height:72%;">
+            <path d="M12 3 L18 10 L21 15 L18 18 L14 17 L12 20 L10 17 L6 18 L3 15 L6 10 Z" fill="none" stroke="${escapeAttr(orange)}" stroke-width="1.1" stroke-linejoin="round"/>
+            <path d="M12 5 L12 18" fill="none" stroke="${escapeAttr(orange)}" stroke-width="0.7"/>
+            <circle cx="12" cy="9" r="0.9" fill="${escapeAttr(orange)}"/>
+          </svg>
+        </div>`;
+      }
+      case "cobra-chat": {
+        const rows = [
+          { user: "nova_viewer", message: t("preview.chat1") },
+          { user: "star_gazer", message: t("preview.chat2") },
+          { user: "orbit_fan", message: t("preview.chat3") },
+        ]
+          .map(
+            (m) =>
+              `<div class="cobra-chat__row" style="display:flex;gap:7px;font-size:13px;line-height:1.55;color:#ffb07c;">
+                <span style="color:#bdb0a1">[12:00]</span>
+                <span style="color:#ff7605;font-weight:700">${escapeHtml(m.user)}</span>
+                <span style="color:#bdb0a1">:</span>
+                <span style="color:#ffb07c">${escapeHtml(m.message)}</span>
+              </div>`
+          )
+          .join("");
+        return `<div class="cobra-chat" style="position:relative;height:100%;"><div class="chat-messages-container" style="position:absolute;overflow:hidden;left:0;right:0;top:0;bottom:0;display:flex;flex-direction:column;justify-content:flex-end;padding:22px 26px;box-sizing:border-box;">${rows}</div></div>`;
+      }
+      case "cobra-goal": {
+        const pct = state.goal && state.goal.target ? Math.min(100, Math.round((state.goal.current / state.goal.target) * 100)) : 0;
+        const orange = "#ff7605";
+        const track = "#33261a";
+        const sectors = [0, 1, 2, 3, 4]
+          .map((i) => {
+            const fill = Math.max(0, Math.min(1, (pct - i * 20) / 20));
+            const x = 6 + i * 38;
+            return `<rect x="${x}" y="12" width="36" height="36" rx="3" fill="${track}"/>` +
+              (fill > 0.01 ? `<rect x="${x}" y="12" width="${Math.max(3, Math.round(36 * fill))}" height="36" rx="3" fill="${orange}"/>` : "");
+          })
+          .join("");
+        return `<div class="cobra-goal-preview" style="position:relative;height:100%;display:flex;flex-direction:column;padding:4px;">
+          <div style="display:flex;justify-content:space-between;gap:10px;color:#ffb07c;font-size:11px;"><span style="font-family:'Orbitron','Segoe UI',sans-serif;">${escapeHtml(state.goal.title || t("preview.goalTitle"))}</span><span style="color:#bdb0a1;font-family:'Orbitron','Consolas',monospace;">${formatMoney(state.goal.current)} / ${formatMoney(state.goal.target)}</span></div>
+          <svg viewBox="0 0 200 60" preserveAspectRatio="xMidYMid meet" style="flex:1;width:100%;min-height:0;">${sectors}</svg>
+        </div>`;
+      }
+      case "cobra-holo-alert": {
+        const orange = "#ff7605";
+        return `<div class="cobra-holo-preview" style="position:relative;height:100%;display:flex;align-items:center;gap:8px;padding:6px 8px;box-sizing:border-box;">
+          <svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" style="flex-shrink:0;width:40px;height:40px;">
+            <circle cx="12" cy="12" r="9" fill="none" stroke="${orange}" stroke-width="1.2"/>
+            <circle cx="12" cy="12" r="5.5" fill="none" stroke="${orange}" stroke-width="0.8"/>
+            <path d="M12 6.5l1.8 4.7 5 .8-3.7 3.4 1 5-4.1-2.4-4.1 2.4 1-5L5 12l5-.8 2-4.7z" fill="none" stroke="${orange}" stroke-width="0.9"/>
+          </svg>
+          <div style="min-width:0;display:flex;flex-direction:column;gap:2px;">
+            <span style="font-size:9px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#bdb0a1;">COBRA // TERMINAL</span>
+            <span style="font-size:13px;font-weight:700;color:#ffb07c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">nova_viewer</span>
+            <span style="font-size:10px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:${orange};">${escapeHtml(t("properties.testFollow"))}</span>
+          </div>
+        </div>`;
+      }
+      case "cobra-shield": {
+        const pct = state.goal && state.goal.target ? Math.min(100, Math.round((state.goal.current / state.goal.target) * 100)) : 0;
+        const orange = "#ff7605";
+        const isLow = pct < 5;
+        const color = isLow ? "#ff3b30" : orange;
+        const label = isLow ? "SHIELDS OFFLINE" : `SHIELD: ${pct}%`;
+        return `<div class="cobra-shield-preview" style="position:relative;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px;box-sizing:border-box;">
+          <span style="font-family:'Orbitron','Consolas',monospace;font-size:8px;color:rgba(255,118,5,0.5);">FAULCON DELACY // COBRA MK II</span>
+          <svg viewBox="0 0 100 72" preserveAspectRatio="xMidYMid meet" style="flex:1;width:100%;min-height:0;">
+            <ellipse cx="50" cy="36" rx="30" ry="16" fill="none" stroke="${color}" stroke-width="1.5"/>
+            <ellipse cx="50" cy="36" rx="21" ry="11" fill="none" stroke="${color}" stroke-width="1"/>
+            <ellipse cx="50" cy="36" rx="12" ry="6" fill="none" stroke="${color}" stroke-width="0.8"/>
+            <path d="M50 25 L59 31 L55 35 L52 34 L50 36 L48 34 L45 35 L41 31 Z" fill="none" stroke="${color}" stroke-width="1.2" stroke-linejoin="round"/>
+          </svg>
+          <span style="font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;color:${color};">${label}</span>
+          <span style="font-family:'Orbitron','Consolas',monospace;font-size:10px;color:#ffb07c;">SYS_CR: ${formatMoney(state.goal.current)} / ${formatMoney(state.goal.target)}</span>
+        </div>`;
+      }
+      case "cobra-radar": {
+        const orange = "#ff7605";
+        return `<div class="cobra-radar-preview" style="position:relative;height:100%;display:flex;align-items:center;justify-content:center;padding:4px;box-sizing:border-box;">
+          <svg viewBox="0 0 120 80" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;">
+            <ellipse cx="60" cy="40" rx="48" ry="18" fill="none" stroke="${orange}" stroke-width="1"/>
+            <ellipse cx="60" cy="40" rx="32" ry="12" fill="none" stroke="${orange}" stroke-width="0.6" opacity="0.5"/>
+            <ellipse cx="60" cy="40" rx="16" ry="6" fill="none" stroke="${orange}" stroke-width="0.5" opacity="0.4"/>
+            <path d="M60 22v36M12 40h96" fill="none" stroke="${orange}" stroke-width="0.4" opacity="0.4"/>
+            <path d="M60 36l3.4 4-3.4-4z" fill="none" stroke="${orange}" stroke-width="1"/>
+            <path d="M32 38l-3.4 4-3.4-4 3.4-2.4z" fill="none" stroke="${orange}" stroke-width="1"/>
+            <path d="M86 44v-9" stroke="${orange}" stroke-width="0.6" opacity="0.6"/>
+            <path d="M82 33h8v8h-8z" fill="none" stroke="#ff3b30" stroke-width="1"/>
+          </svg>
         </div>`;
       }
       default:

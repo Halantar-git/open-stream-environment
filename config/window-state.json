@@ -1,4 +1,9 @@
 {
-  "main": null,
+  "main": {
+    "x": -8,
+    "y": -8,
+    "width": 1936,
+    "height": 1048
+  },
   "chat": null
 }

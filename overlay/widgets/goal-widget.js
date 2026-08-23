@@ -57,8 +57,26 @@
           <span class="widget-goal__title">${escapeHtml(goal.title || t("preview.goalTitle"))}</span>
           <span class="widget-goal__amounts"><b>${formatMoney(goal.current)}</b> / ${formatMoney(goal.target)} ${escapeHtml(currencySymbol(goal.currency))}</span>
         </div>
-        <div class="md-linear-progress"><div class="md-linear-progress__bar" style="width:${pct}%"></div></div>
+        ${this._barHtml(pct)}
         ${this.config.showPercentage ? `<div class="widget-goal__percent">${pct}%</div>` : ""}`;
+    }
+
+    _barHtml(pct) {
+      // The Elite (2D) theme uses the Cobra-style 10-segment readout; every
+      // other theme keeps the standard linear progress bar.
+      if (this.context.activeThemeId !== "elite") {
+        return `<div class="md-linear-progress"><div class="md-linear-progress__bar" style="width:${pct}%"></div></div>`;
+      }
+
+      const SEGMENTS = 10;
+      let cells = "";
+      for (let i = 0; i < SEGMENTS; i++) {
+        const segStart = (i * 100) / SEGMENTS;
+        const segSize = 100 / SEGMENTS;
+        const fill = Math.max(0, Math.min(1, (pct - segStart) / segSize));
+        cells += `<div class="widget-goal__seg"><div class="widget-goal__seg-fill" style="width:${Math.round(fill * 100)}%"></div></div>`;
+      }
+      return `<div class="widget-goal__segments">${cells}</div>`;
     }
   }
 

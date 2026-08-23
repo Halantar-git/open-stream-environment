@@ -27,10 +27,10 @@
   let wheelSectors = [];
   let wheelRotation = 0;
   let wheelSpinning = false;
-  let wheelConfig = { musicVolume: 50 };
+  let wheelConfig = { musicVolume: 50, x: 960, y: 540 };
   let wheelSpeedConfig = { speed: 3 };
   let resultTimer = null;
-  let participantsConfig = { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82 };
+  let participantsConfig = { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82, x: 24, y: 340, w: 340, h: 400 };
   let participantsState = { count: 0, participants: [] };
   let spinAudioEl = null;
   let spinFallback = null;
@@ -61,6 +61,7 @@
     wheelRotation = 0;
     wheelSpinning = false;
     resizeWheel();
+    applyWheelLayout();
     drawWheel();
   }
 
@@ -71,6 +72,13 @@
     const pad = 48;
     const s = Math.max(0.32, Math.min(1.15, (Math.min(window.innerWidth, window.innerHeight) - pad) / base));
     wheelEl.style.setProperty("--wheel-scale", String(s));
+  }
+
+  function applyWheelLayout() {
+    const wheelEl = document.getElementById("wheel");
+    if (!wheelEl) return;
+    wheelEl.style.left = (wheelConfig.x ?? 960) + "px";
+    wheelEl.style.top = (wheelConfig.y ?? 540) + "px";
   }
 
   window.addEventListener("resize", resizeWheel);
@@ -277,8 +285,10 @@
     el.style.setProperty("--pw-font-size", participantsConfig.fontSize + "px");
     el.style.setProperty("--pw-text", participantsConfig.textColor);
     el.style.setProperty("--pw-bg-opacity", participantsConfig.backgroundOpacity + "%");
-    el.style.left = (participantsConfig.x ?? 1.25) + "%";
-    el.style.top = (participantsConfig.y ?? 50) + "%";
+    el.style.left = (participantsConfig.x ?? 24) + "px";
+    el.style.top = (participantsConfig.y ?? 340) + "px";
+    el.style.width = (participantsConfig.w ?? 340) + "px";
+    el.style.height = (participantsConfig.h ?? 400) + "px";
 
     if (!count) {
       el.hidden = true;
@@ -445,6 +455,7 @@
         break;
       case EVENT_TYPES.WHEEL_CONFIG:
         wheelConfig = (msg.payload && msg.payload.config) || wheelConfig;
+        applyWheelLayout();
         break;
       case EVENT_TYPES.WHEEL_SPEED_CONFIG:
         wheelSpeedConfig = (msg.payload && msg.payload.config) || wheelSpeedConfig;

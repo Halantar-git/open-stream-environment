@@ -235,6 +235,28 @@
   content: none !important;
 }
 
+/* Elite (2D): segmented goal bar — 10 equal hull-panel cells with 1px gaps,
+   each filling with the cockpit-orange accent (matches the Cobra goal). */
+.widget-goal__segments {
+  display: flex;
+  gap: 1px;
+  height: 8px;
+}
+.widget-goal__seg {
+  position: relative;
+  flex: 1 1 0;
+  background: #33261a;
+}
+.widget-goal__seg-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  background: #ff7605;
+  box-shadow: 0 0 12px rgba(255, 118, 5, 0.55);
+}
+
 /* ---------- Chat ---------- */
 .widget-chat {
   width: 100%;
@@ -439,7 +461,8 @@
 [data-decoration="brackets4"] .star-citizen-chat-surface,
 [data-decoration="brackets4"] .star-citizen-holo-alert-surface,
 [data-decoration="brackets4"] .widget-stat,
-[data-decoration="brackets4"] .widget-social {
+[data-decoration="brackets4"] .widget-social,
+[data-decoration="brackets4"] .elite-surface {
   position: relative;
   background-image: repeating-linear-gradient(
     180deg,
@@ -516,7 +539,8 @@
 [data-decoration="brackets4"] .star-citizen-chat-surface::before,
 [data-decoration="brackets4"] .star-citizen-holo-alert-surface::before,
 [data-decoration="brackets4"] .widget-stat::before,
-[data-decoration="brackets4"] .widget-social::before {
+[data-decoration="brackets4"] .widget-social::before,
+[data-decoration="brackets4"] .elite-surface::before {
   content: "";
   position: absolute;
   inset: 0;

@@ -68,13 +68,23 @@
         </div>
 
         <div class="remote-field">
-          <label class="remote-field__label" for="wsX"><span data-i18n="giveaway.positionX">Позиция X</span>: <span id="wsXValue">1.25%</span></label>
-          <input class="remote-range" id="wsX" type="range" min="0" max="100" step="0.25" />
+          <label class="remote-field__label" for="wsX"><span data-i18n="giveaway.positionX">Позиция X</span>: <span id="wsXValue">24px</span></label>
+          <input class="remote-input" id="wsX" type="number" inputmode="numeric" />
         </div>
 
         <div class="remote-field">
-          <label class="remote-field__label" for="wsY"><span data-i18n="giveaway.positionY">Позиция Y</span>: <span id="wsYValue">50%</span></label>
-          <input class="remote-range" id="wsY" type="range" min="0" max="100" step="0.25" />
+          <label class="remote-field__label" for="wsY"><span data-i18n="giveaway.positionY">Позиция Y</span>: <span id="wsYValue">340px</span></label>
+          <input class="remote-input" id="wsY" type="number" inputmode="numeric" />
+        </div>
+
+        <div class="remote-field">
+          <label class="remote-field__label" for="wsW" data-i18n="giveaway.widgetWidth">Ширина (px)</label>
+          <input class="remote-input" id="wsW" type="number" min="1" inputmode="numeric" />
+        </div>
+
+        <div class="remote-field">
+          <label class="remote-field__label" for="wsH" data-i18n="giveaway.widgetHeight">Высота (px)</label>
+          <input class="remote-input" id="wsH" type="number" min="1" inputmode="numeric" />
         </div>
 
         <div class="remote-field remote-field--inline">
