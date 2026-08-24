@@ -147,6 +147,13 @@
       const radarRadius = Math.min(cw * 0.36, ch * 0.48);
       const sweepAngle = (now * 0.001) % (Math.PI * 2);
 
+      // Font sizes scale with the widget so the HUD text stays proportionate.
+      const fs = Math.max(0.5, Math.min(3, Math.min(cw, ch) / 260));
+      const fBig = Math.round(11 * fs);
+      const fMed = Math.round(10 * fs);
+      const fSml = Math.round(9 * fs);
+      const fXsm = Math.round(8 * fs);
+
       // Player telemetry readouts. Speed drifts periodically; G-force tracks
       // speed (higher speed -> higher G, like real maneuvering); altitude
       // oscillates with a swing that scales with speed.
@@ -203,17 +210,17 @@
       const lxLabel = margin + 14;
 
       ctx.textAlign = "left";
-      ctx.font = `700 11px ${FONT_DISPLAY}`;
+      ctx.font = `700 ${fBig}px ${FONT_DISPLAY}`;
       drawLine({ x: lx + 10, y: scaleTop }, { x: lx, y: scaleTop }, CYAN_DIM, 1.5);
       drawLine({ x: lx, y: scaleTop }, { x: lx, y: scaleBot }, CYAN_DIM, 1.5);
       drawLine({ x: lx, y: scaleBot }, { x: lx + 10, y: scaleBot }, CYAN_DIM, 1.5);
 
       ctx.fillStyle = CYAN;
-      ctx.fillText(`${speed} M/S`, lxLabel, cy - 5);
+      ctx.fillText(`${speed} M/S`, lxLabel, cy - 5 * fs);
       ctx.fillStyle = CYAN_DIM;
-      ctx.fillText(`${gForce} G`, lxLabel, cy + 12);
+      ctx.fillText(`${gForce} G`, lxLabel, cy + 12 * fs);
       ctx.fillStyle = CYAN;
-      ctx.fillText(`ALT ${altitude}`, lxLabel, cy + 29);
+      ctx.fillText(`ALT ${altitude}`, lxLabel, cy + 29 * fs);
 
       // Speed crosshair.
       drawLine({ x: lxLabel + 46, y: cy }, { x: lxLabel + 54, y: cy }, CYAN_DIM, 1);
@@ -224,20 +231,20 @@
       const rxLabel = cw - margin - 14;
 
       ctx.textAlign = "right";
-      ctx.font = `700 11px ${FONT_DISPLAY}`;
+      ctx.font = `700 ${fBig}px ${FONT_DISPLAY}`;
       drawLine({ x: rx - 10, y: scaleTop }, { x: rx, y: scaleTop }, CYAN_DIM, 1.5);
       drawLine({ x: rx, y: scaleTop }, { x: rx, y: scaleBot }, CYAN_DIM, 1.5);
       drawLine({ x: rx, y: scaleBot }, { x: rx - 10, y: scaleBot }, CYAN_DIM, 1.5);
 
       ctx.fillStyle = CYAN;
-      ctx.fillText("AB 100%", rxLabel, cy - 5);
+      ctx.fillText("AB 100%", rxLabel, cy - 5 * fs);
       ctx.fillStyle = CYAN_DIM;
-      ctx.fillText("H 88%", rxLabel, cy + 12);
+      ctx.fillText("H 88%", rxLabel, cy + 12 * fs);
 
-      ctx.font = `500 9px ${FONT_MONO}`;
+      ctx.font = `500 ${fSml}px ${FONT_MONO}`;
       ctx.fillStyle = CYAN_DIM;
-      ctx.fillText(`DECOY ${decoy}`, rxLabel, scaleTop - 10);
-      ctx.fillText(`NOISE ${noise}`, rxLabel, scaleTop + 2);
+      ctx.fillText(`DECOY ${decoy}`, rxLabel, scaleTop - 10 * fs);
+      ctx.fillText(`NOISE ${noise}`, rxLabel, scaleTop + 2 * fs);
 
       // --- 3. Holographic sensor globe base: radial-glow disc + flat rings ---
       ctx.save();
@@ -342,7 +349,7 @@
       ctx.restore();
 
       // Heading degree labels just inside the rim (readable, not squashed).
-      ctx.font = `600 8px ${FONT_MONO}`;
+      ctx.font = `600 ${fXsm}px ${FONT_MONO}`;
       ctx.fillStyle = "rgba(0, 240, 255, 0.5)";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -433,12 +440,12 @@
 
         // Altitude readout next to the marker.
         if (isAbove || isBelow) {
-          ctx.font = `600 8px ${FONT_MONO}`;
+          ctx.font = `600 ${fXsm}px ${FONT_MONO}`;
           ctx.fillStyle = this._rgba(color, 0.65 * alpha);
           ctx.textAlign = "left";
           ctx.textBaseline = "middle";
           const altText = `${liveHeight >= 0 ? "+" : ""}${Math.round(liveHeight)}`;
-          ctx.fillText(altText, targetX + 8, targetY - 1);
+          ctx.fillText(altText, targetX + 8 * fs, targetY - fs);
           ctx.textBaseline = "alphabetic";
         }
 
@@ -446,22 +453,22 @@
       });
 
       // --- 7. Header + distance readouts ---
-      ctx.font = `700 10px ${FONT_DISPLAY}`;
+      ctx.font = `700 ${fMed}px ${FONT_DISPLAY}`;
       ctx.shadowBlur = 4;
       ctx.shadowColor = CYAN;
       ctx.fillStyle = CYAN;
 
       ctx.textAlign = "left";
-      ctx.fillText("SENSORS ON", margin, 96);
+      ctx.fillText("SENSORS ON", margin, 32);
 
       ctx.textAlign = "right";
-      ctx.fillText(`CONTACTS: ${this._contacts.length}`, cw - margin, 96);
+      ctx.fillText(`CONTACTS: ${this._contacts.length}`, cw - margin, 32);
 
       // Bearing (tracks the sweep) + a live target-range readout.
       const bearing = Math.round((((sweepAngle + Math.PI / 2) * 180) / Math.PI) % 360);
       const distance = (9 + Math.sin(now * 0.0003) * 3 + Math.sin(now * 0.0007 + 1) * 1).toFixed(1);
 
-      ctx.font = `700 11px ${FONT_DISPLAY}`;
+      ctx.font = `700 ${fBig}px ${FONT_DISPLAY}`;
       ctx.textAlign = "center";
       const readoutY = Math.min(cy + radarRadius * tiltFactor + 34, ch - 8);
       ctx.fillText(`${bearing}°          ${distance}km`, cx, readoutY);

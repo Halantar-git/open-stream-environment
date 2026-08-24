@@ -131,12 +131,12 @@
         "config": {}
       },
       {
-        "id": "0be3279c-a145-4057-ba60-1d4eeacf80f2",
+        "id": "bf4c1440-4e25-47c8-97a8-bd869708c162",
         "type": "grimhex-radar",
-        "x": 16,
-        "y": 22,
-        "w": 66,
-        "h": 76,
+        "x": 2,
+        "y": 38,
+        "w": 20,
+        "h": 24,
         "z": 13,
         "visible": true,
         "config": {
@@ -1867,6 +1867,24 @@
       "channel": "halantar",
       "startedAt": 1787586177639,
       "endedAt": 1787588207318
+    },
+    {
+      "id": "75245d59-dfca-4d8a-bc6e-3b624f506194",
+      "channel": "halantar",
+      "startedAt": 1787589136733,
+      "endedAt": 1787589251758
+    },
+    {
+      "id": "a11a973a-4668-4f7f-97e1-a0057164630c",
+      "channel": "halantar",
+      "startedAt": 1787589263340,
+      "endedAt": 1787589286648
+    },
+    {
+      "id": "d20e0467-ca7e-4275-9abc-6febb7b5b0b3",
+      "channel": "halantar",
+      "startedAt": 1787589475293,
+      "endedAt": 1787589700053
     }
   ],
   "chatMessages": [
