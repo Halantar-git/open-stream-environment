@@ -486,6 +486,7 @@
   manager.register("cobra-holo-alert", OW.WidgetCobraHoloAlert);
   manager.register("cobra-shield", OW.WidgetCobraShield);
   manager.register("cobra-radar", OW.WidgetCobraRadar);
+  manager.register("grimhex-radar", OW.WidgetStarCitizenRadar);
 
   // ---- socket ----
   function handleMessage(msg) {

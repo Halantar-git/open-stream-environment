@@ -216,6 +216,18 @@
       minH: 8,
       defaultConfig: {},
     },
+    "grimhex-radar": {
+      type: "grimhex-radar",
+      label: "Радар Star Citizen",
+      description: "Голографический радар с кораблями-донатерами (только для темы Star Citizen)",
+      icon: "widgetStarCitizenRadar",
+      dimension: "3d",
+      theme: "grimhex",
+      defaultGeometry: { x: 42, y: 8, w: 16, h: 24 },
+      minW: 12,
+      minH: 12,
+      defaultConfig: { opacity: 100 },
+    },
     nuclear: {
       type: "nuclear",
       label: "Знак радиации",

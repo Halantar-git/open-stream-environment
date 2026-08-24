@@ -170,7 +170,7 @@ export function initPropertiesPanel({
     } else if (inst.type === "grimhex" || inst.type === "musain" || inst.type === "nuclear" || inst.type === "cobra") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>`;
-    } else if (inst.type === "cobra-shield" || inst.type === "cobra-radar") {
+    } else if (inst.type === "cobra-shield" || inst.type === "cobra-radar" || inst.type === "grimhex-radar") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.opacity")}: <span id="pOpacityValue">${config.opacity ?? 100}%</span></label><input type="range" id="pOpacity" min="0" max="100" step="1" value="${config.opacity ?? 100}"></div>`;
     } else if (inst.type === "recent") {
@@ -300,7 +300,7 @@ export function initPropertiesPanel({
         if (label) label.textContent = String(v);
         send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { perspective: v } } });
       });
-    } else if (inst.type === "cobra-shield" || inst.type === "cobra-radar") {
+    } else if (inst.type === "cobra-shield" || inst.type === "cobra-radar" || inst.type === "grimhex-radar") {
       propertiesEl.querySelector("#pOpacity").addEventListener("input", (e) => {
         const v = Number(e.target.value);
         const label = propertiesEl.querySelector("#pOpacityValue");

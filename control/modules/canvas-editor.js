@@ -308,6 +308,21 @@ export function initCanvasEditor({
           </div>
         </div>`;
       }
+      case "grimhex-radar": {
+        const cyan = "#00f0ff";
+        return `<div class="star-citizen-radar-preview" style="position:relative;height:100%;display:flex;align-items:center;justify-content:center;padding:4px;box-sizing:border-box;">
+          <svg viewBox="0 0 120 80" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;">
+            <ellipse cx="60" cy="40" rx="48" ry="18" fill="none" stroke="${cyan}" stroke-width="1"/>
+            <ellipse cx="60" cy="40" rx="32" ry="12" fill="none" stroke="${cyan}" stroke-width="0.6" opacity="0.5"/>
+            <ellipse cx="60" cy="40" rx="16" ry="6" fill="none" stroke="${cyan}" stroke-width="0.5" opacity="0.4"/>
+            <path d="M60 22v36M12 40h96" fill="none" stroke="${cyan}" stroke-width="0.4" opacity="0.4"/>
+            <path d="M60 36l3.4 4-3.4-4z" fill="none" stroke="${cyan}" stroke-width="1"/>
+            <path d="M32 38l-3.4 4-3.4-4 3.4-2.4z" fill="none" stroke="#ffffff" stroke-width="1"/>
+            <path d="M86 44v-9" stroke="${cyan}" stroke-width="0.6" opacity="0.6"/>
+            <path d="M82 33h8v8h-8z" fill="none" stroke="#ffaa00" stroke-width="1"/>
+          </svg>
+        </div>`;
+      }
       case "nuclear": {
         const green = "#39ff14";
         const cx = 12;
