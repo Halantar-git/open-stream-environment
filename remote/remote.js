@@ -44,6 +44,7 @@
     CMD_ADD_GIVEAWAY_PARTICIPANT: "cmd_add_giveaway_participant",
     CMD_REMOVE_GIVEAWAY_PARTICIPANT: "cmd_remove_giveaway_participant",
     CMD_CLEAR_GIVEAWAY_PARTICIPANTS: "cmd_clear_giveaway_participants",
+    CMD_TEST_CHAT: "cmd_test_chat",
   };
 
   const wsUrl = (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws";
@@ -341,6 +342,16 @@
     alertGrid.appendChild(makeButton("Follow", "TEST_ALERT", { kind: "follow" }));
     alertGrid.appendChild(makeButton("Sub", "TEST_ALERT", { kind: "sub" }));
     alertGrid.appendChild(makeButton("Donate", "TEST_ALERT", { kind: "donation" }));
+
+    // Test chat: sends a raw command (not a REMOTE_ACTION) to emit chat messages.
+    const chatBtn = document.createElement("button");
+    chatBtn.className = "action-btn";
+    chatBtn.textContent = t("editor.testChat");
+    chatBtn.addEventListener("click", () => {
+      vibrate();
+      sendCommand(EVENT_TYPES.CMD_TEST_CHAT, { count: 6 });
+    });
+    alertGrid.appendChild(chatBtn);
   }
 
   function renderThemes() {

@@ -152,7 +152,7 @@ function createWindow(port) {
   });
 
   mainWindow.loadFile(path.join(__dirname, "control", "control.html"), {
-    query: { port: String(port) },
+    query: { port: String(port), version: app.getVersion() },
   });
 
   const splashStartedAt = Date.now();
@@ -339,6 +339,10 @@ function registerGlobalHotkeys() {
 }
 
 app.whenReady().then(() => {
+  // Disable the default application menu so pressing Alt doesn't reveal a
+  // menu bar (the overlay/control UI doesn't need it).
+  Menu.setApplicationMenu(null);
+
   // Allow microphone access for the mic-visualizer bridge (the control panel
   // captures audio and forwards levels to the overlay over WebSocket).
   session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {

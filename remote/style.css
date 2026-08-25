@@ -207,6 +207,16 @@ body {
   border-color: var(--md-error);
 }
 
+.action-btn--icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.action-btn--icon svg {
+  width: clamp(18px, 1.6vw, 26px);
+  height: clamp(18px, 1.6vw, 26px);
+}
+
 .death-counter {
   display: flex;
   align-items: center;

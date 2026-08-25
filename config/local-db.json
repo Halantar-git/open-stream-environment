@@ -129,19 +129,6 @@
         "z": 12,
         "visible": true,
         "config": {}
-      },
-      {
-        "id": "bf4c1440-4e25-47c8-97a8-bd869708c162",
-        "type": "grimhex-radar",
-        "x": 2,
-        "y": 38,
-        "w": 20,
-        "h": 24,
-        "z": 13,
-        "visible": true,
-        "config": {
-          "opacity": 100
-        }
       }
     ]
   },
@@ -1885,6 +1872,30 @@
       "channel": "halantar",
       "startedAt": 1787589475293,
       "endedAt": 1787589700053
+    },
+    {
+      "id": "cbc8d721-a684-4e17-8569-222412b344be",
+      "channel": "halantar",
+      "startedAt": 1787591779813,
+      "endedAt": 1787591856131
+    },
+    {
+      "id": "f61e9555-ba4a-4c2a-be65-2c6c7a5caaeb",
+      "channel": "halantar",
+      "startedAt": 1787591953174,
+      "endedAt": 1787592380507
+    },
+    {
+      "id": "4c5b7ed8-e5ea-4616-8cb3-e1f56ad27fca",
+      "channel": "halantar",
+      "startedAt": 1787671418586,
+      "endedAt": 1787671477207
+    },
+    {
+      "id": "fa07ae26-a35d-4642-8674-089f229c118f",
+      "channel": "halantar",
+      "startedAt": 1787677133663,
+      "endedAt": 1787677375000
     }
   ],
   "chatMessages": [
@@ -6531,6 +6542,123 @@
     {
       "id": "16ef9072-b638-4a7a-b71b-c2bad93c0054",
       "timestamp": 1787588178568,
+      "type": "donation",
+      "kind": "donation",
+      "username": "star_gazer",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "160e71f1-c9f1-42b0-bd59-b0bd7445233e",
+      "timestamp": 1787677156104,
+      "type": "donation",
+      "kind": "donation",
+      "username": "star_gazer",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "28830d5e-f41e-4514-b491-aedcd8b6024b",
+      "timestamp": 1787677168710,
+      "type": "donation",
+      "kind": "donation",
+      "username": "nova_viewer",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "4f892747-a78f-473c-92f6-0711505656e1",
+      "timestamp": 1787677175152,
+      "type": "subscription",
+      "kind": "gift_sub",
+      "username": "comet_watcher",
+      "amount": null,
+      "currency": null,
+      "message": "",
+      "is_test": true,
+      "count": 3,
+      "tier": null
+    },
+    {
+      "id": "a2f3c30d-4869-4225-8408-f645254ceea6",
+      "timestamp": 1787677179698,
+      "type": "donation",
+      "kind": "donation",
+      "username": "orbit_fan",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "3fdb215e-23ce-460d-b1db-0b105f2a1b9e",
+      "timestamp": 1787677191442,
+      "type": "donation",
+      "kind": "donation",
+      "username": "orbit_fan",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "a74c9fed-ce19-4e0d-82df-4008e72c13ed",
+      "timestamp": 1787677198451,
+      "type": "donation",
+      "kind": "donation",
+      "username": "nova_viewer",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "b796800f-1821-44bc-95ab-56d81990d2b5",
+      "timestamp": 1787677205111,
+      "type": "donation",
+      "kind": "donation",
+      "username": "star_gazer",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "d5bca6e9-09d2-4760-b86c-4125f54274bf",
+      "timestamp": 1787677261188,
+      "type": "donation",
+      "kind": "donation",
+      "username": "star_gazer",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "88398e4b-322c-453d-b949-f4f530ca9fc9",
+      "timestamp": 1787677323418,
       "type": "donation",
       "kind": "donation",
       "username": "star_gazer",

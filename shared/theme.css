@@ -310,8 +310,21 @@
   transition: border-color 150ms var(--easing-standard);
   width: 100%;
 }
-.md-field input:focus {
+.md-field input:focus,
+.md-field select:focus {
   border-color: var(--md-primary);
+}
+.md-field select {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--md-on-surface);
+  background: var(--md-surface-container-highest);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-sm);
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color 150ms var(--easing-standard);
+  width: 100%;
 }
 .md-field .md-field__hint {
   font-size: 11px;

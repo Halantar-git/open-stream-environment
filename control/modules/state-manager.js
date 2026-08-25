@@ -39,6 +39,7 @@ export function createStateManager() {
     youtubeEnabled: true,
     obs: { enabled: false, host: "127.0.0.1", port: 4455, password: "", sceneMap: { main: "", start: "", brb: "", end: "", wheel: "" } },
     soundboard: { enabled: true, volume: 0.8, queueMode: false, sounds: [] },
+    tts: { enabled: true, volume: 0.9, rate: 1, lang: "ru-RU", voice: "" },
     streamdeck: { icons: { start: "", brb: "", wheel: "", talk: "", end: "" } },
     selectedId: null,
     pendingAdd: null,
@@ -74,6 +75,7 @@ export function createStateManager() {
     state.youtubeEnabled = payload.youtubeEnabled !== false;
     state.obs = payload.obs || state.obs;
     state.soundboard = payload.soundboard || state.soundboard;
+    state.tts = payload.tts || state.tts;
     state.streamdeck = payload.streamdeck || state.streamdeck;
     state.appearance = payload.appearance || state.appearance;
     state.editorPrefs = payload.editor || state.editorPrefs;

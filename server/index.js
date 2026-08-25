@@ -752,6 +752,11 @@ function createServer({ db } = {}) {
         broadcast(EVENT_TYPES.STATE, stateSnapshot());
         break;
       }
+      case EVENT_TYPES.CMD_SET_TTS_CONFIG: {
+        state.setTtsConfig((msg.payload && msg.payload.config) || {});
+        broadcast(EVENT_TYPES.STATE, stateSnapshot());
+        break;
+      }
       case EVENT_TYPES.CMD_SET_STREAMDECK_CONFIG: {
         state.setStreamDeckConfig((msg.payload && msg.payload.config) || {});
         broadcast(EVENT_TYPES.STATE, stateSnapshot());

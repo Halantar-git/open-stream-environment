@@ -197,6 +197,14 @@
     "soundboardQueue": "Очередь звуков (по одному)",
     "addSound": "+ Добавить звук",
     "soundReward": "Название награды на Twitch",
+    "ttsEnabled": "Озвучка донатов (TTS)",
+    "ttsVolume": "Громкость озвучки",
+    "ttsRate": "Скорость речи",
+    "ttsLang": "Язык озвучки",
+    "ttsVoice": "Голос",
+    "ttsVoiceAuto": "Авто",
+    "ttsTest": "Тест озвучки",
+    "ttsTestPhrase": "Привет! Это проверка озвучки донатов.",
     "streamdeck": "Stream Deck",
     "streamdeckDesc": "Свои иконки для кнопок плагина Elgato Stream Deck. Файл (PNG/JPG/GIF/WebP) копируется в media/ и применяется поверх стандартной иконки плагина.",
     "streamdeckIconScene": "Иконка «Сцена»",
@@ -677,6 +685,7 @@
     "donationalerts": {
       "title": "DonationAlerts",
       "p1": "Донаты автоматически увеличивают счётчик цели и запускают алерт.",
+      "p2": "Озвучка донатов (TTS): в карточке DonationAlerts можно включить голосовое чтение текста доната — выбор языка, голоса, громкости и скорости речи, плюс кнопка «Тест озвучки».",
       "s1": "Создайте клиент на donationalerts.com/application/clients.",
       "s2": "Укажите Redirect URI из Настроек → DonationAlerts.",
       "s3": "Вставьте Client ID и Client Secret, затем нажмите «Подключить DonationAlerts»."

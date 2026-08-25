@@ -197,6 +197,14 @@
     "soundboardQueue": "Queue sounds (one at a time)",
     "addSound": "+ Add sound",
     "soundReward": "Twitch reward name",
+    "ttsEnabled": "Donation voice-over (TTS)",
+    "ttsVolume": "Voice-over volume",
+    "ttsRate": "Speech rate",
+    "ttsLang": "Voice language",
+    "ttsVoice": "Voice",
+    "ttsVoiceAuto": "Auto",
+    "ttsTest": "Test voice",
+    "ttsTestPhrase": "Hi! This is a donation voice-over test.",
     "streamdeck": "Stream Deck",
     "streamdeckDesc": "Custom icons for the Elgato Stream Deck plugin buttons. The file (PNG/JPG/GIF/WebP) is copied to media/ and applied over the default plugin icon.",
     "streamdeckIconScene": "Scene icon",
@@ -677,6 +685,7 @@
     "donationalerts": {
       "title": "DonationAlerts",
       "p1": "Donations automatically increase the goal counter and trigger an alert.",
+      "p2": "Donation voice-over (TTS): in the DonationAlerts card you can enable reading the donation message aloud — language, voice, volume and speech rate, plus a test button.",
       "s1": "Create a client at donationalerts.com/application/clients.",
       "s2": "Set the Redirect URI to the value shown in Settings → DonationAlerts.",
       "s3": "Paste the Client ID and Client Secret, then press Connect DonationAlerts."

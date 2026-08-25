@@ -101,6 +101,7 @@ const SECTIONS = [
     title: "help.donationalerts.title",
     blocks: [
       { type: "p", key: "help.donationalerts.p1" },
+      { type: "p", key: "help.donationalerts.p2" },
       { type: "steps", items: ["help.donationalerts.s1", "help.donationalerts.s2", "help.donationalerts.s3"] },
     ],
   },

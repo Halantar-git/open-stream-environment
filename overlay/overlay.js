@@ -51,6 +51,7 @@
     topDonation: { user: "", amount: 0, currency: "RUB" },
     deathCount: 0,
     soundboardConfig: { volume: 0.8, queueMode: false },
+    tts: { enabled: true, volume: 0.9, rate: 1, lang: "ru-RU", voice: "" },
     participantsState: { count: 0, participants: [] },
     participantsConfig: { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82 },
     micConfig: { sensitivity: 1.5, lineWidth: 2, color: "", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2, peakFall: 2.5 },
@@ -93,6 +94,47 @@
   }
   function readCssVar(name) {
     return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  // ---- DonationAlerts text-to-speech (озвучка) ----
+  function buildDonationSpeech(alert) {
+    const amount = formatMoney(alert.amount);
+    const currency = currencySymbol(alert.currency);
+    const ru = /^ru/i.test((state.tts && state.tts.lang) || "");
+    const intro = ru
+      ? `${alert.user} отправил ${amount} ${currency}`
+      : `${alert.user} donated ${amount} ${currency}`;
+    return alert.message ? `${intro}. ${alert.message}` : intro;
+  }
+
+  function pickTtsVoice() {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return null;
+    const voices = window.speechSynthesis.getVoices() || [];
+    const name = state.tts && state.tts.voice;
+    if (name) {
+      const match = voices.find((v) => v.name === name);
+      if (match) return match;
+    }
+    const prefix = String((state.tts && state.tts.lang) || "ru-RU").slice(0, 2).toLowerCase();
+    return voices.find((v) => v.lang && v.lang.toLowerCase().startsWith(prefix)) || null;
+  }
+
+  function speakDonation(alert) {
+    if (!state.tts || !state.tts.enabled) return;
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    const text = buildDonationSpeech(alert);
+    if (!text) return;
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = state.tts.lang || "ru-RU";
+      u.volume = Math.max(0, Math.min(1, Number(state.tts.volume) || 0.9));
+      u.rate = Math.max(0.5, Math.min(2, Number(state.tts.rate) || 1));
+      const voice = pickTtsVoice();
+      if (voice) u.voice = voice;
+      window.speechSynthesis.speak(u);
+    } catch (_) {
+      /* speech unavailable */
+    }
   }
 
   // ---- alert / winner audio helpers ----
@@ -499,6 +541,7 @@
         state.topDonation = p.topDonation || state.topDonation;
         state.deathCount = p.deathCount || 0;
         state.soundboardConfig = p.soundboard || state.soundboardConfig;
+        state.tts = p.tts || state.tts;
         if (p.giveaway) {
           state.participantsState = {
             count: p.giveaway.count || 0,
@@ -608,6 +651,11 @@
   function send(type, payload) {
     if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type, payload }));
   }
+
+  // Озвучка донатов (DonationAlerts TTS).
+  bus.on(EVENT_TYPES.ALERT, (alert) => {
+    if (alert && alert.kind === "donation") speakDonation(alert);
+  });
 
   window.addEventListener("resize", resizeWheel);
   connect();

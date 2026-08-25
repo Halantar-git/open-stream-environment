@@ -38,6 +38,7 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   const params = new URLSearchParams(location.search);
   const port = params.get("port") || "8710";
+  const appVersion = params.get("version") || "";
   const wsUrl = `ws://localhost:${port}/ws`;
   const overlayUrl = `http://localhost:${port}/overlay/overlay.html`;
   function resolveMediaUrl(p) {
@@ -52,6 +53,8 @@ const { EVENT_TYPES } = window.SharedEvents;
   // ---- state ----
   const state = createStateManager();
 
+  let ttsVoices = [];
+
   // ---- dom refs ----
   const tabsEl = document.getElementById("tabs");
   const viewEditor = document.getElementById("view-editor");
@@ -60,6 +63,8 @@ const { EVENT_TYPES } = window.SharedEvents;
   const libraryListEl = document.getElementById("libraryList");
   const obsUrlLabel = document.getElementById("obsUrlLabel");
   const copyUrlBtn = document.getElementById("copyUrlBtn");
+  const appVersionEl = document.getElementById("appVersion");
+  if (appVersionEl) appVersionEl.textContent = appVersion ? `v${appVersion}` : "";
   const remoteUrlHint = document.getElementById("remoteUrlHint");
   const remoteUrlText = document.getElementById("remoteUrlText");
   const gridSizeSelect = document.getElementById("gridSizeSelect");
@@ -116,6 +121,14 @@ const { EVENT_TYPES } = window.SharedEvents;
   const soundboardVolume = document.getElementById("soundboardVolume");
   const soundboardVolumeValue = document.getElementById("soundboardVolumeValue");
   const soundboardQueueSwitch = document.getElementById("soundboardQueueSwitch");
+  const ttsEnabledSwitch = document.getElementById("ttsEnabledSwitch");
+  const ttsVolume = document.getElementById("ttsVolume");
+  const ttsVolumeValue = document.getElementById("ttsVolumeValue");
+  const ttsRate = document.getElementById("ttsRate");
+  const ttsRateValue = document.getElementById("ttsRateValue");
+  const ttsLang = document.getElementById("ttsLang");
+  const ttsVoice = document.getElementById("ttsVoice");
+  const ttsTestBtn = document.getElementById("ttsTestBtn");
   const soundboardList = document.getElementById("soundboardList");
   const addSoundBtn = document.getElementById("addSoundBtn");
   const streamdeckIconStart = document.getElementById("streamdeckIconStart");
@@ -255,6 +268,16 @@ const { EVENT_TYPES } = window.SharedEvents;
       soundboardVolume.value = vol;
       soundboardVolumeValue.textContent = `${vol}%`;
       renderSoundboard();
+    }
+    if (state.tts) {
+      setSwitchState(ttsEnabledSwitch, !!state.tts.enabled);
+      const ttsVol = Math.round((state.tts.volume ?? 0.9) * 100);
+      ttsVolume.value = ttsVol;
+      ttsVolumeValue.textContent = `${ttsVol}%`;
+      ttsRate.value = state.tts.rate ?? 1;
+      ttsRateValue.textContent = `${(state.tts.rate ?? 1).toFixed(1)}×`;
+      ttsLang.value = state.tts.lang || "ru-RU";
+      renderTtsVoices();
     }
     renderStreamDeckIcons();
     appPortInput.value = port;
@@ -495,6 +518,31 @@ const { EVENT_TYPES } = window.SharedEvents;
     send(EVENT_TYPES.CMD_SET_SOUNDBOARD_CONFIG, { config: patch });
   }
 
+  function sendTtsConfig(patch) {
+    send(EVENT_TYPES.CMD_SET_TTS_CONFIG, { config: patch });
+  }
+
+  function renderTtsVoices() {
+    if (!ttsVoice) return;
+    const lang = (state.tts && state.tts.lang) || "ru-RU";
+    const prefix = lang.slice(0, 2).toLowerCase();
+    const matching = ttsVoices.filter((v) => v.lang && v.lang.toLowerCase().startsWith(prefix));
+    const list = matching.length ? matching : ttsVoices;
+    const current = (state.tts && state.tts.voice) || "";
+    ttsVoice.innerHTML =
+      `<option value="">${t("settings.ttsVoiceAuto")}</option>` +
+      list.map((v) => `<option value="${escapeAttr(v.name)}" ${v.name === current ? "selected" : ""}>${escapeHtml(v.name)} (${escapeHtml(v.lang)})</option>`).join("");
+  }
+
+  function loadTtsVoices() {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      ttsVoices = window.speechSynthesis.getVoices() || [];
+    } else {
+      ttsVoices = [];
+    }
+    renderTtsVoices();
+  }
+
   function sendStreamDeckConfig(patch) {
     send(EVENT_TYPES.CMD_SET_STREAMDECK_CONFIG, { config: patch });
   }
@@ -611,6 +659,49 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   wireSwitch(soundboardQueueSwitch, (on) => sendSoundboardConfig({ queueMode: on }));
   wireSwitch(soundboardEnabledSwitch, (on) => sendSoundboardConfig({ enabled: on }));
+
+  wireSwitch(ttsEnabledSwitch, (on) => sendTtsConfig({ enabled: on }));
+  ttsVolume.addEventListener("input", (e) => {
+    ttsVolumeValue.textContent = `${e.target.value}%`;
+  });
+  ttsVolume.addEventListener("change", (e) => {
+    sendTtsConfig({ volume: Number(e.target.value) / 100 });
+  });
+  ttsRate.addEventListener("input", (e) => {
+    ttsRateValue.textContent = `${Number(e.target.value).toFixed(1)}×`;
+  });
+  ttsRate.addEventListener("change", (e) => {
+    sendTtsConfig({ rate: Number(e.target.value) });
+  });
+
+  ttsLang.addEventListener("change", (e) => {
+    if (state.tts) {
+      state.tts.lang = e.target.value;
+      state.tts.voice = "";
+    }
+    sendTtsConfig({ lang: e.target.value, voice: "" });
+    renderTtsVoices();
+  });
+  ttsVoice.addEventListener("change", (e) => {
+    if (state.tts) state.tts.voice = e.target.value;
+    sendTtsConfig({ voice: e.target.value });
+  });
+  ttsTestBtn.addEventListener("click", () => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    const u = new SpeechSynthesisUtterance(t("settings.ttsTestPhrase"));
+    u.lang = (state.tts && state.tts.lang) || "ru-RU";
+    u.volume = state.tts && state.tts.volume != null ? state.tts.volume : 0.9;
+    u.rate = state.tts && state.tts.rate != null ? state.tts.rate : 1;
+    const name = (state.tts && state.tts.voice) || "";
+    const voice = (window.speechSynthesis.getVoices() || []).find((v) => v.name === name);
+    if (voice) u.voice = voice;
+    window.speechSynthesis.speak(u);
+  });
+
+  if (typeof window !== "undefined" && "speechSynthesis" in window) {
+    window.speechSynthesis.addEventListener("voiceschanged", loadTtsVoices);
+    loadTtsVoices();
+  }
 
   document.getElementById("connectTwitchBtn").addEventListener("click", () => {
     window.desktop?.connectTwitch({

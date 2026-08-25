@@ -172,6 +172,14 @@ class AppState {
         ...(sd.icons || {}),
       },
     };
+    const tts = this.config.tts || {};
+    this.config.tts = {
+      enabled: tts.enabled !== false,
+      volume: typeof tts.volume === "number" ? tts.volume : 0.9,
+      rate: typeof tts.rate === "number" ? tts.rate : 1,
+      lang: String(tts.lang || "ru-RU"),
+      voice: String(tts.voice || ""),
+    };
     if (this.config.twitch.enabled === undefined) this.config.twitch.enabled = true;
     if (this.config.donationAlerts.enabled === undefined) this.config.donationAlerts.enabled = true;
     if (this.config.youtube.enabled === undefined) this.config.youtube.enabled = true;
@@ -476,6 +484,16 @@ class AppState {
     }
     saveConfig(this.config);
     return this.config.streamdeck;
+  }
+
+  setTtsConfig(patch = {}) {
+    if (patch.enabled !== undefined) this.config.tts.enabled = !!patch.enabled;
+    if (patch.volume !== undefined) this.config.tts.volume = clamp(Number(patch.volume) || 0, 0, 1);
+    if (patch.rate !== undefined) this.config.tts.rate = clamp(Number(patch.rate) || 1, 0.5, 2);
+    if (patch.lang !== undefined) this.config.tts.lang = String(patch.lang).trim() || "ru-RU";
+    if (patch.voice !== undefined) this.config.tts.voice = String(patch.voice).trim();
+    saveConfig(this.config);
+    return this.config.tts;
   }
 
   // ---- Death counter (remote quick action) ----
@@ -926,6 +944,7 @@ class AppState {
       youtubeEnabled: this.config.youtube.enabled,
       obs: this.config.obs,
       soundboard: this.config.soundboard,
+      tts: this.config.tts,
       streamdeck: this.config.streamdeck,
       connectionStatus: this.runtime.connectionStatus,
       recentEvents: this.runtime.recentEvents,

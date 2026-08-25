@@ -36,6 +36,7 @@
       <div class="topbar__brand">
         <span class="topbar__brand-mark"></span>
         <span class="topbar__brand-name">Open Stream <b>Environment</b></span>
+        <span class="topbar__version" id="appVersion"></span>
       </div>
       <nav class="topbar__tabs" id="tabs">
         <button class="topbar__tab is-active" data-view="editor" data-i18n="nav.editor">Редактор</button>
@@ -272,6 +273,31 @@
           </div>
           <div class="settings__statuses">
             <span class="md-chip" id="chip-donationAlerts"><span class="md-chip__dot"></span><span class="md-chip__label">DonationAlerts</span></span>
+          </div>
+          <div class="properties__toggle-row"><label data-i18n="settings.ttsEnabled">Озвучка донатов (TTS)</label><div class="md-switch is-on" id="ttsEnabledSwitch" role="switch" aria-checked="true"><div class="md-switch__thumb"></div></div></div>
+          <div class="md-field">
+            <label><span data-i18n="settings.ttsVolume">Громкость озвучки</span>: <span id="ttsVolumeValue">90%</span></label>
+            <input type="range" id="ttsVolume" min="0" max="100" step="1" value="90" />
+          </div>
+          <div class="md-field">
+            <label><span data-i18n="settings.ttsRate">Скорость речи</span>: <span id="ttsRateValue">1.0×</span></label>
+            <input type="range" id="ttsRate" min="0.5" max="2" step="0.1" value="1" />
+          </div>
+          <div class="md-field">
+            <label data-i18n="settings.ttsLang">Язык озвучки</label>
+            <select id="ttsLang">
+              <option value="ru-RU">Русский</option>
+              <option value="en-US">English</option>
+            </select>
+          </div>
+          <div class="md-field">
+            <label data-i18n="settings.ttsVoice">Голос</label>
+            <select id="ttsVoice">
+              <option value="" data-i18n="settings.ttsVoiceAuto">Авто</option>
+            </select>
+          </div>
+          <div class="settings__actions">
+            <button class="md-button md-button--tonal" id="ttsTestBtn" data-i18n="settings.ttsTest">Тест озвучки</button>
           </div>
         </div>
 

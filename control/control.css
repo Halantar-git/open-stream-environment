@@ -23,6 +23,7 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .topbar {
   flex-shrink: 0;
   height: 56px;
+  position: relative;
   display: flex;
   align-items: center;
   padding: 0 16px;
@@ -35,6 +36,7 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .topbar__brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 15px; font-weight: 600; letter-spacing: 0.2px; }
 .topbar__brand b { color: var(--md-primary); }
 .topbar__brand-mark { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, var(--md-secondary), var(--md-primary), var(--md-tertiary)); flex-shrink: 0; }
+.topbar__version { font-family: var(--font-mono); font-size: 11px; font-weight: 500; color: var(--md-on-surface-variant); background: var(--md-surface-container-high); padding: 2px 8px; border-radius: var(--shape-full); }
 .topbar__tabs { display: flex; gap: 2px; background: var(--md-surface-container); padding: 4px; border-radius: var(--shape-full); }
 .topbar__tab { border: none; background: transparent; color: var(--md-on-surface-variant); font-family: var(--font-body); font-size: 13px; font-weight: 500; padding: 7px 18px; border-radius: var(--shape-full); cursor: pointer; -webkit-app-region: no-drag; }
 .topbar__tab:hover { color: var(--md-on-surface); }
@@ -166,6 +168,9 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   border-radius: var(--shape-sm);
   padding: 6px 8px;
 }
+#layoutPresetSelect {
+  min-width: 100px;
+}
 .canvas-toolbar input[type="text"] {
   font-family: var(--font-body);
   font-size: 12px;
@@ -295,7 +300,11 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .topbar__help-btn.is-active { background: var(--md-primary-container); color: var(--md-on-primary-container); }
 
 .topbar__boosty-btn {
-  margin-left: 10px;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin-left: 0;
   font-size: 12px;
   font-weight: 700;
   padding: 7px 14px;
@@ -308,7 +317,7 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 }
 .topbar__boosty-btn:hover {
   box-shadow: 0 0 22px rgba(255, 77, 77, 0.55);
-  transform: translateY(-1px);
+  transform: translate(-50%, -50%) translateY(-1px);
 }
 .topbar__boosty-btn svg { width: 14px; height: 14px; }
 

@@ -92,6 +92,7 @@
     CMD_SET_INTEGRATION_ENABLED: "cmd_set_integration_enabled", // { service, enabled }
     CMD_SET_OBS_CONFIG: "cmd_set_obs_config", // { host?, port?, password?, sceneMap? }
     CMD_SET_SOUNDBOARD_CONFIG: "cmd_set_soundboard_config", // { config }
+    CMD_SET_TTS_CONFIG: "cmd_set_tts_config", // { config: { enabled?, volume?, rate?, lang? } }
     CMD_TEST_SOUNDBOARD: "cmd_test_soundboard", // { soundId }
     CMD_SET_STREAMDECK_CONFIG: "cmd_set_streamdeck_config", // { config }
     CMD_RUN_OBS_COMMAND: "cmd_run_obs_command", // { id }
