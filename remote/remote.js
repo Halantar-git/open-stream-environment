@@ -290,7 +290,7 @@
       const v = Number(wsSpeed.value);
       wheelSpeedConfig.speed = v;
       wsSpeedValue.textContent = `${v}`;
-      sendCommand(EVENT_TYPES.CMD_SET_WHEEL_SPEED_CONFIG, { config: wheelSpeedConfig });
+      sendCommand(EVENT_TYPES.CMD_SET_WHEEL_SPEED_CONFIG, { config: { speed: v } });
     });
   }
 

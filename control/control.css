@@ -76,6 +76,19 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 }
 .canvas-wrap.is-drop-target { outline: 2px dashed var(--md-primary); outline-offset: -8px; }
 .canvas { position: relative; width: 960px; height: 540px; background: rgba(0, 0, 0, 0.15); border-radius: var(--shape-sm); box-shadow: 0 0 0 1px var(--md-outline-variant), var(--elev-3); overflow: hidden; flex-shrink: 0; }
+.canvas::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(208, 188, 255, 0.22), rgba(208, 188, 255, 0.22)),
+    linear-gradient(rgba(208, 188, 255, 0.22), rgba(208, 188, 255, 0.22));
+  background-size: 1px 100%, 100% 1px;
+  background-position: center;
+  background-repeat: no-repeat;
+}
 .canvas-toolbar { flex-shrink: 0; display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-top: 1px solid var(--md-outline-variant); background: var(--md-surface-container-low); }
 .canvas-toolbar__url { font-family: var(--font-mono); font-size: 12px; color: var(--md-on-surface-variant); background: var(--md-surface-container-highest); padding: 7px 10px; border-radius: var(--shape-sm); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

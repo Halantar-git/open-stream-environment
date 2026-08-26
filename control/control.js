@@ -967,8 +967,8 @@ const { EVENT_TYPES } = window.SharedEvents;
     wheelPanelBody.querySelector("#wsSpeed").addEventListener("input", (e) => {
       const v = Number(e.target.value);
       wheelPanelBody.querySelector("#wsSpeedValue").textContent = `${v}`;
-      state.wheelSpeedConfig = { ...state.wheelSpeedConfig, speed: v };
-      send(EVENT_TYPES.CMD_SET_WHEEL_SPEED_CONFIG, { config: state.wheelSpeedConfig });
+      state.wheelSpeedConfig = { speed: v };
+      send(EVENT_TYPES.CMD_SET_WHEEL_SPEED_CONFIG, { config: { speed: v } });
     });
   }
 

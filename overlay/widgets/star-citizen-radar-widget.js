@@ -349,7 +349,7 @@
       ctx.restore();
 
       // Heading degree labels just inside the rim (readable, not squashed).
-      ctx.font = `600 ${fXsm}px ${FONT_MONO}`;
+      ctx.font = `600 6px ${FONT_MONO}`;
       ctx.fillStyle = "rgba(0, 240, 255, 0.5)";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";

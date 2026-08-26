@@ -123,12 +123,25 @@
         "id": "fe3e0d6c-efce-4d26-84a6-6269651d58f6",
         "type": "grimhex-holo-alert",
         "x": 38,
-        "y": 1,
-        "w": 26,
+        "y": 2,
+        "w": 24,
         "h": 14,
         "z": 12,
         "visible": true,
         "config": {}
+      },
+      {
+        "id": "3b0c6a8e-2918-48e5-a20d-cc8c973558fe",
+        "type": "grimhex-radar",
+        "x": 0,
+        "y": 76,
+        "w": 24,
+        "h": 24,
+        "z": 13,
+        "visible": true,
+        "config": {
+          "opacity": 100
+        }
       }
     ]
   },
@@ -1896,6 +1909,36 @@
       "channel": "halantar",
       "startedAt": 1787677133663,
       "endedAt": 1787677375000
+    },
+    {
+      "id": "600a09ad-b2ee-48d3-bfa4-3a3450c92248",
+      "channel": "halantar",
+      "startedAt": 1787677644822,
+      "endedAt": 1787677715459
+    },
+    {
+      "id": "0865ed65-3a40-43d6-ad2b-a870492f96a5",
+      "channel": "halantar",
+      "startedAt": 1787680080892,
+      "endedAt": 1787680131272
+    },
+    {
+      "id": "31e4f9fd-443b-464d-a43e-3c548f982cb1",
+      "channel": "halantar",
+      "startedAt": 1787680539058,
+      "endedAt": 1787680552565
+    },
+    {
+      "id": "631c01c6-c1d3-4898-b766-0965bda2c507",
+      "channel": "halantar",
+      "startedAt": 1787680555811,
+      "endedAt": 1787680869197
+    },
+    {
+      "id": "46d0913f-dec1-4023-a617-f5cbf9b4429d",
+      "channel": "halantar",
+      "startedAt": 1787763505165,
+      "endedAt": 1787763537119
     }
   ],
   "chatMessages": [
@@ -6668,6 +6711,58 @@
       "is_test": true,
       "count": null,
       "tier": null
+    },
+    {
+      "id": "ac36924b-4373-410f-aa2c-a1a1f11224db",
+      "timestamp": 1787677673529,
+      "type": "donation",
+      "kind": "donation",
+      "username": "comet_watcher",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "98a124ce-13cc-4874-87ce-547b4d95a246",
+      "timestamp": 1787677685027,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "0fb303c1-b8a4-46a2-8134-9e3da3b13fee",
+      "timestamp": 1787677689674,
+      "type": "donation",
+      "kind": "donation",
+      "username": "orbit_fan",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "08378ae1-59dd-4a38-a833-445b9c7653b3",
+      "timestamp": 1787677697872,
+      "type": "donation",
+      "kind": "donation",
+      "username": "orbit_fan",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
     }
   ],
   "overlay_participants_config": {
@@ -6687,259 +6782,7 @@
     "y": 540
   },
   "wheel_speed_config": {
-    "speed": 3,
-    "config": {
-      "speed": 2,
-      "config": {
-        "speed": 2,
-        "config": {
-          "speed": 2,
-          "config": {
-            "speed": 2,
-            "config": {
-              "speed": 2,
-              "config": {
-                "speed": 2,
-                "config": {
-                  "speed": 2,
-                  "config": {
-                    "speed": 2,
-                    "config": {
-                      "speed": 2,
-                      "config": {
-                        "speed": 2,
-                        "config": {
-                          "speed": 2,
-                          "config": {
-                            "speed": 2,
-                            "config": {
-                              "speed": 2,
-                              "config": {
-                                "speed": 2,
-                                "config": {
-                                  "speed": 2,
-                                  "config": {
-                                    "speed": 4,
-                                    "config": {
-                                      "speed": 4,
-                                      "config": {
-                                        "speed": 4,
-                                        "config": {
-                                          "speed": 4,
-                                          "config": {
-                                            "speed": 4,
-                                            "config": {
-                                              "speed": 4,
-                                              "config": {
-                                                "speed": 4,
-                                                "config": {
-                                                  "speed": 5,
-                                                  "config": {
-                                                    "speed": 5,
-                                                    "config": {
-                                                      "speed": 5,
-                                                      "config": {
-                                                        "speed": 5,
-                                                        "config": {
-                                                          "speed": 5,
-                                                          "config": {
-                                                            "speed": 5,
-                                                            "config": {
-                                                              "speed": 5,
-                                                              "config": {
-                                                                "speed": 4,
-                                                                "config": {
-                                                                  "speed": 4,
-                                                                  "config": {
-                                                                    "speed": 4,
-                                                                    "config": {
-                                                                      "speed": 4,
-                                                                      "config": {
-                                                                        "speed": 4,
-                                                                        "config": {
-                                                                          "speed": 4,
-                                                                          "config": {
-                                                                            "speed": 4,
-                                                                            "config": {
-                                                                              "speed": 4,
-                                                                              "config": {
-                                                                                "speed": 4,
-                                                                                "config": {
-                                                                                  "speed": 4,
-                                                                                  "config": {
-                                                                                    "speed": 4,
-                                                                                    "config": {
-                                                                                      "speed": 4,
-                                                                                      "config": {
-                                                                                        "speed": 4,
-                                                                                        "config": {
-                                                                                          "speed": 4,
-                                                                                          "config": {
-                                                                                            "speed": 4,
-                                                                                            "config": {
-                                                                                              "speed": 4,
-                                                                                              "config": {
-                                                                                                "speed": 4,
-                                                                                                "config": {
-                                                                                                  "speed": 4,
-                                                                                                  "config": {
-                                                                                                    "speed": 4,
-                                                                                                    "config": {
-                                                                                                      "speed": 4,
-                                                                                                      "config": {
-                                                                                                        "speed": 4,
-                                                                                                        "config": {
-                                                                                                          "speed": 4,
-                                                                                                          "config": {
-                                                                                                            "speed": 4,
-                                                                                                            "config": {
-                                                                                                              "speed": 4,
-                                                                                                              "config": {
-                                                                                                                "speed": 4,
-                                                                                                                "config": {
-                                                                                                                  "speed": 4,
-                                                                                                                  "config": {
-                                                                                                                    "speed": 4,
-                                                                                                                    "config": {
-                                                                                                                      "speed": 4,
-                                                                                                                      "config": {
-                                                                                                                        "speed": 4,
-                                                                                                                        "config": {
-                                                                                                                          "speed": 4,
-                                                                                                                          "config": {
-                                                                                                                            "speed": 4,
-                                                                                                                            "config": {
-                                                                                                                              "speed": 4,
-                                                                                                                              "config": {
-                                                                                                                                "speed": 4,
-                                                                                                                                "config": {
-                                                                                                                                  "speed": 4,
-                                                                                                                                  "config": {
-                                                                                                                                    "speed": 2,
-                                                                                                                                    "config": {
-                                                                                                                                      "speed": 2,
-                                                                                                                                      "config": {
-                                                                                                                                        "speed": 2,
-                                                                                                                                        "config": {
-                                                                                                                                          "speed": 2,
-                                                                                                                                          "config": {
-                                                                                                                                            "speed": 2,
-                                                                                                                                            "config": {
-                                                                                                                                              "speed": 2,
-                                                                                                                                              "config": {
-                                                                                                                                                "speed": 2,
-                                                                                                                                                "config": {
-                                                                                                                                                  "speed": 2,
-                                                                                                                                                  "config": {
-                                                                                                                                                    "speed": 2,
-                                                                                                                                                    "config": {
-                                                                                                                                                      "speed": 2,
-                                                                                                                                                      "config": {
-                                                                                                                                                        "speed": 2,
-                                                                                                                                                        "config": {
-                                                                                                                                                          "speed": 2,
-                                                                                                                                                          "config": {
-                                                                                                                                                            "speed": 2,
-                                                                                                                                                            "config": {
-                                                                                                                                                              "speed": 2,
-                                                                                                                                                              "config": {
-                                                                                                                                                                "speed": 2,
-                                                                                                                                                                "config": {
-                                                                                                                                                                  "speed": 2,
-                                                                                                                                                                  "config": {
-                                                                                                                                                                    "speed": 2,
-                                                                                                                                                                    "config": {
-                                                                                                                                                                      "speed": 2,
-                                                                                                                                                                      "config": {
-                                                                                                                                                                        "speed": 2,
-                                                                                                                                                                        "config": {
-                                                                                                                                                                          "speed": 2,
-                                                                                                                                                                          "config": {
-                                                                                                                                                                            "speed": 2
-                                                                                                                                                                          }
-                                                                                                                                                                        }
-                                                                                                                                                                      }
-                                                                                                                                                                    }
-                                                                                                                                                                  }
-                                                                                                                                                                }
-                                                                                                                                                              }
-                                                                                                                                                            }
-                                                                                                                                                          }
-                                                                                                                                                        }
-                                                                                                                                                      }
-                                                                                                                                                    }
-                                                                                                                                                  }
-                                                                                                                                                }
-                                                                                                                                              }
-                                                                                                                                            }
-                                                                                                                                          }
-                                                                                                                                        }
-                                                                                                                                      }
-                                                                                                                                    }
-                                                                                                                                  }
-                                                                                                                                }
-                                                                                                                              }
-                                                                                                                            }
-                                                                                                                          }
-                                                                                                                        }
-                                                                                                                      }
-                                                                                                                    }
-                                                                                                                  }
-                                                                                                                }
-                                                                                                              }
-                                                                                                            }
-                                                                                                          }
-                                                                                                        }
-                                                                                                      }
-                                                                                                    }
-                                                                                                  }
-                                                                                                }
-                                                                                              }
-                                                                                            }
-                                                                                          }
-                                                                                        }
-                                                                                      }
-                                                                                    }
-                                                                                  }
-                                                                                }
-                                                                              }
-                                                                            }
-                                                                          }
-                                                                        }
-                                                                      }
-                                                                    }
-                                                                  }
-                                                                }
-                                                              }
-                                                            }
-                                                          }
-                                                        }
-                                                      }
-                                                    }
-                                                  }
-                                                }
-                                              }
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
+    "speed": 3
   },
   "language": "ru",
   "overlay_mic_config": {
