@@ -309,7 +309,7 @@
       ctx.fillText("FAULCON DELACY // COBRA MK II", centerX, centerY - baseRadius * 0.8);
 
       // Shield percentage (round, matching the goal bar's 100% at target).
-      const percentText = isLow ? "SHIELDS OFFLINE" : `SHIELD: ${Math.round(this._smooth * 100)}%`;
+      const percentText = isLow ? "0%" : `${Math.round(this._smooth * 100)}%`;
       const percentY = centerY + baseRadius * 0.6 + 40 * scale;
       ctx.font = `700 ${Math.round(22 * scale)}px ${FONT_DISPLAY}`;
       if (isLow) {

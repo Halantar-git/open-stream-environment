@@ -42,9 +42,9 @@
 })(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
   "use strict";
 
-  const ORANGE = "#ff7605";
-  const TEXT_COLOR = "#ffb07c";
-  const MUTED = "#bdb0a1";
+  const AMBER = "#ffaa00";
+  const TEXT_COLOR = "#dcebf5";
+  const MUTED = "#8ab4d0";
   const MAX_MESSAGES = 50;
 
   class WidgetCobraChat extends BaseWidget {
@@ -55,6 +55,8 @@
       this.messagesEl = null;
       this.messagesScroller = null;
       this.messagesInner = null;
+      this._glitchTimer = null;
+      this._glitchStylesReady = false;
     }
 
     onMount() {
@@ -99,10 +101,16 @@
       this.messagesScroller.appendChild(this.messagesInner);
 
       this._applyPerspective();
+      this._ensureGlitchStyles();
+      this._startGlitchLoop();
       this.bindEvents();
     }
 
     onUnmount() {
+      if (this._glitchTimer) {
+        clearTimeout(this._glitchTimer);
+        this._glitchTimer = null;
+      }
       if (this.messagesEl) this.messagesEl.innerHTML = "";
       this.messagesEl = null;
       this.messagesScroller = null;
@@ -157,6 +165,67 @@
       }
     }
 
+    // One shared <style> block for the Star Citizen-style holographic glitch:
+    // a persistent RGB channel split plus an occasional "tear" burst on a row.
+    _ensureGlitchStyles() {
+      if (this._glitchStylesReady) return;
+      this._glitchStylesReady = true;
+
+      const id = "cobra-chat-glitch-styles";
+      if (document.getElementById(id)) return;
+
+      const style = document.createElement("style");
+      style.id = id;
+      style.textContent =
+        ".cobra-chat__row {" +
+        "text-shadow:0.6px 0 0 rgba(255,118,5,0.28),-0.6px 0 0 rgba(0,210,255,0.22);" +
+        "}" +
+        ".cobra-chat__row.cobra-glitch {" +
+        "animation:cobra-chat-glitch 0.34s steps(2,end) both;" +
+        "}" +
+        "@keyframes cobra-chat-glitch {" +
+        "0% { transform:translateX(0); filter:none; }" +
+        "8% { transform:translateX(-2px) skewX(-2deg); text-shadow:2px 0 rgba(255,118,5,0.95),-2px 0 rgba(0,210,255,0.95); }" +
+        "16% { transform:translateX(2px) skewX(1deg); filter:brightness(1.3); }" +
+        "24% { transform:translateX(-1px); text-shadow:-2px 0 rgba(255,118,5,0.95),2px 0 rgba(0,210,255,0.95); }" +
+        "32% { transform:translateX(1px) skewX(2deg); filter:none; }" +
+        "40% { transform:translateX(0); text-shadow:3px 0 rgba(255,118,5,0.6),-3px 0 rgba(0,210,255,0.6); }" +
+        "100% { transform:translateX(0); text-shadow:0.6px 0 rgba(255,118,5,0.28),-0.6px 0 rgba(0,210,255,0.22); }" +
+        "}";
+      document.head.appendChild(style);
+    }
+
+    // Ambient glitch: occasionally fire a burst on a random visible row so the
+    // hologram feels alive, matching the Star Citizen HUD flicker.
+    _startGlitchLoop() {
+      const tick = () => {
+        this._glitchBurst();
+        this._glitchTimer = setTimeout(tick, 1200 + Math.random() * 2600);
+      };
+      this._glitchTimer = setTimeout(tick, 900);
+    }
+
+    _glitchBurst(targetRow) {
+      if (!this.messagesInner) return;
+
+      let row = targetRow;
+      if (!row) {
+        const rows = this.messagesInner.children;
+        if (!rows.length) return;
+        row = rows[Math.floor(Math.random() * rows.length)];
+      }
+      if (!row || row.classList.contains("cobra-glitch")) return;
+
+      // Force a reflow so a second burst on the same row retriggers cleanly.
+      void row.offsetWidth;
+      row.classList.add("cobra-glitch");
+      const onEnd = () => {
+        row.classList.remove("cobra-glitch");
+        row.removeEventListener("animationend", onEnd);
+      };
+      row.addEventListener("animationend", onEnd);
+    }
+
     bindEvents() {
       this.subscribe(this.context.EVENT_TYPES.CHAT_MESSAGE, (msg) => this.pushMessage(msg));
     }
@@ -168,21 +237,21 @@
       const row = document.createElement("div");
       row.className = "cobra-chat__row";
       row.style.cssText =
-        "display:flex;gap:7px;align-items:baseline;font-size:13px;line-height:1.55;color:" + TEXT_COLOR + ";";
+        "font-size:13px;line-height:1.55;color:" + TEXT_COLOR + ";";
 
       const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       const badges = (msg.badges || [])
         .slice(0, 3)
-        .map((b) => `<span style="color:${MUTED};font-weight:700;flex-shrink:0;">${escapeHtml(String(b).slice(0, 1).toUpperCase())}</span>`)
-        .join("");
+        .map((b) => `<span style="color:${MUTED};font-weight:700;">${escapeHtml(String(b).slice(0, 1).toUpperCase())}</span>`)
+        .join(" ");
       const text = renderEmotes ? renderEmotes(msg.message, msg.emotes) : escapeHtml(msg.message);
 
       row.innerHTML =
-        `<span style="color:${MUTED};flex-shrink:0;">[${escapeHtml(time)}]</span>` +
-        badges +
-        `<span style="color:${escapeAttr(ORANGE)};font-weight:700;flex-shrink:0;">${escapeHtml(msg.user)}</span>` +
-        `<span style="color:${MUTED};flex-shrink:0;">:</span>` +
-        `<span style="color:${TEXT_COLOR};flex:1 1 0%;min-width:0;overflow-wrap:anywhere;word-break:break-word;">${text}</span>`;
+        `<span style="color:${MUTED};">[${escapeHtml(time)}]</span>` +
+        (badges ? ` ${badges}` : "") +
+        ` <span style="color:${escapeAttr(AMBER)};font-weight:700;">${escapeHtml(msg.user)}</span>` +
+        `<span style="color:${MUTED};">:</span>` +
+        ` <span style="color:${TEXT_COLOR};word-break:break-word;">${text}</span>`;
 
       this.messagesInner.appendChild(row);
 
@@ -203,6 +272,12 @@
           ],
           { duration: 220, easing: "ease-out" }
         );
+      }
+
+      // New messages occasionally materialize with a holographic glitch burst
+      // (delayed past the entrance slide so the two transforms don't fight).
+      if (Math.random() < 0.35) {
+        setTimeout(() => this._glitchBurst(row), 240);
       }
     }
   }

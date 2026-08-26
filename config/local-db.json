@@ -80,67 +80,67 @@
         }
       },
       {
-        "id": "47cac86c-48ea-4302-99f4-27ad4e044420",
-        "type": "grimhex-chat",
-        "x": 82,
-        "y": 52,
-        "w": 16,
-        "h": 44,
-        "z": 9,
-        "visible": true,
-        "config": {
-          "maxMessages": 50,
-          "perspective": 100
-        }
-      },
-      {
-        "id": "b3cfb6ac-b72c-41cf-92dc-b0de04636e55",
-        "type": "grimhex",
-        "x": 75,
-        "y": 0,
-        "w": 10,
-        "h": 18,
-        "z": 10,
-        "visible": true,
-        "config": {
-          "perspective": 0
-        }
-      },
-      {
-        "id": "3b9ee2b6-9807-45c0-a058-499f4f63c8da",
-        "type": "grimhex-goal",
-        "x": 1,
-        "y": 1,
-        "w": 16,
-        "h": 6,
-        "z": 11,
-        "visible": true,
-        "config": {
-          "showPercentage": false
-        }
-      },
-      {
-        "id": "fe3e0d6c-efce-4d26-84a6-6269651d58f6",
-        "type": "grimhex-holo-alert",
-        "x": 38,
+        "id": "fbfb7530-3823-40be-aa99-a64bb29e3bff",
+        "type": "cobra-holo-alert",
+        "x": 36,
         "y": 2,
-        "w": 24,
+        "w": 26,
         "h": 14,
         "z": 12,
         "visible": true,
         "config": {}
       },
       {
-        "id": "3b0c6a8e-2918-48e5-a20d-cc8c973558fe",
-        "type": "grimhex-radar",
-        "x": 0,
-        "y": 76,
-        "w": 24,
-        "h": 24,
+        "id": "d9924e7a-b675-45b9-bb15-bf348e52d3dd",
+        "type": "cobra-shield",
+        "x": 0.8,
+        "y": 70.2,
+        "w": 20,
+        "h": 28,
         "z": 13,
         "visible": true,
         "config": {
           "opacity": 100
+        }
+      },
+      {
+        "id": "7a7b9508-4821-4b3b-bb87-28024f64e1c6",
+        "type": "cobra-radar",
+        "x": 42,
+        "y": 74,
+        "w": 16,
+        "h": 24,
+        "z": 14,
+        "visible": true,
+        "config": {
+          "opacity": 100
+        }
+      },
+      {
+        "id": "2025fba5-026a-4f0b-a576-f05aca282a71",
+        "type": "cobra-goal",
+        "x": 1,
+        "y": 1,
+        "w": 16,
+        "h": 6,
+        "z": 15,
+        "visible": true,
+        "config": {
+          "showPercentage": false
+        }
+      },
+      {
+        "id": "65d779e0-45ed-469f-824a-8d7cb3682216",
+        "type": "cobra-chat",
+        "x": 82,
+        "y": 52,
+        "w": 16,
+        "h": 44,
+        "z": 16,
+        "visible": true,
+        "config": {
+          "maxMessages": 50,
+          "perspective": 100
         }
       }
     ]
@@ -1939,6 +1939,18 @@
       "channel": "halantar",
       "startedAt": 1787763505165,
       "endedAt": 1787763537119
+    },
+    {
+      "id": "09d4bbf6-8d63-4d53-abe9-1cdc7e7a7df5",
+      "channel": "halantar",
+      "startedAt": 1787765690889,
+      "endedAt": 1787765915459
+    },
+    {
+      "id": "53c623a5-0e9d-482f-8053-9dbe57706957",
+      "channel": "halantar",
+      "startedAt": 1787766318236,
+      "endedAt": 1787766836987
     }
   ],
   "chatMessages": [
@@ -6763,6 +6775,32 @@
       "is_test": true,
       "count": null,
       "tier": null
+    },
+    {
+      "id": "070092ff-310d-47a2-901e-3d8cc84c763a",
+      "timestamp": 1787765789397,
+      "type": "donation",
+      "kind": "donation",
+      "username": "orbit_fan",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "fd95319c-1044-456f-9b72-297cf3b7fe81",
+      "timestamp": 1787765898343,
+      "type": "donation",
+      "kind": "donation",
+      "username": "comet_watcher",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
     }
   ],
   "overlay_participants_config": {
@@ -7327,6 +7365,158 @@
       "theme3d": "nuclear",
       "createdAt": 1787402872895,
       "updatedAt": 1787409572215
+    },
+    {
+      "id": "cc6f5e4c-d125-4b3b-88e6-6a38e1dad8c8",
+      "name": "Elite",
+      "widgets": [
+        {
+          "id": "default-recent",
+          "type": "recent",
+          "x": 1,
+          "y": 8,
+          "w": 16,
+          "h": 12,
+          "z": 1,
+          "visible": true,
+          "config": {
+            "maxItems": 4
+          }
+        },
+        {
+          "id": "f4ec5bac-710d-498b-a117-080e946a73ed",
+          "type": "stat",
+          "x": 86,
+          "y": 2,
+          "w": 12,
+          "h": 6,
+          "z": 5,
+          "visible": true,
+          "config": {
+            "metric": "followers",
+            "label": ""
+          }
+        },
+        {
+          "id": "90c5d777-0a25-45ca-abb1-ea9d8950d022",
+          "type": "social",
+          "x": 86,
+          "y": 10,
+          "w": 12,
+          "h": 6,
+          "z": 6,
+          "visible": true,
+          "config": {
+            "rotateIntervalSec": 8,
+            "socials": [
+              {
+                "platform": "TG",
+                "text": "t.me/your_channel"
+              },
+              {
+                "platform": "DC",
+                "text": "discord.gg/your_server"
+              },
+              {
+                "platform": "YT",
+                "text": "youtube.com/@channel"
+              }
+            ]
+          }
+        },
+        {
+          "id": "679a09a2-c5f6-48ae-87a3-1d6f6aad5a7b",
+          "type": "participants",
+          "x": 86,
+          "y": 2,
+          "w": 12,
+          "h": 32,
+          "z": 7,
+          "visible": true,
+          "config": {}
+        },
+        {
+          "id": "76f55e6d-7527-4928-95ba-51c1158d27cc",
+          "type": "mic",
+          "x": 1,
+          "y": 20,
+          "w": 14,
+          "h": 6,
+          "z": 8,
+          "visible": true,
+          "config": {
+            "color": "#00f0ff"
+          }
+        },
+        {
+          "id": "fbfb7530-3823-40be-aa99-a64bb29e3bff",
+          "type": "cobra-holo-alert",
+          "x": 36,
+          "y": 2,
+          "w": 26,
+          "h": 14,
+          "z": 12,
+          "visible": true,
+          "config": {}
+        },
+        {
+          "id": "d9924e7a-b675-45b9-bb15-bf348e52d3dd",
+          "type": "cobra-shield",
+          "x": 0.8,
+          "y": 70.2,
+          "w": 20,
+          "h": 28,
+          "z": 13,
+          "visible": true,
+          "config": {
+            "opacity": 100
+          }
+        },
+        {
+          "id": "7a7b9508-4821-4b3b-bb87-28024f64e1c6",
+          "type": "cobra-radar",
+          "x": 42,
+          "y": 74,
+          "w": 16,
+          "h": 24,
+          "z": 14,
+          "visible": true,
+          "config": {
+            "opacity": 100
+          }
+        },
+        {
+          "id": "2025fba5-026a-4f0b-a576-f05aca282a71",
+          "type": "cobra-goal",
+          "x": 1,
+          "y": 1,
+          "w": 16,
+          "h": 6,
+          "z": 15,
+          "visible": true,
+          "config": {
+            "showPercentage": false
+          }
+        },
+        {
+          "id": "65d779e0-45ed-469f-824a-8d7cb3682216",
+          "type": "cobra-chat",
+          "x": 82,
+          "y": 52,
+          "w": 16,
+          "h": 44,
+          "z": 16,
+          "visible": true,
+          "config": {
+            "maxMessages": 50,
+            "perspective": 100
+          }
+        }
+      ],
+      "theme2d": "elite",
+      "theme3d": "cobra-mk2",
+      "createdAt": 1787766833527,
+      "updatedAt": 1787766833527
     }
   ]
 }

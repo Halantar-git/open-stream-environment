@@ -140,7 +140,9 @@ function createWindow(port) {
     minWidth: 1100,
     minHeight: 700,
     backgroundColor: "#0e0b17",
-    autoHideMenuBar: true,
+    // No autoHideMenuBar: on Windows it makes the hidden menu bar react to Alt
+    // and can leave focus stuck on it, so mouse clicks on inputs stop working
+    // until Alt is pressed again. The menu is already removed globally below.
     show: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -205,7 +207,6 @@ function openChatWindow(port) {
     minHeight: 320,
     alwaysOnTop: true,
     backgroundColor: "#0e0b17",
-    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, "chatwindow", "chat-window-preload.js"),
       contextIsolation: true,
@@ -237,7 +238,6 @@ function openWidgetEditorWindow(port, widgetId) {
     minWidth: 640,
     minHeight: 480,
     backgroundColor: "#0e0b17",
-    autoHideMenuBar: true,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
