@@ -251,7 +251,6 @@ graph TD
         Twitch[Twitch API / EventSub]
         DA[DonationAlerts Centrifugo]
         YT[YouTube Live API]
-        MA[MemeAlerts Future Integration]
     end
 
     subgraph "Локальный Бэкенд (Node.js / Express)"
