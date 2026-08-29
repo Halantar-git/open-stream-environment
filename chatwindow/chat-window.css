@@ -127,3 +127,42 @@ body { display: flex; flex-direction: column; height: 100vh; position: relative;
   vertical-align: middle;
   margin: 0 1px;
 }
+
+/* ---- Chat HUD overlay (single-monitor, read-only chat over the game) ----
+   The window is a small transparent/frameless/click-through panel, so the
+   header is hidden and the message list fills the window with a translucent
+   background whose opacity is controlled by --chat-hud-opacity (0..1). */
+html.is-hud,
+body.is-hud {
+  background: transparent;
+}
+body.is-hud {
+  --chat-hud-opacity: 0.7;
+  --chat-hud-font-size: 14px;
+}
+body.is-hud .chat-header {
+  display: none;
+}
+body.is-hud .chat-list {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 10px;
+  overflow-y: auto;
+  border-radius: var(--shape-lg);
+  background: rgba(10, 8, 18, var(--chat-hud-opacity));
+  border: 1px solid var(--md-outline-variant);
+}
+body.is-hud .chat-row {
+  font-size: var(--chat-hud-font-size);
+}
+body.is-hud .chat-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+body.is-hud .jump-to-latest {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+}

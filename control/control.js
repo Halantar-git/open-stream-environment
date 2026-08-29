@@ -144,6 +144,19 @@ const { EVENT_TYPES } = window.SharedEvents;
   const saveHudHotkeyBtn = document.getElementById("saveHudHotkeyBtn");
   const hudDisplaySelect = document.getElementById("hudDisplaySelect");
   const refreshDisplaysBtn = document.getElementById("refreshDisplaysBtn");
+  const toggleChatHudBtn = document.getElementById("toggleChatHudBtn");
+  const chatHudHotkeyInput = document.getElementById("chatHudHotkeyInput");
+  const saveChatHudHotkeyBtn = document.getElementById("saveChatHudHotkeyBtn");
+  const chatHudDisplaySelect = document.getElementById("chatHudDisplaySelect");
+  const refreshChatHudDisplaysBtn = document.getElementById("refreshChatHudDisplaysBtn");
+  const chatHudWidth = document.getElementById("chatHudWidth");
+  const chatHudHeight = document.getElementById("chatHudHeight");
+  const chatHudX = document.getElementById("chatHudX");
+  const chatHudY = document.getElementById("chatHudY");
+  const chatHudOpacity = document.getElementById("chatHudOpacity");
+  const chatHudOpacityValue = document.getElementById("chatHudOpacityValue");
+  const chatHudFontSize = document.getElementById("chatHudFontSize");
+  const chatHudFontSizeValue = document.getElementById("chatHudFontSizeValue");
   const eventsHistoryEl = document.getElementById("eventsHistory");
   const refreshEventsBtn = document.getElementById("refreshEventsBtn");
   const loadMoreEventsBtn = document.getElementById("loadMoreEventsBtn");
@@ -291,7 +304,10 @@ const { EVENT_TYPES } = window.SharedEvents;
     appPortInput.value = port;
     appOverlayUrlInput.value = overlayUrl;
     if (hudHotkeyInput) hudHotkeyInput.value = state.hudEditHotkey || "Control+Shift+H";
+    if (chatHudHotkeyInput) chatHudHotkeyInput.value = state.chatHudHotkey || "Control+Shift+L";
     renderHudDisplays();
+    renderChatHudDisplays();
+    renderChatHudConfig();
     twitchRedirectUriEl.textContent = `http://localhost:${port}/oauth/twitch/callback`;
     daRedirectUriEl.textContent = `http://localhost:${port}/oauth/donationalerts/callback`;
     youtubeRedirectUriEl.textContent = `http://localhost:${port}/oauth/youtube/callback`;
@@ -322,36 +338,65 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   let hudDisplays = [];
 
-  function syncHudDisplaySelect() {
-    if (!hudDisplaySelect || !hudDisplaySelect.options.length) return;
-    if (state.hudDisplayId != null) {
-      hudDisplaySelect.value = String(state.hudDisplayId);
-    } else {
-      const primary = hudDisplays.find((d) => d.primary) || hudDisplays[0];
-      if (primary) hudDisplaySelect.value = String(primary.id);
-    }
-  }
-
-  async function renderHudDisplays() {
-    if (!hudDisplaySelect) return;
-    try {
-      hudDisplays = (await window.desktop?.getDisplays()) || [];
-    } catch {
-      hudDisplays = [];
-    }
-    if (!hudDisplays.length) {
-      hudDisplaySelect.hidden = true;
-      return;
-    }
-    hudDisplaySelect.hidden = false;
-    hudDisplaySelect.innerHTML = hudDisplays
+  function displayOptions(displays) {
+    return displays
       .map((d, i) => {
         const name = d.label || `${t("settings.monitor")} ${i + 1}`;
         const suffix = d.primary ? ` (${t("settings.primaryMonitor")})` : "";
         return `<option value="${escapeAttr(String(d.id))}">${escapeHtml(name)}${escapeHtml(suffix)}</option>`;
       })
       .join("");
-    syncHudDisplaySelect();
+  }
+
+  function syncDisplaySelect(selectEl, selectedId) {
+    if (!selectEl || !selectEl.options.length) return;
+    if (selectedId != null) {
+      selectEl.value = String(selectedId);
+    } else {
+      const primary = hudDisplays.find((d) => d.primary) || hudDisplays[0];
+      if (primary) selectEl.value = String(primary.id);
+    }
+  }
+
+  async function loadDisplays() {
+    try {
+      hudDisplays = (await window.desktop?.getDisplays()) || [];
+    } catch {
+      hudDisplays = [];
+    }
+    return hudDisplays;
+  }
+
+  async function renderHudDisplays() {
+    if (!hudDisplaySelect) return;
+    const displays = await loadDisplays();
+    if (!displays.length) {
+      hudDisplaySelect.hidden = true;
+      return;
+    }
+    hudDisplaySelect.hidden = false;
+    hudDisplaySelect.innerHTML = displayOptions(displays);
+    syncDisplaySelect(hudDisplaySelect, state.hudDisplayId);
+  }
+
+  async function renderChatHudDisplays() {
+    if (!chatHudDisplaySelect) return;
+    const displays = await loadDisplays();
+    if (!displays.length) {
+      chatHudDisplaySelect.hidden = true;
+      return;
+    }
+    chatHudDisplaySelect.hidden = false;
+    chatHudDisplaySelect.innerHTML = displayOptions(displays);
+    syncDisplaySelect(chatHudDisplaySelect, state.chatHudDisplayId);
+  }
+
+  function syncHudDisplaySelect() {
+    syncDisplaySelect(hudDisplaySelect, state.hudDisplayId);
+  }
+
+  function syncChatHudDisplaySelect() {
+    syncDisplaySelect(chatHudDisplaySelect, state.chatHudDisplayId);
   }
 
   if (hudDisplaySelect) {
@@ -360,6 +405,70 @@ const { EVENT_TYPES } = window.SharedEvents;
     });
   }
   if (refreshDisplaysBtn) refreshDisplaysBtn.addEventListener("click", () => renderHudDisplays());
+
+  if (toggleChatHudBtn) {
+    toggleChatHudBtn.addEventListener("click", () => send(EVENT_TYPES.CMD_TOGGLE_CHAT_HUD, {}));
+  }
+
+  if (saveChatHudHotkeyBtn && chatHudHotkeyInput) {
+    saveChatHudHotkeyBtn.addEventListener("click", () => {
+      const hotkey = chatHudHotkeyInput.value.trim();
+      if (!hotkey) return;
+      chatHudHotkeyInput.classList.remove("is-invalid");
+      send(EVENT_TYPES.CMD_SET_CHAT_HUD_HOTKEY, { hotkey });
+    });
+    chatHudHotkeyInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") saveChatHudHotkeyBtn.click();
+    });
+    chatHudHotkeyInput.addEventListener("input", () => chatHudHotkeyInput.classList.remove("is-invalid"));
+  }
+
+  if (chatHudDisplaySelect) {
+    chatHudDisplaySelect.addEventListener("change", () => {
+      send(EVENT_TYPES.CMD_SET_CHAT_HUD_DISPLAY, { displayId: chatHudDisplaySelect.value || null });
+    });
+  }
+  if (refreshChatHudDisplaysBtn) refreshChatHudDisplaysBtn.addEventListener("click", () => renderChatHudDisplays());
+
+  function sendChatHudConfig(patch) {
+    state.chatHud = { ...state.chatHud, ...patch };
+    send(EVENT_TYPES.CMD_SET_CHAT_HUD_CONFIG, { config: state.chatHud });
+  }
+
+  function renderChatHudConfig() {
+    const c = state.chatHud || {};
+    if (chatHudWidth) chatHudWidth.value = c.width ?? 360;
+    if (chatHudHeight) chatHudHeight.value = c.height ?? 560;
+    if (chatHudX) chatHudX.value = c.x != null ? c.x : "";
+    if (chatHudY) chatHudY.value = c.y != null ? c.y : "";
+    if (chatHudOpacity) {
+      chatHudOpacity.value = c.opacity ?? 70;
+      if (chatHudOpacityValue) chatHudOpacityValue.textContent = `${c.opacity ?? 70}%`;
+    }
+    if (chatHudFontSize) {
+      chatHudFontSize.value = c.fontSize ?? 14;
+      if (chatHudFontSizeValue) chatHudFontSizeValue.textContent = c.fontSize ?? 14;
+    }
+  }
+
+  if (chatHudWidth) chatHudWidth.addEventListener("change", () => sendChatHudConfig({ width: Number(chatHudWidth.value) || 360 }));
+  if (chatHudHeight) chatHudHeight.addEventListener("change", () => sendChatHudConfig({ height: Number(chatHudHeight.value) || 560 }));
+  if (chatHudX) chatHudX.addEventListener("change", () => sendChatHudConfig({ x: chatHudX.value === "" ? null : Number(chatHudX.value) }));
+  if (chatHudY) chatHudY.addEventListener("change", () => sendChatHudConfig({ y: chatHudY.value === "" ? null : Number(chatHudY.value) }));
+  if (chatHudOpacity) {
+    chatHudOpacity.addEventListener("input", () => {
+      const v = Number(chatHudOpacity.value);
+      if (chatHudOpacityValue) chatHudOpacityValue.textContent = `${v}%`;
+      sendChatHudConfig({ opacity: v });
+    });
+  }
+  if (chatHudFontSize) {
+    chatHudFontSize.addEventListener("input", () => {
+      const v = Number(chatHudFontSize.value);
+      if (chatHudFontSizeValue) chatHudFontSizeValue.textContent = v;
+      sendChatHudConfig({ fontSize: v });
+    });
+  }
 
   youtubeVideoIdInput.addEventListener("change", () => {
     send(EVENT_TYPES.CMD_SET_YOUTUBE_VIDEO_ID, { videoId: youtubeVideoIdInput.value.trim() });
@@ -1756,6 +1865,26 @@ const { EVENT_TYPES } = window.SharedEvents;
       case EVENT_TYPES.HUD_DISPLAY_UPDATE:
         state.hudDisplayId = (msg.payload && msg.payload.displayId != null) ? msg.payload.displayId : null;
         syncHudDisplaySelect();
+        break;
+      case EVENT_TYPES.CHAT_HUD_HOTKEY_UPDATE:
+        state.chatHudHotkey = (msg.payload && msg.payload.hotkey) || state.chatHudHotkey;
+        if (chatHudHotkeyInput) {
+          chatHudHotkeyInput.value = state.chatHudHotkey;
+          if (msg.payload && msg.payload.ok === false) {
+            chatHudHotkeyInput.classList.add("is-invalid");
+            setTimeout(() => chatHudHotkeyInput.classList.remove("is-invalid"), 2000);
+          } else {
+            chatHudHotkeyInput.classList.remove("is-invalid");
+          }
+        }
+        break;
+      case EVENT_TYPES.CHAT_HUD_DISPLAY_UPDATE:
+        state.chatHudDisplayId = (msg.payload && msg.payload.displayId != null) ? msg.payload.displayId : null;
+        syncChatHudDisplaySelect();
+        break;
+      case EVENT_TYPES.CHAT_HUD_CONFIG_UPDATE:
+        state.chatHud = (msg.payload && msg.payload.config) || state.chatHud;
+        renderChatHudConfig();
         break;
       case EVENT_TYPES.SCENES_UPDATE:
         state.scenes = msg.payload;

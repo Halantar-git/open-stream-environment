@@ -160,6 +160,20 @@
     "hudHotkeyHint": "Format: Control+Shift+H. Applied immediately.",
     "hudDisplay": "HUD display",
     "hudDisplayHint": "Which monitor the HUD edit overlay appears on.",
+    "chatHud": "Chat over game",
+    "chatHudHint": "Shows the chat feed over your game (Borderless Window, clicks pass through). Handy on a single monitor; Control+Shift+L toggles it.",
+    "chatHudHotkey": "Chat global hotkey",
+    "chatHudHotkeyHint": "Format: Control+Shift+L. Applied immediately.",
+    "chatHudDisplay": "Chat display",
+    "chatHudDisplayHint": "Which monitor the chat overlay appears on.",
+    "chatHudToggle": "Show/hide",
+    "chatHudWidth": "Width (px)",
+    "chatHudHeight": "Height (px)",
+    "chatHudX": "X (px)",
+    "chatHudY": "Y (px)",
+    "chatHudPosHint": "X/Y — on-screen coordinates; empty = top-right corner of the monitor.",
+    "chatHudOpacity": "Background opacity",
+    "chatHudFontSize": "Font size (px)",
     "monitor": "Monitor",
     "primaryMonitor": "primary",
     "history": "Event history",
@@ -656,7 +670,7 @@
     "overview": {
       "title": "About",
       "p1": "Open Stream Environment is a Material Design 3 overlay plus a drag-and-drop control panel for Twitch and OBS. The overlay is served locally and added to OBS as a Browser Source.",
-      "p2": "Components: the overlay itself (shown in OBS), this control panel, standalone scenes, a Web Remote for phones and tablets, and an Elgato Stream Deck plugin."
+      "p2": "Components: the overlay itself (shown in OBS), this control panel, standalone scenes, a standalone chat window (including one over the game), a Web Remote for phones and tablets, and an Elgato Stream Deck plugin."
     },
     "quickstart": {
       "title": "Quick start",
@@ -671,6 +685,12 @@
       "p2": "Select a widget to edit its properties on the right. Drag to move it, use the corner handle to resize.",
       "p3": "The Layers panel controls z-order; the Grid toggle helps with alignment. Copy this URL into an OBS Browser Source:",
       "p4": "Widget icons appear on the canvas next to the label on hover or selection, making widgets easier to tell apart."
+    },
+    "hud": {
+      "title": "Overlays over the game (HUD)",
+      "p1": "HUD edit mode (Settings → Application, default hotkey Control+Shift+H) opens the overlay over your game as a borderless window. Drag and resize widgets right in-game; the hotkey toggles the mode and the monitor is selected in settings.",
+      "p2": "Chat over game (Settings → Chat over game, default hotkey Control+Shift+L) shows the chat feed in a transparent window over your game. Clicks pass through, so it doesn't interfere with play — handy on a single monitor.",
+      "p3": "Chat settings cover the monitor, window size and position, background opacity and font size. X/Y are on-screen coordinates; leave them empty to dock the window to the top-right corner of the monitor."
     },
     "widget": {
       "title": "Custom widget",

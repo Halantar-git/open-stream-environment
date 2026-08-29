@@ -20,6 +20,21 @@
   const t = (key, params) => (window.I18n ? window.I18n.t(key, params) : key);
   const params = new URLSearchParams(location.search);
   const port = params.get("port") || "8710";
+  const isHud = params.get("hud") === "1";
+  if (isHud) {
+    document.documentElement.classList.add("is-hud");
+    document.body.classList.add("is-hud");
+  }
+
+  // Настройки чата HUD (прозрачность фона и размер шрифта). Передаются через
+  // query при создании окна и обновляются вживую через WebSocket.
+  function applyHudStyle(opacity, fontSize) {
+    const o = Number(opacity);
+    if (Number.isFinite(o)) document.body.style.setProperty("--chat-hud-opacity", String(Math.min(1, Math.max(0, o / 100))));
+    const f = Number(fontSize);
+    if (Number.isFinite(f)) document.body.style.setProperty("--chat-hud-font-size", `${Math.min(48, Math.max(10, f))}px`);
+  }
+  if (isHud) applyHudStyle(params.get("opacity"), params.get("fontSize"));
 
   const chatListEl = document.getElementById("chatList");
   const channelLabelEl = document.getElementById("channelLabel");
@@ -122,6 +137,11 @@
         break;
       case EVENT_TYPES.CONNECTION_STATUS:
         if (msg.payload.service === "twitchChat") setStatus(msg.payload.status);
+        break;
+      case EVENT_TYPES.CHAT_HUD_CONFIG_UPDATE:
+        if (isHud && msg.payload && msg.payload.config) {
+          applyHudStyle(msg.payload.config.opacity, msg.payload.config.fontSize);
+        }
         break;
       case EVENT_TYPES.LOCALES:
         if (window.I18n) {

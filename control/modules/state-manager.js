@@ -47,6 +47,9 @@ export function createStateManager() {
     editorPrefs: { gridSize: 5, snapEnabled: true },
     hudEditHotkey: "Control+Shift+H",
     hudDisplayId: null,
+    chatHudHotkey: "Control+Shift+L",
+    chatHudDisplayId: null,
+    chatHud: { width: 360, height: 560, x: null, y: null, opacity: 70, fontSize: 14 },
     editingThemeId: null,
     scenes: {},
     topDonation: { user: "", amount: 0, currency: "RUB" },
@@ -84,6 +87,9 @@ export function createStateManager() {
     state.editorPrefs = payload.editor || state.editorPrefs;
     state.hudEditHotkey = payload.hud_edit_hotkey || state.hudEditHotkey;
     state.hudDisplayId = payload.hud_display_id != null ? payload.hud_display_id : null;
+    state.chatHudHotkey = payload.chat_hud_hotkey || state.chatHudHotkey;
+    state.chatHudDisplayId = payload.chat_hud_display_id != null ? payload.chat_hud_display_id : null;
+    state.chatHud = payload.chatHud || state.chatHud;
     state.scenes = payload.scenes || state.scenes;
     state.topDonation = payload.topDonation || state.topDonation;
     state.stats = payload.stats || state.stats;

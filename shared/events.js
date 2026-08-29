@@ -57,6 +57,9 @@
     HUD_EDIT_MODE: "hud_edit_mode", // { enabled } — game HUD overlay entered/left direct-edit mode
     HUD_HOTKEY_UPDATE: "hud_hotkey_update", // { hotkey } — current HUD toggle hotkey (after save)
     HUD_DISPLAY_UPDATE: "hud_display_update", // { displayId } — selected monitor for the HUD overlay
+    CHAT_HUD_HOTKEY_UPDATE: "chat_hud_hotkey_update", // { hotkey } — current chat HUD toggle hotkey (after save)
+    CHAT_HUD_DISPLAY_UPDATE: "chat_hud_display_update", // { displayId } — selected monitor for the chat HUD overlay
+    CHAT_HUD_CONFIG_UPDATE: "chat_hud_config_update", // { config } — chat HUD window geometry/opacity/font (after save)
 
     // control -> server commands
     CMD_ADD_WIDGET: "cmd_add_widget", // { type }
@@ -67,6 +70,10 @@
     CMD_TOGGLE_HUD_EDIT_MODE: "cmd_toggle_hud_edit_mode", // {} — control panel requests HUD edit-mode toggle
     CMD_SET_HUD_HOTKEY: "cmd_set_hud_hotkey", // { hotkey } — change the global HUD toggle hotkey
     CMD_SET_HUD_DISPLAY: "cmd_set_hud_display", // { displayId } — change the monitor for the HUD overlay
+    CMD_TOGGLE_CHAT_HUD: "cmd_toggle_chat_hud", // {} — control panel requests the chat HUD overlay toggle
+    CMD_SET_CHAT_HUD_HOTKEY: "cmd_set_chat_hud_hotkey", // { hotkey } — change the global chat HUD toggle hotkey
+    CMD_SET_CHAT_HUD_DISPLAY: "cmd_set_chat_hud_display", // { displayId } — change the monitor for the chat HUD overlay
+    CMD_SET_CHAT_HUD_CONFIG: "cmd_set_chat_hud_config", // { config } — change the chat HUD window geometry/opacity/font
     CMD_SAVE_LAYOUT_PRESET: "cmd_save_layout_preset", // { id?, name }
     CMD_APPLY_LAYOUT_PRESET: "cmd_apply_layout_preset", // { id }
     CMD_DELETE_LAYOUT_PRESET: "cmd_delete_layout_preset", // { id }

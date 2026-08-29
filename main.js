@@ -31,6 +31,7 @@ let mainWindow;
 let splashWindow;
 let chatWindow = null;
 let hudWindow = null;
+let chatHudWindow = null;
 const widgetEditorWindows = new Map(); // widgetId -> BrowserWindow
 let serverHandle;
 let db;
@@ -38,6 +39,8 @@ let gameMode = false;
 let chatPinned = true; // выбор пользователя кнопкой 📌
 let hudEditMode = false; // оверлей поверх игры: true = ловим мышь, false = сквозной клик
 let hudHotkey = null; // текущий зарегистрированный глобальный хоткей HUD
+let chatHudEnabled = false; // чат поверх игры (одномониторный режим)
+let chatHudHotkey = null; // текущий зарегистрированный глобальный хоткей чата HUD
 let quitting = false;
 let tray = null;
 let trayNotificationShown = false;
@@ -346,9 +349,144 @@ function toggleHudEditMode() {
   if (serverHandle && serverHandle.setHudEditMode) serverHandle.setHudEditMode(hudEditMode);
 }
 
+// ---- Chat HUD overlay (чат поверх игры на одном мониторе) ----
+// Прозрачное безрамочное плавающее окно, которое показывает только ленту чата
+// поверх игры и всегда пропускает клики насквозь (setIgnoreMouseEvents). В
+// отличие от HUD-оверлея тут нет режима редактирования — чат только читается,
+// окно показывается/скрывается глобальным хоткеем, а размер/положение/
+// прозрачность задаются в настройках.
+function resolveChatHudDisplay() {
+  const displays = screen.getAllDisplays();
+  const desired = serverHandle && serverHandle.state ? serverHandle.state.config.chat_hud_display_id : null;
+  if (desired != null) {
+    const match = displays.find((d) => String(d.id) === String(desired));
+    if (match) return match;
+  }
+  return screen.getPrimaryDisplay();
+}
+
+function resolveChatHudBounds(display) {
+  const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
+  const cfg = (serverHandle && serverHandle.state && serverHandle.state.config.chatHud) || {};
+  const width = Math.round(clamp(cfg.width ?? 360, 240, 1200));
+  const height = Math.round(clamp(cfg.height ?? 560, 160, 2000));
+  // Если позиция не задана — прижимаем панель к правому верхнему углу монитора.
+  const x = cfg.x != null && Number.isFinite(Number(cfg.x))
+    ? Math.round(Number(cfg.x))
+    : Math.round(display.bounds.x + display.bounds.width - width - 16);
+  const y = cfg.y != null && Number.isFinite(Number(cfg.y))
+    ? Math.round(Number(cfg.y))
+    : Math.round(display.bounds.y + 16);
+  return { x, y, width, height };
+}
+
+function createChatHudWindow(port) {
+  const display = resolveChatHudDisplay();
+  const bounds = resolveChatHudBounds(display);
+  const cfg = (serverHandle && serverHandle.state && serverHandle.state.config.chatHud) || {};
+  chatHudWindow = new BrowserWindow({
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    hasShadow: false,
+    resizable: false,
+    movable: false,
+    skipTaskbar: true,
+    show: false,
+    focusable: false,
+    backgroundColor: "#00000000",
+    webPreferences: {
+      preload: path.join(__dirname, "chatwindow", "chat-window-preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      backgroundThrottling: true,
+      spellcheck: false,
+    },
+  });
+
+  // Чат только читается — окно не должно перехватывать мышь у игры.
+  chatHudWindow.setIgnoreMouseEvents(true, { forward: true });
+  // Поверх всех окон по умолчанию (максимальный z-order на Windows).
+  applyChatHudAlwaysOnTop();
+  applyPerformanceDefaults(chatHudWindow, 30);
+
+  chatHudWindow.loadFile(path.join(__dirname, "chatwindow", "chat-window.html"), {
+    query: {
+      port: String(port),
+      hud: "1",
+      opacity: String(cfg.opacity ?? 70),
+      fontSize: String(cfg.fontSize ?? 14),
+    },
+  });
+
+  chatHudWindow.on("closed", () => {
+    chatHudWindow = null;
+    chatHudEnabled = false;
+  });
+
+  return chatHudWindow;
+}
+
+function ensureChatHudWindow() {
+  if (chatHudWindow && !chatHudWindow.isDestroyed()) return chatHudWindow;
+  if (!serverHandle) return null;
+  return createChatHudWindow(serverHandle.state.config.port);
+}
+
+function toggleChatHudMode() {
+  const win = ensureChatHudWindow();
+  if (!win) return;
+  chatHudEnabled = !chatHudEnabled;
+  // showInactive, чтобы не уводить фокус из игры при показе/скрытии чата.
+  if (chatHudEnabled) {
+    applyChatHudAlwaysOnTop();
+    win.showInactive();
+  } else {
+    win.hide();
+  }
+}
+
+function onChatHudDisplayChanged() {
+  if (!chatHudWindow || chatHudWindow.isDestroyed()) return;
+  const wasEnabled = chatHudEnabled;
+  chatHudWindow.removeAllListeners("closed");
+  chatHudWindow.destroy();
+  chatHudWindow = null;
+  chatHudEnabled = false;
+  if (wasEnabled) {
+    chatHudEnabled = true;
+    const win = ensureChatHudWindow();
+    if (win) {
+      applyChatHudAlwaysOnTop();
+      win.showInactive();
+    }
+  }
+}
+
+// При изменении размеров/позиции чата HUD в настройках обновляем границы
+// уже открытого окна без пересоздания (opacity/fontSize рендерер обновит сам
+// через WebSocket-событие CHAT_HUD_CONFIG_UPDATE).
+function onChatHudConfigChanged() {
+  if (!chatHudWindow || chatHudWindow.isDestroyed()) return;
+  const bounds = resolveChatHudBounds(resolveChatHudDisplay());
+  chatHudWindow.setBounds(bounds);
+}
+
 function applyPerformanceDefaults(win, fps) {
   win.webContents.setBackgroundThrottling(true);
   if (fps) win.webContents.setFrameRate(fps);
+}
+
+// Чат HUD всегда поверх всех окон: уровень "screen-saver" — максимальный
+// z-order, чтобы окно оставалось над игрой и другими topmost-окнами.
+function applyChatHudAlwaysOnTop() {
+  if (chatHudWindow && !chatHudWindow.isDestroyed()) {
+    chatHudWindow.setAlwaysOnTop(true, "screen-saver");
+  }
 }
 
 function applyChatAlwaysOnTop() {
@@ -447,6 +585,18 @@ function registerHudHotkey(hotkey) {
   return true;
 }
 
+// Тот же паттерн для глобального хоткея чата HUD (по умолчанию Control+Shift+L).
+function registerChatHudHotkey(hotkey) {
+  if (!hotkey) return false;
+  if (chatHudHotkey === hotkey) return true;
+
+  if (!globalShortcut.register(hotkey, toggleChatHudMode)) return false;
+
+  if (chatHudHotkey) globalShortcut.unregister(chatHudHotkey);
+  chatHudHotkey = hotkey;
+  return true;
+}
+
 app.whenReady().then(() => {
   // Disable the default application menu so pressing Alt doesn't reveal a
   // menu bar (the overlay/control UI doesn't need it).
@@ -463,7 +613,7 @@ app.whenReady().then(() => {
 
   db = createDatabase();
 
-  serverHandle = createServer({ db, onSetHudHotkey: registerHudHotkey });
+  serverHandle = createServer({ db, onSetHudHotkey: registerHudHotkey, onSetChatHudHotkey: registerChatHudHotkey });
   const { port } = serverHandle.start();
 
   // Команда из control-панели (CMD_TOGGLE_HUD_EDIT_MODE) приходит на шину
@@ -474,10 +624,16 @@ app.whenReady().then(() => {
   // Смена монитора для HUD-оверлея.
   serverHandle.bus.on("hud-display-changed", onHudDisplayChanged);
 
+  // То же для чата HUD: показ/скрытие, смена монитора и обновление геометрии.
+  serverHandle.bus.on("chat-hud-toggle", toggleChatHudMode);
+  serverHandle.bus.on("chat-hud-display-changed", onChatHudDisplayChanged);
+  serverHandle.bus.on("chat-hud-config-changed", onChatHudConfigChanged);
+
   createWindow(port);
   createTray();
   registerGlobalHotkeys();
   registerHudHotkey(serverHandle.state.config.hud_edit_hotkey);
+  registerChatHudHotkey(serverHandle.state.config.chat_hud_hotkey);
 
   ipcMain.handle("app:get-info", () => ({
     port: serverHandle.state.config.port,

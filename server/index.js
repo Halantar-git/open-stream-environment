@@ -90,7 +90,7 @@ function getLocalIp() {
   return "127.0.0.1";
 }
 
-function createServer({ db, onSetHudHotkey } = {}) {
+function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
   enableFileLogging(getLogsDir());
   const state = new AppState(db);
   const app = express();
@@ -555,6 +555,41 @@ function createServer({ db, onSetHudHotkey } = {}) {
         const saved = state.setHudDisplay(displayId);
         bus.emit("hud-display-changed", saved);
         broadcast(EVENT_TYPES.HUD_DISPLAY_UPDATE, { displayId: saved });
+        break;
+      }
+      case EVENT_TYPES.CMD_TOGGLE_CHAT_HUD: {
+        // Window management lives in Electron's main process; the server only
+        // relays the request onto the shared bus (see main.js).
+        bus.emit("chat-hud-toggle");
+        break;
+      }
+      case EVENT_TYPES.CMD_SET_CHAT_HUD_HOTKEY: {
+        const requested = String((msg.payload && msg.payload.hotkey) || "").trim();
+        if (!requested) break;
+        // The global hotkey is registered by Electron (main.js). If the
+        // accelerator is invalid/taken the callback returns false and we keep
+        // the previous value, returning the actual hotkey with ok:false.
+        const ok = onSetChatHudHotkey ? onSetChatHudHotkey(requested) : true;
+        if (ok) {
+          state.setChatHudHotkey(requested);
+          broadcast(EVENT_TYPES.CHAT_HUD_HOTKEY_UPDATE, { hotkey: requested, ok: true });
+        } else {
+          broadcast(EVENT_TYPES.CHAT_HUD_HOTKEY_UPDATE, { hotkey: state.config.chat_hud_hotkey, ok: false });
+        }
+        break;
+      }
+      case EVENT_TYPES.CMD_SET_CHAT_HUD_DISPLAY: {
+        const raw = msg.payload && msg.payload.displayId;
+        const displayId = raw == null || raw === "" ? null : raw;
+        const saved = state.setChatHudDisplay(displayId);
+        bus.emit("chat-hud-display-changed", saved);
+        broadcast(EVENT_TYPES.CHAT_HUD_DISPLAY_UPDATE, { displayId: saved });
+        break;
+      }
+      case EVENT_TYPES.CMD_SET_CHAT_HUD_CONFIG: {
+        const saved = state.setChatHudConfig((msg.payload && msg.payload.config) || {});
+        bus.emit("chat-hud-config-changed", saved);
+        broadcast(EVENT_TYPES.CHAT_HUD_CONFIG_UPDATE, { config: saved });
         break;
       }
       case EVENT_TYPES.CMD_SAVE_LAYOUT_PRESET: {

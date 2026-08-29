@@ -60,6 +60,15 @@ const SECTIONS = [
     ],
   },
   {
+    id: "hud",
+    title: "help.hud.title",
+    blocks: [
+      { type: "p", key: "help.hud.p1" },
+      { type: "p", key: "help.hud.p2" },
+      { type: "p", key: "help.hud.p3" },
+    ],
+  },
+  {
     id: "widget",
     title: "help.widget.title",
     blocks: [

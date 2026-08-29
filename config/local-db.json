@@ -2137,6 +2137,30 @@
       "channel": "halantar",
       "startedAt": 1788004575820,
       "endedAt": 1788004672078
+    },
+    {
+      "id": "e13f291b-9958-444a-b04a-160dc3f5db4d",
+      "channel": "halantar",
+      "startedAt": 1788010235389,
+      "endedAt": 1788010353719
+    },
+    {
+      "id": "9594fef1-86f6-477c-8c34-514e72e7c064",
+      "channel": "halantar",
+      "startedAt": 1788011237438,
+      "endedAt": 1788011318670
+    },
+    {
+      "id": "eee5e4a5-c71a-4a1e-a7a3-b3204c220e14",
+      "channel": "halantar",
+      "startedAt": 1788011434891,
+      "endedAt": 1788011668588
+    },
+    {
+      "id": "4405d205-8b40-4752-ab62-15eb8a3402a2",
+      "channel": "halantar",
+      "startedAt": 1788011805116,
+      "endedAt": 1788011870010
     }
   ],
   "chatMessages": [
@@ -7472,6 +7496,58 @@
     {
       "id": "c18f26cb-86f8-40db-9a36-8d3a83023d90",
       "timestamp": 1788004576514,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "6e19da7f-2dbe-46a6-aec5-ce3a23fd98c5",
+      "timestamp": 1788010236065,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "0210198e-a6e3-4de3-997c-dbdf7305de3d",
+      "timestamp": 1788011238122,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "28438339-75c8-4997-ba9d-1cabfd550231",
+      "timestamp": 1788011435578,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "de6e415c-f107-46aa-a47a-eed2f67fbb4a",
+      "timestamp": 1788011805803,
       "type": "donation",
       "kind": "donation",
       "username": "Аноним",

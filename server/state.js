@@ -139,6 +139,20 @@ class AppState {
         ? this.config.hud_edit_hotkey.trim()
         : "Control+Shift+H";
     this.config.hud_display_id = this.config.hud_display_id == null ? null : String(this.config.hud_display_id);
+    this.config.chat_hud_hotkey =
+      typeof this.config.chat_hud_hotkey === "string" && this.config.chat_hud_hotkey.trim()
+        ? this.config.chat_hud_hotkey.trim()
+        : "Control+Shift+L";
+    this.config.chat_hud_display_id = this.config.chat_hud_display_id == null ? null : String(this.config.chat_hud_display_id);
+    const ch = this.config.chatHud || {};
+    this.config.chatHud = {
+      width: typeof ch.width === "number" ? ch.width : 360,
+      height: typeof ch.height === "number" ? ch.height : 560,
+      x: ch.x == null || ch.x === "" ? null : Number(ch.x),
+      y: ch.y == null || ch.y === "" ? null : Number(ch.y),
+      opacity: typeof ch.opacity === "number" ? ch.opacity : 70,
+      fontSize: typeof ch.fontSize === "number" ? ch.fontSize : 14,
+    };
     const scenesDefaults = defaultScenes();
     this.config.scenes = this.config.scenes || {};
     Object.keys(scenesDefaults).forEach((sceneId) => {
@@ -882,6 +896,40 @@ class AppState {
     return this.config.hud_display_id;
   }
 
+  setChatHudHotkey(hotkey) {
+    const cleaned = typeof hotkey === "string" ? hotkey.trim() : "";
+    this.config.chat_hud_hotkey = cleaned || "Control+Shift+L";
+    saveConfig(this.config);
+    return this.config.chat_hud_hotkey;
+  }
+
+  setChatHudDisplay(displayId) {
+    this.config.chat_hud_display_id = displayId == null || displayId === "" ? null : String(displayId);
+    saveConfig(this.config);
+    return this.config.chat_hud_display_id;
+  }
+
+  setChatHudConfig(patch = {}) {
+    const cur = this.config.chatHud;
+    const clampNum = (v, min, max, fallback) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+    };
+    const next = {
+      width: clampNum(patch.width, 240, 1200, cur.width),
+      height: clampNum(patch.height, 160, 2000, cur.height),
+      x: patch.x == null || patch.x === "" ? null : Number(patch.x),
+      y: patch.y == null || patch.y === "" ? null : Number(patch.y),
+      opacity: clampNum(patch.opacity, 0, 100, cur.opacity),
+      fontSize: clampNum(patch.fontSize, 10, 48, cur.fontSize),
+    };
+    if (!Number.isFinite(next.x)) next.x = null;
+    if (!Number.isFinite(next.y)) next.y = null;
+    this.config.chatHud = next;
+    saveConfig(this.config);
+    return next;
+  }
+
   // ---- Scenes (start / brb / end) ----
 
   setSceneConfig(sceneId, patch = {}) {
@@ -1021,6 +1069,9 @@ class AppState {
       editor: this.config.editor,
       hud_edit_hotkey: this.config.hud_edit_hotkey,
       hud_display_id: this.config.hud_display_id,
+      chat_hud_hotkey: this.config.chat_hud_hotkey,
+      chat_hud_display_id: this.config.chat_hud_display_id,
+      chatHud: this.config.chatHud,
       scenes: this.config.scenes,
       topDonation: this.config.topDonation,
     };
