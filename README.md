@@ -270,7 +270,6 @@ graph TD
     Twitch -->|OAuth2 / WebSockets| Bus
     DA -->|Centrifugo Stream| Bus
     YT -->|Data API v3| Bus
-    MA -.->|OAuth2 / Centrifugo| Bus
 
     %% Связи бэкенда
     Bus <--> DB
