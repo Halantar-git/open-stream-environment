@@ -54,12 +54,19 @@
     CAMERA_FILTER_UPDATE: "camera_filter_update", // { filterId, active }
     SOUNDBOARD_PLAY: "soundboard_play", // { soundId, title, user, audioFile, imageFile }
     MIC_AUDIO_DATA: "mic_audio_data", // { level, wave, freq } — mic bridge (control -> server -> overlay)
+    HUD_EDIT_MODE: "hud_edit_mode", // { enabled } — game HUD overlay entered/left direct-edit mode
+    HUD_HOTKEY_UPDATE: "hud_hotkey_update", // { hotkey } — current HUD toggle hotkey (after save)
+    HUD_DISPLAY_UPDATE: "hud_display_update", // { displayId } — selected monitor for the HUD overlay
 
     // control -> server commands
     CMD_ADD_WIDGET: "cmd_add_widget", // { type }
     CMD_UPDATE_WIDGET: "cmd_update_widget", // { id, patch: { x?,y?,w?,h?,visible?,z?,config? } }
     CMD_REMOVE_WIDGET: "cmd_remove_widget", // { id }
     CMD_REORDER_WIDGET: "cmd_reorder_widget", // { id, direction: 'forward'|'backward' }
+    CMD_SAVE_LAYOUT: "cmd_save_layout", // { layout } — persist overlay layout from HUD edit mode
+    CMD_TOGGLE_HUD_EDIT_MODE: "cmd_toggle_hud_edit_mode", // {} — control panel requests HUD edit-mode toggle
+    CMD_SET_HUD_HOTKEY: "cmd_set_hud_hotkey", // { hotkey } — change the global HUD toggle hotkey
+    CMD_SET_HUD_DISPLAY: "cmd_set_hud_display", // { displayId } — change the monitor for the HUD overlay
     CMD_SAVE_LAYOUT_PRESET: "cmd_save_layout_preset", // { id?, name }
     CMD_APPLY_LAYOUT_PRESET: "cmd_apply_layout_preset", // { id }
     CMD_DELETE_LAYOUT_PRESET: "cmd_delete_layout_preset", // { id }
@@ -93,6 +100,7 @@
     CMD_SET_OBS_CONFIG: "cmd_set_obs_config", // { host?, port?, password?, sceneMap? }
     CMD_SET_SOUNDBOARD_CONFIG: "cmd_set_soundboard_config", // { config }
     CMD_SET_TTS_CONFIG: "cmd_set_tts_config", // { config: { enabled?, volume?, rate?, lang? } }
+    CMD_SET_DONATION_VOICE: "cmd_set_donation_voice", // { config: { donationAlerts?, volume? } }
     CMD_TEST_SOUNDBOARD: "cmd_test_soundboard", // { soundId }
     CMD_SET_STREAMDECK_CONFIG: "cmd_set_streamdeck_config", // { config }
     CMD_RUN_OBS_COMMAND: "cmd_run_obs_command", // { id }
@@ -112,6 +120,8 @@
     gift_sub: 6000,
     cheer: 6000,
     donation: 7000,
+    boosty_sub: 6000,
+    boosty_resub: 6000,
     wheel_start: 6000,
     wheel_winner: 8000,
   };

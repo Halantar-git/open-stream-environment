@@ -30,11 +30,14 @@ const SPLASH_MIN_MS = 3500; // matches the progress-bar animation duration in sp
 let mainWindow;
 let splashWindow;
 let chatWindow = null;
+let hudWindow = null;
 const widgetEditorWindows = new Map(); // widgetId -> BrowserWindow
 let serverHandle;
 let db;
 let gameMode = false;
 let chatPinned = true; // выбор пользователя кнопкой 📌
+let hudEditMode = false; // оверлей поверх игры: true = ловим мышь, false = сквозной клик
+let hudHotkey = null; // текущий зарегистрированный глобальный хоткей HUD
 let quitting = false;
 let tray = null;
 let trayNotificationShown = false;
@@ -252,6 +255,97 @@ function openWidgetEditorWindow(port, widgetId) {
   widgetEditorWindows.set(widgetId, win);
 }
 
+// ---- Game HUD overlay (одномониторный режим) ----
+// Прозрачное окно поверх игры (Borderless Window), которое показывает тот же
+// оверлей, что и OBS Browser Source. В обычном режиме оно пропускает клики
+// насквозь (setIgnoreMouseEvents), поэтому не тратит ресурсы ОС на обработку
+// мыши. Ctrl+Shift+H переключает режим редактирования, в котором окно ловит
+// мышь и стример перетаскивает/ресайзит виджеты по неоновой сетке.
+function resolveHudDisplay() {
+  const displays = screen.getAllDisplays();
+  const desired = serverHandle && serverHandle.state ? serverHandle.state.config.hud_display_id : null;
+  if (desired != null) {
+    const match = displays.find((d) => String(d.id) === String(desired));
+    if (match) return match;
+  }
+  return screen.getPrimaryDisplay();
+}
+
+function createHudWindow(port) {
+  const display = resolveHudDisplay();
+  hudWindow = new BrowserWindow({
+    x: display.bounds.x,
+    y: display.bounds.y,
+    width: display.bounds.width,
+    height: display.bounds.height,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    hasShadow: false,
+    resizable: false,
+    movable: false,
+    skipTaskbar: true,
+    show: false,
+    fullscreen: true,
+    backgroundColor: "#00000000",
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      backgroundThrottling: true,
+      spellcheck: false,
+    },
+  });
+
+  hudEditMode = false;
+  // Сквозной клик по умолчанию: оверлей не перехватывает мышь во время игры.
+  hudWindow.setIgnoreMouseEvents(true, { forward: true });
+  applyPerformanceDefaults(hudWindow, 30);
+
+  // Оверлей подключается к шине по WebSocket через location.host, поэтому
+  // грузим его по HTTP, а не через loadFile (иначе ws-адрес окажется пустым).
+  hudWindow.loadURL(`http://localhost:${port}/overlay/overlay.html`);
+
+  hudWindow.on("closed", () => {
+    hudWindow = null;
+    hudEditMode = false;
+    if (serverHandle && serverHandle.setHudEditMode) serverHandle.setHudEditMode(false);
+  });
+
+  return hudWindow;
+}
+
+// При смене монитора пересоздаём окно на новом дисплее. Если шло
+// редактирование — сразу возвращаемся в режим редактирования на новом мониторе.
+function onHudDisplayChanged() {
+  if (!hudWindow || hudWindow.isDestroyed()) return;
+  const wasEditing = hudEditMode;
+  hudWindow.removeAllListeners("closed");
+  hudWindow.destroy();
+  hudWindow = null;
+  hudEditMode = false;
+  if (wasEditing) toggleHudEditMode();
+}
+
+function ensureHudWindow() {
+  if (hudWindow && !hudWindow.isDestroyed()) return hudWindow;
+  if (!serverHandle) return null;
+  return createHudWindow(serverHandle.state.config.port);
+}
+
+function toggleHudEditMode() {
+  const win = ensureHudWindow();
+  if (!win) return;
+  hudEditMode = !hudEditMode;
+  win.setIgnoreMouseEvents(!hudEditMode, { forward: true });
+  // Оверлей-превью видим только во время редактирования. В обычном режиме
+  // окно скрыто, чтобы виджеты не отрисовывались поверх игры (и не тратили
+  // ресурсы), а сквозной клик нужен уже на случай, если окно вдруг показано.
+  if (hudEditMode) win.show();
+  else win.hide();
+  if (serverHandle && serverHandle.setHudEditMode) serverHandle.setHudEditMode(hudEditMode);
+}
+
 function applyPerformanceDefaults(win, fps) {
   win.webContents.setBackgroundThrottling(true);
   if (fps) win.webContents.setFrameRate(fps);
@@ -338,6 +432,21 @@ function registerGlobalHotkeys() {
   globalShortcut.register("CommandOrControl+Shift+G", toggleGameMode);
 }
 
+// Настраиваемый хоткей HUD. Сначала пробуем зарегистрировать новый, не
+// отвязывая старый; если акселератор невалиден или занят — возвращаем false
+// и оставляем прежний. Только после успешной регистрации отвязываем старый,
+// чтобы не оставлять мусор в реестре глобальных горячих клавиш Windows.
+function registerHudHotkey(hotkey) {
+  if (!hotkey) return false;
+  if (hudHotkey === hotkey) return true;
+
+  if (!globalShortcut.register(hotkey, toggleHudEditMode)) return false;
+
+  if (hudHotkey) globalShortcut.unregister(hudHotkey);
+  hudHotkey = hotkey;
+  return true;
+}
+
 app.whenReady().then(() => {
   // Disable the default application menu so pressing Alt doesn't reveal a
   // menu bar (the overlay/control UI doesn't need it).
@@ -354,17 +463,35 @@ app.whenReady().then(() => {
 
   db = createDatabase();
 
-  serverHandle = createServer({ db });
+  serverHandle = createServer({ db, onSetHudHotkey: registerHudHotkey });
   const { port } = serverHandle.start();
+
+  // Команда из control-панели (CMD_TOGGLE_HUD_EDIT_MODE) приходит на шину
+  // событий сервера; здесь её подхватывает главный процесс, который один
+  // умеет переключать setIgnoreMouseEvents у окна оверлея.
+  serverHandle.bus.on("hud-edit-toggle", toggleHudEditMode);
+
+  // Смена монитора для HUD-оверлея.
+  serverHandle.bus.on("hud-display-changed", onHudDisplayChanged);
 
   createWindow(port);
   createTray();
   registerGlobalHotkeys();
+  registerHudHotkey(serverHandle.state.config.hud_edit_hotkey);
 
   ipcMain.handle("app:get-info", () => ({
     port: serverHandle.state.config.port,
     overlayUrl: `http://localhost:${serverHandle.state.config.port}/overlay/overlay.html`,
   }));
+
+  ipcMain.handle("app:get-displays", () => {
+    const primaryId = screen.getPrimaryDisplay().id;
+    return screen.getAllDisplays().map((d, i) => ({
+      id: String(d.id),
+      label: d.label || "",
+      primary: d.id === primaryId,
+    }));
+  });
 
   ipcMain.handle("app:open-external", (_event, url) => {
     shell.openExternal(url);

@@ -45,6 +45,8 @@ export function createStateManager() {
     pendingAdd: null,
     appearance: { activeThemeId: "nebula", activeThemeId2d: "nebula", activeThemeId3d: "", tokens: {}, themes: [] },
     editorPrefs: { gridSize: 5, snapEnabled: true },
+    hudEditHotkey: "Control+Shift+H",
+    hudDisplayId: null,
     editingThemeId: null,
     scenes: {},
     topDonation: { user: "", amount: 0, currency: "RUB" },
@@ -54,6 +56,7 @@ export function createStateManager() {
     activeFilters: [],
     activeSceneId: "start",
     giveaway: { active: false, command: "!go", eliminationMode: false, winner: null, count: 0, participants: [] },
+    connectionStatus: {},
     participantsConfig: { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82, x: 24, y: 340, w: 340, h: 400 },
     wheelConfig: { musicVolume: 50, x: 960, y: 540 },
     wheelSpeedConfig: { speed: 3 },
@@ -79,6 +82,8 @@ export function createStateManager() {
     state.streamdeck = payload.streamdeck || state.streamdeck;
     state.appearance = payload.appearance || state.appearance;
     state.editorPrefs = payload.editor || state.editorPrefs;
+    state.hudEditHotkey = payload.hud_edit_hotkey || state.hudEditHotkey;
+    state.hudDisplayId = payload.hud_display_id != null ? payload.hud_display_id : null;
     state.scenes = payload.scenes || state.scenes;
     state.topDonation = payload.topDonation || state.topDonation;
     state.stats = payload.stats || state.stats;
@@ -86,6 +91,7 @@ export function createStateManager() {
     state.activeCameraAngle = payload.activeCameraAngle ?? state.activeCameraAngle;
     state.activeFilters = payload.activeFilters || state.activeFilters;
     state.giveaway = payload.giveaway || state.giveaway;
+    state.connectionStatus = payload.connectionStatus || state.connectionStatus;
   };
 
   return state;

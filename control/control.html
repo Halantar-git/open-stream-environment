@@ -275,6 +275,7 @@
             <span class="md-chip" id="chip-donationAlerts"><span class="md-chip__dot"></span><span class="md-chip__label">DonationAlerts</span></span>
           </div>
           <div class="properties__toggle-row"><label data-i18n="settings.ttsEnabled">Озвучка донатов (TTS)</label><div class="md-switch is-on" id="ttsEnabledSwitch" role="switch" aria-checked="true"><div class="md-switch__thumb"></div></div></div>
+          <div class="properties__toggle-row"><label data-i18n="settings.daVoiceEnabled">Озвучка от DonationAlerts (голос сервиса)</label><div class="md-switch" id="daVoiceSwitch" role="switch" aria-checked="false"><div class="md-switch__thumb"></div></div></div>
           <div class="md-field">
             <label><span data-i18n="settings.ttsVolume">Громкость озвучки</span>: <span id="ttsVolumeValue">90%</span></label>
             <input type="range" id="ttsVolume" min="0" max="100" step="1" value="90" />
@@ -439,6 +440,26 @@
           <div class="md-field">
             <label data-i18n="settings.overlayUrl">URL оверлея для OBS Browser Source</label>
             <input type="text" id="appOverlayUrl" disabled />
+          </div>
+          <div class="settings__actions">
+            <button class="md-button md-button--tonal" id="toggleHudBtn" data-i18n="settings.hudEdit">Режим редактирования HUD</button>
+          </div>
+          <p class="settings__desc" data-i18n="settings.hudEditHint">Открывает оверлей поверх игры (Borderless Window). Перетаскивайте/ресайзте виджеты прямо в игре; Ctrl+Shift+H переключает режим.</p>
+          <div class="md-field">
+            <label data-i18n="settings.hudHotkey">Глобальный хоткей HUD</label>
+            <div class="settings__port-row">
+              <input type="text" id="hudHotkeyInput" placeholder="Control+Shift+H" autocomplete="off" spellcheck="false" />
+              <button class="md-button md-button--tonal" id="saveHudHotkeyBtn" data-i18n="settings.savePort">Сохранить</button>
+            </div>
+            <span class="md-field__hint" data-i18n="settings.hudHotkeyHint">Формат: Control+Shift+H. Применяется сразу.</span>
+          </div>
+          <div class="md-field">
+            <label data-i18n="settings.hudDisplay">Монитор для HUD</label>
+            <div class="settings__port-row">
+              <select id="hudDisplaySelect"></select>
+              <button class="md-button md-button--tonal" id="refreshDisplaysBtn" data-i18n="settings.refresh">Обновить</button>
+            </div>
+            <span class="md-field__hint" data-i18n="settings.hudDisplayHint">На какой монитор выводить оверлей в режиме редактирования HUD.</span>
           </div>
           <div class="settings__actions">
             <button class="md-button md-button--outlined" id="resetLayoutBtn" data-i18n="settings.resetLayout">Сбросить раскладку по умолчанию</button>

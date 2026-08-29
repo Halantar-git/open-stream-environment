@@ -52,6 +52,7 @@
     deathCount: 0,
     soundboardConfig: { volume: 0.8, queueMode: false },
     tts: { enabled: true, volume: 0.9, rate: 1, lang: "ru-RU", voice: "" },
+    donationVoice: { donationAlerts: false, volume: 0.9 },
     participantsState: { count: 0, participants: [] },
     participantsConfig: { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82 },
     micConfig: { sensitivity: 1.5, lineWidth: 2, color: "", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2, peakFall: 2.5 },
@@ -59,6 +60,10 @@
   };
 
   let ws;
+
+  // Live connection status per service (from STATE / CONNECTION_STATUS frames),
+  // used by shouldMount() to hide widgets whose data source is disabled.
+  let connectionStatus = {};
 
   // ---- wheel (overlay chrome, not a widget) ----
   let wheelSectors = [];
@@ -135,6 +140,26 @@
     } catch (_) {
       /* speech unavailable */
     }
+  }
+
+  // Озвучка от самого сервиса (готовый аудиофайл доната: DonationAlerts voice).
+  // Возвращает true, если взяла озвучку на себя — тогда встроенный TTS для
+  // этого доната не запускается.
+  function playDonationVoice(alert) {
+    const voiceUrl = alert && alert.voiceUrl;
+    if (!voiceUrl) return false;
+    const dv = state.donationVoice || {};
+    const enabled = dv.donationAlerts !== false;
+    if (!enabled) return false;
+    try {
+      const audio = new Audio(voiceUrl);
+      audio.volume = Math.max(0, Math.min(1, Number(dv.volume) || 0.9));
+      const started = audio.play();
+      if (started && typeof started.catch === "function") started.catch(() => {});
+    } catch (_) {
+      /* audio unavailable */
+    }
+    return true;
   }
 
   // ---- alert / winner audio helpers ----
@@ -486,12 +511,28 @@
     return "2d";
   }
 
-  // Manager-level guard: a theme-bound widget is only created for its theme.
+  // Manager-level guard: a widget is only created while its theme is active and
+  // at least one of the services it depends on is enabled.
   function shouldMount(item) {
     const def = widgetDef(item);
     const theme = def && def.theme ? def.theme : null;
-    if (theme) return context.theme === theme;
+    if (theme && context.theme !== theme) return false;
+
+    const services = (def && def.services) || null;
+    if (services && services.length) {
+      const allDisabled = services.every((service) => connectionStatus[service] === "disabled");
+      if (allDisabled) return false;
+    }
     return true;
+  }
+
+  // In HUD edit mode we show a placeholder only for theme-gated widgets (e.g.
+  // a 3D widget whose theme isn't active), so the streamer can still arrange
+  // them. Service-disabled widgets stay hidden, matching the control panel.
+  function shouldGhost(item) {
+    const def = widgetDef(item);
+    const theme = def && def.theme ? def.theme : null;
+    return !!theme && context.theme !== theme;
   }
 
   // ---- widget manager ----
@@ -542,24 +583,30 @@
         state.deathCount = p.deathCount || 0;
         state.soundboardConfig = p.soundboard || state.soundboardConfig;
         state.tts = p.tts || state.tts;
+        state.donationVoice = p.donationVoice || state.donationVoice;
         if (p.giveaway) {
           state.participantsState = {
             count: p.giveaway.count || 0,
             participants: Array.isArray(p.giveaway.participants) ? p.giveaway.participants : [],
           };
         }
+        connectionStatus = p.connectionStatus || connectionStatus;
         currentLayout = p.layout || [];
         applyTheme(p.appearance);
+        if (OW.HudEditor && p.hudEditMode !== undefined) OW.HudEditor.setEnabled(!!p.hudEditMode);
         manager.syncLayout(currentLayout);
+        if (OW.HudEditor) OW.HudEditor.refresh();
         break;
       }
       case EVENT_TYPES.LAYOUT_UPDATE:
         currentLayout = (msg.payload && msg.payload.layout) || [];
         manager.syncLayout(currentLayout);
+        if (OW.HudEditor) OW.HudEditor.refresh();
         break;
       case EVENT_TYPES.THEME_UPDATE:
         applyTheme(msg.payload);
         manager.syncLayout(currentLayout);
+        if (OW.HudEditor) OW.HudEditor.refresh();
         break;
       case EVENT_TYPES.STAT_UPDATE:
         state.stats = msg.payload || state.stats;
@@ -575,6 +622,11 @@
         break;
       case EVENT_TYPES.ALERT:
         bus.emit(EVENT_TYPES.ALERT, msg.payload);
+        break;
+      case EVENT_TYPES.CONNECTION_STATUS:
+        connectionStatus[msg.payload.service] = msg.payload.status;
+        manager.syncLayout(currentLayout);
+        if (OW.HudEditor) OW.HudEditor.refresh();
         break;
       case EVENT_TYPES.CHAT_MESSAGE:
         bus.emit(EVENT_TYPES.CHAT_MESSAGE, msg.payload);
@@ -629,6 +681,9 @@
         }
         bus.emit(EVENT_TYPES.LOCALES, msg.payload);
         break;
+      case EVENT_TYPES.HUD_EDIT_MODE:
+        if (OW.HudEditor) OW.HudEditor.setEnabled(!!(msg.payload && msg.payload.enabled));
+        break;
       default:
         break;
     }
@@ -652,10 +707,20 @@
     if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type, payload }));
   }
 
-  // Озвучка донатов (DonationAlerts TTS).
+  // Озвучка донатов: сначала голос от сервиса (DonationAlerts voice), затем
+  // встроенный TTS как fallback.
   bus.on(EVENT_TYPES.ALERT, (alert) => {
-    if (alert && alert.kind === "donation") speakDonation(alert);
+    if (!alert || alert.kind !== "donation") return;
+    if (playDonationVoice(alert)) return;
+    speakDonation(alert);
   });
+
+  // HUD direct-edit (game overlay): hand the composition root's internals to
+  // the editor so drag/resize can mutate the live layout and commit it over
+  // the bus. The editor stays inert (0 CPU) until a HUD_EDIT_MODE frame arrives.
+  if (OW.HudEditor) {
+    OW.HudEditor.init({ canvas, manager, send, EVENT_TYPES, getLayout: () => currentLayout, shouldGhost });
+  }
 
   window.addEventListener("resize", resizeWheel);
   connect();

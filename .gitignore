@@ -1,5 +1,6 @@
 node_modules/
 release/
+backup/
 config/config.json
 config/local-db.json
 config/media/

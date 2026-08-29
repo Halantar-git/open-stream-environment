@@ -108,6 +108,11 @@ export function initPropertiesPanel({
         <div class="properties__hint">${t("custom.htmlHint")}</div>
         <button class="md-button md-button--filled" id="pOpenEditor" style="width:100%;justify-content:center;">${t("custom.editCode")}</button>`;
       host.querySelector("#pOpenEditor").addEventListener("click", () => window.desktop?.openWidgetEditor(inst.id));
+    } else if (mode === "embed") {
+      host.innerHTML = `
+        <div class="md-field"><label>${t("custom.embedUrl")}</label><input type="text" id="pCustomEmbedUrl" value="${escapeAttr(config.embedUrl || "")}" placeholder="https://..."></div>
+        <div class="properties__hint">${t("custom.embedHint")}</div>`;
+      host.querySelector("#pCustomEmbedUrl").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { embedUrl: e.target.value.trim() } } }));
     } else {
       host.innerHTML = `
         <div class="md-field"><label>${t("custom.textTitle")}</label><input type="text" id="pTextTitle" value="${escapeAttr(config.textTitle || "")}"></div>
@@ -245,11 +250,13 @@ export function initPropertiesPanel({
     } else if (inst.type === "custom") {
       const mode = config.mode || "text";
       extraHtml = `
+        <div class="md-field"><label>${t("custom.name")}</label><input type="text" id="pCustomName" value="${escapeAttr(config.name || "")}" placeholder="${t("widgets.custom")}"></div>
         <div class="md-field"><label>${t("properties.customMode")}</label>
           <select id="pCustomMode">
             <option value="text" ${mode === "text" ? "selected" : ""}>${t("properties.modeText")}</option>
             <option value="image" ${mode === "image" ? "selected" : ""}>${t("properties.modeImage")}</option>
             <option value="html" ${mode === "html" ? "selected" : ""}>${t("properties.modeHtml")}</option>
+            <option value="embed" ${mode === "embed" ? "selected" : ""}>${t("properties.modeEmbed")}</option>
           </select>
         </div>
         <div id="pCustomFields"></div>`;
@@ -381,13 +388,17 @@ export function initPropertiesPanel({
       wireSwitch(propertiesEl.querySelector("#pSoundboardShowBorder"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showBorder: on } } }));
     } else if (inst.type === "custom") {
       wireCustomWidgetFields(inst, config);
+      document.getElementById("pCustomName").addEventListener("change", (e) => {
+        send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { name: e.target.value } } });
+      });
       document.getElementById("pCustomMode").addEventListener("change", (e) => {
         send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { mode: e.target.value } } });
       });
     }
 
     document.getElementById("pDeleteBtn").addEventListener("click", () => {
-      if (!confirm(t("common.deleteWidgetConfirm", { name: t("widgets." + (def.type || inst.type)) }))) return;
+      const label = inst.type === "custom" && config.name ? config.name : t("widgets." + (def.type || inst.type));
+      if (!confirm(t("common.deleteWidgetConfirm", { name: label }))) return;
       send(EVENT_TYPES.CMD_REMOVE_WIDGET, { id: inst.id });
       state.selectedId = null;
     });

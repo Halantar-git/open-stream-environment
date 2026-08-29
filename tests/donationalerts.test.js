@@ -18,6 +18,7 @@
 const {
   extractPayload,
   donationAlertFromPayload,
+  alertFromPayload,
 } = require("../server/integrations/donationalerts");
 
 describe("donationalerts parsing", () => {
@@ -64,5 +65,47 @@ describe("donationalerts parsing", () => {
       currency: "RUB",
       message: "gg",
     });
+  });
+
+  test("donationAlertFromPayload пробрасывает voiceUrl если есть голос сервиса", () => {
+    const alert = donationAlertFromPayload({
+      username: "nick",
+      amount: "250",
+      currency: "RUB",
+      message: "gg",
+      voiceUrl: "https://example.com/voice.mp3",
+    });
+    expect(alert.voiceUrl).toBe("https://example.com/voice.mp3");
+  });
+
+  test("alertFromPayload распознаёт подписку Boosty", () => {
+    const alert = alertFromPayload({
+      name: "subscription_boosty",
+      username: "nick",
+      amount: "250",
+      currency: "RUB",
+    });
+    expect(alert).toEqual({ kind: "boosty_sub", user: "nick", amount: 250, currency: "RUB" });
+  });
+
+  test("alertFromPayload распознаёт продление подписки Boosty", () => {
+    const alert = alertFromPayload({
+      name: "subscription_boosty_renewal",
+      username: "nick",
+      amount: "250",
+      currency: "RUB",
+    });
+    expect(alert.kind).toBe("boosty_resub");
+  });
+
+  test("alertFromPayload без Boosty остаётся донатом", () => {
+    const alert = alertFromPayload({
+      name: "donation",
+      username: "nick",
+      amount: "250",
+      currency: "RUB",
+      message: "gg",
+    });
+    expect(alert.kind).toBe("donation");
   });
 });

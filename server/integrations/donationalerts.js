@@ -54,13 +54,58 @@ const PONG_TIMEOUT_MS = 10000;
 const SUBSCRIBE_MODE = "method";
 
 function donationAlertFromPayload(payload) {
+  // Озвучка от сервиса (готовый аудиофайл доната). Точное имя поля DonationAlerts
+  // не задокументировано — кандидаты сведены здесь, при необходимости поправить.
+  const firstDefined = (...keys) => {
+    for (const key of keys) {
+      const value = payload && payload[key];
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+    return "";
+  };
+  const voiceUrl = firstDefined("voiceUrl", "voice_url", "voice", "audioUrl", "audio_url", "soundUrl", "ttsUrl", "voiceFile", "messageAudio");
   return {
     kind: "donation",
     user: (payload && (payload.username || payload.name)) || "Аноним",
     amount: Number(payload && payload.amount) || 0,
     currency: (payload && payload.currency) || "RUB",
     message: (payload && payload.message) || "",
+    ...(voiceUrl ? { voiceUrl } : {}),
   };
+}
+
+/*
+ * DonationAlerts доставляет ВСЕ типы алертов по одному каналу
+ * `$alerts:donation_<user_id>`; поле `name` в payload — это тип алерта
+ * (см. https://www.donationalerts.com/apidoc, раздел Donations → name).
+ *
+ * Донаты приходят с name="donation". Подписки Boosty — с name, содержащим
+ * "boosty" (например "subscription_boosty" / "subscription_boosty_renewal").
+ * Точные строки Boosty не задокументированы публично, поэтому определение
+ * сделано через "boosty" + маркер продления; сырой payload логируется выше.
+ */
+function boostyAlertFromPayload(payload) {
+  return {
+    kind: "boosty_sub",
+    user: (payload && payload.username) || "Аноним",
+    amount: Number(payload && payload.amount) || 0,
+    currency: (payload && payload.currency) || "RUB",
+  };
+}
+
+function boostyRenewalAlertFromPayload(payload) {
+  const alert = boostyAlertFromPayload(payload);
+  alert.kind = "boosty_resub";
+  return alert;
+}
+
+function alertFromPayload(payload) {
+  const name = String((payload && payload.name) || "").toLowerCase();
+  if (name.includes("boosty")) {
+    const isRenewal = /renewal|resub|renew|продлен|продл/i.test(name);
+    return isRenewal ? boostyRenewalAlertFromPayload(payload) : boostyAlertFromPayload(payload);
+  }
+  return donationAlertFromPayload(payload);
 }
 
 function startDonationAlerts({ bus, state }) {
@@ -304,8 +349,9 @@ function startDonationAlerts({ bus, state }) {
     const channel = (msg.push && msg.push.channel) || (msg.result && msg.result.channel) || "";
 
     if (channel.startsWith("$alerts:donation")) {
-      const alert = donationAlertFromPayload(payload);
-      logger.success("donation received", alert);
+      logger.info("raw donation frame", payload);
+      const alert = alertFromPayload(payload);
+      logger.success("alert received", alert);
       bus.emit("alert", alert);
     } else if (channel.startsWith("$goals:goal")) {
       if (payload.raised !== undefined || payload.current_amount !== undefined) {
@@ -453,4 +499,4 @@ function extractPayload(msg) {
   return d.data || d;
 }
 
-module.exports = { startDonationAlerts, extractPayload, donationAlertFromPayload };
+module.exports = { startDonationAlerts, extractPayload, donationAlertFromPayload, alertFromPayload };

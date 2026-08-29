@@ -291,11 +291,13 @@
         this.canvas = document.createElement("canvas");
         this.canvas.className = "widget-instance widget-instance--3d";
         this.canvas.dataset.type = this.type;
+        this.canvas.dataset.id = this.id || "";
         return this.canvas;
       }
       const el = document.createElement("div");
       el.className = "widget-instance";
       el.dataset.type = this.type;
+      el.dataset.id = this.id || "";
       return el;
     }
 

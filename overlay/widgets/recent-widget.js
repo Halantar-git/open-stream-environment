@@ -73,6 +73,10 @@
           return t("recent.cheer", { user, amount: evt.amount || 0 });
         case "donation":
           return t("recent.donation", { user, amount: formatMoney(evt.amount || 0) });
+        case "boosty_sub":
+          return t("recent.boostySub", { user });
+        case "boosty_resub":
+          return t("recent.boostyResub", { user });
         default:
           return user;
       }

@@ -45,13 +45,14 @@
       this.host.className = "widget-custom";
       this.element.appendChild(this.host);
       this._codeKey = null;
+      this._embedUrl = null;
     }
 
     render() {
       const { escapeHtml, escapeAttr } = this.context;
       const cfg = this.config;
       const mode = cfg.mode || "text";
-      const withCard = mode !== "image" && cfg.showBackground !== false;
+      const withCard = mode !== "image" && mode !== "embed" && cfg.showBackground !== false;
       this.host.className = "widget-custom" + (withCard ? " has-card" : "");
 
       if (mode === "image") {
@@ -71,6 +72,30 @@
           iframe.className = "widget-custom__html";
           iframe.srcdoc = buildDocument(cfg);
           this.host.appendChild(iframe);
+        }
+      } else if (mode === "embed") {
+        this._codeKey = null;
+        const url = String(cfg.embedUrl || "").trim();
+        if (this._embedUrl !== url) {
+          this._embedUrl = url;
+          this.host.innerHTML = "";
+          if (!url) {
+            const empty = document.createElement("div");
+            empty.className = "widget-custom__empty";
+            empty.textContent = this.context.t
+              ? this.context.t("custom.embedEmpty")
+              : "Вставьте ссылку для встраивания";
+            this.host.appendChild(empty);
+          } else {
+            const iframe = document.createElement("iframe");
+            iframe.className = "widget-custom__html";
+            iframe.src = url;
+            iframe.title = "";
+            iframe.allow = "autoplay; fullscreen; clipboard-write; picture-in-picture";
+            iframe.allowFullscreen = true;
+            iframe.setAttribute("referrerpolicy", "no-referrer");
+            this.host.appendChild(iframe);
+          }
         }
       } else {
         this._codeKey = null;

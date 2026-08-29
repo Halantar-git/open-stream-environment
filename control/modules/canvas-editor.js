@@ -525,11 +525,29 @@ export function initCanvasEditor({
   }
 
   // ---- canvas render + drag/resize ----
+  // A widget is hidden from the editor canvas + layers when every service it
+  // depends on has been disabled (mirrors the overlay's shouldMount() guard).
+  function isServiceDisabled(inst) {
+    const def = WIDGET_TYPES[inst.type] || {};
+    const services = def.services || null;
+    if (!services || !services.length) return false;
+    const statuses = state.connectionStatus || {};
+    return services.every((service) => statuses[service] === "disabled");
+  }
+
+  // Human label shown in the canvas + layers. Custom widgets can override it
+  // via `config.name` so multiple "Свой виджет" entries stay distinguishable.
+  function widgetLabel(inst) {
+    if (inst.type === "custom" && inst.config && inst.config.name) return inst.config.name;
+    return t("widgets." + inst.type);
+  }
+
   function renderCanvas() {
     canvasEl.innerHTML = "";
     [...state.layout]
       .sort((a, b) => (a.z || 0) - (b.z || 0))
       .forEach((inst) => {
+        if (isServiceDisabled(inst)) return;
         const box = document.createElement("div");
         box.className = "canvas-widget" + (inst.id === state.selectedId ? " is-selected" : "");
         box.dataset.id = inst.id;
@@ -540,9 +558,10 @@ export function initCanvasEditor({
         box.style.zIndex = inst.z || 0;
         box.style.opacity = inst.visible ? "1" : "0.35";
 
+        const def = WIDGET_TYPES[inst.type] || {};
         const label = document.createElement("div");
         label.className = "canvas-widget__label";
-        label.textContent = t("widgets." + inst.type);
+        label.innerHTML = `${ICONS[def.icon] || ""}<span>${escapeHtml(widgetLabel(inst))}</span>`;
         box.appendChild(label);
 
         const content = document.createElement("div");
@@ -702,12 +721,13 @@ export function initCanvasEditor({
 
   // ---- layers panel ----
   function renderLayers() {
-    if (!state.layout.length) {
+    const visible = state.layout.filter((inst) => !isServiceDisabled(inst));
+    if (!visible.length) {
       layersEl.innerHTML = `<div class="layers__empty">${t("editor.layersEmpty")}</div>`;
       return;
     }
     layersEl.innerHTML = "";
-    [...state.layout]
+    [...visible]
       .sort((a, b) => (b.z || 0) - (a.z || 0))
       .forEach((inst) => {
         const def = WIDGET_TYPES[inst.type] || {};
@@ -715,7 +735,7 @@ export function initCanvasEditor({
         row.className = "layer-row" + (inst.id === state.selectedId ? " is-selected" : "");
         row.innerHTML = `
           <span class="layer-row__icon">${ICONS[def.icon] || ""}</span>
-          <span class="layer-row__label">${t("widgets." + (def.type || inst.type))}</span>
+          <span class="layer-row__label">${escapeHtml(widgetLabel(inst))}</span>
           <span class="layer-row__btns">
             <button class="layer-row__btn" data-action="forward" title="${t("common.forward")}">▲</button>
             <button class="layer-row__btn" data-action="backward" title="${t("common.backward")}">▼</button>

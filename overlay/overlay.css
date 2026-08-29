@@ -341,3 +341,122 @@ body[data-decoration="nuclear"]::after {
   50% { opacity: 0.8; }
   52% { opacity: 0.85; }
 }
+
+/* ---------- HUD edit mode (game overlay direct manipulation) ----------
+   The game HUD window is transparent and click-through during play. In edit
+   mode the container gets `.is-editing`, paints a GPU-only alignment grid and
+   lets the streamer drag/resize widgets directly over the game. Everything is
+   pure CSS compositing — no JS timers, zero CPU while idle. */
+
+#canvas.is-editing {
+  background-color: rgba(6, 11, 20, 0.4);
+  background-image:
+    linear-gradient(rgba(0, 255, 242, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 242, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Central guides: ::before = vertical (X: 50%), ::after = horizontal (Y: 50%). */
+#canvas.is-editing::before,
+#canvas.is-editing::after {
+  content: "";
+  position: absolute;
+  z-index: 3000;
+  pointer-events: none;
+}
+#canvas.is-editing::before {
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dashed rgba(0, 255, 242, 0.35);
+}
+#canvas.is-editing::after {
+  top: 50%;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed rgba(0, 255, 242, 0.35);
+}
+
+/* Widgets become interactive and visually framed while editing. The subtle
+   fill makes empty widgets (chat/recent/alerts and the like) visible even
+   when they have no live content yet. We force opacity:1 so widgets that hide
+   themselves until an event (3D holo-alerts set element opacity:0 on mount)
+   still show their frame while arranging. The perspective/tilt that 3D widgets
+   apply (holo-alerts + sign/chat perspective) is flattened here so the frame
+   and drag/resize bounds match the widget's real rectangle. */
+#canvas.is-editing .widget-instance {
+  pointer-events: auto;
+  cursor: move;
+  display: block !important;
+  outline: 1px dashed rgba(0, 255, 242, 0.85);
+  outline-offset: -1px;
+  box-shadow: inset 0 0 0 1px rgba(0, 255, 242, 0.15);
+  background-color: rgba(0, 255, 242, 0.06);
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* Widget content (including iframes) becomes non-interactive while editing so
+   pointer events reach the wrapper — this makes html/embed custom widgets
+   draggable instead of the iframe swallowing the pointer. */
+#canvas.is-editing .widget-instance * {
+  pointer-events: none !important;
+}
+
+#canvas.is-editing .widget-instance.is-dragging {
+  cursor: grabbing;
+  outline-color: rgba(0, 255, 242, 1);
+}
+#canvas.is-editing .widget-instance.is-resizing {
+  cursor: nwse-resize;
+  outline-color: rgba(0, 255, 242, 1);
+}
+
+/* Type label so empty widgets are still identifiable while editing. Kept
+   inside the widget (top-left) so it never pokes above the dashed frame.
+   (3D <canvas> widgets skip it — they render their own content.) */
+#canvas.is-editing .widget-instance::before {
+  content: attr(data-type);
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: rgba(6, 11, 20, 0.9);
+  border: 1px solid rgba(0, 255, 242, 0.35);
+  color: #00fff2;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Widgets toggled off (visible:false) stay ghosted but visible in edit mode. */
+#canvas.is-editing .widget-instance.is-hidden {
+  display: block !important;
+  opacity: 0.4 !important;
+}
+
+/* Placeholder for widgets that are not mounted at all (theme/service-gated). */
+#canvas.is-editing .widget-instance--ghost {
+  pointer-events: none;
+  opacity: 0.45 !important;
+  outline-style: dotted;
+  background-color: rgba(0, 255, 242, 0.03);
+}
+
+/* Corner scale handle. hud-editor.js appends one handle per widget as a
+   sibling of the widget inside #canvas (so it works for <canvas>/3D widgets
+   too) and positions it via inline left/top in pixels. */
+#canvas.is-editing .scale-handle {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: #00fff2;
+  border: 2px solid #060b14;
+  cursor: nwse-resize;
+  z-index: 3001;
+}

@@ -140,6 +140,7 @@
     "daDesc": "Donations automatically increase the goal counter and trigger an alert.",
     "openDaConsole": "Open donationalerts.com/application/clients",
     "connectDa": "Connect DonationAlerts",
+    "daVoiceEnabled": "DonationAlerts voice-over (service voice)",
     "youtube": "YouTube",
     "youtubeDesc": "Live chat and live events (Super Chat, new members) via the YouTube Data API.",
     "youtubeClientIdPlaceholder": "from console.cloud.google.com",
@@ -153,6 +154,14 @@
     "savePort": "Save",
     "overlayUrl": "Overlay URL for OBS Browser Source",
     "resetLayout": "Reset layout to default",
+    "hudEdit": "HUD edit mode",
+    "hudEditHint": "Opens the overlay over your game (Borderless Window). Drag/resize widgets right in-game; Ctrl+Shift+H toggles the mode.",
+    "hudHotkey": "HUD global hotkey",
+    "hudHotkeyHint": "Format: Control+Shift+H. Applied immediately.",
+    "hudDisplay": "HUD display",
+    "hudDisplayHint": "Which monitor the HUD edit overlay appears on.",
+    "monitor": "Monitor",
+    "primaryMonitor": "primary",
     "history": "Event history",
     "historyDesc": "Recent donations, subscriptions and follows. The Replay button re-triggers the animation in the overlay.",
     "refresh": "Refresh",
@@ -287,6 +296,8 @@
     "giftSub": "Gift: {{count}}",
     "cheer": "Cheer",
     "donation": "Donation",
+    "boostySub": "Boosty subscription",
+    "boostyResub": "Boosty subscription (renewal)",
     "wheelStart": "Giveaway",
     "wheelWinner": "Fortune Wheel",
     "wheelStartMessage": "Giveaway open! {{command}}",
@@ -304,6 +315,8 @@
     "giftSub": "{{user}} gifted {{amount}} subscriptions",
     "cheer": "{{user}} cheered {{amount}} bits",
     "donation": "{{user}} donated {{amount}}",
+    "boostySub": "{{user}} subscribed on Boosty",
+    "boostyResub": "{{user}} renewed Boosty subscription",
     "empty": "Empty"
   },
   "widgets": {
@@ -445,6 +458,7 @@
     "modeText": "Text",
     "modeImage": "Image",
     "modeHtml": "Custom HTML",
+    "modeEmbed": "Embed (iframe)",
     "visibility": "Visibility",
     "x": "X %",
     "y": "Y %",
@@ -501,6 +515,7 @@
     "disabled": "disabled"
   },
   "custom": {
+    "name": "Widget name",
     "imageUrl": "Image URL",
     "imageFromDisk": "Choose image from disk",
     "imageFit": "Fit",
@@ -518,7 +533,10 @@
     "sizeSmall": "Small",
     "sizeMedium": "Medium",
     "sizeLarge": "Large",
-    "showBg": "Card background"
+    "showBg": "Card background",
+    "embedUrl": "Link (URL)",
+    "embedHint": "Paste a browser-source link (e.g., a DonationAlerts YAP! widget).",
+    "embedEmpty": "Paste a link to embed"
   },
   "events": {
     "all": "All",
@@ -651,7 +669,14 @@
       "title": "Editor",
       "p1": "Drag widgets from the left library onto the canvas, or click one to add it.",
       "p2": "Select a widget to edit its properties on the right. Drag to move it, use the corner handle to resize.",
-      "p3": "The Layers panel controls z-order; the Grid toggle helps with alignment. Copy this URL into an OBS Browser Source:"
+      "p3": "The Layers panel controls z-order; the Grid toggle helps with alignment. Copy this URL into an OBS Browser Source:",
+      "p4": "Widget icons appear on the canvas next to the label on hover or selection, making widgets easier to tell apart."
+    },
+    "widget": {
+      "title": "Custom widget",
+      "p1": "The widget library includes a Custom widget with several modes, switched in the properties panel on the right.",
+      "p2": "Text shows a title and text; Image shows an image URL; Custom HTML opens a separate HTML/CSS/JS editor with a live preview.",
+      "p3": "Embed (iframe) inserts a link to an external browser source (for example, a widget from DonationAlerts) as-is."
     },
     "presets": {
       "title": "Layout presets",
@@ -685,7 +710,7 @@
     "donationalerts": {
       "title": "DonationAlerts",
       "p1": "Donations automatically increase the goal counter and trigger an alert.",
-      "p2": "Donation voice-over (TTS): in the DonationAlerts card you can enable reading the donation message aloud — language, voice, volume and speech rate, plus a test button.",
+      "p2": "Donation voice-over (TTS): in the DonationAlerts card you can enable reading the donation message aloud — language, voice, volume and speech rate, plus a test button. If the service returns a voice link, the DonationAlerts voice can also be used for regular donations (a separate toggle).",
       "s1": "Create a client at donationalerts.com/application/clients.",
       "s2": "Set the Redirect URI to the value shown in Settings → DonationAlerts.",
       "s3": "Paste the Client ID and Client Secret, then press Connect DonationAlerts."

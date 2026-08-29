@@ -19,6 +19,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("desktop", {
   getInfo: () => ipcRenderer.invoke("app:get-info"),
+  getDisplays: () => ipcRenderer.invoke("app:get-displays"),
   openExternal: (url) => ipcRenderer.invoke("app:open-external", url),
   copyText: (text) => ipcRenderer.invoke("app:copy-to-clipboard", text),
   connectTwitch: (creds) => ipcRenderer.invoke("oauth:connect-twitch", creds),

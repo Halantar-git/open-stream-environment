@@ -48,7 +48,7 @@ export function initWsClient({ url, t, onMessage, onStatusClick }) {
     if (!container) return;
     const order = ["twitchChat", "twitchEvents", "donationAlerts", "youtube", "obs"];
     container.innerHTML = order
-      .filter((service) => connectionStatus[service] !== undefined)
+      .filter((service) => connectionStatus[service] !== undefined && connectionStatus[service] !== "disabled")
       .map((service) => {
         const status = connectionStatus[service];
         return `<button class="status-fab ${statusClass(status)}" data-service="${service}" type="button" title="${STATUS_LABEL(service)}">
@@ -68,6 +68,7 @@ export function initWsClient({ url, t, onMessage, onStatusClick }) {
       const chip = el("chip-" + service);
       if (!chip) return;
       const status = connectionStatus[service];
+      chip.style.display = status === "disabled" ? "none" : "";
       chip.className = "md-chip " + statusClass(status);
       const label = chip.querySelector(".md-chip__label");
       if (label) label.textContent = `${STATUS_LABEL(service)}: ${STATUS_TEXT(status)}`;

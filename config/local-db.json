@@ -70,8 +70,8 @@
         "id": "76f55e6d-7527-4928-95ba-51c1158d27cc",
         "type": "mic",
         "x": 1,
-        "y": 20,
-        "w": 14,
+        "y": 24,
+        "w": 16,
         "h": 6,
         "z": 8,
         "visible": true,
@@ -80,67 +80,79 @@
         }
       },
       {
-        "id": "fbfb7530-3823-40be-aa99-a64bb29e3bff",
-        "type": "cobra-holo-alert",
-        "x": 36,
-        "y": 2,
-        "w": 26,
-        "h": 14,
-        "z": 12,
-        "visible": true,
-        "config": {}
-      },
-      {
-        "id": "d9924e7a-b675-45b9-bb15-bf348e52d3dd",
-        "type": "cobra-shield",
-        "x": 0.8,
-        "y": 70.2,
-        "w": 20,
-        "h": 28,
-        "z": 13,
-        "visible": true,
-        "config": {
-          "opacity": 100
-        }
-      },
-      {
-        "id": "7a7b9508-4821-4b3b-bb87-28024f64e1c6",
-        "type": "cobra-radar",
-        "x": 42,
-        "y": 74,
+        "id": "47cac86c-48ea-4302-99f4-27ad4e044420",
+        "type": "grimhex-chat",
+        "x": 82,
+        "y": 52,
         "w": 16,
-        "h": 24,
-        "z": 14,
+        "h": 44,
+        "z": 9,
         "visible": true,
         "config": {
-          "opacity": 100
+          "maxMessages": 50,
+          "perspective": 100
         }
       },
       {
-        "id": "2025fba5-026a-4f0b-a576-f05aca282a71",
-        "type": "cobra-goal",
-        "x": 1,
-        "y": 1,
+        "id": "b3cfb6ac-b72c-41cf-92dc-b0de04636e55",
+        "type": "grimhex",
+        "x": 75,
+        "y": 0,
+        "w": 10,
+        "h": 18,
+        "z": 10,
+        "visible": true,
+        "config": {
+          "perspective": 0
+        }
+      },
+      {
+        "id": "3b9ee2b6-9807-45c0-a058-499f4f63c8da",
+        "type": "grimhex-goal",
+        "x": 1.04,
+        "y": 1.85,
         "w": 16,
         "h": 6,
-        "z": 15,
+        "z": 11,
         "visible": true,
         "config": {
           "showPercentage": false
         }
       },
       {
-        "id": "65d779e0-45ed-469f-824a-8d7cb3682216",
-        "type": "cobra-chat",
-        "x": 82,
-        "y": 52,
-        "w": 16,
-        "h": 44,
-        "z": 16,
+        "id": "fe3e0d6c-efce-4d26-84a6-6269651d58f6",
+        "type": "grimhex-holo-alert",
+        "x": 38.54,
+        "y": 3.7,
+        "w": 25,
+        "h": 14.81,
+        "z": 12,
+        "visible": true,
+        "config": {}
+      },
+      {
+        "id": "741704f5-0864-4022-bdc5-98307c5870be",
+        "type": "custom",
+        "x": 0,
+        "y": 74.07,
+        "w": 23.96,
+        "h": 25.93,
+        "z": 13,
         "visible": true,
         "config": {
-          "maxMessages": 50,
-          "perspective": 100
+          "mode": "embed",
+          "showBackground": true,
+          "textTitle": "",
+          "text": "Новый текст",
+          "textAlign": "center",
+          "textSize": "medium",
+          "imageUrl": "",
+          "imageFit": "contain",
+          "html": "",
+          "css": "",
+          "js": "",
+          "embedUrl": "https://widget.flovvy.com/75bdeb07529b6897caa53be74bc4684fbab9a059e255fbbcb96fe1caa73eaa19/80624",
+          "name": "DA YAP!"
         }
       }
     ]
@@ -1951,6 +1963,180 @@
       "channel": "halantar",
       "startedAt": 1787766318236,
       "endedAt": 1787766836987
+    },
+    {
+      "id": "35a3f4d7-dcf3-45de-815e-7e23c8e39cd8",
+      "channel": "halantar",
+      "startedAt": 1787982725308,
+      "endedAt": 1787982796650
+    },
+    {
+      "id": "6cf9a8b7-4acd-4db6-b5f6-4e5d7fdb50f8",
+      "channel": "halantar",
+      "startedAt": 1787983691508,
+      "endedAt": 1787983884325
+    },
+    {
+      "id": "f4df0c39-52b0-4ae6-9441-1e9d1a8202fe",
+      "channel": "halantar",
+      "startedAt": 1787984453007,
+      "endedAt": 1787984518689
+    },
+    {
+      "id": "16ab2ec6-01a8-465d-bff2-8e1170216f13",
+      "channel": "halantar",
+      "startedAt": 1787985063700,
+      "endedAt": 1787985110181
+    },
+    {
+      "id": "3633a747-35cb-42dc-8880-dfaf81402f93",
+      "channel": "halantar",
+      "startedAt": 1787985125379,
+      "endedAt": 1787985174722
+    },
+    {
+      "id": "1b225e29-b256-40b4-8ade-8ba354fd81ab",
+      "channel": "halantar",
+      "startedAt": 1787985593120,
+      "endedAt": 1787985636672
+    },
+    {
+      "id": "7a9f10f4-818f-4222-9ad8-9fdbab5ba330",
+      "channel": "halantar",
+      "startedAt": 1787985749409,
+      "endedAt": 1787986177755
+    },
+    {
+      "id": "7d0cd68c-3be0-45ef-983b-3938786c7a75",
+      "channel": "halantar",
+      "startedAt": 1787986702192,
+      "endedAt": 1787986737914
+    },
+    {
+      "id": "c6fd1648-b564-4d5f-9b2b-2501aafd11df",
+      "channel": "halantar",
+      "startedAt": 1787986789111,
+      "endedAt": 1787987059093
+    },
+    {
+      "id": "ce23b108-01b9-429a-a9a0-0272f7052133",
+      "channel": "halantar",
+      "startedAt": 1787987915860,
+      "endedAt": 1787988292022
+    },
+    {
+      "id": "9ee9119d-1985-4559-8b8e-3fbd71e54b07",
+      "channel": "halantar",
+      "startedAt": 1787988661371,
+      "endedAt": 1787988996451
+    },
+    {
+      "id": "3c45bb6b-d1ad-4e3d-861d-2ffab892e79e",
+      "channel": "halantar",
+      "startedAt": 1787989907803,
+      "endedAt": 1787990133490
+    },
+    {
+      "id": "6902133b-4ce6-4831-a582-fa4f7c77625d",
+      "channel": "halantar",
+      "startedAt": 1787990714604,
+      "endedAt": 1787990847317
+    },
+    {
+      "id": "09ac38a6-2543-4bb7-b376-f6f571c65d27",
+      "channel": "halantar",
+      "startedAt": 1787991100827,
+      "endedAt": 1787991218921
+    },
+    {
+      "id": "ad13267b-b386-48f8-bea2-06b7f17672c5",
+      "channel": "halantar",
+      "startedAt": 1787991425117,
+      "endedAt": 1787991536268
+    },
+    {
+      "id": "7f2bedf2-1848-4c93-9137-488685ffa11e",
+      "channel": "halantar",
+      "startedAt": 1787992251172,
+      "endedAt": 1787992509711
+    },
+    {
+      "id": "ac780567-5cfc-4489-a85a-99647afd65a3",
+      "channel": "halantar",
+      "startedAt": 1787994523240,
+      "endedAt": 1787994610688
+    },
+    {
+      "id": "3dc319c4-3b30-424a-a89b-25ab510a019f",
+      "channel": "halantar",
+      "startedAt": 1787994676648,
+      "endedAt": 1787994748419
+    },
+    {
+      "id": "8b409915-f932-4cd4-ba10-9334d26f89f8",
+      "channel": "halantar",
+      "startedAt": 1787996791115,
+      "endedAt": 1787997004393
+    },
+    {
+      "id": "06deec52-f26a-4db9-b8aa-7a8c552b1ed2",
+      "channel": "halantar",
+      "startedAt": 1787997012603,
+      "endedAt": 1787997143328
+    },
+    {
+      "id": "e4ad658f-6380-4d25-a75d-87dafbaa9750",
+      "channel": "halantar",
+      "startedAt": 1787997628103,
+      "endedAt": 1787997798229
+    },
+    {
+      "id": "b5d39f62-327b-4c95-9b4c-4b044eb088f6",
+      "channel": "halantar",
+      "startedAt": 1787997806275,
+      "endedAt": 1787997931692
+    },
+    {
+      "id": "0ef8377e-1db9-4d94-81e2-cfb9e8e9c2cc",
+      "channel": "halantar",
+      "startedAt": 1787998953109,
+      "endedAt": 1787999111347
+    },
+    {
+      "id": "302e2ba9-56bc-400c-bfaa-36656db63c62",
+      "channel": "halantar",
+      "startedAt": 1788000913558,
+      "endedAt": 1788000940273
+    },
+    {
+      "id": "514c9072-6fc8-469d-b7cf-93dc100f5de8",
+      "channel": "halantar",
+      "startedAt": 1788001544739,
+      "endedAt": 1788001628289
+    },
+    {
+      "id": "2aec94b1-36bb-44cc-9129-c03e56f7efea",
+      "channel": "halantar",
+      "startedAt": 1788001660301,
+      "endedAt": 1788001715902
+    },
+    {
+      "id": "41c45535-bc71-4cec-a0f6-334cc30f2411",
+      "channel": "halantar",
+      "startedAt": 1788003348546,
+      "endedAt": 1788003901045
+    },
+    {
+      "id": "216f7173-4869-4a6c-95ce-1e65dfb6c3ee",
+      "channel": "halantar",
+      "startedAt": 1788004076429,
+      "endedAt": 1788004251858
+    },
+    {
+      "id": "aa88c5f9-3247-4148-ba97-4d7d2f3828da",
+      "channel": "halantar",
+      "startedAt": 1788004575820,
+      "endedAt": 1788004672078
     }
   ],
   "chatMessages": [
@@ -6799,6 +6985,500 @@
       "currency": "RUB",
       "message": "Удачного стрима!",
       "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "27ff9e30-8e89-4cc7-9c6d-f4e2fc9adff6",
+      "timestamp": 1787983739584,
+      "type": "donation",
+      "kind": "donation",
+      "username": "star_gazer",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "5595008a-b8e9-4249-9f5a-cd6851f8b3b8",
+      "timestamp": 1787986795684,
+      "type": "donation",
+      "kind": "donation",
+      "username": "comet_watcher",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "b413926e-3da0-42b3-9d87-a08d16f0c5ef",
+      "timestamp": 1787986823913,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "fa4d115b-b9a8-4fb5-b252-37a127265cf0",
+      "timestamp": 1787987916578,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "85a7d956-7605-4650-a48c-f861f8f6e89a",
+      "timestamp": 1787988662073,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "d31010ee-82cf-403f-ab66-85461c7b248f",
+      "timestamp": 1787988719328,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 50,
+      "currency": "RUB",
+      "message": "тест",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "62aca7f6-f2f9-4756-b9b2-c15e375bb832",
+      "timestamp": 1787988747565,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 50,
+      "currency": "RUB",
+      "message": "тест",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "629387bc-1080-4786-8d29-9ddcf3c38ba5",
+      "timestamp": 1787988884890,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Halantar",
+      "amount": 50,
+      "currency": "RUB",
+      "message": "тестовое сообщения для проверки работоспособности донатов и ИИ и музыки. ",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "650d6100-6776-4bcc-8500-2b19e2050709",
+      "timestamp": 1787989908506,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "982a28aa-1e2c-40cc-a8bc-79eabce12905",
+      "timestamp": 1787989977693,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 50,
+      "currency": "RUB",
+      "message": "Заказываю трек!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "9f418669-0bdb-4e9e-b9c4-991e1cf5de15",
+      "timestamp": 1787989984386,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Halantar",
+      "amount": 50,
+      "currency": "RUB",
+      "message": "тестовое сообщение",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "acd202ce-a379-4c7b-8eb1-117e921dc623",
+      "timestamp": 1787989990091,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 50,
+      "currency": "RUB",
+      "message": "Тестовый донат",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "949ac2d6-1760-4f22-87e7-f0e9ffe375d7",
+      "timestamp": 1787989996099,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 50,
+      "currency": "RUB",
+      "message": "Заказываю трек!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "9815f8c9-cb05-4e97-b4ae-29965066dbad",
+      "timestamp": 1787990010465,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 50,
+      "currency": "RUB",
+      "message": "Заказываю трек!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "a27d8260-b496-4c75-9377-64a7bf0780b5",
+      "timestamp": 1787990024370,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 50,
+      "currency": "RUB",
+      "message": "Заказываю трек!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "1e1446ed-7fde-41d0-a6a9-a2f164552f09",
+      "timestamp": 1787990054085,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 50,
+      "currency": "RUB",
+      "message": "Заказываю трек!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "fc0eec12-bfdd-4ac8-b1bc-f36317541237",
+      "timestamp": 1787990081441,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 50,
+      "currency": "RUB",
+      "message": "Заказываю трек!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "0b442fb3-4f41-45a6-9d5a-525cab19da68",
+      "timestamp": 1787990098280,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Halantar",
+      "amount": 50,
+      "currency": "RUB",
+      "message": "тестовое сообщение",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "21ec04f0-e5a8-4f80-b2fb-936b8766a653",
+      "timestamp": 1787990108227,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 50,
+      "currency": "RUB",
+      "message": "Тестовый донат",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "b8f52b46-990a-4ddc-b8f2-0472c999c31e",
+      "timestamp": 1787990110997,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Halantar",
+      "amount": 50,
+      "currency": "RUB",
+      "message": "тестовое сообщение",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "bf8439f6-795c-4c4e-a305-c71c7344bac5",
+      "timestamp": 1787990715341,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "c928c553-1458-4feb-9105-8992e3d231e5",
+      "timestamp": 1787991101566,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "e81ed129-663d-428c-a7bc-51e7af1dc5e1",
+      "timestamp": 1787991425794,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "7c26dfe3-1174-40fc-9516-15b6eb355578",
+      "timestamp": 1787992251843,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "ff0d6b0e-f14b-45eb-82b0-d5bd3fff3ddb",
+      "timestamp": 1787994523897,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "5a4e8ce1-e058-4297-88f4-314c93534b66",
+      "timestamp": 1787994677372,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "81a2457a-3334-4467-8bbb-7d76b6493ef6",
+      "timestamp": 1787994700551,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "2c8f364e-10f9-4c23-b9c1-6f7f44a63eae",
+      "timestamp": 1787996791837,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "d849fce0-9a02-4d38-860d-fe62c5952583",
+      "timestamp": 1787997013326,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "d595cd1c-a998-41b6-b489-b5052c741eb2",
+      "timestamp": 1787997628976,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "155b9c1e-eb3d-4e55-aee9-92a40791c78e",
+      "timestamp": 1787997806985,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "fb68e752-fff2-419e-957a-88d8b5ce2fb6",
+      "timestamp": 1787998953791,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "ffa4c667-cd1a-4aa8-8c89-5e76a90df12c",
+      "timestamp": 1788000914243,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "f4370c39-44e3-44ad-ab6c-e7ea2f387669",
+      "timestamp": 1788001545406,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "222381f4-bb10-4042-ae97-79701e43d8a2",
+      "timestamp": 1788001660966,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "3e46096d-b513-46e4-b871-198364f938d4",
+      "timestamp": 1788003349306,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "ddf23f5b-52cb-4720-a7a4-f930e508bf27",
+      "timestamp": 1788004077182,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "c18f26cb-86f8-40db-9a36-8d3a83023d90",
+      "timestamp": 1788004576514,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
       "count": null,
       "tier": null
     }

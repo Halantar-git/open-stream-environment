@@ -114,6 +114,15 @@ describe("AppState config + runtime", () => {
     expect(state.config.streamdeck.icons.wheel).toBe("");
   });
 
+  test("setDonationVoiceConfig управляет озвучкой сервисов", () => {
+    expect(state.config.donationVoice).toEqual({ donationAlerts: false, volume: 0.9 });
+
+    state.setDonationVoiceConfig({ donationAlerts: true, volume: 0.5 });
+
+    expect(state.config.donationVoice).toEqual({ donationAlerts: true, volume: 0.5 });
+    expect(state.snapshot().donationVoice).toEqual({ donationAlerts: true, volume: 0.5 });
+  });
+
   test("setAppConfig ограничивает порт диапазоном 1024-65535", () => {
     state.setAppConfig({ port: 80 });
     expect(state.config.port).toBe(1024);

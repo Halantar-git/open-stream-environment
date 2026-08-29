@@ -94,6 +94,10 @@
           return t("alert.cheer");
         case "donation":
           return t("alert.donation");
+        case "boosty_sub":
+          return t("alert.boostySub");
+        case "boosty_resub":
+          return t("alert.boostyResub");
         case "wheel_start":
           return t("alert.wheelStart");
         case "wheel_winner":
@@ -107,6 +111,9 @@
       const { t, formatMoney, currencySymbol } = this.context;
       if (alert.kind === "cheer") return t("alert.cheerBits", { amount: alert.amount });
       if (alert.kind === "donation") return `${formatMoney(alert.amount)} ${currencySymbol(alert.currency || "RUB")}`;
+      if (alert.kind === "boosty_sub" || alert.kind === "boosty_resub") {
+        return alert.amount ? `${formatMoney(alert.amount)} ${currencySymbol(alert.currency || "RUB")}` : "";
+      }
       return "";
     }
 
@@ -116,7 +123,10 @@
       card.className = "widget-alert";
       card.dataset.kind = alert.kind;
 
-      const showAmount = alert.kind === "donation" || alert.kind === "cheer";
+      const showAmount =
+        alert.kind === "donation" ||
+        alert.kind === "cheer" ||
+        ((alert.kind === "boosty_sub" || alert.kind === "boosty_resub") && Number(alert.amount) > 0);
       let icon = ICONS[alert.kind] || "";
       if (alert.kind === "wheel_start") icon = "🎉";
 

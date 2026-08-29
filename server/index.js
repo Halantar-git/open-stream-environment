@@ -90,7 +90,7 @@ function getLocalIp() {
   return "127.0.0.1";
 }
 
-function createServer({ db } = {}) {
+function createServer({ db, onSetHudHotkey } = {}) {
   enableFileLogging(getLogsDir());
   const state = new AppState(db);
   const app = express();
@@ -112,13 +112,14 @@ function createServer({ db } = {}) {
   let currentSession = null;
   let autoSpinTimer = null;
   let isSpinning = false;
+  let hudEditMode = false;
   let language = db ? db.getLanguage() : "en";
   I18n.setLang(language);
   const serverLog = createLogger(bus, "server");
   const remoteUrl = `http://${getLocalIp()}:${state.config.port || 8710}/remote`;
 
   function stateSnapshot() {
-    return { ...state.snapshot(), remoteUrl };
+    return { ...state.snapshot(), remoteUrl, hudEditMode };
   }
 
   function broadcast(type, payload) {
@@ -126,6 +127,15 @@ function createServer({ db } = {}) {
     wss.clients.forEach((client) => {
       if (client.readyState === 1) client.send(message);
     });
+  }
+
+  // The game HUD window lives in Electron's main process; the server just
+  // remembers the current edit-mode flag so freshly connected overlays get
+  // the correct state in their initial snapshot (see stateSnapshot above).
+  function setHudEditMode(enabled) {
+    hudEditMode = !!enabled;
+    broadcast(EVENT_TYPES.HUD_EDIT_MODE, { enabled: hudEditMode });
+    return hudEditMode;
   }
 
   function setLanguage(code) {
@@ -513,6 +523,40 @@ function createServer({ db } = {}) {
         if (state.reorderWidget(id, direction)) broadcast(EVENT_TYPES.LAYOUT_UPDATE, { layout: state.layout });
         break;
       }
+      case EVENT_TYPES.CMD_SAVE_LAYOUT: {
+        const layout = (msg.payload && msg.payload.layout) || state.layout;
+        if (state.saveLayout(layout)) broadcast(EVENT_TYPES.LAYOUT_UPDATE, { layout: state.layout });
+        break;
+      }
+      case EVENT_TYPES.CMD_TOGGLE_HUD_EDIT_MODE: {
+        // Window management (setIgnoreMouseEvents) lives in Electron's main
+        // process; the server just relays the request onto the shared bus.
+        bus.emit("hud-edit-toggle");
+        break;
+      }
+      case EVENT_TYPES.CMD_SET_HUD_HOTKEY: {
+        const requested = String((msg.payload && msg.payload.hotkey) || "").trim();
+        if (!requested) break;
+        // Регистрацией глобального хоткея владеет Electron (main.js). Если
+        // акселератор невалиден/занят, колбэк вернёт false и мы оставим
+        // прежнее значение, вернув клиенту актуальный хоткей с ok:false.
+        const ok = onSetHudHotkey ? onSetHudHotkey(requested) : true;
+        if (ok) {
+          state.setHudHotkey(requested);
+          broadcast(EVENT_TYPES.HUD_HOTKEY_UPDATE, { hotkey: requested, ok: true });
+        } else {
+          broadcast(EVENT_TYPES.HUD_HOTKEY_UPDATE, { hotkey: state.config.hud_edit_hotkey, ok: false });
+        }
+        break;
+      }
+      case EVENT_TYPES.CMD_SET_HUD_DISPLAY: {
+        const raw = msg.payload && msg.payload.displayId;
+        const displayId = raw == null || raw === "" ? null : raw;
+        const saved = state.setHudDisplay(displayId);
+        bus.emit("hud-display-changed", saved);
+        broadcast(EVENT_TYPES.HUD_DISPLAY_UPDATE, { displayId: saved });
+        break;
+      }
       case EVENT_TYPES.CMD_SAVE_LAYOUT_PRESET: {
         const presets = state.saveLayoutPreset(msg.payload || {});
         if (presets) broadcast(EVENT_TYPES.LAYOUT_PRESETS_UPDATE, { presets });
@@ -757,6 +801,11 @@ function createServer({ db } = {}) {
         broadcast(EVENT_TYPES.STATE, stateSnapshot());
         break;
       }
+      case EVENT_TYPES.CMD_SET_DONATION_VOICE: {
+        state.setDonationVoiceConfig((msg.payload && msg.payload.config) || {});
+        broadcast(EVENT_TYPES.STATE, stateSnapshot());
+        break;
+      }
       case EVENT_TYPES.CMD_SET_STREAMDECK_CONFIG: {
         state.setStreamDeckConfig((msg.payload && msg.payload.config) || {});
         broadcast(EVENT_TYPES.STATE, stateSnapshot());
@@ -948,6 +997,7 @@ function createServer({ db } = {}) {
     start,
     stop,
     broadcast,
+    setHudEditMode,
     restartTwitchChat,
     restartTwitchEvents,
     restartDonationAlerts,

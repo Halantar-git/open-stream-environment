@@ -129,6 +129,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const ttsLang = document.getElementById("ttsLang");
   const ttsVoice = document.getElementById("ttsVoice");
   const ttsTestBtn = document.getElementById("ttsTestBtn");
+  const daVoiceSwitch = document.getElementById("daVoiceSwitch");
   const soundboardList = document.getElementById("soundboardList");
   const addSoundBtn = document.getElementById("addSoundBtn");
   const streamdeckIconStart = document.getElementById("streamdeckIconStart");
@@ -139,6 +140,10 @@ const { EVENT_TYPES } = window.SharedEvents;
   const appPortInput = document.getElementById("appPort");
   const savePortBtn = document.getElementById("savePortBtn");
   const appOverlayUrlInput = document.getElementById("appOverlayUrl");
+  const hudHotkeyInput = document.getElementById("hudHotkeyInput");
+  const saveHudHotkeyBtn = document.getElementById("saveHudHotkeyBtn");
+  const hudDisplaySelect = document.getElementById("hudDisplaySelect");
+  const refreshDisplaysBtn = document.getElementById("refreshDisplaysBtn");
   const eventsHistoryEl = document.getElementById("eventsHistory");
   const refreshEventsBtn = document.getElementById("refreshEventsBtn");
   const loadMoreEventsBtn = document.getElementById("loadMoreEventsBtn");
@@ -279,9 +284,14 @@ const { EVENT_TYPES } = window.SharedEvents;
       ttsLang.value = state.tts.lang || "ru-RU";
       renderTtsVoices();
     }
+    if (state.donationVoice) {
+      setSwitchState(daVoiceSwitch, !!state.donationVoice.donationAlerts);
+    }
     renderStreamDeckIcons();
     appPortInput.value = port;
     appOverlayUrlInput.value = overlayUrl;
+    if (hudHotkeyInput) hudHotkeyInput.value = state.hudEditHotkey || "Control+Shift+H";
+    renderHudDisplays();
     twitchRedirectUriEl.textContent = `http://localhost:${port}/oauth/twitch/callback`;
     daRedirectUriEl.textContent = `http://localhost:${port}/oauth/donationalerts/callback`;
     youtubeRedirectUriEl.textContent = `http://localhost:${port}/oauth/youtube/callback`;
@@ -296,6 +306,60 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (!port || port < 1024 || port > 65535) return;
     send(EVENT_TYPES.CMD_SET_APP_CONFIG, { port });
   });
+
+  if (saveHudHotkeyBtn && hudHotkeyInput) {
+    saveHudHotkeyBtn.addEventListener("click", () => {
+      const hotkey = hudHotkeyInput.value.trim();
+      if (!hotkey) return;
+      hudHotkeyInput.classList.remove("is-invalid");
+      send(EVENT_TYPES.CMD_SET_HUD_HOTKEY, { hotkey });
+    });
+    hudHotkeyInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") saveHudHotkeyBtn.click();
+    });
+    hudHotkeyInput.addEventListener("input", () => hudHotkeyInput.classList.remove("is-invalid"));
+  }
+
+  let hudDisplays = [];
+
+  function syncHudDisplaySelect() {
+    if (!hudDisplaySelect || !hudDisplaySelect.options.length) return;
+    if (state.hudDisplayId != null) {
+      hudDisplaySelect.value = String(state.hudDisplayId);
+    } else {
+      const primary = hudDisplays.find((d) => d.primary) || hudDisplays[0];
+      if (primary) hudDisplaySelect.value = String(primary.id);
+    }
+  }
+
+  async function renderHudDisplays() {
+    if (!hudDisplaySelect) return;
+    try {
+      hudDisplays = (await window.desktop?.getDisplays()) || [];
+    } catch {
+      hudDisplays = [];
+    }
+    if (!hudDisplays.length) {
+      hudDisplaySelect.hidden = true;
+      return;
+    }
+    hudDisplaySelect.hidden = false;
+    hudDisplaySelect.innerHTML = hudDisplays
+      .map((d, i) => {
+        const name = d.label || `${t("settings.monitor")} ${i + 1}`;
+        const suffix = d.primary ? ` (${t("settings.primaryMonitor")})` : "";
+        return `<option value="${escapeAttr(String(d.id))}">${escapeHtml(name)}${escapeHtml(suffix)}</option>`;
+      })
+      .join("");
+    syncHudDisplaySelect();
+  }
+
+  if (hudDisplaySelect) {
+    hudDisplaySelect.addEventListener("change", () => {
+      send(EVENT_TYPES.CMD_SET_HUD_DISPLAY, { displayId: hudDisplaySelect.value || null });
+    });
+  }
+  if (refreshDisplaysBtn) refreshDisplaysBtn.addEventListener("click", () => renderHudDisplays());
 
   youtubeVideoIdInput.addEventListener("change", () => {
     send(EVENT_TYPES.CMD_SET_YOUTUBE_VIDEO_ID, { videoId: youtubeVideoIdInput.value.trim() });
@@ -661,6 +725,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   wireSwitch(soundboardEnabledSwitch, (on) => sendSoundboardConfig({ enabled: on }));
 
   wireSwitch(ttsEnabledSwitch, (on) => sendTtsConfig({ enabled: on }));
+  wireSwitch(daVoiceSwitch, (on) => send(EVENT_TYPES.CMD_SET_DONATION_VOICE, { config: { donationAlerts: on } }));
   ttsVolume.addEventListener("input", (e) => {
     ttsVolumeValue.textContent = `${e.target.value}%`;
   });
@@ -753,6 +818,8 @@ const { EVENT_TYPES } = window.SharedEvents;
     ["recent", "alerts", "goal", "chat"].forEach((type) => send(EVENT_TYPES.CMD_ADD_WIDGET, { type }));
     state.selectedId = null;
   });
+  const toggleHudBtn = document.getElementById("toggleHudBtn");
+  if (toggleHudBtn) toggleHudBtn.addEventListener("click", () => send(EVENT_TYPES.CMD_TOGGLE_HUD_EDIT_MODE, {}));
 
   // ---- events history ----
   const EVENTS_TYPE_LABEL = (type) =>
@@ -1674,6 +1741,22 @@ const { EVENT_TYPES } = window.SharedEvents;
         gridSizeSelect.value = String(state.editorPrefs.gridSize || 0);
         canvasEditor.applyGridToCanvas();
         break;
+      case EVENT_TYPES.HUD_HOTKEY_UPDATE:
+        state.hudEditHotkey = (msg.payload && msg.payload.hotkey) || state.hudEditHotkey;
+        if (hudHotkeyInput) {
+          hudHotkeyInput.value = state.hudEditHotkey;
+          if (msg.payload && msg.payload.ok === false) {
+            hudHotkeyInput.classList.add("is-invalid");
+            setTimeout(() => hudHotkeyInput.classList.remove("is-invalid"), 2000);
+          } else {
+            hudHotkeyInput.classList.remove("is-invalid");
+          }
+        }
+        break;
+      case EVENT_TYPES.HUD_DISPLAY_UPDATE:
+        state.hudDisplayId = (msg.payload && msg.payload.displayId != null) ? msg.payload.displayId : null;
+        syncHudDisplaySelect();
+        break;
       case EVENT_TYPES.SCENES_UPDATE:
         state.scenes = msg.payload;
         renderSceneForm();
@@ -1733,7 +1816,10 @@ const { EVENT_TYPES } = window.SharedEvents;
         propertiesPanel.render();
         break;
       case EVENT_TYPES.CONNECTION_STATUS:
+        state.connectionStatus[msg.payload.service] = msg.payload.status;
         wsClient.updateStatus(msg.payload.service, msg.payload.status);
+        canvasEditor.renderCanvas();
+        canvasEditor.renderLayers();
         break;
       case EVENT_TYPES.LOCALES:
         applyLocales(msg.payload && msg.payload.lang, msg.payload && msg.payload.locales);

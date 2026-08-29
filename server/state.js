@@ -134,6 +134,11 @@ class AppState {
     if (!Array.isArray(this.config.appearance.customThemes)) this.config.appearance.customThemes = [];
     this._migrateAppearance();
     if (!this.config.editor) this.config.editor = defaultEditor();
+    this.config.hud_edit_hotkey =
+      typeof this.config.hud_edit_hotkey === "string" && this.config.hud_edit_hotkey.trim()
+        ? this.config.hud_edit_hotkey.trim()
+        : "Control+Shift+H";
+    this.config.hud_display_id = this.config.hud_display_id == null ? null : String(this.config.hud_display_id);
     const scenesDefaults = defaultScenes();
     this.config.scenes = this.config.scenes || {};
     Object.keys(scenesDefaults).forEach((sceneId) => {
@@ -179,6 +184,12 @@ class AppState {
       rate: typeof tts.rate === "number" ? tts.rate : 1,
       lang: String(tts.lang || "ru-RU"),
       voice: String(tts.voice || ""),
+    };
+    // Озвучка от самого сервиса (готовый аудиофайл доната), отдельно от TTS.
+    const dv = this.config.donationVoice || {};
+    this.config.donationVoice = {
+      donationAlerts: dv.donationAlerts === true,
+      volume: typeof dv.volume === "number" ? dv.volume : 0.9,
     };
     if (this.config.twitch.enabled === undefined) this.config.twitch.enabled = true;
     if (this.config.donationAlerts.enabled === undefined) this.config.donationAlerts.enabled = true;
@@ -317,6 +328,30 @@ class AppState {
     const za = a.z;
     a.z = b.z;
     b.z = za;
+    this._persistLayout();
+    return true;
+  }
+
+  // Commit a full layout array from the game HUD edit mode. Every item is
+  // clamped to the same bounds as updateWidget so a stray drag can't write
+  // off-screen or undersized geometry into the database.
+  saveLayout(layout) {
+    if (!Array.isArray(layout)) return false;
+    const round2 = (n) => Math.round(n * 100) / 100;
+    this._layout = layout
+      .filter((w) => w && w.id != null && WIDGET_TYPES[w.type])
+      .map((w) => {
+        const def = WIDGET_TYPES[w.type] || { minW: 5, minH: 5 };
+        const width = clamp(Number(w.w) || def.minW, def.minW, 100);
+        const height = clamp(Number(w.h) || def.minH, def.minH, 100);
+        return {
+          ...w,
+          w: round2(width),
+          h: round2(height),
+          x: round2(clamp(Number(w.x) || 0, 0, 100 - width)),
+          y: round2(clamp(Number(w.y) || 0, 0, 100 - height)),
+        };
+      });
     this._persistLayout();
     return true;
   }
@@ -494,6 +529,13 @@ class AppState {
     if (patch.voice !== undefined) this.config.tts.voice = String(patch.voice).trim();
     saveConfig(this.config);
     return this.config.tts;
+  }
+
+  setDonationVoiceConfig(patch = {}) {
+    if (patch.donationAlerts !== undefined) this.config.donationVoice.donationAlerts = !!patch.donationAlerts;
+    if (patch.volume !== undefined) this.config.donationVoice.volume = clamp(Number(patch.volume) || 0, 0, 1);
+    saveConfig(this.config);
+    return this.config.donationVoice;
   }
 
   // ---- Death counter (remote quick action) ----
@@ -827,6 +869,19 @@ class AppState {
     return this.config.editor;
   }
 
+  setHudHotkey(hotkey) {
+    const cleaned = typeof hotkey === "string" ? hotkey.trim() : "";
+    this.config.hud_edit_hotkey = cleaned || "Control+Shift+H";
+    saveConfig(this.config);
+    return this.config.hud_edit_hotkey;
+  }
+
+  setHudDisplay(displayId) {
+    this.config.hud_display_id = displayId == null || displayId === "" ? null : String(displayId);
+    saveConfig(this.config);
+    return this.config.hud_display_id;
+  }
+
   // ---- Scenes (start / brb / end) ----
 
   setSceneConfig(sceneId, patch = {}) {
@@ -899,6 +954,7 @@ class AppState {
         ...(newConfig.streamdeck || {}),
         icons: { ...this.config.streamdeck.icons, ...((newConfig.streamdeck && newConfig.streamdeck.icons) || {}) },
       },
+      donationVoice: { ...this.config.donationVoice, ...(newConfig.donationVoice || {}) },
       appearance: {
         ...defaultAppearance(),
         ...this.config.appearance,
@@ -945,6 +1001,7 @@ class AppState {
       obs: this.config.obs,
       soundboard: this.config.soundboard,
       tts: this.config.tts,
+      donationVoice: this.config.donationVoice,
       streamdeck: this.config.streamdeck,
       connectionStatus: this.runtime.connectionStatus,
       recentEvents: this.runtime.recentEvents,
@@ -962,6 +1019,8 @@ class AppState {
         themes: this.listThemes(),
       },
       editor: this.config.editor,
+      hud_edit_hotkey: this.config.hud_edit_hotkey,
+      hud_display_id: this.config.hud_display_id,
       scenes: this.config.scenes,
       topDonation: this.config.topDonation,
     };
