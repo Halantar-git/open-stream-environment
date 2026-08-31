@@ -17,12 +17,12 @@
 
 const EventBus = require("../overlay/event-bus");
 const { EVENT_TYPES } = require("../shared/events");
-const WidgetStarCitizenHoloAlert = require("../overlay/widgets/star-citizen-holo-alert-widget");
+const WidgetGrimHexGoal = require("../overlay/widgets/grimhex-goal-widget");
 const WidgetManager = require("../overlay/widgets/widget-manager");
 
 function makeCtx2D() {
   const ctx = {};
-  ["setTransform", "clearRect", "save", "restore", "translate", "scale", "beginPath", "moveTo", "lineTo", "bezierCurveTo", "closePath", "rect", "arc", "fillRect", "fill", "stroke", "drawImage"].forEach(
+  ["setTransform", "clearRect", "save", "restore", "translate", "beginPath", "moveTo", "lineTo", "rect", "roundRect", "fill", "fillRect", "stroke"].forEach(
     (m) => (ctx[m] = jest.fn())
   );
   return ctx;
@@ -49,10 +49,12 @@ function makeEl(tag) {
     width: 0,
     height: 0,
     clientWidth: 320,
-    clientHeight: 140,
+    clientHeight: 80,
     parentNode: null,
     children: [],
     isConnected: true,
+    scrollTop: 0,
+    scrollHeight: 0,
     appendChild(c) { c.parentNode = this; this.children.push(c); return c; },
     removeChild(c) { const i = this.children.indexOf(c); if (i >= 0) this.children.splice(i, 1); c.parentNode = null; return c; },
     remove() { if (this.parentNode) this.parentNode.removeChild(this); },
@@ -82,19 +84,17 @@ function makeContext(theme) {
     bus: new EventBus(),
     EVENT_TYPES,
     theme,
+    state: { goal: { title: "Цель", current: 50, target: 100, currency: "RUB" } },
     escapeHtml: (s) => String(s),
     escapeAttr: (s) => String(s),
     formatMoney: (n) => String(n),
     currencySymbol: (c) => String(c),
     t: (k) => k,
-    ICONS: { follow: "<svg/>", sub: "<svg/>", gift_sub: "<svg/>", cheer: "<svg/>", donation: "<svg/>" },
-    readCssVar: () => "",
-    audio: { playWinSound: jest.fn(), playEliminationAudio: jest.fn() },
   };
 }
 
 function item(overrides = {}) {
-  return { id: "h", type: "grimhex-holo-alert", x: 0, y: 0, w: 26, h: 14, z: 0, visible: true, config: {}, renderType: "2d", ...overrides };
+  return { id: "g", type: "grimhex-goal", x: 0, y: 0, w: 20, h: 6, z: 0, visible: true, config: {}, renderType: "2d", ...overrides };
 }
 
 let raf;
@@ -124,17 +124,21 @@ afterEach(() => {
   global.performance = originalGlobals.performance;
 });
 
-describe("WidgetStarCitizenHoloAlert", () => {
-  test("монтируется в режиме ожидания и запускает цикл только для grimhex", () => {
+describe("WidgetGrimHexGoal", () => {
+  test("монтируется, создаёт canvas + контент и запускает цикл для grimhex", () => {
     const parent = makeEl("div");
-    const w = new WidgetStarCitizenHoloAlert(item(), makeContext("grimhex"));
+    const w = new WidgetGrimHexGoal(item(), makeContext("grimhex"));
 
     w.mount(parent);
+    expect(raf.pending()).toBe(1); // 30 FPS loop
     expect(w.canvas).toBeTruthy();
     expect(w.ctx).toBeTruthy();
+    expect(w.layoutEl).toBeTruthy();
     expect(w.contentEl).toBeTruthy();
-    expect(raf.pending()).toBe(0); // idle: no alert yet
-    expect(w.element.style.opacity).toBe("0");
+    expect(w.barWrap).toBeTruthy();
+
+    raf.flush(1000); // one frame
+    expect(w.ctx.roundRect).toHaveBeenCalled(); // tube drawn
 
     w.unmount();
     expect(raf.pending()).toBe(0);
@@ -142,55 +146,69 @@ describe("WidgetStarCitizenHoloAlert", () => {
 
   test("не инициализируется на чужой теме (уровень виджета)", () => {
     const parent = makeEl("div");
-    const w = new WidgetStarCitizenHoloAlert(item(), makeContext("nebula"));
+    const w = new WidgetGrimHexGoal(item(), makeContext("nebula"));
 
     w.mount(parent);
+    expect(raf.pending()).toBe(0);
     expect(w.canvas).toBeNull();
     expect(w.contentEl).toBeNull();
     w.unmount();
   });
 
-  test("показывает алерт, включает цикл и спавнит частицы", () => {
+  test("обновляет прогресс и контент по GOAL_UPDATE", () => {
     const ctx = makeContext("grimhex");
     const parent = makeEl("div");
-    const w = new WidgetStarCitizenHoloAlert(item(), ctx);
+    const w = new WidgetGrimHexGoal(item(), ctx);
     w.mount(parent);
 
-    ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "follow", user: "bob" });
+    expect(w.contentEl.innerHTML).toContain("Цель");
+    expect(w.contentEl.innerHTML).toContain("50");
+    expect(w._pct).toBe(50); // 50 / 100
 
-    expect(w.current).toBeTruthy();
-    expect(w.contentEl.innerHTML).toContain("bob");
-    expect(w.element.style.opacity).toBe("1");
-    expect(w._particles.length).toBeGreaterThan(0);
-    expect(raf.pending()).toBe(1); // loop resumed
+    ctx.state.goal = { title: "Новая цель", current: 75, target: 100, currency: "USD" };
+    ctx.bus.emit(EVENT_TYPES.GOAL_UPDATE, ctx.state.goal);
 
+    expect(w._pct).toBe(75);
+    expect(w.contentEl.innerHTML).toContain("Новая цель");
+    expect(w.contentEl.innerHTML).toContain("75");
     w.unmount();
-    expect(raf.pending()).toBe(0);
+  });
+
+  test("не подписывается на чат (не реагирует на сообщения)", () => {
+    const ctx = makeContext("grimhex");
+    const parent = makeEl("div");
+    const w = new WidgetGrimHexGoal(item(), ctx);
+    w.mount(parent);
+
+    const channels = w._subs.map((s) => s.channel);
+    expect(channels).toContain(EVENT_TYPES.GOAL_UPDATE);
+    expect(channels).toContain(EVENT_TYPES.LOCALES);
+    expect(channels).not.toContain(EVENT_TYPES.CHAT_MESSAGE);
+    expect(channels).not.toContain(EVENT_TYPES.ALERT);
+    w.unmount();
   });
 });
 
-describe("WidgetManager — изоляция grimhex-holo-alert", () => {
-  test("не создаёт grimhex-holo-alert, пока тема не grimhex", () => {
+describe("WidgetManager — изоляция grimhex-goal", () => {
+  test("не создаёт grimhex-goal, пока тема не grimhex", () => {
     const root = makeEl("div");
     const context = {
       bus: new EventBus(),
       EVENT_TYPES,
       theme: "nebula",
+      state: { goal: { title: "Цель", current: 0, target: 1, currency: "RUB" } },
       escapeHtml: (s) => String(s),
       escapeAttr: (s) => String(s),
       formatMoney: (n) => String(n),
       currencySymbol: (c) => String(c),
       t: (k) => k,
-      ICONS: {},
-      readCssVar: () => "",
-      audio: { playWinSound: jest.fn(), playEliminationAudio: jest.fn() },
     };
     const mgr = new WidgetManager(root, {
-      shouldMount: (it) => (it.type !== "grimhex-holo-alert" ? true : context.theme === "grimhex"),
+      shouldMount: (it) => (it.type !== "grimhex-goal" ? true : context.theme === "grimhex"),
       resolveRenderType: () => "2d",
       context,
     });
-    mgr.register("grimhex-holo-alert", WidgetStarCitizenHoloAlert);
+    mgr.register("grimhex-goal", WidgetGrimHexGoal);
 
     mgr.syncLayout([item()]);
     expect(mgr.size).toBe(0);

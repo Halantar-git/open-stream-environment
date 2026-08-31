@@ -39,7 +39,7 @@ function makeConfig() {
     soundboard: { enabled: true, volume: 0.8, queueMode: false, sounds: [] },
     streamdeck: { icons: { scene: "", soundboard: "", counter: "", wheel: "" } },
     goal: { title: "", current: 0, target: 1, currency: "RUB" },
-    appearance: { activeThemeId2d: "nebula", activeThemeId3d: "", customThemes: [] },
+    appearance: { activeThemeId: "nebula", enable3d: false, customThemes: [] },
     editor: { gridSize: 5, snapEnabled: true },
     scenes: {},
     topDonation: {},
@@ -192,70 +192,98 @@ describe("AppState config + runtime", () => {
     expect(state.config.obs.customCommands).toEqual([]); // невалидный массив -> []
   });
 
-  test("2D и 3D темы хранятся в отдельных ячейках", () => {
+  test("тема и 3D-вариант управляются через activeThemeId + enable3d", () => {
     state.setActiveTheme("orbital");
-    expect(state.config.appearance.activeThemeId2d).toBe("orbital");
-    expect(state.config.appearance.activeThemeId3d).toBe("");
+    expect(state.config.appearance.activeThemeId).toBe("orbital");
+    expect(state.config.appearance.enable3d).toBe(false);
 
-    // Пока 3D выключена, глобальные токены берутся из 2D темы.
+    // Пока 3D выключен, глобальные токены берутся из базовой темы.
     let snap = state.snapshot();
     expect(snap.appearance.activeThemeId).toBe("orbital");
     expect(snap.appearance.tokens).toEqual(BUILTIN_THEMES.orbital.tokens);
 
-    state.setActiveTheme("grimhex");
-    expect(state.config.appearance.activeThemeId3d).toBe("grimhex");
-    expect(state.config.appearance.activeThemeId2d).toBe("orbital");
+    state.setActiveTheme("orbital", true);
+    expect(state.config.appearance.activeThemeId).toBe("orbital");
+    expect(state.config.appearance.enable3d).toBe(true);
 
-    // При включённой 3D теме она перекрывает 2D для всего оверлея.
+    // При включённом 3D-варианте его токены перекрывают базовые, а виджеты
+    // гейтятся по производному activeThemeId3d.
     snap = state.snapshot();
-    expect(snap.appearance.activeThemeId2d).toBe("orbital");
+    expect(snap.appearance.activeThemeId).toBe("orbital");
     expect(snap.appearance.activeThemeId3d).toBe("grimhex");
-    expect(snap.appearance.activeThemeId).toBe("grimhex");
+    expect(snap.appearance.enable3d).toBe(true);
     expect(snap.appearance.tokens).toEqual(BUILTIN_THEMES.grimhex.tokens);
   });
 
-  test("setActiveTheme('') выключает 3D-тему", () => {
+  test("выбор 3D-варианта по id (grimhex) выбирает базовую тему + 3D", () => {
     state.setActiveTheme("grimhex");
-    expect(state.config.appearance.activeThemeId3d).toBe("grimhex");
-
-    expect(state.setActiveTheme("")).toBe(true);
-    expect(state.config.appearance.activeThemeId3d).toBe("");
-    expect(state.config.appearance.activeThemeId2d).toBe("nebula");
+    expect(state.config.appearance.activeThemeId).toBe("orbital");
+    expect(state.config.appearance.enable3d).toBe(true);
   });
 
-  test("legacy activeThemeId мигрирует в соответствующий слот", () => {
+  test("setActiveTheme('') выключает 3D-вариант", () => {
+    state.setActiveTheme("orbital", true);
+    expect(state.config.appearance.enable3d).toBe(true);
+
+    expect(state.setActiveTheme("")).toBe(true);
+    expect(state.config.appearance.enable3d).toBe(false);
+    expect(state.config.appearance.activeThemeId).toBe("orbital");
+  });
+
+  test("legacy single activeThemeId (3D) мигрирует в activeThemeId + enable3d", () => {
     const legacy = makeConfig();
     legacy.appearance = { activeThemeId: "grimhex", customThemes: [] };
     const migrated = new AppState(null, legacy);
-    expect(migrated.config.appearance.activeThemeId3d).toBe("grimhex");
-    expect(migrated.config.appearance.activeThemeId2d).toBe("nebula");
-    expect(migrated.config.appearance.activeThemeId).toBeUndefined();
+    expect(migrated.config.appearance.activeThemeId).toBe("orbital");
+    expect(migrated.config.appearance.enable3d).toBe(true);
+  });
+
+  test("legacy двухслотовое appearance (activeThemeId2d/3d) мигрирует", () => {
+    const legacy = makeConfig();
+    legacy.appearance = { activeThemeId2d: "elite", activeThemeId3d: "cobra-mk2", customThemes: [] };
+    const migrated = new AppState(null, legacy);
+    expect(migrated.config.appearance.activeThemeId).toBe("elite");
+    expect(migrated.config.appearance.enable3d).toBe(true);
+    expect(migrated.config.appearance.activeThemeId2d).toBeUndefined();
+    expect(migrated.config.appearance.activeThemeId3d).toBeUndefined();
+  });
+
+  test("setEnabled3dWidget управляет 3D-фишками и попадает в снапшот", () => {
+    state.setActiveTheme("nebula", true);
+    expect(state.config.appearance.enabled3d).toEqual({});
+
+    state.setEnabled3dWidget("md3-orb", false);
+    expect(state.config.appearance.enabled3d["md3-orb"]).toBe(false);
+
+    let snap = state.snapshot();
+    expect(snap.appearance.enabled3d["md3-orb"]).toBe(false);
+
+    state.setEnabled3dWidget("md3-orb", true);
+    expect(state.config.appearance.enabled3d["md3-orb"]).toBeUndefined();
   });
 
   test("сохранение/загрузка/удаление пресетов раскладки", () => {
     state.addWidget("recent");
     state.addWidget("chat");
-    state.setActiveTheme("orbital");
-    state.setActiveTheme("grimhex");
+    state.setActiveTheme("orbital", true);
     expect(state.layout).toHaveLength(2);
 
     const saved = state.saveLayoutPreset({ name: "  Мой пресет  " });
     expect(saved).toHaveLength(1);
     expect(saved[0].name).toBe("Мой пресет");
     expect(saved[0].widgetCount).toBe(2);
-    expect(saved[0].theme2d).toBe("orbital");
-    expect(saved[0].theme3d).toBe("grimhex");
+    expect(saved[0].themeId).toBe("orbital");
+    expect(saved[0].enable3d).toBe(true);
 
     // Меняем раскладку и тему, затем возвращаем их из пресета.
     state.removeWidget(state.layout[0].id);
     state.setActiveTheme("pixel");
-    state.setActiveTheme(""); // выключаем 3D
     expect(state.layout).toHaveLength(1);
 
     const applied = state.applyLayoutPreset(saved[0].id);
     expect(applied).toHaveLength(2);
-    expect(state.config.appearance.activeThemeId2d).toBe("orbital");
-    expect(state.config.appearance.activeThemeId3d).toBe("grimhex");
+    expect(state.config.appearance.activeThemeId).toBe("orbital");
+    expect(state.config.appearance.enable3d).toBe(true);
 
     const snap = state.snapshot();
     expect(snap.layoutPresets).toHaveLength(1);

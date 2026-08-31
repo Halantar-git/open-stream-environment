@@ -16,8 +16,8 @@
  */
 
 /*
-  WidgetStarCitizenHoloAlert — holographic terminal + rotating 3D badge for the
-  Star Citizen theme.
+  WidgetGrimHexHoloAlert — holographic terminal + rotating 3D badge for the
+  Grim HEX theme.
 
   Alerts arrive on the shared bus ({ kind: follow|sub|gift_sub|cheer|donation|
   wheel_start|wheel_winner, ... }) and are queued one at a time. The background
@@ -34,13 +34,13 @@
     typeof module !== "undefined" && module.exports
       ? require("./base-widget")
       : root.OSEWidgets && root.OSEWidgets.BaseWidget;
-  const WidgetStarCitizenHoloAlert = factory(BaseWidget);
+  const WidgetGrimHexHoloAlert = factory(BaseWidget);
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = WidgetStarCitizenHoloAlert;
+    module.exports = WidgetGrimHexHoloAlert;
   } else {
     root.OSEWidgets = root.OSEWidgets || {};
-    root.OSEWidgets.WidgetStarCitizenHoloAlert = WidgetStarCitizenHoloAlert;
+    root.OSEWidgets.WidgetGrimHexHoloAlert = WidgetGrimHexHoloAlert;
   }
 })(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
   "use strict";
@@ -53,7 +53,7 @@
 
   const clamp = (v, min, max) => (v < min ? min : v > max ? max : v);
 
-  class WidgetStarCitizenHoloAlert extends BaseWidget {
+  class WidgetGrimHexHoloAlert extends BaseWidget {
     constructor(config, context) {
       super(config, context);
       this.theme = (context && (context.theme || context.activeThemeId)) || "";
@@ -85,7 +85,7 @@
       if (this.theme !== "grimhex") return;
 
       this.canvas = document.createElement("canvas");
-      this.canvas.className = "star-citizen-holo-alert__canvas";
+      this.canvas.className = "grimhex-holo-alert__canvas";
       Object.assign(this.canvas.style, {
         position: "absolute",
         left: "0",
@@ -97,12 +97,12 @@
       this.ctx = this.canvas.getContext("2d");
 
       this.contentEl = document.createElement("div");
-      this.contentEl.className = "star-citizen-holo-alert__content";
+      this.contentEl.className = "grimhex-holo-alert__content";
       this.contentEl.style.cssText =
         "position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;box-sizing:border-box;padding:12px 16px 16px 40%;";
       this.element.appendChild(this.contentEl);
 
-      this.element.classList.add("star-citizen-holo-alert-surface");
+      this.element.classList.add("grimhex-holo-alert-surface");
       this._applySurface();
       this._applyTilt();
       this._nextFlickerAt = performance.now() + 2000 + Math.random() * 3000;
@@ -513,5 +513,5 @@
     }
   }
 
-  return WidgetStarCitizenHoloAlert;
+  return WidgetGrimHexHoloAlert;
 });

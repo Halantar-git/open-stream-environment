@@ -116,10 +116,9 @@ function fisherYates(arr) {
 }
 
 function defaultAppearance() {
-  // 2D and 3D theme selections are stored in separate slots. The 2D slot is
-  // the base theme; the 3D slot (Star Citizen) is an optional override that,
-  // when set, replaces the 2D theme's tokens and enables the 3D widgets.
-  return { activeThemeId2d: "nebula", activeThemeId3d: "", customThemes: [] };
+  // A theme is now a "family": one selected base theme plus an optional 3D
+  // variant toggled by `enable3d` (see resolvedTheme/resolvedTheme3d below).
+  return { activeThemeId: "nebula", enable3d: false, customThemes: [] };
 }
 
 function defaultEditor() {
@@ -133,6 +132,9 @@ class AppState {
     if (!this.config.appearance) this.config.appearance = defaultAppearance();
     if (!Array.isArray(this.config.appearance.customThemes)) this.config.appearance.customThemes = [];
     this._migrateAppearance();
+    if (!this.config.appearance.enabled3d || typeof this.config.appearance.enabled3d !== "object") {
+      this.config.appearance.enabled3d = {};
+    }
     if (!this.config.editor) this.config.editor = defaultEditor();
     this.config.hud_edit_hotkey =
       typeof this.config.hud_edit_hotkey === "string" && this.config.hud_edit_hotkey.trim()
@@ -205,6 +207,16 @@ class AppState {
       donationAlerts: dv.donationAlerts === true,
       volume: typeof dv.volume === "number" ? dv.volume : 0.9,
     };
+    const poll = this.config.poll || {};
+    this.config.poll = {
+      command: typeof poll.command === "string" && poll.command.trim() ? poll.command.trim() : "!poll",
+      chartType: poll.chartType === "pie" ? "pie" : "bars",
+      options: Array.isArray(poll.options)
+        ? poll.options
+            .filter((o) => o && typeof o.id === "string" && typeof o.label === "string")
+            .map((o) => ({ id: o.id, label: o.label }))
+        : [],
+    };
     if (this.config.twitch.enabled === undefined) this.config.twitch.enabled = true;
     if (this.config.donationAlerts.enabled === undefined) this.config.donationAlerts.enabled = true;
     if (this.config.youtube.enabled === undefined) this.config.youtube.enabled = true;
@@ -239,6 +251,10 @@ class AppState {
         isFinalWinner: false,
         pendingWinner: null,
       },
+      poll: {
+        active: false,
+        votes: new Map(), // username -> optionId
+      },
     };
   }
 
@@ -263,25 +279,45 @@ class AppState {
     }
   }
 
-  // Migrates the pre-2.3.1 single `activeThemeId` into the separate 2D/3D
-  // slots so existing config files keep working after the split.
+  // Migrates legacy appearance shapes into the current `{ activeThemeId,
+  // enable3d }` model:
+  //   * pre-2.3.1  — single `activeThemeId`;
+  //   * 2.3.1–2.x  — `activeThemeId2d` + `activeThemeId3d`.
   _migrateAppearance() {
     const a = this.config.appearance;
-    if (a.activeThemeId) {
-      const dim = BUILTIN_THEMES[a.activeThemeId] && BUILTIN_THEMES[a.activeThemeId].dimension === "3d" ? "3d" : "2d";
-      if (!a.activeThemeId2d && !a.activeThemeId3d) {
-        if (dim === "3d") {
-          a.activeThemeId3d = a.activeThemeId;
-          a.activeThemeId2d = "nebula";
-        } else {
-          a.activeThemeId2d = a.activeThemeId;
-          a.activeThemeId3d = "";
-        }
+    const isVariant = (id) => BUILTIN_THEMES[id] && BUILTIN_THEMES[id].variant === true;
+
+    // Pre-2.3.1 single id.
+    if (a.activeThemeId && a.activeThemeId2d === undefined && a.activeThemeId3d === undefined && a.enable3d === undefined) {
+      if (isVariant(a.activeThemeId) || (BUILTIN_THEMES[a.activeThemeId] && BUILTIN_THEMES[a.activeThemeId].dimension === "3d")) {
+        a.enable3d = true;
       }
-      delete a.activeThemeId;
+      if (isVariant(a.activeThemeId)) a.activeThemeId = BUILTIN_THEMES[a.activeThemeId].base2d;
     }
-    if (!a.activeThemeId2d) a.activeThemeId2d = "nebula";
-    if (typeof a.activeThemeId3d !== "string") a.activeThemeId3d = "";
+
+    // Two-slot model.
+    if (a.activeThemeId2d || a.activeThemeId3d) {
+      const id2d = a.activeThemeId2d || "nebula";
+      const id3d = a.activeThemeId3d || "";
+      if (id3d) {
+        a.activeThemeId = (BUILTIN_THEMES[id3d] && BUILTIN_THEMES[id3d].base2d) || id2d;
+        a.enable3d = true;
+      } else {
+        a.activeThemeId = id2d;
+        a.enable3d = false;
+      }
+      delete a.activeThemeId2d;
+      delete a.activeThemeId3d;
+    }
+
+    // Safety net: a stray 3D variant id maps back to its base 2D theme.
+    if (a.activeThemeId && isVariant(a.activeThemeId)) {
+      a.activeThemeId = BUILTIN_THEMES[a.activeThemeId].base2d;
+      a.enable3d = true;
+    }
+
+    if (!a.activeThemeId) a.activeThemeId = "nebula";
+    if (typeof a.enable3d !== "boolean") a.enable3d = false;
   }
 
   get goal() {
@@ -389,8 +425,8 @@ class AppState {
       id: p.id,
       name: p.name,
       widgetCount: Array.isArray(p.widgets) ? p.widgets.length : 0,
-      theme2d: p.theme2d || "",
-      theme3d: p.theme3d || "",
+      themeId: p.themeId || p.theme2d || "",
+      enable3d: p.enable3d != null ? !!p.enable3d : !!p.theme3d,
       createdAt: p.createdAt || 0,
       updatedAt: p.updatedAt || 0,
     }));
@@ -401,18 +437,18 @@ class AppState {
     if (!cleanName) return null;
     const presets = this._getLayoutPresets();
     const widgets = this._layout.map((w) => ({ ...w, config: { ...(w.config || {}) } }));
-    const theme2d = this.config.appearance.activeThemeId2d || "nebula";
-    const theme3d = this.config.appearance.activeThemeId3d || "";
+    const themeId = this.config.appearance.activeThemeId || "nebula";
+    const enable3d = !!this.config.appearance.enable3d;
     if (id) {
       const existing = presets.find((p) => p.id === id);
       if (!existing) return null;
       existing.name = cleanName;
       existing.widgets = widgets;
-      existing.theme2d = theme2d;
-      existing.theme3d = theme3d;
+      existing.themeId = themeId;
+      existing.enable3d = enable3d;
       existing.updatedAt = Date.now();
     } else {
-      presets.push({ id: crypto.randomUUID(), name: cleanName, widgets, theme2d, theme3d, createdAt: Date.now(), updatedAt: Date.now() });
+      presets.push({ id: crypto.randomUUID(), name: cleanName, widgets, themeId, enable3d, createdAt: Date.now(), updatedAt: Date.now() });
     }
     this._setLayoutPresets(presets);
     return this.listLayoutPresets();
@@ -423,14 +459,16 @@ class AppState {
     if (!preset || !Array.isArray(preset.widgets)) return null;
     this._layout = preset.widgets.map((w) => ({ ...w, config: { ...(w.config || {}) } }));
     // Restore the theme the preset was saved with so theme-bound (3D) widgets
-    // actually become visible again.
-    if (preset.theme2d && this.themeDimension(preset.theme2d)) {
-      this.config.appearance.activeThemeId2d = preset.theme2d;
+    // actually become visible again. Older presets stored theme2d/theme3d; new
+    // ones store themeId/enable3d.
+    const rawThemeId = preset.themeId || preset.theme2d || "";
+    const builtin = BUILTIN_THEMES[rawThemeId];
+    const themeId = builtin && builtin.variant ? builtin.base2d : rawThemeId;
+    const enable3d = preset.enable3d != null ? !!preset.enable3d : !!preset.theme3d;
+    if (themeId && this.themeDimension(themeId)) {
+      this.config.appearance.activeThemeId = themeId;
     }
-    if (typeof preset.theme3d === "string") {
-      const dim3d = preset.theme3d === "" ? "" : this.themeDimension(preset.theme3d);
-      if (dim3d === "" || dim3d === "3d") this.config.appearance.activeThemeId3d = preset.theme3d;
-    }
+    this.config.appearance.enable3d = enable3d;
     saveConfig(this.config);
     this._persistLayout();
     return this._layout;
@@ -695,6 +733,114 @@ class AppState {
     return true;
   }
 
+  pollSnapshot() {
+    const votes = this.runtime.poll.votes;
+    const counts = {};
+    for (const optionId of votes.values()) counts[optionId] = (counts[optionId] || 0) + 1;
+    return {
+      active: this.runtime.poll.active,
+      command: this.config.poll.command,
+      chartType: this.config.poll.chartType,
+      options: this.config.poll.options,
+      votes: counts,
+      total: votes.size,
+    };
+  }
+
+  startPoll(command) {
+    if (typeof command === "string" && command.trim()) this.config.poll.command = command.trim();
+    if (this.db) this.db.savePollConfig(this.config.poll);
+    this.runtime.poll.active = true;
+    this.runtime.poll.votes = new Map();
+    return this.pollSnapshot();
+  }
+
+  stopPoll() {
+    this.runtime.poll.active = false;
+    return this.pollSnapshot();
+  }
+
+  resetPoll() {
+    this.runtime.poll.votes = new Map();
+    return this.pollSnapshot();
+  }
+
+  setPollConfig(patch) {
+    const next = { ...this.config.poll, ...(patch || {}) };
+    if (typeof next.command === "string") next.command = next.command.trim() || "!poll";
+    next.chartType = next.chartType === "pie" ? "pie" : "bars";
+    if (!Array.isArray(next.options)) next.options = this.config.poll.options;
+    this.config.poll = next;
+    if (this.db) this.db.savePollConfig(this.config.poll);
+    return this.pollSnapshot();
+  }
+
+  addPollOption(label) {
+    const text = String(label || "").trim();
+    if (!text) return null;
+    const option = { id: crypto.randomUUID(), label: text };
+    this.config.poll.options = [...this.config.poll.options, option];
+    if (this.db) this.db.savePollConfig(this.config.poll);
+    return this.pollSnapshot();
+  }
+
+  removePollOption(id) {
+    const optionId = String(id || "");
+    const before = this.config.poll.options.length;
+    this.config.poll.options = this.config.poll.options.filter((o) => o.id !== optionId);
+    // Удаляем голоса за удалённый пункт.
+    if (this.config.poll.options.length !== before) {
+      for (const [user, oid] of this.runtime.poll.votes) {
+        if (oid === optionId) this.runtime.poll.votes.delete(user);
+      }
+      if (this.db) this.db.savePollConfig(this.config.poll);
+    }
+    return this.pollSnapshot();
+  }
+
+  clearPollOptions() {
+    this.config.poll.options = [];
+    this.runtime.poll.votes = new Map();
+    if (this.db) this.db.savePollConfig(this.config.poll);
+    return this.pollSnapshot();
+  }
+
+  votePoll(username, optionId) {
+    const name = String(username || "").trim();
+    if (!name || optionId == null) return null;
+    if (!this.runtime.poll.active) return null;
+    const valid = this.config.poll.options.some((o) => o.id === optionId);
+    if (!valid) return null;
+    this.runtime.poll.votes.set(name, optionId);
+    return this.pollSnapshot();
+  }
+
+  handlePollChat(username, message) {
+    const poll = this.runtime.poll;
+    if (!poll.active) return null;
+    const cmd = this.config.poll.command.toLowerCase();
+    const msg = String(message || "").trim().toLowerCase();
+    if (!cmd || (msg !== cmd && !msg.startsWith(cmd + " "))) return null;
+    const rest = msg.slice(cmd.length).trim();
+    if (!rest) return null; // без номера пункта голос не засчитываем
+    const idx = Number(rest);
+    if (!Number.isInteger(idx) || idx < 1 || idx > this.config.poll.options.length) return null;
+    const optionId = this.config.poll.options[idx - 1].id;
+    return this.votePoll(username, optionId);
+  }
+
+  testPollVotes(count) {
+    const options = this.config.poll.options;
+    if (!options.length) return null;
+    const n = Math.max(1, Math.min(50, Number(count) || 12));
+    for (let i = 0; i < n; i++) {
+      const user = `__test_${i + 1}`;
+      const optionId = options[i % options.length].id;
+      this.runtime.poll.votes.set(user, optionId);
+    }
+    return this.pollSnapshot();
+  }
+
   pushRecentEvent(event) {
     this.runtime.recentEvents.unshift({ ...event, at: Date.now() });
     this.runtime.recentEvents = this.runtime.recentEvents.slice(0, 15);
@@ -794,50 +940,84 @@ class AppState {
     return null;
   }
 
-  // The base 2D theme, used when the 3D theme is off.
+  // The base theme (family) that drives the overlay's 2D look and global tokens.
   resolvedTheme() {
-    return this.resolveTheme(this.config.appearance.activeThemeId2d) || BUILTIN_THEMES.nebula;
+    return this.resolveTheme(this.config.appearance.activeThemeId) || BUILTIN_THEMES.nebula;
   }
 
-  // The optional 3D theme (Star Citizen). An empty id means "no 3D theme", so
-  // those widgets stay hidden and the 2D theme drives the overlay.
+  // The active 3D variant of the selected theme, or null when 3D is off or the
+  // theme has no 3D variant. Its widgets are gated by this id in the overlay.
   resolvedTheme3d() {
-    return this.resolveTheme(this.config.appearance.activeThemeId3d) || null;
+    if (!this.config.appearance.enable3d) return null;
+    const base = this.resolvedTheme();
+    if (!base || !base.builtin || !base.variant3d) return null;
+    return this.resolveTheme(base.variant3d) || null;
   }
 
   listThemes() {
-    const builtins = Object.values(BUILTIN_THEMES).map((t) => ({
-      id: t.id,
-      name: t.name,
-      builtin: true,
-      category: t.category || "system",
-      dimension: t.dimension || "2d",
-    }));
+    const builtins = Object.values(BUILTIN_THEMES)
+      .filter((t) => !t.variant) // 3D variants (grimhex/cobra-mk2) are not standalone themes
+      .map((t) => ({
+        id: t.id,
+        name: t.name,
+        builtin: true,
+        category: t.category || "system",
+        dimension: t.dimension || "2d",
+        has3d: !!t.variant3d,
+        variant3d: t.variant3d || null,
+      }));
     const custom = this.config.appearance.customThemes.map((t) => ({
       id: t.id,
       name: t.name,
       builtin: false,
       category: "custom",
       dimension: "2d",
+      has3d: false,
+      variant3d: null,
       seeds: t.seeds,
     }));
     return [...builtins, ...custom];
   }
 
-  setActiveTheme(id) {
-    // Empty id means "no 3D theme" — used by the theme picker's off swatch to
-    // hide the Star Citizen widgets without touching the selected 2D theme.
+  // Selecting a 3D-only family (Nuclear) turns its 3D widgets on by default;
+  // 2D families stay 2D until the user flips the 3D toggle.
+  _defaultEnable3d(id) {
+    const t = BUILTIN_THEMES[id];
+    return !!(t && t.dimension === "3d");
+  }
+
+  setActiveTheme(id, enable3d) {
+    // Backward-compat: an empty id used to mean "disable 3D".
     if (!id) {
-      this.config.appearance.activeThemeId3d = "";
+      this.config.appearance.enable3d = false;
       saveConfig(this.config);
       return true;
     }
-    const dim = this.themeDimension(id);
-    if (!dim) return false;
-    if (dim === "3d") this.config.appearance.activeThemeId3d = id;
-    else this.config.appearance.activeThemeId2d = id;
+    const t = this.resolveTheme(id);
+    if (!t) return false;
+    if (t.builtin && t.variant) {
+      // A 3D variant id (grimhex / cobra-mk2) selects its base 2D theme + 3D.
+      this.config.appearance.activeThemeId = t.base2d;
+      this.config.appearance.enable3d = true;
+    } else {
+      this.config.appearance.activeThemeId = t.id;
+      this.config.appearance.enable3d =
+        typeof enable3d === "boolean" ? enable3d : this._defaultEnable3d(t.id);
+    }
     saveConfig(this.config);
     return true;
+  }
+
+  // Enable/disable an individual 3D widget (фишка) for the currently selected
+  // theme's 3D variant. Absent key = enabled; we store only disabled entries
+  // (false) to keep the config compact.
+  setEnabled3dWidget(type, enabled) {
+    const clean = String(type || "").trim();
+    if (!clean) return null;
+    if (enabled) delete this.config.appearance.enabled3d[clean];
+    else this.config.appearance.enabled3d[clean] = false;
+    saveConfig(this.config);
+    return this.config.appearance.enabled3d;
   }
 
   saveCustomTheme({ id, name, seeds }) {
@@ -871,7 +1051,7 @@ class AppState {
   deleteCustomTheme(id) {
     const before = this.config.appearance.customThemes.length;
     this.config.appearance.customThemes = this.config.appearance.customThemes.filter((t) => t.id !== id);
-    if (this.config.appearance.activeThemeId2d === id) this.config.appearance.activeThemeId2d = "nebula";
+    if (this.config.appearance.activeThemeId === id) this.config.appearance.activeThemeId = "nebula";
     saveConfig(this.config);
     return this.config.appearance.customThemes.length !== before;
   }
@@ -1010,6 +1190,11 @@ class AppState {
         customThemes: keepArr(newConfig.appearance && newConfig.appearance.customThemes, this.config.appearance.customThemes),
       },
       editor: { ...defaultEditor(), ...this.config.editor, ...(newConfig.editor || {}) },
+      poll: {
+        ...this.config.poll,
+        ...(newConfig.poll || {}),
+        options: keepArr(newConfig.poll && newConfig.poll.options, this.config.poll.options),
+      },
       scenes: newConfig.scenes ? { ...defaultScenes(), ...newConfig.scenes } : this.config.scenes,
       topDonation: newConfig.topDonation || this.config.topDonation,
     };
@@ -1026,10 +1211,10 @@ class AppState {
   }
 
   snapshot() {
-    // The 3D theme, when active, overrides the 2D theme for the whole overlay:
-    // it supplies the global token set (so 2D widgets, scenes and the wheel
-    // follow the Star Citizen HUD) and enables the 3D widgets via
-    // `appearance.activeThemeId3d`. When it is off, the 2D theme drives tokens.
+    // The 3D variant, when enabled, overrides the base theme for the whole
+    // overlay: it supplies the global token set (so 2D widgets, scenes and the
+    // wheel follow the theme's HUD) and enables the 3D widgets via the derived
+    // `appearance.activeThemeId3d`. When 3D is off, the base theme drives tokens.
     const theme2d = this.resolvedTheme();
     const theme3d = this.resolvedTheme3d();
     const effective = theme3d || theme2d;
@@ -1059,10 +1244,12 @@ class AppState {
       activeCameraAngle: this.runtime.activeCameraAngle,
       activeFilters: this.getActiveFilters(),
       giveaway: this.giveawaySnapshot(),
+      poll: this.pollSnapshot(),
       appearance: {
-        activeThemeId: effective.id,
-        activeThemeId2d: this.config.appearance.activeThemeId2d,
-        activeThemeId3d: this.config.appearance.activeThemeId3d || "",
+        activeThemeId: this.config.appearance.activeThemeId,
+        activeThemeId3d: theme3d ? theme3d.id : "",
+        enable3d: !!theme3d,
+        enabled3d: this.config.appearance.enabled3d || {},
         tokens: effective.tokens,
         themes: this.listThemes(),
       },

@@ -27,6 +27,7 @@
     talk: { id: "talk", label: "Разговор", icon: "sceneTalk" },
     end: { id: "end", label: "Окончание стрима", icon: "sceneEnd" },
     wheel: { id: "wheel", label: "Колесо Фортуны", icon: "sceneWheel" },
+    poll: { id: "poll", label: "Голосование", icon: "scenePoll" },
   };
 
   const DEFAULT_SOCIALS = [
@@ -85,6 +86,17 @@
         statusLabel: "РОЗЫГРЫШ",
         title: "Колесо Фортуны",
         subtitle: "Победителя определит колесо",
+        showTimer: false,
+        timerDuration: 0,
+        timerDoneText: "",
+        showEvents: false,
+        showSocials: false,
+        socials: [],
+      },
+      poll: {
+        statusLabel: "ГОЛОСОВАНИЕ",
+        title: "Голосование",
+        subtitle: "Голосуйте в чате!",
         showTimer: false,
         timerDuration: 0,
         timerDoneText: "",

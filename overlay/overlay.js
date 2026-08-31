@@ -34,6 +34,9 @@
   const { EVENT_TYPES } = window.SharedEvents;
   const { ICONS } = window.SharedIcons;
   const { WIDGET_TYPES } = window.WidgetCatalog || {};
+  const replacedBy3d = (window.WidgetCatalog && window.WidgetCatalog.replacedBy3d) || (() => null);
+  const widgetsForTheme = (window.WidgetCatalog && window.WidgetCatalog.widgetsForTheme) || (() => []);
+  const widgetRole = (window.WidgetCatalog && window.WidgetCatalog.widgetRole) || (() => null);
   const t = (key, params) => (window.I18n ? window.I18n.t(key, params) : key);
   const renderEmotes =
     window.TwitchEmotes && window.TwitchEmotes.renderEmotes
@@ -474,6 +477,7 @@
     readCssVar,
     audio: { playWinSound, playEliminationAudio },
     theme: "nebula",
+    enabled3d: {},
   };
 
   // Current layout, kept so a theme change can re-run syncLayout (and thus
@@ -487,12 +491,13 @@
     Object.entries(appearance.tokens).forEach(([k, v]) => root.style.setProperty(k, v));
     document.body.dataset.decoration = appearance.tokens["--panel-decoration"] || "none";
     document.body.dataset.theme = appearance.activeThemeId || "";
-    // `context.theme` gates the 3D (Star Citizen) widgets only. When the 3D
-    // theme is active the global tokens above are already the Star Citizen
+    // `context.theme` gates the 3D (Grim HEX) widgets only. When the 3D
+    // theme is active the global tokens above are already the Grim HEX
     // HUD token set (3D overrides the base 2D theme), so 2D and 3D widgets
     // share one coherent look.
     context.theme = appearance.activeThemeId3d || "";
     context.activeThemeId = appearance.activeThemeId || "";
+    context.enabled3d = appearance.enabled3d || {};
     if (wheelSectors.length) drawWheel();
   }
 
@@ -511,12 +516,29 @@
     return "2d";
   }
 
-  // Manager-level guard: a widget is only created while its theme is active and
-  // at least one of the services it depends on is enabled.
+  // Manager-level guard: a widget is only created when it has a valid target
+  // under the active theme and at least one of the services it depends on is
+  // enabled.
   function shouldMount(item) {
     const def = widgetDef(item);
     const theme = def && def.theme ? def.theme : null;
-    if (theme && context.theme !== theme) return false;
+    const role = widgetRole(item.type);
+
+    if (theme && !role) {
+      // Additive 3D widget with no role (defensive fallback): strictly bound
+      // to its own theme and to the per-widget 3D toggle (фишка).
+      if (context.theme !== theme) return false;
+      if (context.enabled3d && context.enabled3d[item.type] === false) return false;
+    } else if (theme && role) {
+      // 3D role widget (chat/goal/alerts, or a decorative sign/radar/shield):
+      // remapped to the active theme by transform(), so it stays mountable even
+      // when its own theme is inactive. It hides only when there is nothing to
+      // remap to (3D off, or the active theme's counterpart is disabled/missing).
+      if (!active3dCounterpartType(role)) return false;
+    } else if (!theme && role) {
+      // 2D base role widget: gives way to an explicit 3D widget of the same role.
+      if (hasActive3dReplacement(role)) return false;
+    }
 
     const services = (def && def.services) || null;
     if (services && services.length) {
@@ -526,13 +548,54 @@
     return true;
   }
 
+  // True when an explicit 3D widget of the given role is present in the layout
+  // and will actually render (i.e. the active theme has an enabled counterpart).
+  function hasActive3dReplacement(role) {
+    if (!role || !currentLayout || !currentLayout.length) return false;
+    if (!active3dCounterpartType(role)) return false;
+    return currentLayout.some((other) => {
+      const def = widgetDef(other);
+      return !!def && !!def.theme && widgetRole(other.type) === role;
+    });
+  }
+
+  // The 3D widget type that replaces a given role under the active theme, or
+  // null when there is none (3D off, or the counterpart фишка is disabled).
+  function active3dCounterpartType(role) {
+    if (!role || !context.theme) return null;
+    const target = widgetsForTheme(context.theme).find((w) => widgetRole(w.type) === role);
+    if (!target) return null;
+    if (context.enabled3d && context.enabled3d[target.type] === false) return null;
+    return target.type;
+  }
+
+  // Swap a role widget (a 2D base, an explicitly placed 3D variant, or a
+  // decorative sign/radar/shield/orb/cube) for the active theme's 3D
+  // counterpart. This makes chat/goal/alerts AND the decorative signs
+  // "theme-following": a widget placed in one theme becomes the new theme's
+  // equivalent on switch (or is hidden when the new theme has no counterpart).
+  function transform(item) {
+    const role = widgetRole(item.type);
+    if (!role) return item;
+    const targetType = active3dCounterpartType(role);
+    if (!targetType || item.type === targetType) return item;
+    const targetDef = WIDGET_TYPES[targetType] || {};
+    return Object.assign({}, item, {
+      type: targetType,
+      config: Object.assign({}, targetDef.defaultConfig, item.config),
+    });
+  }
+
   // In HUD edit mode we show a placeholder only for theme-gated widgets (e.g.
-  // a 3D widget whose theme isn't active), so the streamer can still arrange
-  // them. Service-disabled widgets stay hidden, matching the control panel.
+  // an additive 3D widget whose theme isn't active), so the streamer can still
+  // arrange them. Role widgets (chat/goal/alerts/signs) are remapped, so they
+  // are not ghosted. Service-disabled widgets stay hidden.
   function shouldGhost(item) {
     const def = widgetDef(item);
     const theme = def && def.theme ? def.theme : null;
-    return !!theme && context.theme !== theme;
+    if (!theme) return false;
+    if (widgetRole(item.type)) return false; // role widgets are remapped, not hidden
+    return context.theme !== theme;
   }
 
   // ---- widget manager ----
@@ -540,6 +603,7 @@
   const manager = new OW.WidgetManager(canvas, {
     resolveRenderType,
     shouldMount,
+    transform,
     context,
   });
 
@@ -556,20 +620,29 @@
   manager.register("custom", OW.CustomWidget);
   manager.register("grimhex", OW.WidgetGrimHex);
   manager.register("musain", OW.WidgetMusain);
-  manager.register("grimhex-chat", OW.WidgetStarCitizenChat);
-  manager.register("grimhex-goal", OW.WidgetStarCitizenGoal);
-  manager.register("grimhex-holo-alert", OW.WidgetStarCitizenHoloAlert);
+  manager.register("grimhex-chat", OW.WidgetGrimHexChat);
+  manager.register("grimhex-goal", OW.WidgetGrimHexGoal);
+  manager.register("grimhex-holo-alert", OW.WidgetGrimHexHoloAlert);
   manager.register("nuclear", OW.WidgetNuclear);
   manager.register("nuclear-chat", OW.WidgetNuclearChat);
   manager.register("nuclear-goal", OW.WidgetNuclearGoal);
   manager.register("nuclear-holo-alert", OW.WidgetNuclearHoloAlert);
   manager.register("cobra", OW.WidgetCobra);
+  manager.register("elite-sign", OW.WidgetEliteSign);
   manager.register("cobra-chat", OW.WidgetCobraChat);
   manager.register("cobra-goal", OW.WidgetCobraGoal);
   manager.register("cobra-holo-alert", OW.WidgetCobraHoloAlert);
   manager.register("cobra-shield", OW.WidgetCobraShield);
   manager.register("cobra-radar", OW.WidgetCobraRadar);
-  manager.register("grimhex-radar", OW.WidgetStarCitizenRadar);
+  manager.register("grimhex-radar", OW.WidgetGrimHexRadar);
+  manager.register("md3-orb", OW.WidgetMd3Orb);
+  manager.register("md3-chat", OW.WidgetMd3Chat);
+  manager.register("md3-goal", OW.WidgetMd3Goal);
+  manager.register("md3-holo-alert", OW.WidgetMd3HoloAlert);
+  manager.register("pixel-cube", OW.WidgetPixelCube);
+  manager.register("pixel-chat", OW.WidgetPixelChat);
+  manager.register("pixel-goal", OW.WidgetPixelGoal);
+  manager.register("pixel-holo-alert", OW.WidgetPixelHoloAlert);
 
   // ---- socket ----
   function handleMessage(msg) {

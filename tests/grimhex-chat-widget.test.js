@@ -17,43 +17,50 @@
 
 const EventBus = require("../overlay/event-bus");
 const { EVENT_TYPES } = require("../shared/events");
-const WidgetStarCitizenRadar = require("../overlay/widgets/star-citizen-radar-widget");
-
-// ---- minimal mock ----
+const WidgetGrimHexChat = require("../overlay/widgets/grimhex-chat-widget");
+const WidgetManager = require("../overlay/widgets/widget-manager");
 
 function makeCtx2D() {
   const ctx = {};
-  ["setTransform", "clearRect", "save", "restore", "translate", "scale", "beginPath", "moveTo", "lineTo", "closePath", "stroke", "fill", "fillRect", "arc", "fillText", "setLineDash"].forEach(
+  ["setTransform", "clearRect", "save", "restore", "translate", "rotate", "transform", "scale", "beginPath", "moveTo", "lineTo", "closePath", "stroke", "fill", "fillRect", "drawImage"].forEach(
     (m) => (ctx[m] = jest.fn())
   );
-  ctx.measureText = jest.fn(() => ({ width: 0 }));
-  ctx.createRadialGradient = jest.fn(() => ({ addColorStop: jest.fn() }));
   return ctx;
 }
 
 function makeEl(tag) {
   const isCanvas = tag === "canvas";
   const ctx2d = isCanvas ? makeCtx2D() : null;
+  const listeners = [];
+  const classSet = new Set();
   const el = {
     tagName: (tag || "div").toUpperCase(),
     className: "",
     dataset: {},
     style: { setProperty(k, v) { this[k] = v; } },
-    classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
+    classList: {
+      add: (...c) => c.forEach((x) => classSet.add(x)),
+      remove: (...c) => c.forEach((x) => classSet.delete(x)),
+      toggle: (c, f) => { const on = f === undefined ? !classSet.has(c) : f; if (on) classSet.add(c); else classSet.delete(c); return on; },
+      contains: (c) => classSet.has(c),
+    },
+    innerHTML: "",
     width: 0,
     height: 0,
     clientWidth: 320,
-    clientHeight: 180,
+    clientHeight: 160,
     parentNode: null,
     children: [],
     isConnected: true,
+    scrollTop: 0,
+    scrollHeight: 0,
     appendChild(c) { c.parentNode = this; this.children.push(c); return c; },
     removeChild(c) { const i = this.children.indexOf(c); if (i >= 0) this.children.splice(i, 1); c.parentNode = null; return c; },
     remove() { if (this.parentNode) this.parentNode.removeChild(this); },
     querySelector() { return null; },
     getContext(t) { return isCanvas ? (t === "2d" ? ctx2d : null) : null; },
-    addEventListener() {},
-    removeEventListener() {},
+    addEventListener(t, fn, o) { listeners.push({ t, fn, o }); },
+    removeEventListener(t, fn) { for (let i = listeners.length - 1; i >= 0; i--) if (listeners[i].fn === fn) listeners.splice(i, 1); },
     _ctx: ctx2d,
   };
   Object.defineProperty(el, "firstChild", { get() { return this.children[0] || null; }, configurable: true });
@@ -76,14 +83,15 @@ function makeContext(theme) {
     bus: new EventBus(),
     EVENT_TYPES,
     theme,
-    state: { goal: { current: 500, target: 1000, currency: "RUB" } },
-    formatMoney: (n) => String(n),
-    currencySymbol: (c) => (c === "RUB" ? "₽" : c),
+    escapeHtml: (s) => String(s),
+    escapeAttr: (s) => String(s),
+    renderEmotes: (m) => String(m),
+    readCssVar: () => "",
   };
 }
 
-function radarItem(id = "r") {
-  return { id, type: "grimhex-radar", x: 0, y: 0, w: 16, h: 24, z: 0, visible: true, config: {} };
+function item(overrides = {}) {
+  return { id: "c", type: "grimhex-chat", x: 0, y: 0, w: 20, h: 20, z: 0, visible: true, config: {}, renderType: "2d", ...overrides };
 }
 
 let raf;
@@ -113,74 +121,80 @@ afterEach(() => {
   global.performance = originalGlobals.performance;
 });
 
-describe("WidgetStarCitizenRadar", () => {
-  test("запускает цикл и рисует только для темы grimhex", () => {
+describe("WidgetGrimHexChat", () => {
+  test("монтируется и создаёт контейнер сообщений для grimhex", () => {
     const parent = makeEl("div");
-    const w = new WidgetStarCitizenRadar({ ...radarItem(), renderType: "canvas" }, makeContext("grimhex"));
+    const w = new WidgetGrimHexChat(item(), makeContext("grimhex"));
 
     w.mount(parent);
-    expect(w.renderType).toBe("canvas");
-    expect(w.element.tagName).toBe("CANVAS");
-    expect(raf.pending()).toBe(1); // 30 FPS loop started
-
-    raf.flush(1000); // one frame
-    expect(w.element._ctx.stroke).toHaveBeenCalled(); // radar disc drawn
+    expect(raf.pending()).toBe(0); // no render loop
+    expect(w.canvas).toBeNull();
+    expect(w.messagesEl).toBeTruthy();
+    expect(w.messagesScroller).toBeTruthy();
+    expect(w.messagesInner).toBeTruthy();
 
     w.unmount();
-    expect(raf.pending()).toBe(0); // loop stopped, 0% GPU
+    expect(raf.pending()).toBe(0);
   });
 
-  test("не запускает цикл на чужой теме (уровень виджета)", () => {
+  test("не инициализируется на чужой теме (уровень виджета)", () => {
     const parent = makeEl("div");
-    const w = new WidgetStarCitizenRadar({ ...radarItem(), renderType: "canvas" }, makeContext("nebula"));
+    const w = new WidgetGrimHexChat(item(), makeContext("nebula"));
 
     w.mount(parent);
-    expect(raf.pending()).toBe(0); // onMount вернулся раньше — цикла нет
+    expect(raf.pending()).toBe(0);
+    expect(w.canvas).toBeNull();
+    expect(w.messagesEl).toBeNull();
     w.unmount();
   });
 
-  test("донат порождает контакт-корабль, остальные алерты — нет", () => {
+  test("pushMessage добавляет строку", () => {
     const ctx = makeContext("grimhex");
     const parent = makeEl("div");
-    const w = new WidgetStarCitizenRadar({ ...radarItem(), renderType: "canvas" }, ctx);
+    const w = new WidgetGrimHexChat(item(), ctx);
     w.mount(parent);
 
-    ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "follow" });
-    expect(w._contacts).toHaveLength(0);
+    ctx.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "bob", message: "hi", badges: [] });
 
-    ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "donation", amount: 250, durationMs: 7000 });
-    expect(w._contacts).toHaveLength(1);
-    expect(w._contacts[0].hostile).toBe(false); // regular ship -> white triangle
-
-    ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "donation", amount: 1500, durationMs: 7000 });
-    expect(w._contacts).toHaveLength(2);
-    expect(w._contacts[1].hostile).toBe(true); // large target -> amber (warning)
-
+    expect(w.messagesInner.children.length).toBe(1);
     w.unmount();
   });
 
-  test("ограничивает число одновременных контактов (защита от перегрузки)", () => {
+  test("ограничивает число сообщений до 50", () => {
     const ctx = makeContext("grimhex");
     const parent = makeEl("div");
-    const w = new WidgetStarCitizenRadar({ ...radarItem(), renderType: "canvas" }, ctx);
+    const w = new WidgetGrimHexChat(item(), ctx);
     w.mount(parent);
 
-    for (let i = 0; i < 40; i++) {
-      ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "donation", amount: 100, durationMs: 7000 });
+    for (let i = 0; i < 55; i++) {
+      ctx.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "u" + i, message: "m", badges: [] });
     }
-    // Старые корабли вытесняются новыми — массив не растёт бесконечно.
-    expect(w._contacts.length).toBeLessThanOrEqual(24);
-    expect(w._contacts.length).toBe(24);
 
+    expect(w.messagesInner.children.length).toBe(50);
     w.unmount();
   });
+});
 
-  test("применяет настройку прозрачности", () => {
-    const parent = makeEl("div");
-    const w = new WidgetStarCitizenRadar({ ...radarItem(), config: { opacity: 25 }, renderType: "canvas" }, makeContext("grimhex"));
+describe("WidgetManager — изоляция grimhex-chat", () => {
+  test("не создаёт grimhex-chat, пока тема не grimhex", () => {
+    const root = makeEl("div");
+    const context = { bus: new EventBus(), EVENT_TYPES, theme: "nebula" };
+    const mgr = new WidgetManager(root, {
+      shouldMount: (it) => (it.type !== "grimhex-chat" ? true : context.theme === "grimhex"),
+      resolveRenderType: (it) => (it.type === "grimhex-chat" && context.theme === "grimhex" ? "2d" : "2d"),
+      context,
+    });
+    mgr.register("grimhex-chat", WidgetGrimHexChat);
 
-    w.mount(parent);
-    expect(w.element.style.opacity).toBe("0.25");
-    w.unmount();
+    mgr.syncLayout([item()]);
+    expect(mgr.size).toBe(0);
+
+    context.theme = "grimhex";
+    mgr.syncLayout([item()]);
+    expect(mgr.size).toBe(1);
+
+    context.theme = "pixel";
+    mgr.syncLayout([item()]);
+    expect(mgr.size).toBe(0);
   });
 });

@@ -463,18 +463,18 @@
 [data-decoration="brackets2"] .widget-goal,
 [data-decoration="brackets2"] .widget-recent,
 [data-decoration="brackets2"] .widget-custom.has-card,
-[data-decoration="brackets2"] .star-citizen-goal-surface,
-[data-decoration="brackets2"] .star-citizen-chat-surface,
-[data-decoration="brackets2"] .star-citizen-holo-alert-surface,
+[data-decoration="brackets2"] .grimhex-goal-surface,
+[data-decoration="brackets2"] .grimhex-chat-surface,
+[data-decoration="brackets2"] .grimhex-holo-alert-surface,
 [data-decoration="brackets2"] .widget-stat,
 [data-decoration="brackets2"] .widget-social,
 [data-decoration="brackets4"] .widget-alert,
 [data-decoration="brackets4"] .widget-goal,
 [data-decoration="brackets4"] .widget-recent,
 [data-decoration="brackets4"] .widget-custom.has-card,
-[data-decoration="brackets4"] .star-citizen-goal-surface,
-[data-decoration="brackets4"] .star-citizen-chat-surface,
-[data-decoration="brackets4"] .star-citizen-holo-alert-surface,
+[data-decoration="brackets4"] .grimhex-goal-surface,
+[data-decoration="brackets4"] .grimhex-chat-surface,
+[data-decoration="brackets4"] .grimhex-holo-alert-surface,
 [data-decoration="brackets4"] .widget-stat,
 [data-decoration="brackets4"] .widget-social,
 [data-decoration="brackets4"] .elite-surface {
@@ -493,18 +493,18 @@
 [data-decoration="brackets2"] .widget-goal::before,
 [data-decoration="brackets2"] .widget-recent::before,
 [data-decoration="brackets2"] .widget-custom.has-card::before,
-[data-decoration="brackets2"] .star-citizen-goal-surface::before,
-[data-decoration="brackets2"] .star-citizen-chat-surface::before,
-[data-decoration="brackets2"] .star-citizen-holo-alert-surface::before,
+[data-decoration="brackets2"] .grimhex-goal-surface::before,
+[data-decoration="brackets2"] .grimhex-chat-surface::before,
+[data-decoration="brackets2"] .grimhex-holo-alert-surface::before,
 [data-decoration="brackets2"] .widget-stat::before,
 [data-decoration="brackets2"] .widget-social::before,
 [data-decoration="brackets2"] .widget-alert::after,
 [data-decoration="brackets2"] .widget-goal::after,
 [data-decoration="brackets2"] .widget-recent::after,
 [data-decoration="brackets2"] .widget-custom.has-card::after,
-[data-decoration="brackets2"] .star-citizen-goal-surface::after,
-[data-decoration="brackets2"] .star-citizen-chat-surface::after,
-[data-decoration="brackets2"] .star-citizen-holo-alert-surface::after,
+[data-decoration="brackets2"] .grimhex-goal-surface::after,
+[data-decoration="brackets2"] .grimhex-chat-surface::after,
+[data-decoration="brackets2"] .grimhex-holo-alert-surface::after,
 [data-decoration="brackets2"] .widget-stat::after,
 [data-decoration="brackets2"] .widget-social::after {
   content: "";
@@ -518,9 +518,9 @@
 [data-decoration="brackets2"] .widget-goal::before,
 [data-decoration="brackets2"] .widget-recent::before,
 [data-decoration="brackets2"] .widget-custom.has-card::before,
-[data-decoration="brackets2"] .star-citizen-goal-surface::before,
-[data-decoration="brackets2"] .star-citizen-chat-surface::before,
-[data-decoration="brackets2"] .star-citizen-holo-alert-surface::before,
+[data-decoration="brackets2"] .grimhex-goal-surface::before,
+[data-decoration="brackets2"] .grimhex-chat-surface::before,
+[data-decoration="brackets2"] .grimhex-holo-alert-surface::before,
 [data-decoration="brackets2"] .widget-stat::before,
 [data-decoration="brackets2"] .widget-social::before {
   top: -1px;
@@ -532,9 +532,9 @@
 [data-decoration="brackets2"] .widget-goal::after,
 [data-decoration="brackets2"] .widget-recent::after,
 [data-decoration="brackets2"] .widget-custom.has-card::after,
-[data-decoration="brackets2"] .star-citizen-goal-surface::after,
-[data-decoration="brackets2"] .star-citizen-chat-surface::after,
-[data-decoration="brackets2"] .star-citizen-holo-alert-surface::after,
+[data-decoration="brackets2"] .grimhex-goal-surface::after,
+[data-decoration="brackets2"] .grimhex-chat-surface::after,
+[data-decoration="brackets2"] .grimhex-holo-alert-surface::after,
 [data-decoration="brackets2"] .widget-stat::after,
 [data-decoration="brackets2"] .widget-social::after {
   bottom: -1px;
@@ -550,9 +550,9 @@
 [data-decoration="brackets4"] .widget-goal::before,
 [data-decoration="brackets4"] .widget-recent::before,
 [data-decoration="brackets4"] .widget-custom.has-card::before,
-[data-decoration="brackets4"] .star-citizen-goal-surface::before,
-[data-decoration="brackets4"] .star-citizen-chat-surface::before,
-[data-decoration="brackets4"] .star-citizen-holo-alert-surface::before,
+[data-decoration="brackets4"] .grimhex-goal-surface::before,
+[data-decoration="brackets4"] .grimhex-chat-surface::before,
+[data-decoration="brackets4"] .grimhex-holo-alert-surface::before,
 [data-decoration="brackets4"] .widget-stat::before,
 [data-decoration="brackets4"] .widget-social::before,
 [data-decoration="brackets4"] .elite-surface::before {
@@ -1321,3 +1321,7 @@
 [data-theme="pixel"] .widget-social__platform { font-size: 12px; }
 [data-theme="pixel"] .widget-social__handle { font-size: 16px; }
 [data-theme="pixel"] .widget-participants { font-size: 16px; }
+
+/* Pixel Perfect: chat stays on Roboto Condensed for readability while the
+   rest of the UI uses the pixel frame font. */
+[data-theme="pixel"] .widget-chat__msg { font-family: "Roboto Condensed", "Segoe UI", sans-serif; }

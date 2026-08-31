@@ -154,6 +154,10 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
     });
   }
 
+  function broadcastPoll(poll) {
+    broadcast(EVENT_TYPES.POLL_UPDATE, { poll });
+  }
+
   function clearAutoSpin() {
     clearTimeout(autoSpinTimer);
     autoSpinTimer = null;
@@ -440,7 +444,8 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
       }
       case "THEME_SET": {
         const id = payload && (typeof payload.themeId === "string" ? payload.themeId : payload.id);
-        if (typeof id === "string" && state.setActiveTheme(id)) broadcastTheme();
+        const enable3d = payload && payload.enable3d;
+        if (typeof id === "string" && state.setActiveTheme(id, enable3d)) broadcastTheme();
         break;
       }
       case "OBS_RAW_COMMAND": {
@@ -624,8 +629,13 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
         break;
       }
       case EVENT_TYPES.CMD_SET_ACTIVE_THEME: {
-        const { id } = msg.payload || {};
-        if (state.setActiveTheme(id)) broadcastTheme();
+        const { id, enable3d } = msg.payload || {};
+        if (state.setActiveTheme(id, enable3d)) broadcastTheme();
+        break;
+      }
+      case EVENT_TYPES.CMD_SET_ENABLED_3D: {
+        const { type, enabled } = msg.payload || {};
+        if (state.setEnabled3dWidget(type, enabled)) broadcastTheme();
         break;
       }
       case EVENT_TYPES.CMD_SAVE_CUSTOM_THEME: {
@@ -683,6 +693,15 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
             message: messages[i % messages.length],
             isTest: true,
           });
+        }
+        break;
+      }
+      case EVENT_TYPES.CMD_TEST_POLL: {
+        const poll = state.testPollVotes((msg.payload && msg.payload.count) || 12);
+        if (poll) {
+          broadcastPoll(poll);
+        } else {
+          serverLog.warn("poll test skipped (no poll options configured)");
         }
         break;
       }
@@ -781,6 +800,35 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
         const patch = (msg.payload && msg.payload.config) || {};
         const config = db ? db.saveWheelSpeedConfig(patch) : patch;
         broadcast(EVENT_TYPES.WHEEL_SPEED_CONFIG, { config });
+        break;
+      }
+      case EVENT_TYPES.CMD_START_POLL: {
+        broadcastPoll(state.startPoll(msg.payload && msg.payload.command));
+        break;
+      }
+      case EVENT_TYPES.CMD_STOP_POLL: {
+        broadcastPoll(state.stopPoll());
+        break;
+      }
+      case EVENT_TYPES.CMD_RESET_POLL: {
+        broadcastPoll(state.resetPoll());
+        break;
+      }
+      case EVENT_TYPES.CMD_SET_POLL_CONFIG: {
+        broadcastPoll(state.setPollConfig((msg.payload && msg.payload.config) || {}));
+        break;
+      }
+      case EVENT_TYPES.CMD_ADD_POLL_OPTION: {
+        const poll = state.addPollOption(msg.payload && msg.payload.label);
+        if (poll) broadcastPoll(poll);
+        break;
+      }
+      case EVENT_TYPES.CMD_REMOVE_POLL_OPTION: {
+        broadcastPoll(state.removePollOption(msg.payload && msg.payload.id));
+        break;
+      }
+      case EVENT_TYPES.CMD_CLEAR_POLL_OPTIONS: {
+        broadcastPoll(state.clearPollOptions());
         break;
       }
       case EVENT_TYPES.MIC_AUDIO_DATA: {
@@ -903,6 +951,8 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
     if (!chatMessage.isTest) {
       const giveaway = state.handleGiveawayChat(chatMessage.user, chatMessage.message);
       if (giveaway) broadcastGiveaway(giveaway);
+      const poll = state.handlePollChat(chatMessage.user, chatMessage.message);
+      if (poll) broadcastPoll(poll);
     }
   });
 

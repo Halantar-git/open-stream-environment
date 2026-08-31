@@ -95,6 +95,8 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .canvas-widget { position: absolute; cursor: grab; outline: 1px dashed transparent; border-radius: var(--shape-sm); }
 .canvas-widget:hover { outline-color: rgba(198, 184, 255, 0.45); }
 .canvas-widget.is-selected { outline: 2px solid var(--md-primary); outline-offset: 1px; }
+.canvas-widget.is-replaced { outline: 1px dashed var(--md-outline); }
+.canvas-widget.is-theme-gated { outline: 1px dashed var(--md-outline); }
 .canvas-widget.is-dragging { cursor: grabbing; opacity: 0.92; }
 .canvas-widget__content { width: 100%; height: 100%; pointer-events: none; container-type: inline-size; }
 .canvas-widget__placeholder {
@@ -145,6 +147,10 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .layer-row__icon svg { width: 14px; height: 14px; }
 .layer-row__label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .layer-row__btns { display: flex; gap: 2px; }
+.layer-row.is-replaced .layer-row__label { opacity: 0.55; text-decoration: line-through; }
+.layer-row.is-theme-gated .layer-row__label { opacity: 0.55; }
+.layer-row__3d-tag { flex-shrink: 0; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: var(--shape-xs); background: var(--md-primary); color: var(--md-on-primary); }
+.layer-row__off-tag { background: var(--md-surface-container-highest); color: var(--md-on-surface-variant); }
 .layer-row__btn { background: none; border: none; color: inherit; opacity: 0.65; cursor: pointer; display: flex; padding: 3px; border-radius: 4px; }
 .layer-row__btn:hover { opacity: 1; background: rgba(255, 255, 255, 0.1); }
 .layer-row__btn svg { width: 13px; height: 13px; }
@@ -271,6 +277,27 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .theme-swatch__btn { background: none; border: none; color: inherit; opacity: 0.7; cursor: pointer; padding: 2px; border-radius: 4px; display: flex; }
 .theme-swatch__btn:hover { opacity: 1; background: rgba(255, 255, 255, 0.12); }
 .theme-swatch__btn svg { width: 13px; height: 13px; }
+.theme-swatch__3d {
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-xs);
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: border-color 150ms, background 150ms, color 150ms;
+}
+.theme-swatch__3d:hover { border-color: var(--md-primary); color: var(--md-on-surface); }
+.theme-swatch__3d.is-on { background: var(--md-primary); color: var(--md-on-primary); border-color: var(--md-primary); }
+.theme-swatch.is-active .theme-swatch__3d.is-on { background: var(--md-primary); color: var(--md-on-primary); }
+
+.theme-grid__3d { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.theme-grid__3d-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border: 1px solid var(--md-outline-variant); border-radius: var(--shape-sm); background: var(--md-surface-container-low); }
+.theme-grid__3d-label { font-size: 12.5px; color: var(--md-on-surface); }
 
 .theme-editor {
   margin-top: 14px;
@@ -576,6 +603,9 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .topbar__wheel-btn { margin-left: 10px; font-size: 12px; padding: 7px 14px; }
 .topbar__wheel-btn svg { width: 14px; height: 14px; }
 .topbar__wheel-btn.is-active { background: var(--md-primary-container); color: var(--md-on-primary-container); }
+.topbar__poll-btn { margin-left: 10px; font-size: 12px; padding: 7px 14px; }
+.topbar__poll-btn svg { width: 14px; height: 14px; }
+.topbar__poll-btn.is-active { background: var(--md-primary-container); color: var(--md-on-primary-container); }
 
 .wheel-panel {
   position: fixed;
@@ -659,6 +689,19 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   font-size: 12px;
   color: var(--md-on-surface-variant);
   line-height: 1.5;
+}
+
+/* ---------- Poll panel ---------- */
+.poll-chart-types {
+  display: flex;
+  gap: 8px;
+}
+.poll-chart-types .md-button {
+  flex: 1;
+}
+.poll-chart-types .md-button.is-active {
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
 }
 
 /* ---------- Participants panel ---------- */

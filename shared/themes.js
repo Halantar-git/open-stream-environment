@@ -88,6 +88,8 @@
       builtin: true,
       category: "system",
       dimension: "2d",
+      family: "nebula",
+      variant3d: "nebula",
       borderRadius: "24px",
       tokens: {
         "--md-primary": "#d0bcff",
@@ -138,6 +140,8 @@
       builtin: true,
       category: "system",
       dimension: "2d",
+      family: "starcitizen",
+      variant3d: "grimhex",
       borderRadius: "0px",
       tokens: {
         "--md-primary": "#00f0ff",
@@ -189,6 +193,8 @@
       builtin: true,
       category: "system",
       dimension: "2d",
+      family: "pixel",
+      variant3d: "pixel",
       borderRadius: "0px",
       tokens: {
         // ShestakUI-inspired minimal dark UI: near-black neutral surfaces,
@@ -221,11 +227,11 @@
         "--md-on-surface-variant": "#b8b8b8",
         "--md-outline": "#8a8a8d",
         "--md-outline-variant": "#3a3a3e",
-        // Pixelify Sans — thin pixel face with Cyrillic, like ShestakUI's
-        // crisp party/HP bar readouts. VT323 as a terminal fallback.
-        "--font-display": '"Pixelify Sans", "VT323", monospace',
-        "--font-body": '"Pixelify Sans", "VT323", monospace',
-        "--font-mono": '"Pixelify Sans", "VT323", monospace',
+        // ShestakUI-style: PT Sans Caption (condensed readable text) everywhere;
+        // data/numbers reuse the same font, no pixel face. Chat stays on Roboto Condensed.
+        "--font-display": '"PT Sans Caption", "Segoe UI", sans-serif',
+        "--font-body": '"PT Sans Caption", "Segoe UI", sans-serif',
+        "--font-mono": '"PT Sans Caption", "Segoe UI", sans-serif',
         "--panel-radius": "0px",
         "--panel-clip": "none",
         "--panel-decoration": "none",
@@ -244,6 +250,9 @@
       builtin: true,
       category: "starcitizen",
       dimension: "3d",
+      family: "starcitizen",
+      variant: true,
+      base2d: "orbital",
       borderRadius: "0px",
       tokens: {
         // HUD cyan (#00F0FF) — the station's terminal accent, matching Orbital.
@@ -314,6 +323,8 @@
       builtin: true,
       category: "nuclear",
       dimension: "3d",
+      family: "nuclear",
+      variant3d: "nuclear",
       borderRadius: "0px",
       tokens: {
         // CRT green (#39FF14) — the accent, not a full-screen tint.
@@ -395,6 +406,8 @@
       builtin: true,
       category: "system",
       dimension: "2d",
+      family: "elite",
+      variant3d: "cobra-mk2",
       borderRadius: "0px",
       tokens: ELITE_TOKENS,
     },
@@ -405,6 +418,9 @@
       builtin: true,
       category: "elite",
       dimension: "3d",
+      family: "elite",
+      variant: true,
+      base2d: "elite",
       borderRadius: "0px",
       tokens: {
         ...ELITE_TOKENS,

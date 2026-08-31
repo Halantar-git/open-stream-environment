@@ -31,7 +31,7 @@
     RECENT_EVENT: "recent_event",
     GOAL_UPDATE: "goal_update", // { current, target, title, currency }
     CONNECTION_STATUS: "connection_status", // { service, status }
-    THEME_UPDATE: "theme_update", // { activeThemeId, activeThemeId2d, activeThemeId3d, tokens, themes }
+    THEME_UPDATE: "theme_update", // { activeThemeId, enable3d, activeThemeId3d, tokens, themes }
     EDITOR_PREFS_UPDATE: "editor_prefs_update", // { gridSize, snapEnabled }
     SCENES_UPDATE: "scenes_update", // { start, brb, end }
     TOP_DONATION_UPDATE: "top_donation_update", // { user, amount, currency }
@@ -40,6 +40,7 @@
     GIVEAWAY_WHEEL: "giveaway_wheel", // { sectors }
     GIVEAWAY_SPIN: "giveaway_spin", // {}
     GIVEAWAY_PARTICIPANTS: "giveaway_participants", // { count, participants }
+    POLL_UPDATE: "poll_update", // { poll }
     OVERLAY_PARTICIPANTS_CONFIG: "overlay_participants_config", // { config }
     WHEEL_CONFIG: "wheel_config", // { config }
     WHEEL_SPEED_CONFIG: "wheel_speed_config", // { config }
@@ -80,8 +81,10 @@
     CMD_SET_GOAL: "cmd_set_goal", // { title?, current?, target?, currency? }
     CMD_TEST_ALERT: "cmd_test_alert", // { kind }
     CMD_TEST_CHAT: "cmd_test_chat", // { message? }
+    CMD_TEST_POLL: "cmd_test_poll", // {} — simulate chat votes
     CMD_SET_APP_CONFIG: "cmd_set_app_config", // { twitchChannel? }
-    CMD_SET_ACTIVE_THEME: "cmd_set_active_theme", // { id }
+    CMD_SET_ACTIVE_THEME: "cmd_set_active_theme", // { id, enable3d? } — select a theme and optionally toggle its 3D variant
+    CMD_SET_ENABLED_3D: "cmd_set_enabled_3d", // { type, enabled } — enable/disable an individual 3D widget (фишка)
     CMD_SAVE_CUSTOM_THEME: "cmd_save_custom_theme", // { id?, name, seeds }
     CMD_DELETE_CUSTOM_THEME: "cmd_delete_custom_theme", // { id }
     CMD_SET_EDITOR_PREFS: "cmd_set_editor_prefs", // { gridSize?, snapEnabled? }
@@ -100,6 +103,13 @@
     CMD_SET_PARTICIPANTS_CONFIG: "cmd_set_participants_config", // { config }
     CMD_SET_WHEEL_CONFIG: "cmd_set_wheel_config", // { config }
     CMD_SET_WHEEL_SPEED_CONFIG: "cmd_set_wheel_speed_config", // { config }
+    CMD_START_POLL: "cmd_start_poll", // { command }
+    CMD_STOP_POLL: "cmd_stop_poll",
+    CMD_RESET_POLL: "cmd_reset_poll",
+    CMD_SET_POLL_CONFIG: "cmd_set_poll_config", // { config }
+    CMD_ADD_POLL_OPTION: "cmd_add_poll_option", // { label }
+    CMD_REMOVE_POLL_OPTION: "cmd_remove_poll_option", // { id }
+    CMD_CLEAR_POLL_OPTIONS: "cmd_clear_poll_options",
     CMD_SET_MIC_CONFIG: "cmd_set_mic_config", // { config }
     CMD_SET_LANGUAGE: "cmd_set_language", // { lang }
     CMD_SET_YOUTUBE_VIDEO_ID: "cmd_set_youtube_video_id", // { videoId }

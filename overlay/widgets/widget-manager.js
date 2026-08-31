@@ -66,6 +66,11 @@
       // (item) => WidgetClass — optional full override of the registry.
       this.factory = options.factory || null;
 
+      // (item) => item — optional transform applied during reconciliation
+      // (before build/type checks). Used to swap a 2D widget for its active
+      // theme's 3D counterpart; must be pure (no mutation) and preserve `id`.
+      this.transform = options.transform || null;
+
       this.hooks = {
         mount: options.onMount || null,
         update: options.onUpdate || null,
@@ -90,28 +95,33 @@
       const items = Array.isArray(layoutConfig) ? layoutConfig : [];
 
       for (const item of items) {
-        if (item && item.id != null && this.shouldMount(item)) incoming.set(String(item.id), item);
+        if (!item || item.id == null || !this.shouldMount(item)) continue;
+        // Resolve the final shape of a widget once (e.g. swap a 2D widget for
+        // its active theme's 3D counterpart) and use that resolved item as the
+        // single source of truth for build, update and type checks below.
+        const resolved = this.transform ? this.transform(item) || item : item;
+        incoming.set(String(item.id), resolved);
       }
 
       // Mount new, re-mount changed types, update existing.
-      for (const item of incoming.values()) {
-        const id = String(item.id);
+      for (const resolved of incoming.values()) {
+        const id = String(resolved.id);
         let inst = this.instances.get(id);
 
-        if (!inst || inst.type !== item.type) {
+        if (!inst || inst.type !== resolved.type) {
           if (inst) {
             inst.unmount();
             this.instances.delete(id);
             if (this.hooks.unmount) this.hooks.unmount(inst);
           }
-          inst = this._build(item);
+          inst = this._build(resolved);
           this.instances.set(id, inst);
           inst.mount(this.root);
-          if (this.hooks.mount) this.hooks.mount(inst, item);
+          if (this.hooks.mount) this.hooks.mount(inst, resolved);
         }
 
-        inst.update(item);
-        if (this.hooks.update) this.hooks.update(inst, item);
+        inst.update(resolved);
+        if (this.hooks.update) this.hooks.update(inst, resolved);
       }
 
       // Unmount widgets that disappeared from the config.

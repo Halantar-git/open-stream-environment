@@ -91,8 +91,8 @@
   let isConnected = false;
   let hasLocales = false;
   let themes = [];
-  let activeThemeId2d = null;
-  let activeThemeId3d = null;
+  let activeThemeId = null;
+  let enable3d = false;
   let activeScene = null;
   let obsCommands = [];
   let cameraAngles = [];
@@ -364,36 +364,24 @@
       return;
     }
 
-    const themes2d = themes.filter((th) => (th.dimension || "2d") === "2d");
-    const themes3d = themes.filter((th) => th.dimension === "3d");
+    themes.forEach((theme) => {
+      const isActive = theme.id === activeThemeId;
+      const btn = makeButton(theme.name, "THEME_SET", { themeId: theme.id });
+      if (isActive) btn.classList.add("is-active");
+      themeGrid.appendChild(btn);
 
-    const addGroupLabel = (text) => {
-      const label = document.createElement("div");
-      label.className = "remote-theme-group";
-      label.textContent = text;
-      themeGrid.appendChild(label);
-    };
-
-    if (themes2d.length) {
-      addGroupLabel(t("settings.themeCategory2d"));
-      themes2d.forEach((theme) => {
-        const btn = makeButton(theme.name, "THEME_SET", { themeId: theme.id });
-        if (theme.id === activeThemeId2d) btn.classList.add("is-active");
-        themeGrid.appendChild(btn);
-      });
-    }
-
-    if (themes3d.length) {
-      addGroupLabel(t("settings.themeCategory3d"));
-      const offBtn = makeButton(t("settings.themeNone"), "THEME_SET", { themeId: "" });
-      if (!activeThemeId3d) offBtn.classList.add("is-active");
-      themeGrid.appendChild(offBtn);
-      themes3d.forEach((theme) => {
-        const btn = makeButton(theme.name, "THEME_SET", { themeId: theme.id });
-        if (theme.id === activeThemeId3d) btn.classList.add("is-active");
-        themeGrid.appendChild(btn);
-      });
-    }
+      if (theme.has3d) {
+        const on = isActive && enable3d;
+        const tgl = makeButton(
+          t("settings.theme3dToggle"),
+          "THEME_SET",
+          { themeId: theme.id, enable3d: !on },
+          { title: t("settings.theme3dToggleHint") }
+        );
+        if (on) tgl.classList.add("is-active");
+        themeGrid.appendChild(tgl);
+      }
+    });
   }
 
   function renderObsCommands() {
@@ -472,8 +460,8 @@
         const p = msg.payload || {};
         if (p.appearance) {
           themes = p.appearance.themes || [];
-          activeThemeId2d = p.appearance.activeThemeId2d || null;
-          activeThemeId3d = p.appearance.activeThemeId3d || null;
+          activeThemeId = p.appearance.activeThemeId || null;
+          enable3d = !!p.appearance.enable3d;
           renderThemes();
         }
         if (p.obs) {
@@ -518,8 +506,8 @@
       case EVENT_TYPES.THEME_UPDATE: {
         const p = msg.payload || {};
         if (p.themes) themes = p.themes;
-        activeThemeId2d = p.activeThemeId2d || null;
-        activeThemeId3d = p.activeThemeId3d || null;
+        activeThemeId = p.activeThemeId || null;
+        enable3d = !!p.enable3d;
         renderThemes();
         break;
       }

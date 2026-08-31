@@ -23,7 +23,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&family=Pixelify+Sans:wght@400;500;600;700&family=VT323&family=IBM+Plex+Mono:wght@400;500;600;700&display=block"
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&family=PT+Sans+Caption:wght@400;700&family=Roboto+Condensed:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=block"
     rel="stylesheet"
   />
   <link rel="stylesheet" href="../shared/theme.css" />
@@ -52,6 +52,7 @@
         <button class="md-button md-button--tonal topbar__chat-btn" id="openChatWindowBtn"></button>
         <button class="md-button md-button--tonal topbar__debug-btn" id="toggleDebugBtn" data-i18n-title="debug.title"></button>
         <button class="md-button md-button--tonal topbar__wheel-btn" id="toggleWheelBtn" data-i18n-title="nav.wheel"></button>
+        <button class="md-button md-button--tonal topbar__poll-btn" id="togglePollBtn" data-i18n-title="nav.poll"></button>
         <button class="md-button md-button--tonal topbar__terminal-btn" id="toggleTerminalBtn" data-i18n-title="editor.terminal"></button>
         <button class="md-button md-button--tonal topbar__history-btn" id="toggleHistoryBtn" data-i18n-title="settings.history"></button>
         <button class="md-button md-button--tonal topbar__help-btn" id="toggleHelpBtn" data-i18n-title="help.title"></button>
@@ -136,6 +137,14 @@
       <div class="wheel-panel__body" id="wheelPanelBody"></div>
     </aside>
 
+    <aside class="wheel-panel poll-panel" id="pollPanel" hidden>
+      <header class="wheel-panel__header">
+        <span class="wheel-panel__title" data-i18n="poll.panelTitle">Голосование</span>
+        <button class="wheel-panel__close" id="pollCloseBtn" aria-label="Закрыть" data-i18n-title="common.close">×</button>
+      </header>
+      <div class="wheel-panel__body" id="pollPanelBody"></div>
+    </aside>
+
     <section class="view" id="view-editor">
       <aside class="library" id="library">
         <div class="library__title" data-i18n="editor.widgets">Виджеты</div>
@@ -212,6 +221,29 @@
 
     <section class="view" id="view-settings" hidden>
       <div class="settings">
+        <div class="settings__card md-card">
+          <h2 data-i18n="settings.appearance">Оформление</h2>
+          <p class="settings__desc" data-i18n="settings.appearanceDesc">Тема влияет только на сам оверлей (и его превью на канвасе) — панель управления всегда выглядит одинаково.</p>
+          <div class="theme-grid" id="themeGrid"></div>
+          <div class="settings__actions">
+            <button class="md-button md-button--outlined" id="newThemeBtn" data-i18n="settings.createTheme">Создать свою тему</button>
+          </div>
+          <div class="theme-editor" id="themeEditor" hidden></div>
+        </div>
+
+        <div class="settings__card md-card">
+          <h2 data-i18n="settings.exportImport">Экспорт / импорт настроек</h2>
+          <p class="settings__desc" data-i18n="settings.exportImportDesc">
+            Экспорт сохраняет полный config.json — раскладку, темы, цель, а также токены и ключи Twitch/DonationAlerts.
+            Файл содержит секреты — не выкладывайте его публично.
+          </p>
+          <div class="settings__actions">
+            <button class="md-button md-button--tonal" id="exportConfigBtn"></button>
+            <button class="md-button md-button--outlined" id="importConfigBtn"></button>
+          </div>
+          <div class="settings__hint" id="exportImportStatus" hidden></div>
+        </div>
+
         <div class="settings__card md-card" id="settingsCardTwitch">
           <div class="settings__card-head">
             <h2 data-i18n="settings.twitch">Twitch</h2>
@@ -505,29 +537,6 @@
             <label data-i18n="settings.chatHudFontSize">Размер шрифта (px): <span id="chatHudFontSizeValue">14</span></label>
             <input type="range" id="chatHudFontSize" min="10" max="48" step="1" value="14" />
           </div>
-        </div>
-
-        <div class="settings__card md-card">
-          <h2 data-i18n="settings.appearance">Оформление</h2>
-          <p class="settings__desc" data-i18n="settings.appearanceDesc">Тема влияет только на сам оверлей (и его превью на канвасе) — панель управления всегда выглядит одинаково.</p>
-          <div class="theme-grid" id="themeGrid"></div>
-          <div class="settings__actions">
-            <button class="md-button md-button--outlined" id="newThemeBtn" data-i18n="settings.createTheme">Создать свою тему</button>
-          </div>
-          <div class="theme-editor" id="themeEditor" hidden></div>
-        </div>
-
-        <div class="settings__card md-card">
-          <h2 data-i18n="settings.exportImport">Экспорт / импорт настроек</h2>
-          <p class="settings__desc" data-i18n="settings.exportImportDesc">
-            Экспорт сохраняет полный config.json — раскладку, темы, цель, а также токены и ключи Twitch/DonationAlerts.
-            Файл содержит секреты — не выкладывайте его публично.
-          </p>
-          <div class="settings__actions">
-            <button class="md-button md-button--tonal" id="exportConfigBtn"></button>
-            <button class="md-button md-button--outlined" id="importConfigBtn"></button>
-          </div>
-          <div class="settings__hint" id="exportImportStatus" hidden></div>
         </div>
       </div>
     </section>

@@ -420,6 +420,29 @@ describe("WidgetManager", () => {
     expect(root.children).toHaveLength(1);
   });
 
+  test("transform подменяет тип и не пересоздаёт виджет при повторном syncLayout", () => {
+    const root = document.createElement("div");
+    let enabled = true;
+    const mgr = new WidgetManager(root, {
+      transform: (it) => (enabled && it.type === "alerts" ? { ...it, type: "holo-alert" } : it),
+    });
+
+    mgr.syncLayout([item({ id: "a", type: "alerts" })]);
+    const inst = mgr.get("a");
+    expect(inst.type).toBe("holo-alert");
+
+    // Тот же исходный item повторно — подменённый тип совпадает, пересоздания нет.
+    mgr.syncLayout([item({ id: "a", type: "alerts" })]);
+    expect(mgr.get("a")).toBe(inst);
+    expect(root.children).toHaveLength(1);
+
+    // Отключение transform возвращает исходный тип и пересоздаёт виджет.
+    enabled = false;
+    mgr.syncLayout([item({ id: "a", type: "alerts" })]);
+    expect(mgr.get("a")).not.toBe(inst);
+    expect(mgr.get("a").type).toBe("alerts");
+  });
+
   test("resolveRenderType управляет режимом рендера", () => {
     const gl = createFakeGl();
     document.gl = gl;

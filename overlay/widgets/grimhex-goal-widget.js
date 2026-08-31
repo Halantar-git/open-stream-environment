@@ -16,8 +16,8 @@
  */
 
 /*
-  WidgetStarCitizenGoal — donation goal as a five-segment neon bar for the
-  Star Citizen theme.
+  WidgetGrimHexGoal — donation goal as a five-segment neon bar for the
+  Grim HEX theme.
 
   Each segment is alarm-red while empty and turns neon-green as it fills,
   like the Pyro / industrial hangar lighting of the reference red.svg. The
@@ -32,13 +32,13 @@
     typeof module !== "undefined" && module.exports
       ? require("./base-widget")
       : root.OSEWidgets && root.OSEWidgets.BaseWidget;
-  const WidgetStarCitizenGoal = factory(BaseWidget);
+  const WidgetGrimHexGoal = factory(BaseWidget);
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = WidgetStarCitizenGoal;
+    module.exports = WidgetGrimHexGoal;
   } else {
     root.OSEWidgets = root.OSEWidgets || {};
-    root.OSEWidgets.WidgetStarCitizenGoal = WidgetStarCitizenGoal;
+    root.OSEWidgets.WidgetGrimHexGoal = WidgetGrimHexGoal;
   }
 })(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
   "use strict";
@@ -54,7 +54,7 @@
 
   const clamp = (v, min, max) => (v < min ? min : v > max ? max : v);
 
-  class WidgetStarCitizenGoal extends BaseWidget {
+  class WidgetGrimHexGoal extends BaseWidget {
     constructor(config, context) {
       super(config, context);
       this.theme = (context && (context.theme || context.activeThemeId)) || "";
@@ -82,26 +82,26 @@
 
       // Inner flex layout (keeps the BaseWidget geometry untouched).
       this.layoutEl = document.createElement("div");
-      this.layoutEl.className = "star-citizen-goal";
+      this.layoutEl.className = "grimhex-goal";
       this.layoutEl.style.cssText =
         "position:absolute;inset:0;display:flex;flex-direction:column;box-sizing:border-box;padding:12px 14px;";
       this.element.appendChild(this.layoutEl);
 
       // Title + amounts row.
       this.contentEl = document.createElement("div");
-      this.contentEl.className = "star-citizen-goal__content";
+      this.contentEl.className = "grimhex-goal__content";
       this.contentEl.style.cssText =
         "display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-shrink:0;padding:0 4px;";
       this.layoutEl.appendChild(this.contentEl);
 
       // Bar area (canvas fills it).
       this.barWrap = document.createElement("div");
-      this.barWrap.className = "star-citizen-goal__bar";
+      this.barWrap.className = "grimhex-goal__bar";
       this.barWrap.style.cssText = "position:relative;flex:1;min-height:0;";
       this.layoutEl.appendChild(this.barWrap);
 
       this.canvas = document.createElement("canvas");
-      this.canvas.className = "star-citizen-goal__canvas";
+      this.canvas.className = "grimhex-goal__canvas";
       Object.assign(this.canvas.style, {
         position: "absolute",
         left: "0",
@@ -114,7 +114,7 @@
 
       // Corner brackets driven by the active theme's --panel-decoration token
       // (same decoration language as the Recent events widget).
-      this.element.classList.add("star-citizen-goal-surface");
+      this.element.classList.add("grimhex-goal-surface");
       this._applySurface();
       this._updateDom();
       this._nextFlickerAt = performance.now() + 1500 + Math.random() * 2500;
@@ -295,5 +295,5 @@
     }
   }
 
-  return WidgetStarCitizenGoal;
+  return WidgetGrimHexGoal;
 });

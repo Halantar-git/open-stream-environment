@@ -68,12 +68,16 @@ export function initDebugPanel({ t, ICONS, send, EVENT_TYPES }) {
     ).join("");
     const chatButton =
       `<button class="debug-panel__btn" data-test="chat">${t("editor.testChat")}</button>`;
+    const pollButton =
+      `<button class="debug-panel__btn" data-test="poll">${t("debug.testPoll")}</button>`;
 
     testsEl.innerHTML = `
       <div class="debug-panel__group">${t("debug.alerts")}</div>
       <div class="debug-panel__grid">${alertButtons}</div>
       <div class="debug-panel__group">${t("debug.chat")}</div>
       <div class="debug-panel__grid">${chatButton}</div>
+      <div class="debug-panel__group">${t("debug.poll")}</div>
+      <div class="debug-panel__grid">${pollButton}</div>
     `;
 
     testsEl.querySelectorAll("[data-test]").forEach((btn) => {
@@ -81,6 +85,8 @@ export function initDebugPanel({ t, ICONS, send, EVENT_TYPES }) {
         const kind = btn.dataset.test;
         if (kind === "chat") {
           send(EVENT_TYPES.CMD_TEST_CHAT, { count: 6 });
+        } else if (kind === "poll") {
+          send(EVENT_TYPES.CMD_TEST_POLL, {});
         } else {
           send(EVENT_TYPES.CMD_TEST_ALERT, { kind });
         }

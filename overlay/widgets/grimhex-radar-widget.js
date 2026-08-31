@@ -16,8 +16,8 @@
  */
 
 /*
-  WidgetStarCitizenRadar — a perspective holographic sensor radar for the
-  Star Citizen (Grim HEX) theme.
+  WidgetGrimHexRadar — a perspective holographic sensor radar for the
+  Grim HEX theme.
 
   Reproduces the in-cockpit SC radar language: a squashed holographic disc with
   a compass ring, an expanding sweep beam and a subtle 3D sensor globe. The
@@ -38,13 +38,13 @@
     typeof module !== "undefined" && module.exports
       ? require("./base-widget")
       : root.OSEWidgets && root.OSEWidgets.BaseWidget;
-  const WidgetStarCitizenRadar = factory(BaseWidget);
+  const WidgetGrimHexRadar = factory(BaseWidget);
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = WidgetStarCitizenRadar;
+    module.exports = WidgetGrimHexRadar;
   } else {
     root.OSEWidgets = root.OSEWidgets || {};
-    root.OSEWidgets.WidgetStarCitizenRadar = WidgetStarCitizenRadar;
+    root.OSEWidgets.WidgetGrimHexRadar = WidgetGrimHexRadar;
   }
 })(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
   "use strict";
@@ -62,7 +62,7 @@
   // radar (the oldest contact is dropped first).
   const MAX_CONTACTS = 24;
 
-  class WidgetStarCitizenRadar extends BaseWidget {
+  class WidgetGrimHexRadar extends BaseWidget {
     constructor(config, context) {
       super(config, context);
       this.theme = (context && (context.theme || context.activeThemeId)) || "";
@@ -492,5 +492,5 @@
     }
   }
 
-  return WidgetStarCitizenRadar;
+  return WidgetGrimHexRadar;
 });

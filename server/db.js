@@ -57,6 +57,12 @@ function defaultData() {
     wheel_speed_config: {
       speed: 3,
     },
+    // Настройки голосования в чате (команда, тип диаграммы и пункты).
+    poll_config: {
+      command: "!poll",
+      chartType: "bars", // "bars" | "pie"
+      options: [], // [{ id, label }]
+    },
     // Настройки виджета аудио-визуализатора (микрофон).
     overlay_mic_config: {
       sensitivity: 1.5,
@@ -294,6 +300,28 @@ function createDatabase(dbPath = getDbPath()) {
     return next;
   }
 
+  function getPollConfig() {
+    const raw = get("poll_config") || {};
+    const options = Array.isArray(raw.options)
+      ? raw.options
+          .filter((o) => o && typeof o.id === "string" && typeof o.label === "string")
+          .map((o) => ({ id: o.id, label: o.label }))
+      : [];
+    return {
+      command: typeof raw.command === "string" && raw.command.trim() ? raw.command.trim() : "!poll",
+      chartType: raw.chartType === "pie" ? "pie" : "bars",
+      options,
+    };
+  }
+
+  function savePollConfig(config) {
+    const next = { ...getPollConfig(), ...(config || {}) };
+    if (!Array.isArray(next.options)) next.options = [];
+    set("poll_config", next);
+    persist();
+    return next;
+  }
+
   function getMicConfig() {
     const raw = get("overlay_mic_config") || {};
     const mode =
@@ -371,6 +399,8 @@ function createDatabase(dbPath = getDbPath()) {
     saveWheelConfig,
     getWheelSpeedConfig,
     saveWheelSpeedConfig,
+    getPollConfig,
+    savePollConfig,
     getMicConfig,
     saveMicConfig,
     getLanguage,

@@ -17,12 +17,14 @@
 
 const EventBus = require("../overlay/event-bus");
 const { EVENT_TYPES } = require("../shared/events");
-const WidgetStarCitizenGoal = require("../overlay/widgets/star-citizen-goal-widget");
+const WidgetEliteSign = require("../overlay/widgets/elite-sign-widget");
 const WidgetManager = require("../overlay/widgets/widget-manager");
+
+// ---- minimal mock ----
 
 function makeCtx2D() {
   const ctx = {};
-  ["setTransform", "clearRect", "save", "restore", "translate", "beginPath", "moveTo", "lineTo", "rect", "roundRect", "fill", "fillRect", "stroke"].forEach(
+  ["setTransform", "clearRect", "save", "restore", "translate", "rotate", "scale", "beginPath", "moveTo", "lineTo", "closePath", "stroke", "fill", "drawImage"].forEach(
     (m) => (ctx[m] = jest.fn())
   );
   return ctx;
@@ -44,17 +46,13 @@ function makeEl(tag) {
       toggle: (c, f) => { const on = f === undefined ? !classSet.has(c) : f; if (on) classSet.add(c); else classSet.delete(c); return on; },
       contains: (c) => classSet.has(c),
     },
-    innerHTML: "",
-    textContent: "",
     width: 0,
     height: 0,
     clientWidth: 320,
-    clientHeight: 80,
+    clientHeight: 160,
     parentNode: null,
     children: [],
     isConnected: true,
-    scrollTop: 0,
-    scrollHeight: 0,
     appendChild(c) { c.parentNode = this; this.children.push(c); return c; },
     removeChild(c) { const i = this.children.indexOf(c); if (i >= 0) this.children.splice(i, 1); c.parentNode = null; return c; },
     remove() { if (this.parentNode) this.parentNode.removeChild(this); },
@@ -80,21 +78,11 @@ function createRaf() {
 }
 
 function makeContext(theme) {
-  return {
-    bus: new EventBus(),
-    EVENT_TYPES,
-    theme,
-    state: { goal: { title: "Цель", current: 50, target: 100, currency: "RUB" } },
-    escapeHtml: (s) => String(s),
-    escapeAttr: (s) => String(s),
-    formatMoney: (n) => String(n),
-    currencySymbol: (c) => String(c),
-    t: (k) => k,
-  };
+  return { bus: new EventBus(), EVENT_TYPES, theme };
 }
 
-function item(overrides = {}) {
-  return { id: "g", type: "grimhex-goal", x: 0, y: 0, w: 20, h: 6, z: 0, visible: true, config: {}, renderType: "2d", ...overrides };
+function eliteSignItem(id = "e") {
+  return { id, type: "elite-sign", x: 0, y: 0, w: 20, h: 10, z: 0, visible: true, config: {} };
 }
 
 let raf;
@@ -108,12 +96,14 @@ beforeEach(() => {
     requestAnimationFrame: global.requestAnimationFrame,
     cancelAnimationFrame: global.cancelAnimationFrame,
     performance: global.performance,
+    Path2D: global.Path2D,
   };
   global.document = { createElement: (tag) => makeEl(tag) };
   global.window = { devicePixelRatio: 1, addEventListener() {}, removeEventListener() {} };
   global.requestAnimationFrame = raf.request;
   global.cancelAnimationFrame = raf.cancel;
   global.performance = { now: () => 0 };
+  global.Path2D = function (d) { this.d = d; };
 });
 
 afterEach(() => {
@@ -122,103 +112,73 @@ afterEach(() => {
   global.requestAnimationFrame = originalGlobals.requestAnimationFrame;
   global.cancelAnimationFrame = originalGlobals.cancelAnimationFrame;
   global.performance = originalGlobals.performance;
+  global.Path2D = originalGlobals.Path2D;
 });
 
-describe("WidgetStarCitizenGoal", () => {
-  test("монтируется, создаёт canvas + контент и запускает цикл для grimhex", () => {
+describe("WidgetEliteSign", () => {
+  test("запускает цикл и рисует только для темы cobra-mk2", () => {
     const parent = makeEl("div");
-    const w = new WidgetStarCitizenGoal(item(), makeContext("grimhex"));
+    const w = new WidgetEliteSign({ ...eliteSignItem(), renderType: "canvas" }, makeContext("cobra-mk2"));
 
     w.mount(parent);
-    expect(raf.pending()).toBe(1); // 30 FPS loop
-    expect(w.canvas).toBeTruthy();
-    expect(w.ctx).toBeTruthy();
-    expect(w.layoutEl).toBeTruthy();
-    expect(w.contentEl).toBeTruthy();
-    expect(w.barWrap).toBeTruthy();
+    expect(w.renderType).toBe("canvas");
+    expect(w.element.tagName).toBe("CANVAS");
+    expect(raf.pending()).toBe(1); // 30 FPS loop started
 
     raf.flush(1000); // one frame
-    expect(w.ctx.roundRect).toHaveBeenCalled(); // tube drawn
+    expect(w.element._ctx.fill).toHaveBeenCalled();
 
     w.unmount();
-    expect(raf.pending()).toBe(0);
+    expect(raf.pending()).toBe(0); // loop stopped, 0% GPU
   });
 
-  test("не инициализируется на чужой теме (уровень виджета)", () => {
+  test("не запускает цикл на чужой теме (уровень виджета)", () => {
     const parent = makeEl("div");
-    const w = new WidgetStarCitizenGoal(item(), makeContext("nebula"));
+    const w = new WidgetEliteSign({ ...eliteSignItem(), renderType: "canvas" }, makeContext("nebula"));
 
     w.mount(parent);
-    expect(raf.pending()).toBe(0);
-    expect(w.canvas).toBeNull();
-    expect(w.contentEl).toBeNull();
+    expect(raf.pending()).toBe(0); // onMount вернулся раньше — цикла нет
     w.unmount();
   });
 
-  test("обновляет прогресс и контент по GOAL_UPDATE", () => {
-    const ctx = makeContext("grimhex");
+  test("glitch активируется по событию чата/доната", () => {
+    const ctx = makeContext("cobra-mk2");
     const parent = makeEl("div");
-    const w = new WidgetStarCitizenGoal(item(), ctx);
+    const w = new WidgetEliteSign({ ...eliteSignItem(), renderType: "canvas" }, ctx);
     w.mount(parent);
 
-    expect(w.contentEl.innerHTML).toContain("Цель");
-    expect(w.contentEl.innerHTML).toContain("50");
-    expect(w._pct).toBe(50); // 50 / 100
+    expect(w._glitchUntil).toBe(0);
+    ctx.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "x", message: "hi" });
+    expect(w._glitchUntil).toBeGreaterThan(0);
 
-    ctx.state.goal = { title: "Новая цель", current: 75, target: 100, currency: "USD" };
-    ctx.bus.emit(EVENT_TYPES.GOAL_UPDATE, ctx.state.goal);
-
-    expect(w._pct).toBe(75);
-    expect(w.contentEl.innerHTML).toContain("Новая цель");
-    expect(w.contentEl.innerHTML).toContain("75");
-    w.unmount();
-  });
-
-  test("не подписывается на чат (не реагирует на сообщения)", () => {
-    const ctx = makeContext("grimhex");
-    const parent = makeEl("div");
-    const w = new WidgetStarCitizenGoal(item(), ctx);
-    w.mount(parent);
-
-    const channels = w._subs.map((s) => s.channel);
-    expect(channels).toContain(EVENT_TYPES.GOAL_UPDATE);
-    expect(channels).toContain(EVENT_TYPES.LOCALES);
-    expect(channels).not.toContain(EVENT_TYPES.CHAT_MESSAGE);
-    expect(channels).not.toContain(EVENT_TYPES.ALERT);
     w.unmount();
   });
 });
 
-describe("WidgetManager — изоляция grimhex-goal", () => {
-  test("не создаёт grimhex-goal, пока тема не grimhex", () => {
+describe("WidgetManager — изоляция EliteSign", () => {
+  test("не создаёт elite-sign виджет, пока тема не cobra-mk2", () => {
     const root = makeEl("div");
-    const context = {
-      bus: new EventBus(),
-      EVENT_TYPES,
-      theme: "nebula",
-      state: { goal: { title: "Цель", current: 0, target: 1, currency: "RUB" } },
-      escapeHtml: (s) => String(s),
-      escapeAttr: (s) => String(s),
-      formatMoney: (n) => String(n),
-      currencySymbol: (c) => String(c),
-      t: (k) => k,
-    };
+    const context = { bus: new EventBus(), EVENT_TYPES, theme: "nebula" };
     const mgr = new WidgetManager(root, {
-      shouldMount: (it) => (it.type !== "grimhex-goal" ? true : context.theme === "grimhex"),
-      resolveRenderType: () => "2d",
+      shouldMount: (item) => item.type !== "elite-sign" || context.theme === "cobra-mk2",
+      resolveRenderType: (item) => (item.type === "elite-sign" && context.theme === "cobra-mk2" ? "canvas" : "2d"),
       context,
     });
-    mgr.register("grimhex-goal", WidgetStarCitizenGoal);
+    mgr.register("elite-sign", WidgetEliteSign);
 
-    mgr.syncLayout([item()]);
-    expect(mgr.size).toBe(0);
+    mgr.syncLayout([eliteSignItem()]);
+    expect(mgr.size).toBe(0); // пропущен
 
-    context.theme = "grimhex";
-    mgr.syncLayout([item()]);
+    context.theme = "cobra-mk2";
+    mgr.syncLayout([eliteSignItem()]);
     expect(mgr.size).toBe(1);
+    expect(mgr.get("e").theme).toBe("cobra-mk2");
+    expect(mgr.get("e").renderType).toBe("canvas");
 
+    // обратно на лёгкую тему — виджет демонтируется
     context.theme = "pixel";
-    mgr.syncLayout([item()]);
+    mgr.syncLayout([eliteSignItem()]);
     expect(mgr.size).toBe(0);
+    expect(root.children).toHaveLength(0);
   });
 });

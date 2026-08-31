@@ -36,6 +36,7 @@ export function initPropertiesPanel({
   t,
   ICONS,
   WIDGET_TYPES,
+  resolveTypeForTheme,
   EVENT_TYPES,
   send,
   switchHtml,
@@ -143,18 +144,26 @@ export function initPropertiesPanel({
   }
 
   function render() {
-    const inst = state.layout.find((w) => w.id === state.selectedId);
-    if (!inst) {
+    const raw = state.layout.find((w) => w.id === state.selectedId);
+    if (!raw) {
       propertiesSection.hidden = true;
       return;
     }
     propertiesSection.hidden = false;
-    const def = WIDGET_TYPES[inst.type] || {};
-    propertiesTitle.textContent = t("widgets." + (def.type || inst.type));
+    // Resolve the effective type so a 2D widget that is auto-transformed to 3D
+    // (or remapped across themes) shows the correct fields (e.g. a 3D chat
+    // shows its perspective slider). id/config/geometry stay the raw widget's,
+    // so edits still target the right item.
+    const type = resolveTypeForTheme
+      ? resolveTypeForTheme(raw.type, state.appearance.activeThemeId3d, state.appearance.enabled3d)
+      : raw.type;
+    const inst = { ...raw, type };
+    const def = WIDGET_TYPES[type] || {};
+    propertiesTitle.textContent = t("widgets." + (def.type || type));
     const config = inst.config || {};
 
     let extraHtml = "";
-    if (inst.type === "goal" || inst.type === "grimhex-goal" || inst.type === "nuclear-goal" || inst.type === "cobra-goal") {
+    if (inst.type === "goal" || inst.type === "grimhex-goal" || inst.type === "nuclear-goal" || inst.type === "cobra-goal" || inst.type === "md3-goal" || inst.type === "pixel-goal") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.goalTitle")}</label><input type="text" id="pGoalTitle" value="${escapeAttr(state.goal.title || "")}"></div>
         <div class="properties__row">
@@ -168,11 +177,11 @@ export function initPropertiesPanel({
       extraHtml = `
         <div class="md-field"><label>${t("properties.maxMessages")}</label><input type="number" id="pMaxMessages" min="1" max="20" value="${config.maxMessages || 8}"></div>
         <div class="properties__toggle-row"><label>${t("properties.showBadges")}</label>${switchHtml("pShowBadges", config.showBadges !== false)}</div>`;
-    } else if (inst.type === "grimhex-chat" || inst.type === "nuclear-chat" || inst.type === "cobra-chat") {
+    } else if (inst.type === "grimhex-chat" || inst.type === "nuclear-chat" || inst.type === "cobra-chat" || inst.type === "md3-chat" || inst.type === "pixel-chat") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.maxMessages")}</label><input type="number" id="pMaxMessages" min="1" max="100" value="${config.maxMessages || 50}"></div>
         <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>`;
-    } else if (inst.type === "grimhex" || inst.type === "musain" || inst.type === "nuclear" || inst.type === "cobra") {
+    } else if (inst.type === "grimhex" || inst.type === "musain" || inst.type === "nuclear" || inst.type === "cobra" || inst.type === "elite-sign" || inst.type === "md3-orb" || inst.type === "pixel-cube") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>`;
     } else if (inst.type === "cobra-shield" || inst.type === "cobra-radar" || inst.type === "grimhex-radar") {
@@ -282,7 +291,7 @@ export function initPropertiesPanel({
     });
     wireSwitch(propertiesEl.querySelector("#pVisible"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { visible: on } }));
 
-    if (inst.type === "goal" || inst.type === "grimhex-goal" || inst.type === "nuclear-goal" || inst.type === "cobra-goal") {
+    if (inst.type === "goal" || inst.type === "grimhex-goal" || inst.type === "nuclear-goal" || inst.type === "cobra-goal" || inst.type === "md3-goal" || inst.type === "pixel-goal") {
       propertiesEl.querySelector("#pGoalTitle").addEventListener("change", (e) => send(EVENT_TYPES.CMD_SET_GOAL, { title: e.target.value }));
       propertiesEl.querySelector("#pGoalCurrent").addEventListener("change", (e) => send(EVENT_TYPES.CMD_SET_GOAL, { current: Number(e.target.value) }));
       propertiesEl.querySelector("#pGoalTarget").addEventListener("change", (e) => send(EVENT_TYPES.CMD_SET_GOAL, { target: Number(e.target.value) }));
@@ -292,7 +301,7 @@ export function initPropertiesPanel({
     } else if (inst.type === "chat") {
       propertiesEl.querySelector("#pMaxMessages").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { maxMessages: Number(e.target.value) } } }));
       wireSwitch(propertiesEl.querySelector("#pShowBadges"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showBadges: on } } }));
-    } else if (inst.type === "grimhex-chat" || inst.type === "nuclear-chat" || inst.type === "cobra-chat") {
+    } else if (inst.type === "grimhex-chat" || inst.type === "nuclear-chat" || inst.type === "cobra-chat" || inst.type === "md3-chat" || inst.type === "pixel-chat") {
       propertiesEl.querySelector("#pMaxMessages").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { maxMessages: Number(e.target.value) } } }));
       propertiesEl.querySelector("#pPerspective").addEventListener("input", (e) => {
         const v = Number(e.target.value);
@@ -300,7 +309,7 @@ export function initPropertiesPanel({
         if (label) label.textContent = String(v);
         send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { perspective: v } } });
       });
-    } else if (inst.type === "grimhex" || inst.type === "musain" || inst.type === "nuclear" || inst.type === "cobra") {
+    } else if (inst.type === "grimhex" || inst.type === "musain" || inst.type === "nuclear" || inst.type === "cobra" || inst.type === "elite-sign" || inst.type === "md3-orb" || inst.type === "pixel-cube") {
       propertiesEl.querySelector("#pPerspective").addEventListener("input", (e) => {
         const v = Number(e.target.value);
         const label = propertiesEl.querySelector("#pPerspectiveValue");

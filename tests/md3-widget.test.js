@@ -17,14 +17,17 @@
 
 const EventBus = require("../overlay/event-bus");
 const { EVENT_TYPES } = require("../shared/events");
-const WidgetStarCitizenChat = require("../overlay/widgets/star-citizen-chat-widget");
+const WidgetMd3Orb = require("../overlay/widgets/md3-orb-widget");
 const WidgetManager = require("../overlay/widgets/widget-manager");
+
+// ---- minimal mock ----
 
 function makeCtx2D() {
   const ctx = {};
-  ["setTransform", "clearRect", "save", "restore", "translate", "rotate", "transform", "scale", "beginPath", "moveTo", "lineTo", "closePath", "stroke", "fill", "fillRect", "drawImage"].forEach(
+  ["setTransform", "clearRect", "save", "restore", "translate", "rotate", "transform", "scale", "beginPath", "moveTo", "lineTo", "bezierCurveTo", "fillRect", "roundRect", "arc", "closePath", "stroke", "fill", "drawImage"].forEach(
     (m) => (ctx[m] = jest.fn())
   );
+  ctx.createLinearGradient = jest.fn(() => ({ addColorStop: jest.fn() }));
   return ctx;
 }
 
@@ -44,7 +47,6 @@ function makeEl(tag) {
       toggle: (c, f) => { const on = f === undefined ? !classSet.has(c) : f; if (on) classSet.add(c); else classSet.delete(c); return on; },
       contains: (c) => classSet.has(c),
     },
-    innerHTML: "",
     width: 0,
     height: 0,
     clientWidth: 320,
@@ -52,8 +54,6 @@ function makeEl(tag) {
     parentNode: null,
     children: [],
     isConnected: true,
-    scrollTop: 0,
-    scrollHeight: 0,
     appendChild(c) { c.parentNode = this; this.children.push(c); return c; },
     removeChild(c) { const i = this.children.indexOf(c); if (i >= 0) this.children.splice(i, 1); c.parentNode = null; return c; },
     remove() { if (this.parentNode) this.parentNode.removeChild(this); },
@@ -79,19 +79,11 @@ function createRaf() {
 }
 
 function makeContext(theme) {
-  return {
-    bus: new EventBus(),
-    EVENT_TYPES,
-    theme,
-    escapeHtml: (s) => String(s),
-    escapeAttr: (s) => String(s),
-    renderEmotes: (m) => String(m),
-    readCssVar: () => "",
-  };
+  return { bus: new EventBus(), EVENT_TYPES, theme, readCssVar: () => "" };
 }
 
-function item(overrides = {}) {
-  return { id: "c", type: "grimhex-chat", x: 0, y: 0, w: 20, h: 20, z: 0, visible: true, config: {}, renderType: "2d", ...overrides };
+function orbItem(id = "o") {
+  return { id, type: "md3-orb", x: 0, y: 0, w: 20, h: 10, z: 0, visible: true, config: {} };
 }
 
 let raf;
@@ -121,80 +113,69 @@ afterEach(() => {
   global.performance = originalGlobals.performance;
 });
 
-describe("WidgetStarCitizenChat", () => {
-  test("монтируется и создаёт контейнер сообщений для grimhex", () => {
+describe("WidgetMd3Orb", () => {
+  test("запускает цикл и рисует только для темы nebula", () => {
     const parent = makeEl("div");
-    const w = new WidgetStarCitizenChat(item(), makeContext("grimhex"));
+    const w = new WidgetMd3Orb({ ...orbItem(), renderType: "canvas" }, makeContext("nebula"));
 
     w.mount(parent);
-    expect(raf.pending()).toBe(0); // no render loop
-    expect(w.canvas).toBeNull();
-    expect(w.messagesEl).toBeTruthy();
-    expect(w.messagesScroller).toBeTruthy();
-    expect(w.messagesInner).toBeTruthy();
+    expect(w.renderType).toBe("canvas");
+    expect(w.element.tagName).toBe("CANVAS");
+    expect(raf.pending()).toBe(1); // 30 FPS loop started
+
+    raf.flush(1000); // one frame
+    expect(w.element._ctx.fill).toHaveBeenCalled();
 
     w.unmount();
+    expect(raf.pending()).toBe(0); // loop stopped
+  });
+
+  test("не запускает цикл на чужой теме (уровень виджета)", () => {
+    const parent = makeEl("div");
+    const w = new WidgetMd3Orb({ ...orbItem(), renderType: "canvas" }, makeContext("nuclear"));
+
+    w.mount(parent);
     expect(raf.pending()).toBe(0);
-  });
-
-  test("не инициализируется на чужой теме (уровень виджета)", () => {
-    const parent = makeEl("div");
-    const w = new WidgetStarCitizenChat(item(), makeContext("nebula"));
-
-    w.mount(parent);
-    expect(raf.pending()).toBe(0);
-    expect(w.canvas).toBeNull();
-    expect(w.messagesEl).toBeNull();
     w.unmount();
   });
 
-  test("pushMessage добавляет строку", () => {
-    const ctx = makeContext("grimhex");
+  test("pop активируется по событию чата/доната", () => {
+    const ctx = makeContext("nebula");
     const parent = makeEl("div");
-    const w = new WidgetStarCitizenChat(item(), ctx);
+    const w = new WidgetMd3Orb({ ...orbItem(), renderType: "canvas" }, ctx);
     w.mount(parent);
 
-    ctx.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "bob", message: "hi", badges: [] });
+    expect(w._popUntil).toBe(0);
+    ctx.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "x", message: "hi" });
+    expect(w._popUntil).toBeGreaterThan(0);
 
-    expect(w.messagesInner.children.length).toBe(1);
-    w.unmount();
-  });
-
-  test("ограничивает число сообщений до 50", () => {
-    const ctx = makeContext("grimhex");
-    const parent = makeEl("div");
-    const w = new WidgetStarCitizenChat(item(), ctx);
-    w.mount(parent);
-
-    for (let i = 0; i < 55; i++) {
-      ctx.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "u" + i, message: "m", badges: [] });
-    }
-
-    expect(w.messagesInner.children.length).toBe(50);
     w.unmount();
   });
 });
 
-describe("WidgetManager — изоляция grimhex-chat", () => {
-  test("не создаёт grimhex-chat, пока тема не grimhex", () => {
+describe("WidgetManager — изоляция Md3Orb", () => {
+  test("не создаёт md3-orb, пока тема не nebula", () => {
     const root = makeEl("div");
-    const context = { bus: new EventBus(), EVENT_TYPES, theme: "nebula" };
+    const context = { bus: new EventBus(), EVENT_TYPES, theme: "pixel" };
     const mgr = new WidgetManager(root, {
-      shouldMount: (it) => (it.type !== "grimhex-chat" ? true : context.theme === "grimhex"),
-      resolveRenderType: (it) => (it.type === "grimhex-chat" && context.theme === "grimhex" ? "2d" : "2d"),
+      shouldMount: (item) => item.type !== "md3-orb" || context.theme === "nebula",
+      resolveRenderType: (item) => (item.type === "md3-orb" && context.theme === "nebula" ? "canvas" : "2d"),
       context,
     });
-    mgr.register("grimhex-chat", WidgetStarCitizenChat);
+    mgr.register("md3-orb", WidgetMd3Orb);
 
-    mgr.syncLayout([item()]);
-    expect(mgr.size).toBe(0);
+    mgr.syncLayout([orbItem()]);
+    expect(mgr.size).toBe(0); // пропущен
 
-    context.theme = "grimhex";
-    mgr.syncLayout([item()]);
+    context.theme = "nebula";
+    mgr.syncLayout([orbItem()]);
     expect(mgr.size).toBe(1);
+    expect(mgr.get("o").theme).toBe("nebula");
+    expect(mgr.get("o").renderType).toBe("canvas");
 
     context.theme = "pixel";
-    mgr.syncLayout([item()]);
+    mgr.syncLayout([orbItem()]);
     expect(mgr.size).toBe(0);
+    expect(root.children).toHaveLength(0);
   });
 });

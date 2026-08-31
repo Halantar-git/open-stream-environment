@@ -118,15 +118,6 @@
   --alert-enter-duration: 480ms;
 }
 
-/* Pixel faces: disable font smoothing so the pixel grid stays crisp —
-   Pixel Perfect (Pixelify Sans). */
-[data-theme="pixel"],
-[data-theme="pixel"] * {
-  -webkit-font-smoothing: none;
-  -moz-osx-font-smoothing: grayscale;
-  font-smooth: never;
-}
-
 * {
   box-sizing: border-box;
 }

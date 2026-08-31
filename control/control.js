@@ -33,7 +33,7 @@ import { initCanvasEditor } from "./modules/canvas-editor.js";
 
 const { EVENT_TYPES } = window.SharedEvents;
   const { ICONS } = window.SharedIcons;
-  const { WIDGET_TYPES } = window.WidgetCatalog;
+  const { WIDGET_TYPES, widgetsForTheme, replacedBy3d, widgetRole, resolveTypeForTheme } = window.WidgetCatalog;
   const t = (key, params) => (window.I18n ? window.I18n.t(key, params) : key);
 
   const params = new URLSearchParams(location.search);
@@ -172,6 +172,10 @@ const { EVENT_TYPES } = window.SharedEvents;
   const clearParticipantsBtn = document.getElementById("clearParticipantsBtn");
   const toggleWheelBtn = document.getElementById("toggleWheelBtn");
   const wheelCloseBtn = document.getElementById("wheelCloseBtn");
+  const pollPanelEl = document.getElementById("pollPanel");
+  const pollPanelBody = document.getElementById("pollPanelBody");
+  const togglePollBtn = document.getElementById("togglePollBtn");
+  const pollCloseBtn = document.getElementById("pollCloseBtn");
 
   // ---- helpers ----
   function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
@@ -235,8 +239,10 @@ const { EVENT_TYPES } = window.SharedEvents;
   function renderLibrary() {
     libraryListEl.innerHTML = "";
     Object.values(WIDGET_TYPES).forEach((def) => {
-      // A theme-bound widget (3D) is only offered while its own 3D theme is active.
+      // A theme-bound widget (3D) is only offered while its own 3D theme is
+      // active and the widget itself isn't disabled (3D фишка).
       if (def.theme && state.appearance.activeThemeId3d !== def.theme) return;
+      if (def.theme && state.appearance.enabled3d && state.appearance.enabled3d[def.type] === false) return;
       const card = document.createElement("div");
       card.className = "library-card";
       card.draggable = true;
@@ -1232,6 +1238,91 @@ const { EVENT_TYPES } = window.SharedEvents;
     });
   }
 
+  // ---- poll (chat voting) settings ----
+  function renderPollPanel() {
+    if (!pollPanelBody) return;
+    pollPanelBody.innerHTML = `
+      <div class="md-field"><label>${t("poll.command")}</label><input type="text" id="pollCommand" placeholder="!poll" value="${escapeAttr(state.poll.command || "!poll")}"></div>
+      <div class="properties__test-grid">
+        <button class="md-button md-button--filled" id="startPollBtn">${t("poll.start")}</button>
+        <button class="md-button md-button--outlined" id="stopPollBtn">${t("poll.stop")}</button>
+        <button class="md-button md-button--tonal" id="resetPollBtn">${t("poll.reset")}</button>
+      </div>
+
+      <div class="inspector__title" style="margin-top:10px;">${t("poll.chartType")}</div>
+      <div class="poll-chart-types">
+        <button class="md-button md-button--tonal" id="pollBarsBtn">${t("poll.bars")}</button>
+        <button class="md-button md-button--tonal" id="pollPieBtn">${t("poll.pie")}</button>
+      </div>
+
+      <div class="inspector__title" style="margin-top:10px;">${t("poll.optionsTitle")}</div>
+      <div class="giveaway-manual">
+        <input type="text" id="pollOptionName" placeholder="${t("poll.optionPlaceholder")}" />
+      </div>
+      <button class="md-button md-button--tonal" id="addPollOptionBtn" title="${t("poll.addOption")}">+ ${t("poll.addOption")}</button>
+      <div class="giveaway-participants" id="pollOptionsList"></div>
+      <button class="md-button md-button--outlined" id="clearPollOptionsBtn">${t("poll.clearOptions")}</button>
+    `;
+    wirePollControls();
+    renderPollOptions();
+  }
+
+  function renderPollOptions() {
+    const commandEl = document.getElementById("pollCommand");
+    if (commandEl && document.activeElement !== commandEl) commandEl.value = state.poll.command || "!poll";
+    const barsBtn = document.getElementById("pollBarsBtn");
+    const pieBtn = document.getElementById("pollPieBtn");
+    if (barsBtn) barsBtn.classList.toggle("is-active", state.poll.chartType !== "pie");
+    if (pieBtn) pieBtn.classList.toggle("is-active", state.poll.chartType === "pie");
+
+    const listEl = document.getElementById("pollOptionsList");
+    if (!listEl) return;
+    const options = state.poll.options || [];
+    listEl.innerHTML = options.length
+      ? options.map((o, i) => `
+        <div class="giveaway-participant-row">
+          <span class="giveaway-participant__name">${i + 1}. ${escapeHtml(o.label)}</span>
+          <button class="giveaway-participant__remove" data-remove-id="${escapeAttr(o.id)}" title="${t("poll.removeOption")}">✕</button>
+        </div>`).join("")
+      : `<div class="events-history__empty">${t("poll.noOptions")}</div>`;
+  }
+
+  function wirePollControls() {
+    document.getElementById("startPollBtn")?.addEventListener("click", () => {
+      const cmd = document.getElementById("pollCommand");
+      send(EVENT_TYPES.CMD_START_POLL, { command: cmd ? cmd.value.trim() : "!poll" });
+    });
+    document.getElementById("stopPollBtn")?.addEventListener("click", () => send(EVENT_TYPES.CMD_STOP_POLL, {}));
+    document.getElementById("resetPollBtn")?.addEventListener("click", () => send(EVENT_TYPES.CMD_RESET_POLL, {}));
+    document.getElementById("pollBarsBtn")?.addEventListener("click", () => sendPollConfig({ chartType: "bars" }));
+    document.getElementById("pollPieBtn")?.addEventListener("click", () => sendPollConfig({ chartType: "pie" }));
+    document.getElementById("pollCommand")?.addEventListener("change", (e) => sendPollConfig({ command: e.target.value.trim() || "!poll" }));
+    document.getElementById("addPollOptionBtn")?.addEventListener("click", () => {
+      const input = document.getElementById("pollOptionName");
+      if (!input) return;
+      const label = input.value.trim();
+      if (!label) return;
+      send(EVENT_TYPES.CMD_ADD_POLL_OPTION, { label });
+      input.value = "";
+    });
+    document.getElementById("pollOptionName")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") document.getElementById("addPollOptionBtn")?.click();
+    });
+    document.getElementById("pollOptionsList")?.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-remove-id]");
+      if (!btn) return;
+      send(EVENT_TYPES.CMD_REMOVE_POLL_OPTION, { id: btn.dataset.removeId });
+    });
+    document.getElementById("clearPollOptionsBtn")?.addEventListener("click", () => {
+      if (confirm(t("poll.clearOptionsConfirm"))) send(EVENT_TYPES.CMD_CLEAR_POLL_OPTIONS, {});
+    });
+  }
+
+  function sendPollConfig(patch) {
+    state.poll = { ...state.poll, ...patch };
+    send(EVENT_TYPES.CMD_SET_POLL_CONFIG, { config: patch });
+  }
+
   // ---- participants widget settings ----
   function sendParticipantsConfig(patch) {
     state.participantsConfig = { ...state.participantsConfig, ...patch };
@@ -1250,6 +1341,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     t,
     ICONS,
     WIDGET_TYPES,
+    resolveTypeForTheme,
     EVENT_TYPES,
     send,
     switchHtml,
@@ -1266,6 +1358,10 @@ const { EVENT_TYPES } = window.SharedEvents;
     t,
     ICONS,
     WIDGET_TYPES,
+    widgetsForTheme,
+    replacedBy3d,
+    widgetRole,
+    resolveTypeForTheme,
     EVENT_TYPES,
     send,
     clamp,
@@ -1280,10 +1376,12 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   // ---- appearance: theme picker + custom theme editor ----
 
-  function renderThemeSwatch(theme, dimension) {
-    const activeId = dimension === "3d" ? state.appearance.activeThemeId3d : state.appearance.activeThemeId2d;
+  function renderThemeSwatch(theme) {
+    const isActive = theme.id === state.appearance.activeThemeId;
+    const has3d = !!theme.has3d;
+    const enable3d = isActive && !!state.appearance.enable3d;
     const card = document.createElement("div");
-    card.className = "theme-swatch" + (theme.id === activeId ? " is-active" : "");
+    card.className = "theme-swatch" + (isActive ? " is-active" : "");
     const dotColors = theme.builtin
       ? BuiltinThemes.BUILTIN_THEMES[theme.id].tokens
       : null;
@@ -1304,11 +1402,22 @@ const { EVENT_TYPES } = window.SharedEvents;
                 <button class="theme-swatch__btn" data-action="delete" title="${t("common.remove")}">${ICONS.trash}</button>
               </span>`
         }
-      </div>`;
+      </div>
+      ${
+        has3d
+          ? `<button class="theme-swatch__3d${enable3d ? " is-on" : ""}" data-action="3d" type="button" title="${escapeAttr(t("settings.theme3dToggleHint"))}">${escapeHtml(t("settings.theme3dToggle"))}</button>`
+          : ""
+      }`;
     card.addEventListener("click", (e) => {
       if (e.target.closest("[data-action]")) return;
       send(EVENT_TYPES.CMD_SET_ACTIVE_THEME, { id: theme.id });
     });
+    if (has3d) {
+      card.querySelector('[data-action="3d"]').addEventListener("click", (e) => {
+        e.stopPropagation();
+        send(EVENT_TYPES.CMD_SET_ACTIVE_THEME, { id: theme.id, enable3d: !enable3d });
+      });
+    }
     if (!theme.builtin) {
       card.querySelector('[data-action="edit"]').addEventListener("click", (e) => {
         e.stopPropagation();
@@ -1322,36 +1431,53 @@ const { EVENT_TYPES } = window.SharedEvents;
     return card;
   }
 
-  function renderThemeNoneSwatch() {
-    const card = document.createElement("div");
-    card.className = "theme-swatch" + (state.appearance.activeThemeId3d ? "" : " is-active");
-    card.innerHTML = `
-      <div class="theme-swatch__dots"><span class="theme-swatch__dot" style="background:transparent;border:1px dashed currentColor"></span></div>
-      <div class="theme-swatch__row"><span class="theme-swatch__name">${t("settings.themeNone")}</span></div>`;
-    card.addEventListener("click", () => send(EVENT_TYPES.CMD_SET_ACTIVE_THEME, { id: "" }));
-    return card;
-  }
-
   function renderThemeGrid() {
     themeGridEl.innerHTML = "";
     const themes = state.appearance.themes || [];
-    const groups = [
-      ["3d", t("settings.themeCategory3d")],
-      ["2d", t("settings.themeCategory2d")],
-    ];
-    groups.forEach(([dimension, label]) => {
-      const items = themes.filter((theme) => (theme.dimension || "2d") === dimension);
-      if (!items.length) return;
-      const header = document.createElement("div");
-      header.className = "theme-grid__category";
-      header.textContent = label;
-      themeGridEl.appendChild(header);
-      const grid = document.createElement("div");
-      grid.className = "theme-grid__items";
-      if (dimension === "3d") grid.appendChild(renderThemeNoneSwatch());
-      items.forEach((theme) => grid.appendChild(renderThemeSwatch(theme, dimension)));
-      themeGridEl.appendChild(grid);
+    const grid = document.createElement("div");
+    grid.className = "theme-grid__items";
+    themes.forEach((theme) => grid.appendChild(renderThemeSwatch(theme)));
+    themeGridEl.appendChild(grid);
+    render3dFeatureToggles();
+  }
+
+  // When the active theme's 3D variant is on, show its individual 3D widgets
+  // (фишки) as toggle switches so each one can be enabled/disabled separately.
+  function render3dFeatureToggles() {
+    const variantId = state.appearance.activeThemeId3d;
+    const widgets = (variantId && widgetsForTheme && widgetsForTheme(variantId)) || [];
+    if (!widgets.length) return;
+
+    const container = document.createElement("div");
+    container.className = "theme-grid__3d";
+
+    const header = document.createElement("div");
+    header.className = "theme-grid__category";
+    header.textContent = t("settings.theme3dWidgets");
+    container.appendChild(header);
+
+    widgets.forEach((def) => {
+      const on = !(state.appearance.enabled3d && state.appearance.enabled3d[def.type] === false);
+      const row = document.createElement("div");
+      row.className = "theme-grid__3d-row";
+      row.innerHTML = `<span class="theme-grid__3d-label">${escapeHtml(t("widgets." + def.type))}</span>`;
+
+      const sw = document.createElement("div");
+      sw.className = "md-switch" + (on ? " is-on" : "");
+      sw.setAttribute("role", "switch");
+      sw.setAttribute("aria-checked", String(on));
+      sw.innerHTML = '<div class="md-switch__thumb"></div>';
+      sw.addEventListener("click", () => {
+        const next = !sw.classList.contains("is-on");
+        sw.classList.toggle("is-on", next);
+        sw.setAttribute("aria-checked", String(next));
+        send(EVENT_TYPES.CMD_SET_ENABLED_3D, { type: def.type, enabled: next });
+      });
+      row.appendChild(sw);
+      container.appendChild(row);
     });
+
+    themeGridEl.appendChild(container);
   }
 
   function openThemeEditor(theme) {
@@ -1541,6 +1667,7 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   function sceneUrl(id) {
     if (id === "wheel") return `http://localhost:${port}/overlay/wheel-scene.html`;
+    if (id === "poll") return `http://localhost:${port}/overlay/poll-scene.html`;
     return `http://localhost:${port}/overlay/scene.html?type=${id}`;
   }
 
@@ -1583,6 +1710,15 @@ const { EVENT_TYPES } = window.SharedEvents;
         <button class="md-button md-button--tonal" id="openWheelSettingsBtn" style="margin-top:10px;">${t("giveaway.openWheelSettings")}</button>
       `;
       sceneFormEl.querySelector("#openWheelSettingsBtn").addEventListener("click", () => setWheelOpen(true));
+      return;
+    }
+
+    if (state.activeSceneId === "poll") {
+      sceneFormEl.innerHTML = `
+        <div class="wheel-panel__hint">${t("poll.panelHint")}</div>
+        <button class="md-button md-button--tonal" id="openPollSettingsBtn" style="margin-top:10px;">${t("poll.openSettings")}</button>
+      `;
+      sceneFormEl.querySelector("#openPollSettingsBtn").addEventListener("click", () => setPollOpen(true));
       return;
     }
 
@@ -1756,6 +1892,19 @@ const { EVENT_TYPES } = window.SharedEvents;
     toggleWheelBtn.innerHTML = `${ICONS.sceneWheel} ${t("nav.wheel")}`;
   }
   if (wheelCloseBtn) wheelCloseBtn.addEventListener("click", () => setWheelOpen(false));
+
+  // ---- poll settings panel ----
+  function setPollOpen(open) {
+    if (!pollPanelEl || !togglePollBtn) return;
+    pollPanelEl.hidden = !open;
+    togglePollBtn.classList.toggle("is-active", open);
+    if (open) renderPollPanel();
+  }
+  if (togglePollBtn) {
+    togglePollBtn.innerHTML = `${ICONS.scenePoll} ${t("nav.poll")}`;
+  }
+  if (pollCloseBtn) pollCloseBtn.addEventListener("click", () => setPollOpen(false));
+
   if (participantsSearchInput) {
     participantsSearchInput.addEventListener("input", () => {
       giveawaySearch = participantsSearchInput.value.trim().toLowerCase();
@@ -1777,6 +1926,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     { id: "helpPanel", setOpen: helpPanel.setOpen },
     { id: "historyPanel", setOpen: setHistoryOpen },
     { id: "wheelPanel", setOpen: setWheelOpen },
+    { id: "pollPanel", setOpen: setPollOpen },
   ];
 
   function panelIsOpen(id) {
@@ -1801,6 +1951,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     ["toggleHelpBtn", "helpPanel"],
     ["toggleHistoryBtn", "historyPanel"],
     ["toggleWheelBtn", "wheelPanel"],
+    ["togglePollBtn", "pollPanel"],
   ].forEach(([btnId, panelId]) => {
     const btn = document.getElementById(btnId);
     if (btn) btn.addEventListener("click", () => togglePanelById(panelId));
@@ -1828,6 +1979,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         populateSettings();
         syncIntegrationSwitches();
         renderWheelPanels();
+        if (!pollPanelEl.hidden) renderPollPanel();
         selectScene(state.activeSceneId);
         syncMicBridge();
         break;
@@ -1844,6 +1996,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         renderThemeGrid();
         renderLibrary();
         canvasEditor.renderCanvas();
+        canvasEditor.renderLayers();
         break;
       case EVENT_TYPES.EDITOR_PREFS_UPDATE:
         state.editorPrefs = msg.payload;
@@ -1934,6 +2087,10 @@ const { EVENT_TYPES } = window.SharedEvents;
         state.wheelSpeedConfig = (msg.payload && msg.payload.config) || state.wheelSpeedConfig;
         renderWheelPanel();
         break;
+      case EVENT_TYPES.POLL_UPDATE:
+        state.poll = (msg.payload && msg.payload.poll) || state.poll;
+        if (!pollPanelEl.hidden) renderPollOptions();
+        break;
       case EVENT_TYPES.OVERLAY_MIC_CONFIG:
         state.micConfig = (msg.payload && msg.payload.config) || state.micConfig;
         canvasEditor.renderCanvas();
@@ -1996,6 +2153,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     propertiesPanel.render();
     renderSceneForm();
     renderWheelPanels();
+    if (!pollPanelEl.hidden) renderPollPanel();
     renderThemeGrid();
     renderLayoutPresets();
     wsClient.refreshStatusChips();
@@ -2011,6 +2169,8 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (historyBtn) historyBtn.innerHTML = `${ICONS.widgetRecent} ${t("nav.history")}`;
     const wheelBtn = document.getElementById("toggleWheelBtn");
     if (wheelBtn) wheelBtn.innerHTML = `${ICONS.sceneWheel} ${t("nav.wheel")}`;
+    const pollBtn = document.getElementById("togglePollBtn");
+    if (pollBtn) pollBtn.innerHTML = `${ICONS.scenePoll} ${t("nav.poll")}`;
     loggerPanel.refreshLabel();
     debugPanel.refresh();
     helpPanel.refresh();

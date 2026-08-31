@@ -35,6 +35,10 @@ export function initCanvasEditor({
   t,
   ICONS,
   WIDGET_TYPES,
+  widgetsForTheme,
+  replacedBy3d,
+  widgetRole,
+  resolveTypeForTheme,
   EVENT_TYPES,
   send,
   clamp,
@@ -50,6 +54,12 @@ export function initCanvasEditor({
   const canvasEl = el("canvas");
   const layersEl = el("layers");
   const gridSizeSelect = el("gridSizeSelect");
+
+  // While a drag/resize is in progress the canvas must not rebuild its DOM —
+  // doing so would detach the element the pointer handlers are bound to and
+  // make the widget snap back to its pre-drag position. Re-renders that arrive
+  // mid-gesture are skipped; the final LAYOUT_UPDATE after release re-syncs.
+  let interacting = false;
 
   // ---- canvas preview content (sample data for event-driven widgets, real data for goal) ----
   function sampleChat() {
@@ -113,9 +123,19 @@ export function initCanvasEditor({
     </div>`;
   }
 
+  // The type a widget renders as under the active theme — mirrors the overlay's
+  // transform(). Role widgets (chat/goal/alerts) follow the active 3D variant's
+  // counterpart; everything else keeps its own type. The editor box keeps the
+  // stored x/y/w/h, so the preview only swaps the visuals, never the geometry.
+  function effectiveType(inst) {
+    return resolveTypeForTheme
+      ? resolveTypeForTheme(inst.type, state.appearance.activeThemeId3d, state.appearance.enabled3d)
+      : inst.type;
+  }
+
   function buildPreviewHtml(inst) {
     const config = inst.config || {};
-    switch (inst.type) {
+    switch (effectiveType(inst)) {
       case "goal": {
         const pct = state.goal.target ? Math.min(100, Math.round((state.goal.current / state.goal.target) * 100)) : 0;
         const noBg = config.showBackground === false ? " widget-goal--no-bg" : "";
@@ -259,6 +279,14 @@ export function initCanvasEditor({
           </svg>
         </div>`;
       }
+      case "elite-sign": {
+        const orange = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#ff7605";
+        return `<div class="widget-grimhex-preview" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" style="width:72%;height:72%;filter:drop-shadow(0 0 6px ${escapeAttr(orange)});">
+            <path d="M12 3l2.5 4.5L21 5.5l-1.8 4.7 4.4 1.8-5.6 1.2 2 4.3-5.5-1.6L12 21l-2.5-5.1-5.5 1.6 2-4.3-5.6-1.2 4.4-1.8L3 5.5l6.5 2L12 3z" fill="${escapeAttr(orange)}"/>
+          </svg>
+        </div>`;
+      }
       case "grimhex-chat": {
         const rows = [
           { user: "nova_viewer", message: t("preview.chat1") },
@@ -267,7 +295,7 @@ export function initCanvasEditor({
         ]
           .map(
             (m) =>
-              `<div class="star-citizen-chat__row" style="display:flex;gap:7px;font-size:13px;line-height:1.55;color:#e9eef2;">
+              `<div class="grimhex-chat__row" style="display:flex;gap:7px;font-size:13px;line-height:1.55;color:#e9eef2;">
                 <span style="color:#64748b">[12:00]</span>
                 <span style="color:#F97316;font-weight:700">${escapeHtml(m.user)}</span>
                 <span style="color:#64748b">:</span>
@@ -275,7 +303,7 @@ export function initCanvasEditor({
               </div>`
           )
           .join("");
-        return `<div class="star-citizen-chat" style="position:relative;height:100%;"><div class="chat-messages-container" style="position:absolute;overflow:hidden;left:0;right:0;top:0;bottom:0;display:flex;flex-direction:column;justify-content:flex-end;padding:22px 26px;box-sizing:border-box;">${rows}</div></div>`;
+        return `<div class="grimhex-chat" style="position:relative;height:100%;"><div class="chat-messages-container" style="position:absolute;overflow:hidden;left:0;right:0;top:0;bottom:0;display:flex;flex-direction:column;justify-content:flex-end;padding:22px 26px;box-sizing:border-box;">${rows}</div></div>`;
       }
       case "grimhex-goal": {
         const pct = state.goal && state.goal.target ? Math.min(100, Math.round((state.goal.current / state.goal.target) * 100)) : 0;
@@ -289,14 +317,14 @@ export function initCanvasEditor({
               (fill > 0.01 ? `<rect x="${x}" y="12" width="${Math.max(3, Math.round(36 * fill))}" height="36" rx="3" fill="${green}"/>` : "");
           })
           .join("");
-        return `<div class="star-citizen-goal-preview" style="position:relative;height:100%;display:flex;flex-direction:column;padding:4px;">
+        return `<div class="grimhex-goal-preview" style="position:relative;height:100%;display:flex;flex-direction:column;padding:4px;">
           <div style="display:flex;justify-content:space-between;gap:10px;color:#e9eef2;font-size:11px;"><span style="font-family:'Orbitron','Segoe UI',sans-serif;">${escapeHtml(state.goal.title || t("preview.goalTitle"))}</span><span style="color:#64748b;font-family:'Orbitron','Consolas',monospace;">${formatMoney(state.goal.current)} / ${formatMoney(state.goal.target)}</span></div>
           <svg viewBox="0 0 200 60" preserveAspectRatio="xMidYMid meet" style="flex:1;width:100%;min-height:0;">${sectors}</svg>
         </div>`;
       }
       case "grimhex-holo-alert": {
         const cyan = "#00f0ff";
-        return `<div class="star-citizen-holo-preview" style="position:relative;height:100%;display:flex;align-items:center;gap:8px;padding:6px 8px;box-sizing:border-box;">
+        return `<div class="grimhex-holo-preview" style="position:relative;height:100%;display:flex;align-items:center;gap:8px;padding:6px 8px;box-sizing:border-box;">
           <svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" style="flex-shrink:0;width:40px;height:40px;">
             <path d="M12 2.8l7.6 4.4v7.6L12 19.2l-7.6-4.4V7.2L12 2.8z" fill="none" stroke="${cyan}" stroke-width="1.2"/>
             <path d="M12 8.4c-1.2-1.7-3.4-1.6-4.2 0-0.7 1.4.1 3.1 1.2 4.1 1 .9 2.2 1.7 3 2.4.8-.7 2-1.5 3-2.4 1.1-1 1.9-2.7 1.2-4.1-0.8-1.6-3-1.7-4.2 0z" fill="none" stroke="${cyan}" stroke-width="0.9"/>
@@ -310,7 +338,7 @@ export function initCanvasEditor({
       }
       case "grimhex-radar": {
         const cyan = "#00f0ff";
-        return `<div class="star-citizen-radar-preview" style="position:relative;height:100%;display:flex;align-items:center;justify-content:center;padding:4px;box-sizing:border-box;">
+        return `<div class="grimhex-radar-preview" style="position:relative;height:100%;display:flex;align-items:center;justify-content:center;padding:4px;box-sizing:border-box;">
           <svg viewBox="0 0 120 80" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;">
             <ellipse cx="60" cy="40" rx="48" ry="18" fill="none" stroke="${cyan}" stroke-width="1"/>
             <ellipse cx="60" cy="40" rx="32" ry="12" fill="none" stroke="${cyan}" stroke-width="0.6" opacity="0.5"/>
@@ -519,6 +547,136 @@ export function initCanvasEditor({
           </svg>
         </div>`;
       }
+      case "md3-orb": {
+        const primary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#d0bcff";
+        const secondary = (state.appearance.tokens && state.appearance.tokens["--md-secondary"]) || "#ccc2dc";
+        return `<div class="md3-orb-preview" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" style="width:80%;height:80%;">
+            <defs><radialGradient id="md3o" cx="35%" cy="30%" r="75%"><stop offset="0%" stop-color="${escapeAttr(secondary)}"/><stop offset="55%" stop-color="${escapeAttr(primary)}"/><stop offset="100%" stop-color="#1d192b"/></radialGradient></defs>
+            <circle cx="50" cy="50" r="34" fill="url(#md3o)"/>
+            <circle cx="40" cy="38" r="8" fill="rgba(255,255,255,0.45)"/>
+            <ellipse cx="50" cy="50" rx="44" ry="16" fill="none" stroke="${escapeAttr(primary)}" stroke-width="1.4" opacity="0.6"/>
+            <circle cx="92" cy="50" r="4" fill="${escapeAttr(secondary)}"/>
+          </svg>
+        </div>`;
+      }
+      case "md3-chat": {
+        const text = (state.appearance.tokens && state.appearance.tokens["--md-on-surface"]) || "#e6e1e5";
+        const muted = (state.appearance.tokens && state.appearance.tokens["--md-on-surface-variant"]) || "#cac4d0";
+        const primary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#d0bcff";
+        const rows = [
+          { user: "nova_viewer", message: t("preview.chat1") },
+          { user: "star_gazer", message: t("preview.chat2") },
+          { user: "orbit_fan", message: t("preview.chat3") },
+        ]
+          .map(
+            (m) =>
+              `<div class="md3-chat__row" style="display:flex;gap:7px;font-size:13px;line-height:1.55;color:${text};">
+                <span style="color:${muted}">[12:00]</span>
+                <span style="color:${primary};font-weight:700">${escapeHtml(m.user)}</span>
+                <span style="color:${muted}">:</span>
+                <span style="color:${text}">${escapeHtml(m.message)}</span>
+              </div>`
+          )
+          .join("");
+        return `<div class="md3-chat" style="position:relative;height:100%;"><div class="chat-messages-container" style="position:absolute;overflow:hidden;left:0;right:0;top:0;bottom:0;display:flex;flex-direction:column;justify-content:flex-end;padding:22px 26px;box-sizing:border-box;">${rows}</div></div>`;
+      }
+      case "md3-goal": {
+        const pct = state.goal && state.goal.target ? Math.min(100, Math.round((state.goal.current / state.goal.target) * 100)) : 0;
+        const primary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#d0bcff";
+        const secondary = (state.appearance.tokens && state.appearance.tokens["--md-secondary"]) || "#ccc2dc";
+        const text = (state.appearance.tokens && state.appearance.tokens["--md-on-surface"]) || "#e6e1e5";
+        const muted = (state.appearance.tokens && state.appearance.tokens["--md-on-surface-variant"]) || "#cac4d0";
+        return `<div class="md3-goal-preview" style="position:relative;height:100%;display:flex;flex-direction:column;padding:4px;">
+          <div style="display:flex;justify-content:space-between;gap:10px;color:${text};font-size:11px;"><span style="font-family:'Manrope','Segoe UI',sans-serif;font-weight:700;">${escapeHtml(state.goal.title || t("preview.goalTitle"))}</span><span style="color:${muted};font-family:'JetBrains Mono','Consolas',monospace;">${formatMoney(state.goal.current)} / ${formatMoney(state.goal.target)}</span></div>
+          <svg viewBox="0 0 200 40" preserveAspectRatio="xMidYMid meet" style="flex:1;width:100%;min-height:0;">
+            <defs><linearGradient id="md3g" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="${escapeAttr(primary)}"/><stop offset="100%" stop-color="${escapeAttr(secondary)}"/></linearGradient></defs>
+            <rect x="4" y="12" width="192" height="16" rx="8" fill="rgba(255,255,255,0.10)"/>
+            <rect x="4" y="12" width="${Math.max(8, Math.round(192 * pct / 100))}" height="16" rx="8" fill="url(#md3g)"/>
+          </svg>
+        </div>`;
+      }
+      case "md3-holo-alert": {
+        const primary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#d0bcff";
+        const text = (state.appearance.tokens && state.appearance.tokens["--md-on-surface"]) || "#e6e1e5";
+        const muted = (state.appearance.tokens && state.appearance.tokens["--md-on-surface-variant"]) || "#cac4d0";
+        return `<div class="md3-holo-preview" style="position:relative;height:100%;display:flex;align-items:center;gap:10px;padding:6px 10px;box-sizing:border-box;">
+          <svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" style="flex-shrink:0;width:36px;height:36px;">
+            <circle cx="12" cy="12" r="10" fill="none" stroke="${primary}" stroke-width="1.4" stroke-dasharray="4 3"/>
+            <circle cx="12" cy="12" r="5.5" fill="${primary}" opacity="0.22"/>
+            <path d="M12 7.5l1.5 3.4 3.5.5-2.6 2.4.7 3.4-3.1-1.8-3.1 1.8.7-3.4-2.6-2.4 3.5-.5L12 7.5z" fill="${primary}"/>
+          </svg>
+          <div style="min-width:0;display:flex;flex-direction:column;gap:2px;">
+            <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:${muted};">${escapeHtml(t("properties.testFollow"))}</span>
+            <span style="font-size:13px;font-weight:700;color:${text};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">nova_viewer</span>
+          </div>
+        </div>`;
+      }
+      case "pixel-cube": {
+        const gold = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#d6b675";
+        return `<div class="pixel-cube-preview" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" style="width:76%;height:76%;">
+            <g fill="none" stroke="${gold}" stroke-linecap="square" stroke-linejoin="miter">
+              <path d="M50 52 L82 68 L82 36 L50 20 L50 52 Z" stroke-width="2"/>
+              <path d="M18 68 L50 84 L50 52 L18 36 L18 68 Z" stroke-width="1" opacity="0.4"/>
+              <path d="M50 52 L18 68 M82 68 L50 84 M82 36 L50 52 M50 20 L18 36" stroke-width="1" opacity="0.4"/>
+            </g>
+          </svg>
+        </div>`;
+      }
+      case "pixel-chat": {
+        const text = (state.appearance.tokens && state.appearance.tokens["--md-on-surface"]) || "#e6e6e6";
+        const muted = (state.appearance.tokens && state.appearance.tokens["--md-on-surface-variant"]) || "#b8b8b8";
+        const gold = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#d6b675";
+        const rows = [
+          { user: "nova_viewer", message: t("preview.chat1") },
+          { user: "star_gazer", message: t("preview.chat2") },
+          { user: "orbit_fan", message: t("preview.chat3") },
+        ]
+          .map(
+            (m) =>
+              `<div class="pixel-chat__row" style="display:flex;gap:7px;font-size:13px;line-height:1.5;color:${text};font-family:'Roboto Condensed','Segoe UI',sans-serif;">
+                <span style="color:${muted}">[12:00]</span>
+                <span style="color:${gold};font-weight:700">${escapeHtml(m.user)}</span>
+                <span style="color:${muted}">:</span>
+                <span style="color:${text}">${escapeHtml(m.message)}</span>
+              </div>`
+          )
+          .join("");
+        return `<div class="pixel-chat" style="position:relative;height:100%;"><div class="chat-messages-container" style="position:absolute;overflow:hidden;left:0;right:0;top:0;bottom:0;display:flex;flex-direction:column;justify-content:flex-end;padding:18px 22px;box-sizing:border-box;">${rows}</div></div>`;
+      }
+      case "pixel-goal": {
+        const pct = state.goal && state.goal.target ? Math.min(100, Math.round((state.goal.current / state.goal.target) * 100)) : 0;
+        const gold = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#d6b675";
+        const text = (state.appearance.tokens && state.appearance.tokens["--md-on-surface"]) || "#e6e6e6";
+        const muted = (state.appearance.tokens && state.appearance.tokens["--md-on-surface-variant"]) || "#b8b8b8";
+        const cells = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+          .map((i) => {
+            const fill = Math.max(0, Math.min(1, (pct - i * 10) / 10));
+            const x = 4 + i * 19.5;
+            return `<rect x="${x}" y="10" width="18" height="20" fill="#19191c" stroke="#3a3a3e" stroke-width="1"/>` +
+              (fill > 0.01 ? `<rect x="${x}" y="10" width="${Math.max(1, Math.round(18 * fill))}" height="20" fill="${gold}"/>` : "");
+          })
+          .join("");
+        return `<div class="pixel-goal-preview" style="position:relative;height:100%;display:flex;flex-direction:column;padding:4px;">
+          <div style="display:flex;justify-content:space-between;gap:10px;color:${text};font-size:11px;font-family:'PT Sans Caption','Segoe UI',sans-serif;"><span style="font-weight:700;">${escapeHtml(state.goal.title || t("preview.goalTitle"))}</span><span style="color:${muted};">${formatMoney(state.goal.current)} / ${formatMoney(state.goal.target)}</span></div>
+          <svg viewBox="0 0 200 40" preserveAspectRatio="xMidYMid meet" style="flex:1;width:100%;min-height:0;">${cells}</svg>
+        </div>`;
+      }
+      case "pixel-holo-alert": {
+        const gold = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#d6b675";
+        const text = (state.appearance.tokens && state.appearance.tokens["--md-on-surface"]) || "#e6e6e6";
+        const muted = (state.appearance.tokens && state.appearance.tokens["--md-on-surface-variant"]) || "#b8b8b8";
+        return `<div class="pixel-holo-preview" style="position:relative;height:100%;display:flex;align-items:center;gap:10px;padding:6px 10px;box-sizing:border-box;font-family:'PT Sans Caption','Segoe UI',sans-serif;">
+          <svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" style="flex-shrink:0;width:30px;height:30px;">
+            <path d="M12 3l2.2 4.2 4.6.6-3.4 3.2.8 4.6L12 13.4 7.8 15.6l.8-4.6L5.2 7.8l4.6-.6L12 3z" fill="${gold}"/>
+          </svg>
+          <div style="min-width:0;display:flex;flex-direction:column;gap:2px;">
+            <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${muted};">${escapeHtml(t("properties.testFollow"))}</span>
+            <span style="font-size:13px;font-weight:700;color:${text};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">nova_viewer</span>
+          </div>
+        </div>`;
+      }
       default:
         return "";
     }
@@ -535,30 +693,88 @@ export function initCanvasEditor({
     return services.every((service) => statuses[service] === "disabled");
   }
 
-  // Human label shown in the canvas + layers. Custom widgets can override it
-  // via `config.name` so multiple "Свой виджет" entries stay distinguishable.
+  // True only when this 2D widget is actually hidden in the overlay because an
+  // explicit 3D widget of the same role is placed (dedup). Auto-transformed 2D
+  // widgets (no explicit 3D) are NOT "replaced" — they render as their 3D
+  // counterpart, which the label/preview already reflect via effectiveType().
+  function isReplaced(inst) {
+    if (!replacedBy3d || !widgetRole) return false;
+    const def = WIDGET_TYPES[inst.type] || {};
+    if (def.theme) return false; // 3D widgets (role or decorative) are never dedup'd
+    const role = widgetRole(inst.type);
+    if (!role) return false;
+    const variantId = state.appearance.activeThemeId3d;
+    if (!variantId) return false;
+    const counterpart = (widgetsForTheme ? widgetsForTheme(variantId) : []).find(
+      (w) => widgetRole(w.type) === role
+    );
+    if (!counterpart) return false;
+    if (state.appearance.enabled3d && state.appearance.enabled3d[counterpart.type] === false) {
+      return false;
+    }
+    // Only mark as replaced when an explicit 3D widget of the same role is
+    // placed in the layout (it takes over and hides this 2D widget).
+    return state.layout.some((other) => {
+      if (other.id === inst.id) return false;
+      const otherDef = WIDGET_TYPES[other.type] || {};
+      return !!otherDef.theme && widgetRole(other.type) === role;
+    });
+  }
+
+  // True when a theme-bound widget will not be mounted on the overlay right
+  // now. For role widgets (chat/goal/alerts and decorative signs/radar/shield)
+  // that means the active 3D theme has no enabled counterpart to remap to; for
+  // additive (role-less) widgets it means its own theme isn't the active 3D
+  // variant. The canvas skips these widgets entirely (they belong to another
+  // theme); the layers list still shows them marked as inactive.
+  function isThemeGated(inst) {
+    const def = WIDGET_TYPES[inst.type] || {};
+    if (!def.theme) return false;
+    const role = widgetRole(inst.type);
+    const variantId = state.appearance.activeThemeId3d;
+    if (role) {
+      // Role widget: inactive unless the active theme has an enabled counterpart.
+      if (!variantId) return true; // 3D off
+      const counterpart = (widgetsForTheme ? widgetsForTheme(variantId) : []).find(
+        (w) => widgetRole(w.type) === role
+      );
+      if (!counterpart) return true; // no counterpart in the active theme
+      if (state.appearance.enabled3d && state.appearance.enabled3d[counterpart.type] === false) return true;
+      return false;
+    }
+    // Additive widget (no role): inactive when its own theme isn't active.
+    return variantId !== def.theme;
+  }
+
+  // Human label shown in the canvas + layers. Follows the effective (theme-
+  // remapped) type, and custom widgets can override it via `config.name` so
+  // multiple "Свой виджет" entries stay distinguishable.
   function widgetLabel(inst) {
     if (inst.type === "custom" && inst.config && inst.config.name) return inst.config.name;
-    return t("widgets." + inst.type);
+    return t("widgets." + effectiveType(inst));
   }
 
   function renderCanvas() {
+    if (interacting) return; // don't rebuild the canvas mid-drag/mid-resize
     canvasEl.innerHTML = "";
     [...state.layout]
       .sort((a, b) => (a.z || 0) - (b.z || 0))
       .forEach((inst) => {
         if (isServiceDisabled(inst)) return;
+        // Виджеты, не относящиеся к активной теме, на канвасе не показываем.
+        if (isThemeGated(inst)) return;
+        const replaced = isReplaced(inst);
         const box = document.createElement("div");
-        box.className = "canvas-widget" + (inst.id === state.selectedId ? " is-selected" : "");
+        box.className = "canvas-widget" + (inst.id === state.selectedId ? " is-selected" : "") + (replaced ? " is-replaced" : "");
         box.dataset.id = inst.id;
         box.style.left = inst.x + "%";
         box.style.top = inst.y + "%";
         box.style.width = inst.w + "%";
         box.style.height = inst.h + "%";
         box.style.zIndex = inst.z || 0;
-        box.style.opacity = inst.visible ? "1" : "0.35";
+        box.style.opacity = !inst.visible ? "0.35" : replaced ? "0.3" : "1";
 
-        const def = WIDGET_TYPES[inst.type] || {};
+        const def = WIDGET_TYPES[effectiveType(inst)] || {};
         const label = document.createElement("div");
         label.className = "canvas-widget__label";
         label.innerHTML = `${ICONS[def.icon] || ""}<span>${escapeHtml(widgetLabel(inst))}</span>`;
@@ -621,6 +837,7 @@ export function initCanvasEditor({
       if (e.target.closest(".resize-handle")) return;
       e.preventDefault();
       selectWidget(inst.id);
+      interacting = true;
       const canvasRect = canvasEl.getBoundingClientRect();
       const startX = e.clientX;
       const startY = e.clientY;
@@ -648,15 +865,27 @@ export function initCanvasEditor({
         boxEl.removeEventListener("pointermove", onMove);
         boxEl.removeEventListener("pointerup", onUp);
         boxEl.classList.remove("is-dragging");
+        interacting = false;
         if (moved) {
-          send(EVENT_TYPES.CMD_UPDATE_WIDGET, {
-            id: inst.id,
-            patch: { x: round1(parseFloat(boxEl.dataset.pendingX)), y: round1(parseFloat(boxEl.dataset.pendingY)) },
-          });
+          const x = round1(parseFloat(boxEl.dataset.pendingX));
+          const y = round1(parseFloat(boxEl.dataset.pendingY));
+          // Optimistically apply so an interleaved re-render (connection status,
+          // etc.) uses the new position instead of snapping back to the old one.
+          const widget = state.layout.find((w) => w.id === inst.id);
+          if (widget) { widget.x = x; widget.y = y; }
+          send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { x, y } });
         }
+      }
+      function onCancel() {
+        boxEl.removeEventListener("pointermove", onMove);
+        boxEl.removeEventListener("pointerup", onUp);
+        boxEl.removeEventListener("pointercancel", onCancel);
+        boxEl.classList.remove("is-dragging");
+        interacting = false;
       }
       boxEl.addEventListener("pointermove", onMove);
       boxEl.addEventListener("pointerup", onUp);
+      boxEl.addEventListener("pointercancel", onCancel);
     });
   }
 
@@ -671,6 +900,7 @@ export function initCanvasEditor({
         e.preventDefault();
         e.stopPropagation();
         selectWidget(inst.id);
+        interacting = true;
         const canvasRect = canvasEl.getBoundingClientRect();
         const startX = e.clientX;
         const startY = e.clientY;
@@ -704,8 +934,12 @@ export function initCanvasEditor({
         function onUp() {
           handle.removeEventListener("pointermove", onMove);
           handle.removeEventListener("pointerup", onUp);
+          interacting = false;
           if (boxEl.dataset.pendingGeo) {
             const geo = JSON.parse(boxEl.dataset.pendingGeo);
+            // Optimistically apply so an interleaved re-render can't reset the box.
+            const widget = state.layout.find((w) => w.id === inst.id);
+            if (widget) { widget.x = geo.x; widget.y = geo.y; widget.w = geo.w; widget.h = geo.h; }
             send(EVENT_TYPES.CMD_UPDATE_WIDGET, {
               id: inst.id,
               patch: { x: round1(geo.x), y: round1(geo.y), w: round1(geo.w), h: round1(geo.h) },
@@ -713,8 +947,15 @@ export function initCanvasEditor({
             delete boxEl.dataset.pendingGeo;
           }
         }
+        function onCancel() {
+          handle.removeEventListener("pointermove", onMove);
+          handle.removeEventListener("pointerup", onUp);
+          handle.removeEventListener("pointercancel", onCancel);
+          interacting = false;
+        }
         handle.addEventListener("pointermove", onMove);
         handle.addEventListener("pointerup", onUp);
+        handle.addEventListener("pointercancel", onCancel);
       });
     });
   }
@@ -730,12 +971,16 @@ export function initCanvasEditor({
     [...visible]
       .sort((a, b) => (b.z || 0) - (a.z || 0))
       .forEach((inst) => {
-        const def = WIDGET_TYPES[inst.type] || {};
+        const def = WIDGET_TYPES[effectiveType(inst)] || {};
+        const replaced = isReplaced(inst);
+        const inactive = isThemeGated(inst);
         const row = document.createElement("div");
-        row.className = "layer-row" + (inst.id === state.selectedId ? " is-selected" : "");
+        row.className = "layer-row" + (inst.id === state.selectedId ? " is-selected" : "") + (replaced ? " is-replaced" : "") + (inactive ? " is-theme-gated" : "");
         row.innerHTML = `
           <span class="layer-row__icon">${ICONS[def.icon] || ""}</span>
           <span class="layer-row__label">${escapeHtml(widgetLabel(inst))}</span>
+          ${replaced ? `<span class="layer-row__3d-tag" title="${escapeAttr(t("editor.replacedBy3d"))}">3D</span>` : ""}
+          ${inactive ? `<span class="layer-row__3d-tag layer-row__off-tag" title="${escapeAttr(t("editor.themeInactive"))}">${escapeHtml(t("editor.themeInactiveTag"))}</span>` : ""}
           <span class="layer-row__btns">
             <button class="layer-row__btn" data-action="forward" title="${t("common.forward")}">▲</button>
             <button class="layer-row__btn" data-action="backward" title="${t("common.backward")}">▼</button>

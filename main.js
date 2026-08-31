@@ -548,8 +548,12 @@ function refreshTrayMenu() {
 }
 
 function createTray() {
-  const iconPath = path.join(__dirname, "assets", "icons", "icon.png");
-  let icon = nativeImage.createFromPath(iconPath);
+  // Иконки приложения разведены по размерам/платформам (см. assets/icons/),
+  // поэтому грузим PNG нужного размера, а не несуществующий icon.png.
+  let icon = nativeImage.createFromPath(path.join(__dirname, "assets", "icons", "256x256.png"));
+  if (icon.isEmpty() && process.platform === "win32") {
+    icon = nativeImage.createFromPath(path.join(__dirname, "assets", "icons", "icon.ico"));
+  }
   if (!icon.isEmpty() && process.platform === "win32") {
     icon = icon.resize({ width: 16, height: 16 });
   }

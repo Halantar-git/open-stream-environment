@@ -16,13 +16,15 @@
  */
 
 /*
-  WidgetStarCitizenChat — pirate-sci-fi stream chat for the Star Citizen theme.
+  WidgetMd3Chat — elevated stream chat for the Material You theme.
 
-  Chat messages render in a DOM container while the background is a filled
-  panel surface matching the Recent events widget (var(--panel-bg) + border +
-  radius + shadow + scanline texture + corner brackets). No neon HUD frame.
+  Chat messages render in a DOM container while the background is the theme's
+  glass panel surface (var(--panel-bg) + border + radius + blur), so it
+  automatically follows the Material You look. Text colours come from the theme
+  tokens (--md-on-surface / --md-on-surface-variant), usernames keep the chat
+  color (or fall back to the primary accent).
 
-  Theme isolation: hard-gated to "grimhex" in onMount() and via the manager
+  Theme isolation: hard-gated to "nebula" in onMount() and via the manager
   (shouldMount / resolveRenderType using the catalog `theme` field).
 */
 (function (root, factory) {
@@ -30,26 +32,30 @@
     typeof module !== "undefined" && module.exports
       ? require("./base-widget")
       : root.OSEWidgets && root.OSEWidgets.BaseWidget;
-  const WidgetStarCitizenChat = factory(BaseWidget);
+  const WidgetMd3Chat = factory(BaseWidget);
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = WidgetStarCitizenChat;
+    module.exports = WidgetMd3Chat;
   } else {
     root.OSEWidgets = root.OSEWidgets || {};
-    root.OSEWidgets.WidgetStarCitizenChat = WidgetStarCitizenChat;
+    root.OSEWidgets.WidgetMd3Chat = WidgetMd3Chat;
   }
 })(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
   "use strict";
 
-  const AMBER = "#ffaa00";
-  const TEXT_COLOR = "#dcebf5";
-  const MUTED = "#8ab4d0";
+  const DEFAULT_TEXT = "#e6e1e5"; // --md-on-surface (nebula)
+  const DEFAULT_MUTED = "#cac4d0"; // --md-on-surface-variant (nebula)
+  const DEFAULT_USER = "#d0bcff"; // --md-primary (nebula)
   const MAX_MESSAGES = 50;
 
-  class WidgetStarCitizenChat extends BaseWidget {
+  class WidgetMd3Chat extends BaseWidget {
     constructor(config, context) {
       super(config, context);
       this.theme = (context && (context.theme || context.activeThemeId)) || "";
+
+      this.textColor = DEFAULT_TEXT;
+      this.mutedColor = DEFAULT_MUTED;
+      this.userColor = DEFAULT_USER;
 
       this.messagesEl = null;
       this.messagesScroller = null;
@@ -57,17 +63,16 @@
     }
 
     onMount() {
-      // HARD theme gate: no DOM, no events on a non-grimhex theme.
-      if (this.theme !== "grimhex") return;
+      // HARD theme gate: no DOM, no events on a non-MD3 theme.
+      if (this.theme !== "nebula") return;
 
-      // Panel surface + corner brackets/scanlines, driven by the active theme's
-      // --panel-decoration token (same decoration language as Recent events).
-      this.element.classList.add("star-citizen-chat-surface");
+      this._readColors();
+
+      this.element.classList.add("md3-chat-surface");
       this._applySurface();
 
       // Foreground chat frame: an outer box holding only the padding, so the
-      // scroll viewport below clips exactly at the padded content box (the
-      // frame) rather than at the widget edge.
+      // scroll viewport below clips exactly at the padded content box.
       this.messagesEl = document.createElement("div");
       this.messagesEl.className = "chat-messages-container";
       Object.assign(this.messagesEl.style, {
@@ -76,23 +81,18 @@
         right: "0",
         top: "0",
         bottom: "0",
-        padding: "30px 34px",
+        padding: "22px 26px",
         boxSizing: "border-box",
       });
       this.element.appendChild(this.messagesEl);
 
-      // Scroll viewport: fills the outer content box (no padding of its own),
-      // so overflow is trimmed at the frame instead of bleeding into it.
       this.messagesScroller = document.createElement("div");
-      this.messagesScroller.className = "star-citizen-chat__viewport";
+      this.messagesScroller.className = "md3-chat__viewport";
       this.messagesScroller.style.cssText = "height:100%;overflow:hidden;";
       this.messagesEl.appendChild(this.messagesScroller);
 
-      // Inner list: pinned to the bottom while short (min-height:100% +
-      // flex-end), and grows past the viewport when it overflows so the viewport
-      // scrolls instead of bleeding messages past the frame.
       this.messagesInner = document.createElement("div");
-      this.messagesInner.className = "star-citizen-chat__list";
+      this.messagesInner.className = "md3-chat__list";
       this.messagesInner.style.cssText =
         "display:flex;flex-direction:column;justify-content:flex-end;min-height:100%;";
       this.messagesScroller.appendChild(this.messagesInner);
@@ -112,26 +112,26 @@
       if (prev.perspective !== next.perspective) this._applyPerspective();
     }
 
-    // Panel surface matching the Recent events widget: filled panel, border,
-    // radius, drop shadow/glow, scanline texture + corner brackets.
+    _readColors() {
+      const read = this.context.readCssVar;
+      this.textColor = (read && read("--md-on-surface")) || DEFAULT_TEXT;
+      this.mutedColor = (read && read("--md-on-surface-variant")) || DEFAULT_MUTED;
+      this.userColor = (read && read("--md-primary")) || DEFAULT_USER;
+    }
+
     _applySurface() {
       const read = this.context.readCssVar;
       const s = this.element.style;
 
-      const bg = (read && read("--panel-bg")) || "rgba(8, 14, 20, 0.92)";
-      const blur = (read && read("--panel-blur")) || "0px";
-      const border = (read && read("--panel-border")) || "1px solid rgba(0, 240, 255, 0.35)";
-      const radius = (read && read("--panel-radius")) || "0px";
+      const bg = (read && read("--panel-bg")) || "rgba(33, 31, 38, 0.82)";
+      const blur = (read && read("--panel-blur")) || "20px";
+      const border = (read && read("--panel-border")) || "1px solid rgba(255, 255, 255, 0.12)";
+      const radius = (read && read("--panel-radius")) || "24px";
       const clip = (read && read("--panel-clip")) || "none";
       const elev =
-        (read && read("--elev-1")) ||
-        "0 1px 3px rgba(0,0,0,0.55), 0 1px 2px rgba(0,0,0,0.35)";
-      const glow =
-        (read && read("--panel-glow")) ||
-        "0 0 15px rgba(0,240,255,0.3), inset 0 0 30px rgba(0,240,255,0.04)";
+        (read && read("--elev-1")) || "0 1px 3px rgba(0,0,0,0.45), 0 1px 2px rgba(0,0,0,0.3)";
+      const glow = (read && read("--panel-glow")) || "0 24px 48px rgba(0,0,0,0.45)";
 
-      // Set only backgroundColor so the scanline background-image from the
-      // HUD decoration ([data-decoration]) can layer on top, like Recent events.
       s.backgroundColor = bg;
       s.backgroundImage = "";
       s.backdropFilter = blur === "0px" ? "none" : `blur(${blur})`;
@@ -142,12 +142,11 @@
       s.boxShadow = `${elev}, ${glow}`;
     }
 
-    // Perspective tilt (0-100), adjustable from the chat inspector.
     _applyPerspective() {
       const v = Math.max(0, Math.min(100, Number(this.config.perspective) || 0));
       if (v > 0) {
-        const ry = -(v * 0.15); // 0 .. -15deg
-        const rx = v * 0.03; // 0 .. 3deg
+        const ry = -(v * 0.15);
+        const rx = v * 0.03;
         this.element.style.transform = `perspective(1200px) rotateY(${ry}deg) rotateX(${rx}deg)`;
         this.element.style.transformStyle = "preserve-3d";
       } else {
@@ -165,46 +164,43 @@
       const { escapeHtml, escapeAttr, renderEmotes } = this.context;
 
       const row = document.createElement("div");
-      row.className = "star-citizen-chat__row";
-      row.style.cssText =
-        "font-size:13px;line-height:1.55;color:" + TEXT_COLOR + ";";
+      row.className = "md3-chat__row";
+      row.style.cssText = `font-size:13px;line-height:1.55;color:${this.textColor};`;
 
       const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       const badges = (msg.badges || [])
         .slice(0, 3)
-        .map((b) => `<span style="color:${MUTED};font-weight:700;">${escapeHtml(String(b).slice(0, 1).toUpperCase())}</span>`)
+        .map((b) => `<span style="color:${this.mutedColor};font-weight:700;">${escapeHtml(String(b).slice(0, 1).toUpperCase())}</span>`)
         .join(" ");
+      const userColor = msg.color || this.userColor;
       const text = renderEmotes ? renderEmotes(msg.message, msg.emotes) : escapeHtml(msg.message);
 
       row.innerHTML =
-        `<span style="color:${MUTED};">[${escapeHtml(time)}]</span>` +
+        `<span style="color:${this.mutedColor};">[${escapeHtml(time)}]</span>` +
         (badges ? ` ${badges}` : "") +
-        ` <span style="color:${escapeAttr(AMBER)};font-weight:700;">${escapeHtml(msg.user)}</span>` +
-        `<span style="color:${MUTED};">:</span>` +
-        ` <span style="color:${TEXT_COLOR};word-break:break-word;">${text}</span>`;
+        ` <span style="color:${escapeAttr(userColor)};font-weight:700;">${escapeHtml(msg.user)}</span>` +
+        `<span style="color:${this.mutedColor};">:</span>` +
+        ` <span style="color:${this.textColor};word-break:break-word;">${text}</span>`;
 
       this.messagesInner.appendChild(row);
 
-      // Hard limit: drop the oldest rows so the DOM never grows unbounded.
       while (this.messagesInner.children.length > MAX_MESSAGES) {
         this.messagesInner.firstChild.remove();
       }
 
-      // Auto-scroll to the newest message.
       this.messagesScroller.scrollTop = this.messagesScroller.scrollHeight;
 
-      // GPU-accelerated entrance: slide in from the left + fade.
       if (row.animate) {
         row.animate(
           [
-            { opacity: 0, transform: "translateX(-20px)" },
-            { opacity: 1, transform: "translateX(0)" },
+            { opacity: 0, transform: "translateY(8px)" },
+            { opacity: 1, transform: "translateY(0)" },
           ],
-          { duration: 220, easing: "ease-out" }
+          { duration: 200, easing: "ease-out" }
         );
       }
     }
   }
 
-  return WidgetStarCitizenChat;
+  return WidgetMd3Chat;
 });

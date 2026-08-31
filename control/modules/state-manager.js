@@ -43,7 +43,7 @@ export function createStateManager() {
     streamdeck: { icons: { start: "", brb: "", wheel: "", talk: "", end: "" } },
     selectedId: null,
     pendingAdd: null,
-    appearance: { activeThemeId: "nebula", activeThemeId2d: "nebula", activeThemeId3d: "", tokens: {}, themes: [] },
+    appearance: { activeThemeId: "nebula", enable3d: false, activeThemeId3d: "", enabled3d: {}, tokens: {}, themes: [] },
     editorPrefs: { gridSize: 5, snapEnabled: true },
     hudEditHotkey: "Control+Shift+H",
     hudDisplayId: null,
@@ -59,6 +59,7 @@ export function createStateManager() {
     activeFilters: [],
     activeSceneId: "start",
     giveaway: { active: false, command: "!go", eliminationMode: false, winner: null, count: 0, participants: [] },
+    poll: { active: false, command: "!poll", chartType: "bars", options: [], votes: {}, total: 0 },
     connectionStatus: {},
     participantsConfig: { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82, x: 24, y: 340, w: 340, h: 400 },
     wheelConfig: { musicVolume: 50, x: 960, y: 540 },
@@ -97,6 +98,7 @@ export function createStateManager() {
     state.activeCameraAngle = payload.activeCameraAngle ?? state.activeCameraAngle;
     state.activeFilters = payload.activeFilters || state.activeFilters;
     state.giveaway = payload.giveaway || state.giveaway;
+    state.poll = payload.poll || state.poll;
     state.connectionStatus = payload.connectionStatus || state.connectionStatus;
   };
 
