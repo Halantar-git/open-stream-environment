@@ -15,6 +15,7 @@
     "properties": "Properties",
     "grid": "Grid",
     "gridOff": "Off",
+    "aspectRatio": "Aspect ratio",
     "copyUrl": "Copy OBS URL",
     "copied": "Copied!",
     "chat": "Chat",

@@ -26,9 +26,11 @@
 
 import { el } from "./dom.js";
 
-export function initWsClient({ url, t, onMessage, onStatusClick }) {
+export function initWsClient({ url, t, onMessage, onStatusClick, resolveUrl }) {
   let ws = null;
   let connectionStatus = {};
+  let currentUrl = url;
+  let failures = 0;
 
   const STATUS_LABEL = (service) =>
     ({ twitchChat: t("status.twitchChat"), twitchEvents: t("status.twitchEvents"), donationAlerts: t("status.donationAlerts"), youtube: t("status.youtube"), obs: "OBS" }[service] || service);
@@ -95,7 +97,10 @@ export function initWsClient({ url, t, onMessage, onStatusClick }) {
   }
 
   function connect() {
-    ws = new WebSocket(url);
+    ws = new WebSocket(currentUrl);
+    ws.onopen = () => {
+      failures = 0;
+    };
     ws.onmessage = (ev) => {
       try {
         onMessage(JSON.parse(ev.data));
@@ -103,11 +108,30 @@ export function initWsClient({ url, t, onMessage, onStatusClick }) {
         /* ignore malformed frame */
       }
     };
-    ws.onclose = () => setTimeout(connect, 2000);
+    ws.onclose = () => {
+      failures += 1;
+      // After a live port switch the saved URL can be stale (e.g. a switch
+      // that failed and rolled back to the previous port). Re-resolve the
+      // authoritative port from the main process so the panel self-heals.
+      if (typeof resolveUrl === "function" && failures % 5 === 0) {
+        Promise.resolve(resolveUrl())
+          .then((resolved) => {
+            if (resolved && resolved !== currentUrl) currentUrl = resolved;
+          })
+          .catch(() => {})
+          .finally(() => setTimeout(connect, 2000));
+      } else {
+        setTimeout(connect, 2000);
+      }
+    };
     ws.onerror = () => ws.close();
+  }
+
+  function setUrl(next) {
+    if (next && next !== currentUrl) currentUrl = next;
   }
 
   connect();
 
-  return { send, setStatuses, updateStatus, refreshStatusChips };
+  return { send, setStatuses, updateStatus, refreshStatusChips, setUrl };
 }

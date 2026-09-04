@@ -54,6 +54,7 @@ export function initCanvasEditor({
   const canvasEl = el("canvas");
   const layersEl = el("layers");
   const gridSizeSelect = el("gridSizeSelect");
+  const aspectRatioSelect = el("aspectRatioSelect");
 
   // While a drag/resize is in progress the canvas must not rebuild its DOM —
   // doing so would detach the element the pointer handlers are bound to and
@@ -817,12 +818,43 @@ export function initCanvasEditor({
     canvasEl.dataset.theme = themeId || "";
   }
 
+  function parseRatio(value) {
+    const match = String(value || "16:9").match(/^(\d+(?:\.\d+)?):(\d+(?:\.\d+)?)$/);
+    if (!match) return { w: 16, h: 9 };
+    const w = parseFloat(match[1]);
+    const h = parseFloat(match[2]);
+    if (!(w > 0) || !(h > 0)) return { w: 16, h: 9 };
+    return { w, h };
+  }
+
+  // Size the editor canvas to match the selected aspect ratio, fitting it
+  // inside the available canvas-wrap area (so portrait ratios like 9:16 don't
+  // overflow). The overlay itself fills 100vw/100vh, so it needs no change.
+  function applyCanvasRatio() {
+    const { w, h } = parseRatio(state.editorPrefs.aspectRatio);
+    const pad = 48; // .canvas-wrap padding (24px each side)
+    const availW = Math.max(120, canvasWrapEl.clientWidth - pad);
+    const availH = Math.max(120, canvasWrapEl.clientHeight - pad);
+    const ratio = w / h;
+    let cw = availW;
+    let ch = cw / ratio;
+    if (ch > availH) {
+      ch = availH;
+      cw = ch * ratio;
+    }
+    canvasEl.style.width = Math.round(cw) + "px";
+    canvasEl.style.height = Math.round(ch) + "px";
+    applyGridToCanvas();
+  }
+
   function applyGridToCanvas() {
     const size = state.editorPrefs.gridSize || 0;
     canvasEl.classList.toggle("show-grid", size > 0);
     if (size > 0) {
-      canvasEl.style.setProperty("--grid-x", (size / 100) * 960 + "px");
-      canvasEl.style.setProperty("--grid-y", (size / 100) * 540 + "px");
+      const w = canvasEl.clientWidth || 960;
+      const h = canvasEl.clientHeight || 540;
+      canvasEl.style.setProperty("--grid-x", (size / 100) * w + "px");
+      canvasEl.style.setProperty("--grid-y", (size / 100) * h + "px");
     }
   }
 
@@ -1032,6 +1064,18 @@ export function initCanvasEditor({
     send(EVENT_TYPES.CMD_SET_EDITOR_PREFS, { gridSize: size, snapEnabled: size > 0 });
   });
 
+  aspectRatioSelect.addEventListener("change", () => {
+    send(EVENT_TYPES.CMD_SET_EDITOR_PREFS, { aspectRatio: aspectRatioSelect.value });
+  });
+
+  // Refit the canvas when the available area changes (window resize, panel
+  // resize, etc.) so the chosen aspect ratio is preserved.
+  if (typeof ResizeObserver !== "undefined") {
+    new ResizeObserver(() => applyCanvasRatio()).observe(canvasWrapEl);
+  } else {
+    window.addEventListener("resize", () => applyCanvasRatio());
+  }
+
   canvasEl.addEventListener("pointerdown", (e) => {
     if (e.target === canvasEl) selectWidget(null);
   });
@@ -1043,5 +1087,5 @@ export function initCanvasEditor({
     }
   });
 
-  return { addWidget, renderCanvas, renderLayers, applyThemeToCanvas, applyGridToCanvas };
+  return { addWidget, renderCanvas, renderLayers, applyThemeToCanvas, applyGridToCanvas, applyCanvasRatio };
 }

@@ -122,8 +122,10 @@ function defaultAppearance() {
 }
 
 function defaultEditor() {
-  return { gridSize: 5, snapEnabled: true };
+  return { gridSize: 5, snapEnabled: true, aspectRatio: "16:9" };
 }
+
+const EDITOR_ASPECT_RATIOS = ["16:9", "16:10", "21:9", "32:9", "4:3", "1:1", "9:16", "3:4"];
 
 class AppState {
   constructor(db, config) {
@@ -136,6 +138,7 @@ class AppState {
       this.config.appearance.enabled3d = {};
     }
     if (!this.config.editor) this.config.editor = defaultEditor();
+    if (!this.config.editor.aspectRatio) this.config.editor.aspectRatio = "16:9";
     this.config.hud_edit_hotkey =
       typeof this.config.hud_edit_hotkey === "string" && this.config.hud_edit_hotkey.trim()
         ? this.config.hud_edit_hotkey.trim()
@@ -1056,9 +1059,12 @@ class AppState {
     return this.config.appearance.customThemes.length !== before;
   }
 
-  setEditorPrefs({ gridSize, snapEnabled }) {
+  setEditorPrefs({ gridSize, snapEnabled, aspectRatio }) {
     if (typeof gridSize === "number") this.config.editor.gridSize = clamp(gridSize, 0, 25);
     if (typeof snapEnabled === "boolean") this.config.editor.snapEnabled = snapEnabled;
+    if (typeof aspectRatio === "string" && EDITOR_ASPECT_RATIOS.includes(aspectRatio)) {
+      this.config.editor.aspectRatio = aspectRatio;
+    }
     saveConfig(this.config);
     return this.config.editor;
   }

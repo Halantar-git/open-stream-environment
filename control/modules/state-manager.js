@@ -44,7 +44,7 @@ export function createStateManager() {
     selectedId: null,
     pendingAdd: null,
     appearance: { activeThemeId: "nebula", enable3d: false, activeThemeId3d: "", enabled3d: {}, tokens: {}, themes: [] },
-    editorPrefs: { gridSize: 5, snapEnabled: true },
+    editorPrefs: { gridSize: 5, snapEnabled: true, aspectRatio: "16:9" },
     hudEditHotkey: "Control+Shift+H",
     hudDisplayId: null,
     chatHudHotkey: "Control+Shift+L",

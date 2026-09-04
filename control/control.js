@@ -37,17 +37,22 @@ const { EVENT_TYPES } = window.SharedEvents;
   const t = (key, params) => (window.I18n ? window.I18n.t(key, params) : key);
 
   const params = new URLSearchParams(location.search);
-  const port = params.get("port") || "8710";
+  let port = params.get("port") || "8710";
   const appVersion = params.get("version") || "";
-  const wsUrl = `ws://localhost:${port}/ws`;
-  const overlayUrl = `http://localhost:${port}/overlay/overlay.html`;
+  let overlayUrl = `http://localhost:${port}/overlay/overlay.html`;
   function resolveMediaUrl(p) {
     if (!p) return "";
     if (/^(https?:)?\/\//i.test(p) || p.startsWith("data:")) return p;
     return `http://localhost:${port}/${String(p).replace(/^\/+/, "")}`;
   }
 
-  const wsClient = initWsClient({ url: wsUrl, t, onMessage: handleMessage, onStatusClick });
+  const resolveWsUrl = async () => {
+    const info = await window.desktop?.getInfo();
+    if (!info || !info.port) return null;
+    return `ws://localhost:${info.port}/ws`;
+  };
+
+  const wsClient = initWsClient({ url: `ws://localhost:${port}/ws`, t, onMessage: handleMessage, onStatusClick, resolveUrl: resolveWsUrl });
   const send = wsClient.send;
 
   // ---- state ----
@@ -68,6 +73,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const remoteUrlHint = document.getElementById("remoteUrlHint");
   const remoteUrlText = document.getElementById("remoteUrlText");
   const gridSizeSelect = document.getElementById("gridSizeSelect");
+  const aspectRatioSelect = document.getElementById("aspectRatioSelect");
   const layoutPresetSelect = document.getElementById("layoutPresetSelect");
   const layoutPresetName = document.getElementById("layoutPresetName");
   const saveLayoutPresetBtn = document.getElementById("saveLayoutPresetBtn");
@@ -319,14 +325,35 @@ const { EVENT_TYPES } = window.SharedEvents;
     youtubeRedirectUriEl.textContent = `http://localhost:${port}/oauth/youtube/callback`;
   }
 
+  // Live port switch (no app restart): keep the renderer's port-derived URLs
+  // in sync and point the WebSocket client at the new listener. The server is
+  // authoritative — on a failed switch it rolls back and the next STATE frame
+  // re-syncs this value.
+  function setAppPort(nextPort) {
+    port = String(nextPort);
+    overlayUrl = `http://localhost:${port}/overlay/overlay.html`;
+    obsUrlLabel.textContent = overlayUrl;
+    if (appPortInput) appPortInput.value = port;
+    if (appOverlayUrlInput) appOverlayUrlInput.value = overlayUrl;
+    twitchRedirectUriEl.textContent = `http://localhost:${port}/oauth/twitch/callback`;
+    daRedirectUriEl.textContent = `http://localhost:${port}/oauth/donationalerts/callback`;
+    youtubeRedirectUriEl.textContent = `http://localhost:${port}/oauth/youtube/callback`;
+    wsClient.setUrl(`ws://localhost:${port}/ws`);
+    // Scene preview is reloaded by the STATE handler once the new listener
+    // is up (selectScene), so we don't point the iframe at a port that is
+    // not yet listening.
+  }
+
   twitchChannelInput.addEventListener("change", () => {
     send(EVENT_TYPES.CMD_SET_APP_CONFIG, { twitchChannel: twitchChannelInput.value.trim() });
   });
 
   savePortBtn.addEventListener("click", () => {
-    const port = Number(appPortInput.value);
-    if (!port || port < 1024 || port > 65535) return;
-    send(EVENT_TYPES.CMD_SET_APP_CONFIG, { port });
+    const next = Number(appPortInput.value);
+    if (!next || next < 1024 || next > 65535) return;
+    if (next === Number(port)) return;
+    setAppPort(next);
+    send(EVENT_TYPES.CMD_SET_APP_CONFIG, { port: next });
   });
 
   if (saveHudHotkeyBtn && hudHotkeyInput) {
@@ -1962,14 +1989,18 @@ const { EVENT_TYPES } = window.SharedEvents;
     switch (msg.type) {
       case EVENT_TYPES.STATE:
         state.applySnapshot(msg.payload);
+        if (msg.payload.port && Number(msg.payload.port) !== Number(port)) {
+          setAppPort(msg.payload.port);
+        }
         if (msg.payload.remoteUrl) {
           remoteUrlText.textContent = msg.payload.remoteUrl;
           remoteUrlHint.hidden = false;
         }
         wsClient.setStatuses(msg.payload.connectionStatus);
         gridSizeSelect.value = String(state.editorPrefs.gridSize || 0);
+        aspectRatioSelect.value = state.editorPrefs.aspectRatio || "16:9";
         canvasEditor.applyThemeToCanvas(state.appearance.tokens, state.appearance.activeThemeId);
-        canvasEditor.applyGridToCanvas();
+        canvasEditor.applyCanvasRatio();
         renderThemeGrid();
         renderLayoutPresets();
         renderLibrary();
@@ -2001,7 +2032,8 @@ const { EVENT_TYPES } = window.SharedEvents;
       case EVENT_TYPES.EDITOR_PREFS_UPDATE:
         state.editorPrefs = msg.payload;
         gridSizeSelect.value = String(state.editorPrefs.gridSize || 0);
-        canvasEditor.applyGridToCanvas();
+        aspectRatioSelect.value = state.editorPrefs.aspectRatio || "16:9";
+        canvasEditor.applyCanvasRatio();
         break;
       case EVENT_TYPES.HUD_HOTKEY_UPDATE:
         state.hudEditHotkey = (msg.payload && msg.payload.hotkey) || state.hudEditHotkey;

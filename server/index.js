@@ -116,7 +116,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
   let language = db ? db.getLanguage() : "en";
   I18n.setLang(language);
   const serverLog = createLogger(bus, "server");
-  const remoteUrl = `http://${getLocalIp()}:${state.config.port || 8710}/remote`;
+  let remoteUrl = `http://${getLocalIp()}:${state.config.port || 8710}/remote`;
 
   function stateSnapshot() {
     return { ...state.snapshot(), remoteUrl, hudEditMode };
@@ -623,9 +623,18 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
         break;
       }
       case EVENT_TYPES.CMD_SET_APP_CONFIG: {
-        state.setAppConfig(msg.payload || {});
-        restartTwitchChat();
-        broadcast(EVENT_TYPES.STATE, stateSnapshot());
+        const patch = msg.payload || {};
+        const isPortSwitch = patch.port !== undefined && Number(patch.port) !== currentPort();
+        if (isPortSwitch) {
+          switchPort(patch.port);
+          // The channel may be sent together with the port; reconnect Twitch
+          // only for that part (switchPort already broadcasts fresh STATE).
+          if (patch.twitchChannel !== undefined) restartTwitchChat();
+        } else {
+          state.setAppConfig(patch);
+          restartTwitchChat();
+          broadcast(EVENT_TYPES.STATE, stateSnapshot());
+        }
         break;
       }
       case EVENT_TYPES.CMD_SET_ACTIVE_THEME: {
@@ -1024,6 +1033,71 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
     }
 
     return { port, remoteUrl };
+  }
+
+  function currentPort() {
+    return state.config.port || 8710;
+  }
+
+  // Live port switch: re-binds the HTTP + WebSocket listener without an app
+  // restart. The control panel already knows the new port (it updated its
+  // WebSocket target before sending the command) and reconnects on its own;
+  // OBS Browser Sources keep their own URL and must be pointed at the new port
+  // manually.
+  function switchPort(rawPort) {
+    const requested = Number(rawPort);
+    const prev = currentPort();
+    const next =
+      Number.isInteger(requested) && requested >= 1024 && requested <= 65535
+        ? requested
+        : prev;
+
+    if (next === prev && server.listening) {
+      return { ok: true, port: next, remoteUrl };
+    }
+
+    serverLog.info("switching server port", { from: prev, to: next });
+
+    // Persist first so main.js (get-info, OAuth URLs, HUD windows) reads the
+    // new value. The control panel reconnects on its own to the new port (it
+    // already updated its WebSocket target optimistically before sending the
+    // command), so no broadcast is needed here.
+    state.setAppConfig({ port: next });
+    remoteUrl = `http://${getLocalIp()}:${next}/remote`;
+
+    wss.clients.forEach((client) => {
+      try {
+        client.close();
+      } catch {
+        /* ignore */
+      }
+    });
+    if (typeof server.closeIdleConnections === "function") server.closeIdleConnections();
+
+    server.close(() => {
+      const onError = (err) => {
+        server.removeListener("listening", onListening);
+        serverLog.error("port switch failed, reverting", { port: next, error: err.message });
+        state.setAppConfig({ port: prev });
+        remoteUrl = `http://${getLocalIp()}:${prev}/remote`;
+        server.once("error", (err2) => serverLog.error("rollback listen failed", { error: err2.message }));
+        server.once("listening", () => {
+          serverLog.success("re-listening on previous port", { url: `http://localhost:${prev}` });
+          broadcast(EVENT_TYPES.STATE, stateSnapshot());
+        });
+        server.listen(prev);
+      };
+      const onListening = () => {
+        server.removeListener("error", onError);
+        serverLog.success("overlay + control bus listening", { url: `http://localhost:${next}` });
+        serverLog.success("web remote ready", { url: remoteUrl });
+      };
+      server.once("error", onError);
+      server.once("listening", onListening);
+      server.listen(next);
+    });
+
+    return { ok: true, port: next, remoteUrl };
   }
 
   function importConfig(newConfig) {
