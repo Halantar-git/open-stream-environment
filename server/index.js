@@ -386,16 +386,15 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
         pendingVideoTarget = null;
 
         // Заставка (видео/картинка/GIF или стандартная) проигрывается при
-        // переходах: start → main (интро), → brb/talk/end/wheel/poll.
-        // Приоритет: файл сцены → общий файл → стандартная.
+        // переходах: start → main (интро), возврат brb/talk/end/wheel/poll → main
+        // и вход → brb/talk/end/wheel/poll. Приоритет: файл сцены → общий файл
+        // → стандартная.
         const current = state.runtime.activeScene;
+        const RETURN_SPLASH = ["start", "brb", "talk", "end", "wheel", "poll"];
+        const ENTER_SPLASH = ["brb", "talk", "end", "wheel", "poll"];
         let splashScene = "";
-        if (scene === "main" && current === "start") splashScene = "start";
-        else if (scene === "brb") splashScene = "brb";
-        else if (scene === "talk") splashScene = "talk";
-        else if (scene === "end") splashScene = "end";
-        else if (scene === "wheel") splashScene = "wheel";
-        else if (scene === "poll") splashScene = "poll";
+        if (scene === "main" && RETURN_SPLASH.includes(current)) splashScene = current;
+        else if (ENTER_SPLASH.includes(scene)) splashScene = scene;
         const sceneSplashFile = splashScene
           ? (state.config.scenes[splashScene] && state.config.scenes[splashScene].splashFile) || ""
           : "";
