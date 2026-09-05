@@ -38,10 +38,10 @@
 })(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
   "use strict";
 
-  const DEFAULT_PRIMARY = "#d0bcff";
-  const DEFAULT_SECONDARY = "#ccc2dc";
-  const DEFAULT_TEXT = "#e6e1e5";
-  const DEFAULT_MUTED = "#cac4d0";
+  const DEFAULT_PRIMARY = "#94cbf9";
+  const DEFAULT_SECONDARY = "#aac6e3";
+  const DEFAULT_TEXT = "#e9eaec";
+  const DEFAULT_MUTED = "#c2c5cb";
 
   class WidgetMd3HoloAlert extends BaseWidget {
     constructor(config, context) {

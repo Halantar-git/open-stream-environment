@@ -484,11 +484,31 @@
   // re-evaluate shouldMount/resolveRenderType) without a fresh STATE frame.
   let currentLayout = [];
 
+  // The theme preview window loads the same overlay with ?themePreview=1; only
+  // there do we apply the editor's unsaved draft (never on the OBS/HUD overlay).
+  const isThemePreview = /themePreview=1/.test(location.search);
+  let lastAppearance = null;
+
   // ---- theme ----
+  function applyCustomCss(css) {
+    let style = document.getElementById("ose-custom-theme-css");
+    if (!css) {
+      if (style) style.remove();
+      return;
+    }
+    if (!style) {
+      style = document.createElement("style");
+      style.id = "ose-custom-theme-css";
+      document.head.appendChild(style);
+    }
+    style.textContent = css;
+  }
+
   function applyTheme(appearance) {
     if (!appearance || !appearance.tokens) return;
     const root = document.documentElement;
     Object.entries(appearance.tokens).forEach(([k, v]) => root.style.setProperty(k, v));
+    applyCustomCss(appearance.customCss || "");
     document.body.dataset.decoration = appearance.tokens["--panel-decoration"] || "none";
     document.body.dataset.theme = appearance.activeThemeId || "";
     // `context.theme` gates the 3D (Grim HEX) widgets only. When the 3D
@@ -499,6 +519,20 @@
     context.activeThemeId = appearance.activeThemeId || "";
     context.enabled3d = appearance.enabled3d || {};
     if (wheelSectors.length) drawWheel();
+  }
+
+  function applyDraftTheme(draft) {
+    if (!draft || draft.clear || !draft.tokens) {
+      if (lastAppearance) applyTheme(lastAppearance);
+      return;
+    }
+    applyTheme({
+      ...(lastAppearance || {}),
+      tokens: draft.tokens,
+      customCss: draft.customCss || "",
+      activeThemeId: draft.themeId || (lastAppearance && lastAppearance.activeThemeId) || "",
+      activeThemeId3d: "",
+    });
   }
 
   // ---- render mode + theme isolation -------
@@ -665,6 +699,7 @@
         }
         connectionStatus = p.connectionStatus || connectionStatus;
         currentLayout = p.layout || [];
+        lastAppearance = p.appearance || lastAppearance;
         applyTheme(p.appearance);
         if (OW.HudEditor && p.hudEditMode !== undefined) OW.HudEditor.setEnabled(!!p.hudEditMode);
         manager.syncLayout(currentLayout);
@@ -677,9 +712,16 @@
         if (OW.HudEditor) OW.HudEditor.refresh();
         break;
       case EVENT_TYPES.THEME_UPDATE:
+        lastAppearance = msg.payload || lastAppearance;
         applyTheme(msg.payload);
         manager.syncLayout(currentLayout);
         if (OW.HudEditor) OW.HudEditor.refresh();
+        break;
+      case EVENT_TYPES.THEME_DRAFT_PREVIEW:
+        if (isThemePreview) {
+          applyDraftTheme(msg.payload);
+          manager.syncLayout(currentLayout);
+        }
         break;
       case EVENT_TYPES.STAT_UPDATE:
         state.stats = msg.payload || state.stats;

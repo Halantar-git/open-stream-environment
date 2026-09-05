@@ -1,0 +1,73 @@
+/*
+ * Copyright (C) 2026  Halantar
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://gnu.org>.
+ */
+
+html, body { margin: 0; min-height: 100%; background: transparent; }
+body { padding: 40px 24px; box-sizing: border-box; }
+
+.samples {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.sample {
+  background: var(--panel-bg, var(--md-surface-container));
+  backdrop-filter: blur(var(--panel-blur, 20px));
+  -webkit-backdrop-filter: blur(var(--panel-blur, 20px));
+  border: var(--panel-border, 1px solid var(--md-outline-variant));
+  border-radius: var(--panel-radius, 24px);
+  box-shadow: var(--panel-glow, 0 24px 48px rgba(0,0,0,0.45));
+  color: var(--md-on-surface);
+  font-family: var(--font-body);
+  padding: 16px 18px;
+}
+
+/* ---- Alert ---- */
+.sample-alert { display: flex; align-items: center; gap: 14px; }
+.sample-alert__icon {
+  width: 40px; height: 40px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  font-size: 20px;
+}
+.sample-alert__title { font-family: var(--font-display); font-weight: 700; font-size: 15px; }
+.sample-alert__text { color: var(--md-on-surface-variant); font-size: 13px; margin-top: 2px; }
+
+/* ---- Chat ---- */
+.sample-chat { display: flex; flex-direction: column; gap: 8px; }
+.sample-chat__row { display: flex; gap: 8px; font-size: 13px; }
+.sample-chat__row .user { color: var(--md-primary); font-weight: 600; }
+.sample-chat__row .msg { color: var(--md-on-surface); }
+
+/* ---- Goal ---- */
+.sample-goal { display: flex; flex-direction: column; gap: 10px; }
+.sample-goal__head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+.sample-goal__head .num { font-family: var(--font-mono); color: var(--md-on-surface-variant); }
+.sample-goal__track { height: 10px; border-radius: 999px; background: var(--md-surface-container-highest); overflow: hidden; }
+.sample-goal__fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--md-secondary), var(--md-primary)); }
+
+/* ---- Poll ---- */
+.sample-poll { display: flex; flex-direction: column; gap: 10px; }
+.sample-poll__title { font-family: var(--font-display); font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+.sample-poll__bar { display: grid; grid-template-columns: 110px 1fr 40px; align-items: center; gap: 10px; font-size: 12px; }
+.sample-poll__bar .track { height: 10px; border-radius: 999px; background: var(--md-surface-container-highest); overflow: hidden; }
+.sample-poll__bar .fill { height: 100%; border-radius: 999px; background: var(--md-tertiary); }
+.sample-poll__bar b { font-family: var(--font-mono); text-align: right; color: var(--md-on-surface-variant); }

@@ -161,7 +161,7 @@
       ctx.fillStyle = readCssVar("--md-surface-container") || "#1b1826";
       ctx.fill();
       ctx.fillStyle = readCssVar("--md-on-surface") || "#fff";
-      ctx.font = "700 54px 'JetBrains Mono', 'IBM Plex Mono', monospace";
+      ctx.font = "700 54px " + (readCssVar("--font-mono") || "'JetBrains Mono', 'IBM Plex Mono', monospace");
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(String(total), cx, cy);

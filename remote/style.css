@@ -207,6 +207,29 @@ body {
   border-color: var(--md-error);
 }
 
+.action-btn--main {
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  border-color: var(--md-primary);
+}
+
+.action-btn--start {
+  background: #2ea043;
+  color: #ffffff;
+  border-color: #2ea043;
+}
+
+.action-btn--end {
+  color: var(--md-error);
+  border-color: color-mix(in srgb, var(--md-error) 45%, var(--md-outline-variant));
+}
+
+.action-btn--end:active {
+  background: var(--md-error-container);
+  color: var(--md-on-error-container);
+  border-color: var(--md-error);
+}
+
 .action-btn--icon {
   display: inline-flex;
   align-items: center;

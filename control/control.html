@@ -41,6 +41,7 @@
       <nav class="topbar__tabs" id="tabs">
         <button class="topbar__tab is-active" data-view="editor" data-i18n="nav.editor">Редактор</button>
         <button class="topbar__tab" data-view="scenes" data-i18n="nav.scenes">Сцены</button>
+        <button class="topbar__tab" data-view="splashes" data-i18n="nav.splashes">Заставки</button>
         <button class="topbar__tab" data-view="settings" data-i18n="nav.settings">Настройки</button>
       </nav>
       <div class="topbar__actions">
@@ -232,6 +233,15 @@
       </aside>
     </section>
 
+    <section class="view" id="view-splashes" hidden>
+      <div class="settings">
+        <div class="settings__card md-card">
+          <h2 data-i18n="scenes.splashSettings">Заставки</h2>
+          <div id="splashSettingsForm"></div>
+        </div>
+      </div>
+    </section>
+
     <section class="view" id="view-settings" hidden>
       <div class="settings">
         <div class="settings__card md-card">
@@ -240,8 +250,9 @@
           <div class="theme-grid" id="themeGrid"></div>
           <div class="settings__actions">
             <button class="md-button md-button--outlined" id="newThemeBtn" data-i18n="settings.createTheme">Создать свою тему</button>
+            <button class="md-button md-button--outlined" id="importThemeBtn" data-i18n="themeEditor.importTheme">Импорт темы</button>
           </div>
-          <div class="theme-editor" id="themeEditor" hidden></div>
+
         </div>
 
         <div class="settings__card md-card">
@@ -412,6 +423,8 @@
           <div class="md-field"><label>Talk</label><input type="text" id="obsSceneTalk" placeholder="Разговор" /></div>
           <div class="md-field"><label>End</label><input type="text" id="obsSceneEnd" placeholder="Конец" /></div>
           <div class="md-field"><label>Wheel</label><input type="text" id="obsSceneWheel" placeholder="Колесо" /></div>
+          <div class="md-field"><label>Opening</label><input type="text" id="obsSceneVideo" placeholder="Заставка" /></div>
+          <div class="md-field"><label>Poll</label><input type="text" id="obsScenePoll" placeholder="Голосование" /></div>
           <p class="settings__desc" data-i18n="settings.obsCommands">Кастомные OBS команды (RAW Requests, obs-websocket v5).</p>
           <div class="obs-commands" id="obsCommandsList"></div>
           <div class="settings__actions">
@@ -468,6 +481,7 @@
             <div class="md-field"><label data-i18n="settings.streamdeckIconBrb">Иконка «BRB»</label><div id="streamdeckIconBrb"></div></div>
             <div class="md-field"><label data-i18n="settings.streamdeckIconWheel">Иконка «Колесо»</label><div id="streamdeckIconWheel"></div></div>
             <div class="md-field"><label data-i18n="settings.streamdeckIconTalk">Иконка «Разговор»</label><div id="streamdeckIconTalk"></div></div>
+            <div class="md-field"><label data-i18n="settings.streamdeckIconMain">Иконка «Main»</label><div id="streamdeckIconMain"></div></div>
             <div class="md-field"><label data-i18n="settings.streamdeckIconEnd">Иконка «Конец»</label><div id="streamdeckIconEnd"></div></div>
           </div>
         </div>

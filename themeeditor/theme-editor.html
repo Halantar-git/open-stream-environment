@@ -1,0 +1,48 @@
+<!--
+  Copyright (C) 2026  Halantar
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <https://gnu.org>.
+-->
+
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&family=PT+Sans+Caption:wght@400;700&family=Roboto+Condensed:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=block"
+    rel="stylesheet"
+  />
+  <title>Редактор темы</title>
+  <link rel="stylesheet" href="../shared/theme.css" />
+  <link rel="stylesheet" href="theme-editor.css" />
+</head>
+<body>
+  <header class="tw-header">
+    <span class="tw-header__title" id="titleLabel">Редактор темы</span>
+    <span class="tw-header__status" id="statusLabel"></span>
+    <button class="md-button md-button--filled" id="saveBtn">Сохранить</button>
+    <button class="md-button md-button--text" id="cancelBtn">Отмена</button>
+  </header>
+  <main class="tw-body" id="form"></main>
+
+  <script src="../shared/events.js"></script>
+  <script src="../shared/i18n.js"></script>
+  <script src="../shared/widget-catalog.js"></script>
+  <script src="../shared/theme-engine.js"></script>
+  <script src="../shared/themes.js"></script>
+  <script src="theme-editor.js"></script>
+</body>
+</html>

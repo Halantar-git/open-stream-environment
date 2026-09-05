@@ -320,4 +320,43 @@ describe("AppState config + runtime", () => {
     expect(snap.obs.cameraAngles).toHaveLength(1);
     expect(snap.streamdeck.icons.scene).toBe("media/x.png");
   });
+
+  test("saveCustomTheme сохраняет гранулярные переопределения и генерирует токены", () => {
+    const theme = state.saveCustomTheme({
+      name: "Моя",
+      seeds: {
+        primary: "#111111", secondary: "#222222", tertiary: "#333333", surfaceSeed: "#444444",
+        shapeMode: "angular", fontPreset: "orbital",
+        fontDisplay: '"Arial", sans-serif',
+        panelRadius: "10px",
+        panelBorderWidth: "2px",
+        panelBorderColor: "#ff0000",
+        panelGlowColor: "#00ff00",
+        panelGlowStrength: 60,
+        customCss: ".x { color: red; }",
+      },
+    });
+
+    expect(theme.seeds.fontDisplay).toBe('"Arial", sans-serif');
+    expect(theme.seeds.panelRadius).toBe("10px");
+    expect(theme.seeds.panelBorderWidth).toBe("2px");
+    expect(theme.seeds.panelBorderColor).toBe("#ff0000");
+    expect(theme.seeds.panelGlowColor).toBe("#00ff00");
+    expect(theme.seeds.panelGlowStrength).toBe(60);
+    expect(theme.seeds.customCss).toBe(".x { color: red; }");
+    expect(theme.tokens["--panel-radius"]).toBe("10px");
+    expect(theme.tokens["--panel-border"]).toBe("2px solid #ff0000");
+    expect(theme.tokens["--panel-glow"]).toMatch(/^0 0 /);
+  });
+
+  test("duplicateCustomTheme создаёт копию с новым id и именем", () => {
+    const theme = state.saveCustomTheme({ name: "Оригинал", seeds: { primary: "#111111", secondary: "#222222", tertiary: "#333333" } });
+    const copy = state.duplicateCustomTheme(theme.id);
+
+    expect(copy).toBeTruthy();
+    expect(copy.id).not.toBe(theme.id);
+    expect(copy.name).toBe("Оригинал (копия)");
+    expect(copy.tokens).toEqual(theme.tokens);
+    expect(state.findCustomTheme(copy.id)).toBeTruthy();
+  });
 });

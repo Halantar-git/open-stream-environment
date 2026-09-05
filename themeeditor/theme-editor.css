@@ -1,0 +1,96 @@
+/*
+ * Copyright (C) 2026  Halantar
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://gnu.org>.
+ */
+
+html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: var(--md-on-surface); font-family: var(--font-body); overflow: hidden; }
+body { display: flex; flex-direction: column; }
+
+.tw-header {
+  flex-shrink: 0;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  background: var(--md-surface-container-low);
+  border-bottom: 1px solid var(--md-outline-variant);
+}
+.tw-header__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tw-header__status {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--md-on-surface-variant);
+  font-size: 12px;
+}
+
+.tw-body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+/* ---- Theme form (moved out of the control panel) ---- */
+.theme-editor__colors { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.theme-editor__color { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+.theme-editor__color label { font-size: 11px; color: var(--md-on-surface-variant); }
+.theme-editor__color input[type="color"] {
+  width: 44px; height: 32px; border-radius: var(--shape-sm); border: 1px solid var(--md-outline-variant);
+  background: none; padding: 0; cursor: pointer;
+}
+.theme-editor__row { display: flex; gap: 10px; }
+.theme-editor__row .md-field { flex: 1; }
+.theme-editor select {
+  font-family: var(--font-body); font-size: 13px; color: var(--md-on-surface); background: var(--md-surface-container-highest);
+  border: 1px solid var(--md-outline-variant); border-radius: var(--shape-sm); padding: 9px 10px; width: 100%;
+}
+.theme-editor__section { display: flex; flex-direction: column; gap: 8px; }
+.theme-editor__section-title {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--md-on-surface-variant);
+}
+.theme-editor__grid { display: grid; gap: 10px; }
+.theme-editor__grid--3 { grid-template-columns: repeat(3, 1fr); }
+.theme-editor__grid--2 { grid-template-columns: repeat(2, 1fr); }
+.theme-editor__color-row { display: flex; align-items: center; gap: 8px; }
+.theme-editor__color-row input[type="color"] {
+  width: 42px; height: 30px; border: 1px solid var(--md-outline-variant); border-radius: var(--shape-sm);
+  background: none; padding: 0; cursor: pointer; flex-shrink: 0;
+}
+.theme-editor__auto { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--md-on-surface-variant); cursor: pointer; white-space: nowrap; }
+.theme-editor__glow { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
+.theme-editor__glow-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.theme-editor__glow-label { font-size: 11px; color: var(--md-on-surface-variant); }
+.theme-editor__glow-controls { display: flex; align-items: center; gap: 10px; }
+.theme-editor__glow-controls input[type="color"] {
+  width: 42px; height: 30px; border: 1px solid var(--md-outline-variant); border-radius: var(--shape-sm);
+  background: none; padding: 0; cursor: pointer; flex-shrink: 0;
+}
+.theme-editor__glow-controls input[type="range"] { flex: 1; accent-color: var(--md-primary); }
+.theme-editor__glow-value { min-width: 40px; text-align: right; font-size: 11px; color: var(--md-on-surface-variant); font-variant-numeric: tabular-nums; }
+.theme-editor__reset { display: flex; justify-content: flex-end; }
+.theme-editor__actions { display: flex; flex-wrap: wrap; gap: 10px; }

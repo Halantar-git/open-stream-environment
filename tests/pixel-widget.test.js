@@ -114,14 +114,20 @@ afterEach(() => {
 });
 
 describe("WidgetPixelCube", () => {
-  test("запускает цикл и рисует только для темы pixel", () => {
+  test("скрыт до алерта, затем запускает цикл и рисует (pixel)", () => {
+    const ctx = makeContext("pixel");
     const parent = makeEl("div");
-    const w = new WidgetPixelCube({ ...cubeItem(), renderType: "canvas" }, makeContext("pixel"));
+    const w = new WidgetPixelCube({ ...cubeItem(), renderType: "canvas" }, ctx);
 
     w.mount(parent);
     expect(w.renderType).toBe("canvas");
     expect(w.element.tagName).toBe("CANVAS");
-    expect(raf.pending()).toBe(1);
+    expect(w.element.style.opacity).toBe("0"); // hidden until the first alert
+    expect(raf.pending()).toBe(0); // no loop while idle
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "donation", durationMs: 5000 });
+    expect(w.element.style.opacity).toBe("1");
+    expect(raf.pending()).toBe(1); // 30 FPS loop resumed for the alert
 
     raf.flush(1000);
     expect(w.element._ctx.stroke).toHaveBeenCalled();
@@ -139,7 +145,7 @@ describe("WidgetPixelCube", () => {
     w.unmount();
   });
 
-  test("pop активируется по событию чата/доната", () => {
+  test("pop активируется только по алерту-донату", () => {
     const ctx = makeContext("pixel");
     const parent = makeEl("div");
     const w = new WidgetPixelCube({ ...cubeItem(), renderType: "canvas" }, ctx);
@@ -147,6 +153,9 @@ describe("WidgetPixelCube", () => {
 
     expect(w._popUntil).toBe(0);
     ctx.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "x", message: "hi" });
+    expect(w._popUntil).toBe(0); // чат больше не дёргает куб
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "donation" });
     expect(w._popUntil).toBeGreaterThan(0);
 
     w.unmount();

@@ -66,6 +66,7 @@ function collectReferencedMedia(config, layout) {
 
   scan(config && config.soundboard);
   scan(config && config.streamdeck);
+  scan(config && config.scenes); // сцены: видео-заставки (start/brb/end.splashFile)
   if (Array.isArray(layout)) scan(layout);
   return refs;
 }

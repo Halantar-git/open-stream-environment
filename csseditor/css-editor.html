@@ -1,0 +1,69 @@
+<!--
+  Copyright (C) 2026  Halantar
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <https://gnu.org>.
+-->
+
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>CSS темы</title>
+  <link rel="stylesheet" href="../shared/theme.css" />
+  <link rel="stylesheet" href="css-editor.css" />
+  <script src="../shared/css-editor-core.js"></script>
+</head>
+<body>
+  <header class="csswin-header">
+    <span class="csswin-header__title" id="titleLabel">CSS темы</span>
+    <span class="csswin-header__status" id="statusLabel"></span>
+    <button class="csswin-done" id="doneBtn">Готово</button>
+  </header>
+
+  <div class="csswin-toolbar">
+    <button class="csswin-btn" id="undoBtn" title="">↶</button>
+    <button class="csswin-btn" id="redoBtn" title="">↷</button>
+    <span class="csswin-toolbar__sep"></span>
+    <button class="csswin-btn" id="selectAllBtn"></button>
+    <button class="csswin-btn" id="clearBtn"></button>
+    <button class="csswin-btn" id="copyBtn"></button>
+    <span class="csswin-toolbar__sep"></span>
+    <button class="csswin-btn" id="findBtn"></button>
+    <button class="csswin-btn" id="replaceBtn"></button>
+  </div>
+
+  <div class="csswin-findbar" id="findBar" hidden>
+    <input class="csswin-input" id="findInput" type="text" placeholder="">
+    <button class="csswin-btn" id="findPrevBtn">↑</button>
+    <button class="csswin-btn" id="findNextBtn">↓</button>
+    <span class="csswin-toolbar__sep"></span>
+    <input class="csswin-input" id="replaceInput" type="text" placeholder="">
+    <button class="csswin-btn" id="replaceOneBtn"></button>
+    <button class="csswin-btn" id="replaceAllBtn"></button>
+    <button class="csswin-btn csswin-btn--close" id="closeFindBtn">✕</button>
+  </div>
+
+  <div class="csswin-body">
+    <div id="editorWrap"></div>
+    <div class="csswin-hint" id="hintLabel"></div>
+  </div>
+
+  <div class="csswin-statusbar">
+    <span id="posLabel"></span>
+    <span id="countLabel"></span>
+  </div>
+
+  <script type="module" src="css-editor.js"></script>
+</body>
+</html>

@@ -37,13 +37,13 @@ export function createStateManager() {
     twitchEnabled: true,
     donationAlertsEnabled: true,
     youtubeEnabled: true,
-    obs: { enabled: false, host: "127.0.0.1", port: 4455, password: "", sceneMap: { main: "", start: "", brb: "", end: "", wheel: "" } },
+    obs: { enabled: false, host: "127.0.0.1", port: 4455, password: "", sceneMap: { main: "", start: "", brb: "", talk: "", end: "", wheel: "", video: "", poll: "" } },
     soundboard: { enabled: true, volume: 0.8, queueMode: false, sounds: [] },
     tts: { enabled: true, volume: 0.9, rate: 1, lang: "ru-RU", voice: "" },
     streamdeck: { icons: { start: "", brb: "", wheel: "", talk: "", end: "" } },
     selectedId: null,
     pendingAdd: null,
-    appearance: { activeThemeId: "nebula", enable3d: false, activeThemeId3d: "", enabled3d: {}, tokens: {}, themes: [] },
+    appearance: { activeThemeId: "nebula", enable3d: false, activeThemeId3d: "", enabled3d: {}, tokens: {}, customCss: "", themes: [] },
     editorPrefs: { gridSize: 5, snapEnabled: true, aspectRatio: "16:9" },
     hudEditHotkey: "Control+Shift+H",
     hudDisplayId: null,
@@ -52,6 +52,7 @@ export function createStateManager() {
     chatHud: { width: 360, height: 560, x: null, y: null, opacity: 70, fontSize: 14 },
     editingThemeId: null,
     scenes: {},
+    splash: { file: "" },
     topDonation: { user: "", amount: 0, currency: "RUB" },
     stats: { followerCount: null, subscriberCount: null },
     deathCount: 0,
@@ -92,6 +93,7 @@ export function createStateManager() {
     state.chatHudDisplayId = payload.chat_hud_display_id != null ? payload.chat_hud_display_id : null;
     state.chatHud = payload.chatHud || state.chatHud;
     state.scenes = payload.scenes || state.scenes;
+    state.splash = payload.splash || state.splash;
     state.topDonation = payload.topDonation || state.topDonation;
     state.stats = payload.stats || state.stats;
     state.deathCount = payload.deathCount ?? state.deathCount;

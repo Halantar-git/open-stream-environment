@@ -125,34 +125,114 @@
     },
   };
 
+  const SHAPE_MODES = ["rounded", "angular", "sharp", "soft", "pill", "brackets4", "hazard"];
+
   function shapeTokens(mode, primaryHex, surfaceContainerHex, outlineVariantHex) {
-    if (mode === "angular") {
-      return {
-        "--panel-radius": "2px",
-        "--panel-clip": "polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%)",
-        "--panel-decoration": "brackets2",
-        "--panel-glow": `0 0 16px ${hexToRgba(primaryHex, 0.22)}, inset 0 0 24px ${hexToRgba(primaryHex, 0.05)}`,
-        "--panel-bg": surfaceContainerHex,
-        "--panel-blur": "0px",
-        "--panel-border": `1px solid ${outlineVariantHex}`,
-        "--alert-enter-easing": "cubic-bezier(0.175, 0.885, 0.32, 1.2)",
-        "--alert-enter-duration": "350ms",
-      };
-    }
-    return {
+    const glass = hexToRgba(surfaceContainerHex, 0.82);
+    const base = {
       "--panel-radius": "24px",
       "--panel-clip": "none",
       "--panel-decoration": "none",
       "--panel-glow": "0 24px 48px rgba(0,0,0,0.45)",
-      "--panel-bg": hexToRgba(surfaceContainerHex, 0.82),
+      "--panel-bg": glass,
       "--panel-blur": "20px",
       "--panel-border": "1px solid rgba(255, 255, 255, 0.12)",
       "--alert-enter-easing": "cubic-bezier(0.05, 0.7, 0.1, 1)",
       "--alert-enter-duration": "480ms",
     };
+
+    switch (mode) {
+      case "angular":
+        return {
+          ...base,
+          "--panel-radius": "2px",
+          "--panel-clip": "polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%)",
+          "--panel-decoration": "brackets2",
+          "--panel-glow": `0 0 16px ${hexToRgba(primaryHex, 0.22)}, inset 0 0 24px ${hexToRgba(primaryHex, 0.05)}`,
+          "--panel-bg": surfaceContainerHex,
+          "--panel-blur": "0px",
+          "--panel-border": `1px solid ${outlineVariantHex}`,
+          "--alert-enter-easing": "cubic-bezier(0.175, 0.885, 0.32, 1.2)",
+          "--alert-enter-duration": "350ms",
+        };
+      case "sharp":
+        return {
+          ...base,
+          "--panel-radius": "0px",
+          "--panel-glow": "0 1px 3px rgba(0,0,0,0.4)",
+          "--panel-bg": surfaceContainerHex,
+          "--panel-blur": "0px",
+          "--panel-border": `1px solid ${outlineVariantHex}`,
+        };
+      case "soft":
+        return {
+          ...base,
+          "--panel-radius": "12px",
+          "--panel-bg": hexToRgba(surfaceContainerHex, 0.72),
+          "--panel-blur": "12px",
+          "--panel-border": "1px solid rgba(255, 255, 255, 0.10)",
+        };
+      case "pill":
+        return {
+          ...base,
+          "--panel-radius": "999px",
+          "--panel-blur": "16px",
+        };
+      case "brackets4":
+        return {
+          ...base,
+          "--panel-radius": "8px",
+          "--panel-decoration": "brackets4",
+          "--panel-glow": `0 0 14px ${hexToRgba(primaryHex, 0.2)}, inset 0 0 20px ${hexToRgba(primaryHex, 0.05)}`,
+          "--panel-bg": surfaceContainerHex,
+          "--panel-blur": "0px",
+          "--panel-border": `1px solid ${outlineVariantHex}`,
+          "--alert-enter-easing": "cubic-bezier(0.175, 0.885, 0.32, 1.2)",
+          "--alert-enter-duration": "350ms",
+        };
+      case "hazard":
+        return {
+          ...base,
+          "--panel-radius": "4px",
+          "--panel-decoration": "hazard",
+          "--panel-glow": `0 0 14px ${hexToRgba(primaryHex, 0.22)}, inset 0 0 20px ${hexToRgba(primaryHex, 0.04)}`,
+          "--panel-bg": surfaceContainerHex,
+          "--panel-blur": "0px",
+          "--panel-border": `1px solid ${outlineVariantHex}`,
+          "--alert-enter-easing": "cubic-bezier(0.175, 0.885, 0.32, 1.2)",
+          "--alert-enter-duration": "350ms",
+        };
+      default:
+        return base;
+    }
   }
 
-  // seeds: { primary, secondary, tertiary, surfaceSeed, shapeMode: 'rounded'|'angular', fontPreset }
+  // Rebuild `--panel-border` from optional granular width/style/color overrides
+  // while keeping the derived default for whichever part is left blank.
+  function overridePanelBorder(current, width, style, color) {
+    const parts = String(current || "1px solid rgba(255,255,255,0.12)").split(" ");
+    const w = (width && String(width).trim()) || parts[0] || "1px";
+    const s = (style && String(style).trim()) || parts[1] || "solid";
+    const c = (color && String(color).trim()) || parts.slice(2).join(" ") || "rgba(255,255,255,0.12)";
+    return `${w} ${s} ${c}`;
+  }
+
+  // Build `--panel-glow` from a color + intensity (0-100). Intensity drives both
+  // opacity and blur/spread, so the picker/slider UI never has to emit raw CSS.
+  function panelGlow(colorHex, strength) {
+    const hex = String(colorHex).replace("#", "").slice(0, 6).padEnd(6, "0");
+    const s = Math.max(0, Math.min(100, Number(strength) || 0));
+    const alpha = Math.round((0.05 + (s / 100) * 0.55) * 255).toString(16).padStart(2, "0");
+    const blur = Math.round(4 + (s / 100) * 40);
+    const spread = Math.round((s / 100) * 8);
+    return `0 0 ${blur}px ${spread}px #${hex}${alpha}`;
+  }
+
+  // seeds: { primary, secondary, tertiary, surfaceSeed, shapeMode, fontPreset,
+  //          fontDisplay?, fontBody?, fontMono?, panelRadius?, panelBorderWidth?,
+  //          panelBorderStyle?, panelBorderColor?, panelGlowColor?, panelGlowStrength?,
+  //          background?, text?, panelOpacity?, panelBlur? }
+  // Optional granular fields override the preset/derived token only when set.
   function buildThemeTokens(seeds) {
     const primary = deriveRole(seeds.primary);
     const secondary = deriveRole(seeds.secondary);
@@ -161,7 +241,7 @@
     const fonts = FONT_PRESETS[seeds.fontPreset] || FONT_PRESETS.nebula;
     const shape = shapeTokens(seeds.shapeMode, seeds.primary, surf.container, surf.outlineVariant);
 
-    return {
+    const tokens = {
       "--md-primary": primary.role,
       "--md-on-primary": primary.onRole,
       "--md-primary-container": primary.container,
@@ -193,9 +273,28 @@
       ...fonts,
       ...shape,
     };
+
+    // Granular overrides (empty = keep the preset/derived value).
+    if (seeds.fontDisplay && String(seeds.fontDisplay).trim()) tokens["--font-display"] = String(seeds.fontDisplay).trim();
+    if (seeds.fontBody && String(seeds.fontBody).trim()) tokens["--font-body"] = String(seeds.fontBody).trim();
+    if (seeds.fontMono && String(seeds.fontMono).trim()) tokens["--font-mono"] = String(seeds.fontMono).trim();
+    if (seeds.panelRadius && String(seeds.panelRadius).trim()) tokens["--panel-radius"] = String(seeds.panelRadius).trim();
+    if (seeds.panelGlowColor && String(seeds.panelGlowColor).trim()) tokens["--panel-glow"] = panelGlow(seeds.panelGlowColor, seeds.panelGlowStrength);
+    if (seeds.background && String(seeds.background).trim()) tokens["--md-surface"] = String(seeds.background).trim();
+    if (seeds.text && String(seeds.text).trim()) tokens["--md-on-surface"] = String(seeds.text).trim();
+    if (seeds.panelBlur && String(seeds.panelBlur).trim()) tokens["--panel-blur"] = String(seeds.panelBlur).trim();
+    const opacity = Number(seeds.panelOpacity);
+    if (seeds.panelOpacity !== "" && seeds.panelOpacity != null && Number.isFinite(opacity)) {
+      tokens["--panel-bg"] = hexToRgba(surf.container, Math.max(0, Math.min(100, opacity)) / 100);
+    }
+    if ((seeds.panelBorderWidth && String(seeds.panelBorderWidth).trim()) || (seeds.panelBorderStyle && String(seeds.panelBorderStyle).trim()) || (seeds.panelBorderColor && String(seeds.panelBorderColor).trim())) {
+      tokens["--panel-border"] = overridePanelBorder(tokens["--panel-border"], seeds.panelBorderWidth, seeds.panelBorderStyle, seeds.panelBorderColor);
+    }
+
+    return tokens;
   }
 
-  const api = { hexToHsl, hslToHex, hexToRgba, deriveRole, deriveSurfaces, buildThemeTokens, FONT_PRESETS };
+  const api = { hexToHsl, hslToHex, hexToRgba, deriveRole, deriveSurfaces, buildThemeTokens, FONT_PRESETS, SHAPE_MODES };
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;

@@ -64,12 +64,14 @@ const { EVENT_TYPES } = window.SharedEvents;
   const tabsEl = document.getElementById("tabs");
   const viewEditor = document.getElementById("view-editor");
   const viewScenes = document.getElementById("view-scenes");
+  const viewSplashes = document.getElementById("view-splashes");
   const viewSettings = document.getElementById("view-settings");
   const libraryListEl = document.getElementById("libraryList");
   const obsUrlLabel = document.getElementById("obsUrlLabel");
   const copyUrlBtn = document.getElementById("copyUrlBtn");
   const appVersionEl = document.getElementById("appVersion");
   if (appVersionEl) appVersionEl.textContent = appVersion ? `v${appVersion}` : "";
+  const statusFabStack = document.getElementById("statusFabStack");
   const remoteUrlHint = document.getElementById("remoteUrlHint");
   const remoteUrlText = document.getElementById("remoteUrlText");
   const gridSizeSelect = document.getElementById("gridSizeSelect");
@@ -79,8 +81,8 @@ const { EVENT_TYPES } = window.SharedEvents;
   const saveLayoutPresetBtn = document.getElementById("saveLayoutPresetBtn");
   const deleteLayoutPresetBtn = document.getElementById("deleteLayoutPresetBtn");
   const themeGridEl = document.getElementById("themeGrid");
-  const themeEditorEl = document.getElementById("themeEditor");
   const newThemeBtn = document.getElementById("newThemeBtn");
+  const importThemeBtn = document.getElementById("importThemeBtn");
   const exportConfigBtn = document.getElementById("exportConfigBtn");
   const importConfigBtn = document.getElementById("importConfigBtn");
   const exportImportStatus = document.getElementById("exportImportStatus");
@@ -117,6 +119,9 @@ const { EVENT_TYPES } = window.SharedEvents;
   const obsSceneTalkInput = document.getElementById("obsSceneTalk");
   const obsSceneEndInput = document.getElementById("obsSceneEnd");
   const obsSceneWheelInput = document.getElementById("obsSceneWheel");
+  const obsSceneVideoInput = document.getElementById("obsSceneVideo");
+  const obsScenePollInput = document.getElementById("obsScenePoll");
+  const splashSettingsFormEl = document.getElementById("splashSettingsForm");
   const obsCommandsList = document.getElementById("obsCommandsList");
   const addObsCommandBtn = document.getElementById("addObsCommandBtn");
   const cameraAnglesList = document.getElementById("cameraAnglesList");
@@ -142,6 +147,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const streamdeckIconBrb = document.getElementById("streamdeckIconBrb");
   const streamdeckIconWheel = document.getElementById("streamdeckIconWheel");
   const streamdeckIconTalk = document.getElementById("streamdeckIconTalk");
+  const streamdeckIconMain = document.getElementById("streamdeckIconMain");
   const streamdeckIconEnd = document.getElementById("streamdeckIconEnd");
   const appPortInput = document.getElementById("appPort");
   const savePortBtn = document.getElementById("savePortBtn");
@@ -219,7 +225,11 @@ const { EVENT_TYPES } = window.SharedEvents;
     setActiveTab(view);
     viewEditor.hidden = targetView !== "editor";
     viewScenes.hidden = targetView !== "scenes";
+    viewSplashes.hidden = targetView !== "splashes";
     viewSettings.hidden = targetView !== "settings";
+    if (statusFabStack) {
+      statusFabStack.style.display = targetView === "settings" || targetView === "splashes" ? "none" : "";
+    }
     if (isWheel) selectScene("wheel");
     if (targetView === "settings") renderStreamEvents();
   }
@@ -287,6 +297,8 @@ const { EVENT_TYPES } = window.SharedEvents;
       obsSceneTalkInput.value = sm.talk || "";
       obsSceneEndInput.value = sm.end || "";
       obsSceneWheelInput.value = sm.wheel || "";
+      obsSceneVideoInput.value = sm.video || "";
+      obsScenePollInput.value = sm.poll || "";
     }
     renderObsCommands();
     renderCameraAngles();
@@ -313,6 +325,7 @@ const { EVENT_TYPES } = window.SharedEvents;
       setSwitchState(daVoiceSwitch, !!state.donationVoice.donationAlerts);
     }
     renderStreamDeckIcons();
+    renderSplashSettings();
     appPortInput.value = port;
     appOverlayUrlInput.value = overlayUrl;
     if (hudHotkeyInput) hudHotkeyInput.value = state.hudEditHotkey || "Control+Shift+H";
@@ -521,6 +534,8 @@ const { EVENT_TYPES } = window.SharedEvents;
   obsSceneTalkInput.addEventListener("change", () => sendObsConfig({ sceneMap: { talk: obsSceneTalkInput.value.trim() } }));
   obsSceneEndInput.addEventListener("change", () => sendObsConfig({ sceneMap: { end: obsSceneEndInput.value.trim() } }));
   obsSceneWheelInput.addEventListener("change", () => sendObsConfig({ sceneMap: { wheel: obsSceneWheelInput.value.trim() } }));
+  obsSceneVideoInput.addEventListener("change", () => sendObsConfig({ sceneMap: { video: obsSceneVideoInput.value.trim() } }));
+  obsScenePollInput.addEventListener("change", () => sendObsConfig({ sceneMap: { poll: obsScenePollInput.value.trim() } }));
 
   function updateObsCommand(id, patch) {
     const commands = (state.obs.customCommands || []).map((c) => (c.id === id ? { ...c, ...patch } : c));
@@ -767,7 +782,69 @@ const { EVENT_TYPES } = window.SharedEvents;
     makeStreamDeckIconField(streamdeckIconBrb, "brb", "media/...png");
     makeStreamDeckIconField(streamdeckIconWheel, "wheel", "media/...png");
     makeStreamDeckIconField(streamdeckIconTalk, "talk", "media/...png");
+    makeStreamDeckIconField(streamdeckIconMain, "main", "media/...png");
     makeStreamDeckIconField(streamdeckIconEnd, "end", "media/...png");
+  }
+
+  function durationSelectHtml(id, value) {
+    const v = Math.max(0, Math.min(30, Number(value) || 0));
+    let opts = `<option value="0" ${v === 0 ? "selected" : ""}>${t("scenes.splashDurationAuto")}</option>`;
+    for (let s = 1; s <= 30; s++) {
+      opts += `<option value="${s}" ${v === s ? "selected" : ""}>${s} ${t("scenes.sec")}</option>`;
+    }
+    return `<select id="${id}">${opts}</select>`;
+  }
+
+  function renderSplashSettings() {
+    if (!splashSettingsFormEl) return;
+    const splash = state.splash || { file: "", duration: 0 };
+    const sceneIds = ["start", "brb", "talk", "end", "wheel", "poll"];
+
+    let html = `
+      <div class="md-field">
+        <label>${t("scenes.globalSplashFile")}</label>
+        <div class="splash-row">
+          <div id="globalSplashFile"></div>
+          ${durationSelectHtml("globalSplashDuration", splash.duration || 0)}
+        </div>
+      </div>
+      <p class="properties__hint" style="margin:0;">${t("scenes.splashDurationHint")}</p>
+      <div class="inspector__title" style="margin-top:10px;">${t("scenes.splashPerScene")}</div>
+    `;
+
+    sceneIds.forEach((id) => {
+      const sc = state.scenes[id] || {};
+      html += `
+        <div class="md-field">
+          <label>${t("scene." + id + "Label")}</label>
+          <div class="splash-row">
+            <div id="splashFile_${id}"></div>
+            ${durationSelectHtml("splashDuration_" + id, sc.splashDuration || 0)}
+          </div>
+        </div>
+      `;
+    });
+
+    splashSettingsFormEl.innerHTML = html;
+
+    splashSettingsFormEl.querySelector("#globalSplashFile").appendChild(
+      makeSoundFileInput(splash.file || "", "media/...mp4/gif", "media", (v) =>
+        send(EVENT_TYPES.CMD_SET_SPLASH_CONFIG, { config: { file: v } })
+      )
+    );
+    splashSettingsFormEl.querySelector("#globalSplashDuration").addEventListener("change", (e) =>
+      send(EVENT_TYPES.CMD_SET_SPLASH_CONFIG, { config: { duration: Number(e.target.value) || 0 } })
+    );
+
+    sceneIds.forEach((id) => {
+      const sc = state.scenes[id] || {};
+      splashSettingsFormEl.querySelector(`#splashFile_${id}`).appendChild(
+        makeSoundFileInput(sc.splashFile || "", "media/...mp4/gif", "media", (v) => sendSceneConfigFor(id, { splashFile: v }))
+      );
+      splashSettingsFormEl.querySelector(`#splashDuration_${id}`).addEventListener("change", (e) =>
+        sendSceneConfigFor(id, { splashDuration: Number(e.target.value) || 0 })
+      );
+    });
   }
 
   function makeSoundFileInput(value, placeholder, kind, onChange) {
@@ -1425,6 +1502,8 @@ const { EVENT_TYPES } = window.SharedEvents;
           theme.builtin
             ? ""
             : `<span class="layer-row__btns">
+                <button class="theme-swatch__btn" data-action="duplicate" title="${escapeAttr(t("themeEditor.duplicate"))}">⧉</button>
+                <button class="theme-swatch__btn" data-action="export" title="${escapeAttr(t("themeEditor.exportTheme"))}">⤓</button>
                 <button class="theme-swatch__btn" data-action="edit" title="${t("common.edit")}">✎</button>
                 <button class="theme-swatch__btn" data-action="delete" title="${t("common.remove")}">${ICONS.trash}</button>
               </span>`
@@ -1446,9 +1525,20 @@ const { EVENT_TYPES } = window.SharedEvents;
       });
     }
     if (!theme.builtin) {
+      card.querySelector('[data-action="duplicate"]').addEventListener("click", (e) => {
+        e.stopPropagation();
+        send(EVENT_TYPES.CMD_DUPLICATE_CUSTOM_THEME, { id: theme.id });
+      });
+      card.querySelector('[data-action="export"]').addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const res = await window.desktop?.exportTheme({ name: theme.name, seeds: theme.seeds });
+        if (!res || res.canceled) return;
+        if (res.ok) showExportImportStatus(t("themeEditor.themeExported", { path: res.filePath }), false);
+        else showExportImportStatus(t("themeEditor.themeExportFailed", { error: res.error }), true);
+      });
       card.querySelector('[data-action="edit"]').addEventListener("click", (e) => {
         e.stopPropagation();
-        openThemeEditor(theme);
+        window.desktop?.openThemeEditor?.({ theme: { id: theme.id, name: theme.name, seeds: theme.seeds } });
       });
       card.querySelector('[data-action="delete"]').addEventListener("click", (e) => {
         e.stopPropagation();
@@ -1507,78 +1597,18 @@ const { EVENT_TYPES } = window.SharedEvents;
     themeGridEl.appendChild(container);
   }
 
-  function openThemeEditor(theme) {
-    state.editingThemeId = theme ? theme.id : null;
-    const seeds = theme && theme.seeds
-      ? theme.seeds
-      : { primary: "#c6b8ff", secondary: "#7ee0d6", tertiary: "#ffb0d8", surfaceSeed: "#8878c8", shapeMode: "rounded", fontPreset: "nebula" };
+  newThemeBtn.addEventListener("click", () => window.desktop?.openThemeEditor?.({ theme: null }));
 
-    themeEditorEl.hidden = false;
-    themeEditorEl.innerHTML = `
-      <div class="md-field"><label>${t("themeEditor.themeName")}</label><input type="text" id="themeName" value="${escapeAttr(theme ? theme.name : t("themeEditor.myTheme"))}"></div>
-      <div class="theme-editor__colors">
-        <div class="theme-editor__color"><label>${t("themeEditor.primary")}</label><input type="color" id="seedPrimary" value="${seeds.primary}"></div>
-        <div class="theme-editor__color"><label>${t("themeEditor.secondary")}</label><input type="color" id="seedSecondary" value="${seeds.secondary}"></div>
-        <div class="theme-editor__color"><label>${t("themeEditor.tertiary")}</label><input type="color" id="seedTertiary" value="${seeds.tertiary}"></div>
-        <div class="theme-editor__color"><label>${t("themeEditor.surface")}</label><input type="color" id="seedSurface" value="${seeds.surfaceSeed}"></div>
-      </div>
-      <div class="theme-editor__row">
-        <div class="md-field"><label>${t("themeEditor.shape")}</label>
-          <select id="seedShape">
-            <option value="rounded" ${seeds.shapeMode !== "angular" ? "selected" : ""}>${t("themeEditor.rounded")}</option>
-            <option value="angular" ${seeds.shapeMode === "angular" ? "selected" : ""}>${t("themeEditor.angular")}</option>
-          </select>
-        </div>
-        <div class="md-field"><label>${t("themeEditor.fonts")}</label>
-          <select id="seedFont">
-            <option value="nebula" ${seeds.fontPreset !== "orbital" ? "selected" : ""}>Manrope / JetBrains Mono (Material You)</option>
-            <option value="orbital" ${seeds.fontPreset === "orbital" ? "selected" : ""}>Orbitron / Rajdhani (Orbital)</option>
-          </select>
-        </div>
-      </div>
-      <div class="settings__actions">
-        <button class="md-button md-button--filled" id="saveThemeBtn">${t("themeEditor.save")}</button>
-        <button class="md-button md-button--text" id="cancelThemeBtn">${t("themeEditor.cancel")}</button>
-      </div>`;
-
-    const previewFromForm = () => {
-      const liveSeeds = {
-        primary: document.getElementById("seedPrimary").value,
-        secondary: document.getElementById("seedSecondary").value,
-        tertiary: document.getElementById("seedTertiary").value,
-        surfaceSeed: document.getElementById("seedSurface").value,
-        shapeMode: document.getElementById("seedShape").value,
-        fontPreset: document.getElementById("seedFont").value,
-      };
-      canvasEditor.applyThemeToCanvas(ThemeEngine.buildThemeTokens(liveSeeds));
-      return liveSeeds;
-    };
-    themeEditorEl.querySelectorAll("input, select").forEach((el) => el.addEventListener("input", previewFromForm));
-
-    document.getElementById("saveThemeBtn").addEventListener("click", () => {
-      // При редактировании существующей темы предупреждаем о перезаписи.
-      if (state.editingThemeId && !confirm(t("themeEditor.overwriteConfirm"))) return;
-      const liveSeeds = previewFromForm();
-      send(EVENT_TYPES.CMD_SAVE_CUSTOM_THEME, {
-        id: state.editingThemeId,
-        name: document.getElementById("themeName").value.trim() || t("themeEditor.myTheme"),
-        seeds: liveSeeds,
-      });
-      closeThemeEditor();
-    });
-    document.getElementById("cancelThemeBtn").addEventListener("click", closeThemeEditor);
-
-    themeEditorEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }
-
-  function closeThemeEditor() {
-    state.editingThemeId = null;
-    themeEditorEl.hidden = true;
-    themeEditorEl.innerHTML = "";
-    canvasEditor.applyThemeToCanvas(state.appearance.tokens, state.appearance.activeThemeId); // revert live-preview back to the actually active theme
-  }
-
-  newThemeBtn.addEventListener("click", () => openThemeEditor(null));
+  importThemeBtn.addEventListener("click", async () => {
+    const res = await window.desktop?.importTheme();
+    if (!res || res.canceled) return;
+    if (res.ok) {
+      send(EVENT_TYPES.CMD_IMPORT_CUSTOM_THEME, { name: res.theme.name, seeds: res.theme.seeds });
+      showExportImportStatus(t("themeEditor.themeImported"), false);
+    } else {
+      showExportImportStatus(t("themeEditor.themeImportFailed", { error: res.error }), true);
+    }
+  });
 
   // ---- export / import ----
 
@@ -1723,6 +1753,10 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   function sendSceneUpdate(patch) {
     send(EVENT_TYPES.CMD_SET_SCENE_CONFIG, { sceneId: state.activeSceneId, patch });
+  }
+
+  function sendSceneConfigFor(sceneId, patch) {
+    send(EVENT_TYPES.CMD_SET_SCENE_CONFIG, { sceneId, patch });
   }
 
   function renderSceneForm() {
@@ -1999,7 +2033,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         wsClient.setStatuses(msg.payload.connectionStatus);
         gridSizeSelect.value = String(state.editorPrefs.gridSize || 0);
         aspectRatioSelect.value = state.editorPrefs.aspectRatio || "16:9";
-        canvasEditor.applyThemeToCanvas(state.appearance.tokens, state.appearance.activeThemeId);
+        canvasEditor.applyThemeToCanvas(state.appearance.tokens, state.appearance.activeThemeId, state.appearance.customCss || "");
         canvasEditor.applyCanvasRatio();
         renderThemeGrid();
         renderLayoutPresets();
@@ -2023,11 +2057,18 @@ const { EVENT_TYPES } = window.SharedEvents;
         break;
       case EVENT_TYPES.THEME_UPDATE:
         state.appearance = msg.payload;
-        if (!state.editingThemeId) canvasEditor.applyThemeToCanvas(state.appearance.tokens, state.appearance.activeThemeId);
+        if (!state.editingThemeId) canvasEditor.applyThemeToCanvas(state.appearance.tokens, state.appearance.activeThemeId, state.appearance.customCss || "");
         renderThemeGrid();
         renderLibrary();
         canvasEditor.renderCanvas();
         canvasEditor.renderLayers();
+        break;
+      case EVENT_TYPES.THEME_DRAFT_PREVIEW:
+        if (msg.payload && !msg.payload.clear && msg.payload.tokens) {
+          canvasEditor.applyThemeToCanvas(msg.payload.tokens, msg.payload.themeId || "", msg.payload.customCss || "");
+        } else {
+          canvasEditor.applyThemeToCanvas(state.appearance.tokens, state.appearance.activeThemeId, state.appearance.customCss || "");
+        }
         break;
       case EVENT_TYPES.EDITOR_PREFS_UPDATE:
         state.editorPrefs = msg.payload;
@@ -2074,6 +2115,7 @@ const { EVENT_TYPES } = window.SharedEvents;
       case EVENT_TYPES.SCENES_UPDATE:
         state.scenes = msg.payload;
         renderSceneForm();
+        renderSplashSettings();
         break;
       case EVENT_TYPES.TOP_DONATION_UPDATE:
         state.topDonation = msg.payload;

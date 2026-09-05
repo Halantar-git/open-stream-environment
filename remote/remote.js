@@ -156,16 +156,22 @@
 
   function renderScenes() {
     sceneGrid.innerHTML = "";
+    const SCENE_CLASS = {
+      main: "action-btn--main",
+      start: "action-btn--start",
+      end: "action-btn--end",
+    };
     [
       [t("scene.startLabel"), "start"],
+      [t("scene.mainLabel"), "main"],
       [t("scene.brbLabel"), "brb"],
       [t("scene.talkLabel"), "talk"],
-      [t("scene.mainLabel"), "main"],
       [t("scene.endLabel"), "end"],
       [t("scene.wheelLabel"), "wheel"],
+      [t("scene.pollLabel"), "poll"],
     ].forEach(([label, scene]) => {
       const btn = document.createElement("button");
-      btn.className = "action-btn" + (scene === activeScene ? " is-active" : "");
+      btn.className = "action-btn" + (SCENE_CLASS[scene] ? " " + SCENE_CLASS[scene] : "") + (scene === activeScene ? " is-active" : "");
       btn.textContent = label;
       btn.addEventListener("click", () => {
         vibrate();

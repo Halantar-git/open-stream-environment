@@ -32,6 +32,7 @@
     GOAL_UPDATE: "goal_update", // { current, target, title, currency }
     CONNECTION_STATUS: "connection_status", // { service, status }
     THEME_UPDATE: "theme_update", // { activeThemeId, enable3d, activeThemeId3d, tokens, themes }
+    THEME_DRAFT_PREVIEW: "theme_draft_preview", // { tokens, customCss, themeId, name, clear? } — live draft for the theme preview window
     EDITOR_PREFS_UPDATE: "editor_prefs_update", // { gridSize, snapEnabled }
     SCENES_UPDATE: "scenes_update", // { start, brb, end }
     TOP_DONATION_UPDATE: "top_donation_update", // { user, amount, currency }
@@ -54,6 +55,7 @@
     CAMERA_ANGLE_UPDATE: "camera_angle_update", // { activeCameraAngle }
     CAMERA_FILTER_UPDATE: "camera_filter_update", // { filterId, active }
     SOUNDBOARD_PLAY: "soundboard_play", // { soundId, title, user, audioFile, imageFile }
+    VIDEO_SPLASH_PLAY: "video_splash_play", // { mediaFile, scene, nextScene } — server -> overlay: play intro/brb/outro splash
     MIC_AUDIO_DATA: "mic_audio_data", // { level, wave, freq } — mic bridge (control -> server -> overlay)
     HUD_EDIT_MODE: "hud_edit_mode", // { enabled } — game HUD overlay entered/left direct-edit mode
     HUD_HOTKEY_UPDATE: "hud_hotkey_update", // { hotkey } — current HUD toggle hotkey (after save)
@@ -87,8 +89,14 @@
     CMD_SET_ENABLED_3D: "cmd_set_enabled_3d", // { type, enabled } — enable/disable an individual 3D widget (фишка)
     CMD_SAVE_CUSTOM_THEME: "cmd_save_custom_theme", // { id?, name, seeds }
     CMD_DELETE_CUSTOM_THEME: "cmd_delete_custom_theme", // { id }
+    CMD_DUPLICATE_CUSTOM_THEME: "cmd_duplicate_custom_theme", // { id }
+    CMD_IMPORT_CUSTOM_THEME: "cmd_import_custom_theme", // { name, seeds }
+    CMD_PREVIEW_THEME_DRAFT: "cmd_preview_theme_draft", // { tokens, customCss, themeId, name, clear? }
     CMD_SET_EDITOR_PREFS: "cmd_set_editor_prefs", // { gridSize?, snapEnabled? }
     CMD_SET_SCENE_CONFIG: "cmd_set_scene_config", // { sceneId, patch }
+    CMD_SET_SPLASH_CONFIG: "cmd_set_splash_config", // { config: { file } } — global fallback splash media
+    VIDEO_SPLASH_ENDED: "video_splash_ended", // overlay -> server: splash video finished/error — advance to pending scene
+    VIDEO_SPLASH_READY: "video_splash_ready", // overlay -> server: (re)connected — replay pending splash if any
     CMD_RESET_TOP_DONATION: "cmd_reset_top_donation",
     CMD_START_GIVEAWAY: "cmd_start_giveaway", // { command }
     CMD_STOP_GIVEAWAY: "cmd_stop_giveaway",

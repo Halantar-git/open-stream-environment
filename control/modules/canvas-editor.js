@@ -811,11 +811,28 @@ export function initCanvasEditor({
   }
 
   // ---- theme + grid (canvas preview only — app chrome stays fixed Nebula) ----
-  function applyThemeToCanvas(tokens, themeId) {
+  function applyThemeToCanvas(tokens, themeId, customCss) {
     if (!tokens) return;
     Object.entries(tokens).forEach(([k, v]) => canvasEl.style.setProperty(k, v));
     canvasEl.dataset.decoration = tokens["--panel-decoration"] || "none";
     canvasEl.dataset.theme = themeId || "";
+    applyCustomCssToCanvas(customCss || "");
+  }
+
+  // Raw custom CSS is scoped to the canvas via @scope so widget-targeting rules
+  // apply inside the preview without leaking onto the control panel chrome.
+  function applyCustomCssToCanvas(css) {
+    let style = document.getElementById("ose-canvas-theme-css");
+    if (!css) {
+      if (style) style.remove();
+      return;
+    }
+    if (!style) {
+      style = document.createElement("style");
+      style.id = "ose-canvas-theme-css";
+      document.head.appendChild(style);
+    }
+    style.textContent = `@scope (#canvas) { ${css} }`;
   }
 
   function parseRatio(value) {
@@ -1087,5 +1104,5 @@ export function initCanvasEditor({
     }
   });
 
-  return { addWidget, renderCanvas, renderLayers, applyThemeToCanvas, applyGridToCanvas, applyCanvasRatio };
+  return { addWidget, renderCanvas, renderLayers, applyThemeToCanvas, applyCustomCssToCanvas, applyGridToCanvas, applyCanvasRatio };
 }

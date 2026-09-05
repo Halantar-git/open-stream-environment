@@ -32,6 +32,13 @@ let splashWindow;
 let chatWindow = null;
 let hudWindow = null;
 let chatHudWindow = null;
+let themePreviewWindow = null;
+let themeSamplesWindow = null;
+let cssEditorWindow = null;
+let cssEditorInit = { css: "", tokens: [], strings: {} };
+let cssEditorParent = null;
+let themeEditorWindow = null;
+let themeEditorInit = { theme: null };
 const widgetEditorWindows = new Map(); // widgetId -> BrowserWindow
 let serverHandle;
 let db;
@@ -256,6 +263,110 @@ function openWidgetEditorWindow(port, widgetId) {
     widgetEditorWindows.delete(widgetId);
   });
   widgetEditorWindows.set(widgetId, win);
+}
+
+function openThemePreviewWindow(port) {
+  if (themePreviewWindow) {
+    themePreviewWindow.focus();
+    return;
+  }
+  const win = new BrowserWindow({
+    width: 1280,
+    height: 720,
+    minWidth: 640,
+    minHeight: 360,
+    backgroundColor: "#000000",
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  // The real overlay, but with a flag so it applies the editor's live draft
+  // (and never the saved theme) while the theme editor is open.
+  win.loadURL(`http://localhost:${port}/overlay/overlay.html?themePreview=1`);
+  win.on("closed", () => {
+    themePreviewWindow = null;
+  });
+  themePreviewWindow = win;
+}
+
+function openThemeSamplesWindow(port) {
+  if (themeSamplesWindow) {
+    themeSamplesWindow.focus();
+    return;
+  }
+  const win = new BrowserWindow({
+    width: 720,
+    height: 900,
+    minWidth: 480,
+    minHeight: 640,
+    backgroundColor: "#000000",
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  win.loadURL(`http://localhost:${port}/overlay/samples.html`);
+  win.on("closed", () => {
+    themeSamplesWindow = null;
+  });
+  themeSamplesWindow = win;
+}
+
+function openCssEditorWindow(init) {
+  cssEditorInit = init || { css: "", tokens: [], strings: {} };
+  if (cssEditorWindow) {
+    cssEditorWindow.focus();
+    cssEditorWindow.webContents.send("css-editor:init", cssEditorInit);
+    return;
+  }
+  const win = new BrowserWindow({
+    width: 900,
+    height: 680,
+    minWidth: 640,
+    minHeight: 480,
+    backgroundColor: "#0e0b17",
+    webPreferences: {
+      preload: path.join(__dirname, "csseditor", "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  win.loadFile(path.join(__dirname, "csseditor", "css-editor.html"));
+  win.on("closed", () => {
+    cssEditorWindow = null;
+    cssEditorInit = { css: "", tokens: [], strings: {} };
+  });
+  cssEditorWindow = win;
+}
+
+function openThemeEditorWindow(port, init) {
+  themeEditorInit = init || { theme: null };
+  if (themeEditorWindow) {
+    themeEditorWindow.focus();
+    themeEditorWindow.webContents.send("theme-editor:init", themeEditorInit);
+    return;
+  }
+  const win = new BrowserWindow({
+    width: 720,
+    height: 820,
+    minWidth: 620,
+    minHeight: 640,
+    backgroundColor: "#0e0b17",
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  win.loadFile(path.join(__dirname, "themeeditor", "theme-editor.html"), {
+    query: { port: String(port) },
+  });
+  win.on("closed", () => {
+    themeEditorWindow = null;
+    themeEditorInit = { theme: null };
+  });
+  themeEditorWindow = win;
 }
 
 // ---- Game HUD overlay (одномониторный режим) ----
@@ -693,16 +804,56 @@ app.whenReady().then(() => {
     openWidgetEditorWindow(serverHandle.state.config.port, widgetId);
   });
 
+  ipcMain.handle("app:open-theme-preview", () => {
+    openThemePreviewWindow(serverHandle.state.config.port);
+  });
+
+  ipcMain.handle("app:open-theme-samples", () => {
+    openThemeSamplesWindow(serverHandle.state.config.port);
+  });
+
+  ipcMain.handle("app:open-theme-editor", (_event, init) => {
+    openThemeEditorWindow(serverHandle.state.config.port, init);
+  });
+
+  ipcMain.handle("theme-editor:get-init", () => themeEditorInit);
+
+  ipcMain.handle("app:open-css-editor", (event, init) => {
+    cssEditorParent = BrowserWindow.fromWebContents(event.sender);
+    openCssEditorWindow(init);
+  });
+
+  ipcMain.handle("css-editor:get-init", () => cssEditorInit);
+
+  ipcMain.on("css-editor:update", (_event, css) => {
+    const target = cssEditorParent && !cssEditorParent.isDestroyed() ? cssEditorParent : mainWindow;
+    if (target && !target.isDestroyed()) {
+      target.webContents.send("css-editor:updated", css);
+    }
+  });
+
+  ipcMain.on("css-editor:close", () => {
+    if (cssEditorWindow) cssEditorWindow.close();
+  });
+
+  ipcMain.on("app:close-current-window", (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) win.close();
+  });
+
   ipcMain.handle("app:pick-sound-file", async (_event, kind) => {
     const isImage = kind === "image";
     const isVideo = kind === "video";
+    const isMedia = kind === "media";
     const filters = isImage
       ? [{ name: "Изображения / GIF", extensions: ["png", "jpg", "jpeg", "gif", "webp"] }]
       : isVideo
         ? [{ name: "Видео", extensions: ["mp4", "webm", "mov"] }]
-        : [{ name: "Аудио", extensions: ["mp3", "wav", "ogg", "m4a", "aac"] }];
+        : isMedia
+          ? [{ name: "Медиа (видео / картинка / GIF)", extensions: ["mp4", "webm", "mov", "png", "jpg", "jpeg", "gif", "webp"] }]
+          : [{ name: "Аудио", extensions: ["mp3", "wav", "ogg", "m4a", "aac"] }];
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
-      title: isImage ? "Выберите картинку / GIF" : isVideo ? "Выберите видео" : "Выберите аудиофайл",
+      title: isImage ? "Выберите картинку / GIF" : isVideo ? "Выберите видео" : isMedia ? "Выберите медиа (видео / картинку / GIF)" : "Выберите аудиофайл",
       filters,
       properties: ["openFile"],
     });
@@ -785,6 +936,42 @@ app.whenReady().then(() => {
       delete parsed._media;
       serverHandle.importConfig(parsed);
       return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle("app:export-theme", async (_event, theme) => {
+    const name = String((theme && theme.name) || "theme").replace(/[^\w\- ]+/g, "").trim() || "theme";
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+      title: "Экспорт темы",
+      defaultPath: `${name}.json`,
+      filters: [{ name: "JSON", extensions: ["json"] }],
+    });
+    if (canceled || !filePath) return { ok: false, canceled: true };
+    try {
+      const payload = { type: "ose-theme", version: 1, name: theme && theme.name, seeds: theme && theme.seeds };
+      fs.writeFileSync(filePath, JSON.stringify(payload, null, 2));
+      return { ok: true, filePath };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle("app:import-theme", async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+      title: "Импорт темы",
+      filters: [{ name: "JSON", extensions: ["json"] }],
+      properties: ["openFile"],
+    });
+    if (canceled || !filePaths[0]) return { ok: false, canceled: true };
+    try {
+      const raw = fs.readFileSync(filePaths[0], "utf-8");
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed.seeds !== "object") {
+        return { ok: false, error: "Неверный формат файла темы" };
+      }
+      return { ok: true, theme: { name: parsed.name, seeds: parsed.seeds } };
     } catch (err) {
       return { ok: false, error: err.message };
     }

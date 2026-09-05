@@ -22,7 +22,7 @@ const crypto = require("crypto");
 const { seal, open } = require("./secret-store");
 const { WIDGET_TYPES } = require("../shared/widget-catalog");
 const { BUILTIN_THEMES } = require("../shared/themes");
-const { buildThemeTokens } = require("../shared/theme-engine");
+const { buildThemeTokens, SHAPE_MODES } = require("../shared/theme-engine");
 const { defaultScenes } = require("../shared/scenes-catalog");
 const { getConfigPath, getExamplePath } = require("./storage-paths");
 
@@ -164,6 +164,10 @@ class AppState {
       this.config.scenes[sceneId] = { ...scenesDefaults[sceneId], ...(this.config.scenes[sceneId] || {}) };
     });
     if (!this.config.topDonation) this.config.topDonation = { user: "", amount: 0, currency: "RUB" };
+    this.config.splash = {
+      file: String((this.config.splash && this.config.splash.file) || ""),
+      duration: Math.max(0, Math.min(30, Math.round(Number((this.config.splash && this.config.splash.duration) || 0)))),
+    };
     this.config.youtube = { clientId: "", clientSecret: "", accessToken: "", refreshToken: "", videoId: "", ...(this.config.youtube || {}) };
     this.config.obs = {
       enabled: false,
@@ -173,7 +177,7 @@ class AppState {
       ...(this.config.obs || {}),
       webcamSource: String((this.config.obs && this.config.obs.webcamSource) || ""),
       micSource: String((this.config.obs && this.config.obs.micSource) || ""),
-      sceneMap: { main: "", start: "", brb: "", talk: "", end: "", wheel: "", ...((this.config.obs && this.config.obs.sceneMap) || {}) },
+      sceneMap: { main: "", start: "", brb: "", talk: "", end: "", wheel: "", video: "", poll: "", ...((this.config.obs && this.config.obs.sceneMap) || {}) },
       customCommands: Array.isArray(this.config.obs && this.config.obs.customCommands) ? this.config.obs.customCommands : [],
       cameraAngles: Array.isArray(this.config.obs && this.config.obs.cameraAngles) ? this.config.obs.cameraAngles : [],
       cameraFilters: Array.isArray(this.config.obs && this.config.obs.cameraFilters) ? this.config.obs.cameraFilters : [],
@@ -192,6 +196,7 @@ class AppState {
         brb: "",
         wheel: "",
         talk: "",
+        main: "",
         end: "",
         ...(sd.icons || {}),
       },
@@ -939,7 +944,7 @@ class AppState {
   resolveTheme(id) {
     if (BUILTIN_THEMES[id]) return BUILTIN_THEMES[id];
     const custom = this.findCustomTheme(id);
-    if (custom) return { id: custom.id, name: custom.name, builtin: false, tokens: custom.tokens };
+    if (custom) return { id: custom.id, name: custom.name, builtin: false, tokens: custom.tokens, customCss: (custom.seeds && custom.seeds.customCss) || "" };
     return null;
   }
 
@@ -1029,8 +1034,22 @@ class AppState {
       secondary: seeds.secondary || "#7ee0d6",
       tertiary: seeds.tertiary || "#ffb0d8",
       surfaceSeed: seeds.surfaceSeed || seeds.primary || "#8878c8",
-      shapeMode: seeds.shapeMode === "angular" ? "angular" : "rounded",
+      shapeMode: SHAPE_MODES.includes(seeds.shapeMode) ? seeds.shapeMode : "rounded",
       fontPreset: seeds.fontPreset === "orbital" ? "orbital" : "nebula",
+      fontDisplay: String(seeds.fontDisplay || "").trim(),
+      fontBody: String(seeds.fontBody || "").trim(),
+      fontMono: String(seeds.fontMono || "").trim(),
+      panelRadius: String(seeds.panelRadius || "").trim(),
+      panelBorderWidth: String(seeds.panelBorderWidth || "").trim(),
+      panelBorderStyle: String(seeds.panelBorderStyle || "").trim(),
+      panelBorderColor: String(seeds.panelBorderColor || "").trim(),
+      panelGlowColor: String(seeds.panelGlowColor || "").trim(),
+      panelGlowStrength: Math.max(0, Math.min(100, Number(seeds.panelGlowStrength) || 0)),
+      background: String(seeds.background || "").trim(),
+      text: String(seeds.text || "").trim(),
+      panelOpacity: seeds.panelOpacity === "" || seeds.panelOpacity == null ? "" : Math.max(0, Math.min(100, Number(seeds.panelOpacity) || 0)),
+      panelBlur: String(seeds.panelBlur || "").trim(),
+      customCss: String(seeds.customCss || ""),
     };
     const tokens = buildThemeTokens(cleanSeeds);
     const cleanName = String(name || "Моя тема").slice(0, 40);
@@ -1057,6 +1076,20 @@ class AppState {
     if (this.config.appearance.activeThemeId === id) this.config.appearance.activeThemeId = "nebula";
     saveConfig(this.config);
     return this.config.appearance.customThemes.length !== before;
+  }
+
+  duplicateCustomTheme(id) {
+    const source = this.findCustomTheme(id);
+    if (!source) return null;
+    const copy = {
+      id: crypto.randomUUID(),
+      name: String(source.name || "").slice(0, 36) + " (копия)",
+      seeds: { ...(source.seeds || {}) },
+      tokens: { ...(source.tokens || {}) },
+    };
+    this.config.appearance.customThemes.push(copy);
+    saveConfig(this.config);
+    return copy;
   }
 
   setEditorPrefs({ gridSize, snapEnabled, aspectRatio }) {
@@ -1129,6 +1162,8 @@ class AppState {
     if (typeof patch.timerDuration === "number") scene.timerDuration = Math.max(0, Math.round(patch.timerDuration));
     if (typeof patch.showEvents === "boolean") scene.showEvents = patch.showEvents;
     if (typeof patch.showSocials === "boolean") scene.showSocials = patch.showSocials;
+    if (patch.splashFile !== undefined) scene.splashFile = String(patch.splashFile || "").slice(0, 200);
+    if (patch.splashDuration !== undefined) scene.splashDuration = Math.max(0, Math.min(30, Math.round(Number(patch.splashDuration) || 0)));
     if (Array.isArray(patch.socials)) {
       scene.socials = patch.socials
         .slice(0, 6)
@@ -1136,6 +1171,15 @@ class AppState {
     }
     saveConfig(this.config);
     return scene;
+  }
+
+  setSplashConfig(patch = {}) {
+    const splash = this.config.splash || { file: "", duration: 4 };
+    if (patch.file !== undefined) splash.file = String(patch.file || "").trim();
+    if (patch.duration !== undefined) splash.duration = Math.max(0, Math.min(30, Math.round(Number(patch.duration) || 0)));
+    this.config.splash = splash;
+    saveConfig(this.config);
+    return this.config.splash;
   }
 
   resetTopDonation() {
@@ -1257,6 +1301,7 @@ class AppState {
         enable3d: !!theme3d,
         enabled3d: this.config.appearance.enabled3d || {},
         tokens: effective.tokens,
+        customCss: (theme2d && theme2d.customCss) || "",
         themes: this.listThemes(),
       },
       editor: this.config.editor,
@@ -1266,6 +1311,7 @@ class AppState {
       chat_hud_display_id: this.config.chat_hud_display_id,
       chatHud: this.config.chatHud,
       scenes: this.config.scenes,
+      splash: this.config.splash,
       topDonation: this.config.topDonation,
     };
   }

@@ -43,9 +43,9 @@
 })(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
   "use strict";
 
-  const DEFAULT_TEXT = "#e6e1e5"; // --md-on-surface (nebula)
-  const DEFAULT_MUTED = "#cac4d0"; // --md-on-surface-variant (nebula)
-  const DEFAULT_USER = "#d0bcff"; // --md-primary (nebula)
+  const DEFAULT_TEXT = "#e9eaec"; // --md-on-surface (nebula)
+  const DEFAULT_MUTED = "#c2c5cb"; // --md-on-surface-variant (nebula)
+  const DEFAULT_USER = "#94cbf9"; // --md-primary (nebula)
   const MAX_MESSAGES = 50;
 
   class WidgetMd3Chat extends BaseWidget {

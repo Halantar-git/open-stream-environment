@@ -113,6 +113,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
   let autoSpinTimer = null;
   let isSpinning = false;
   let hudEditMode = false;
+  let pendingVideoTarget = null; // { sceneName, splash } — advance after the splash ends
   let language = db ? db.getLanguage() : "en";
   I18n.setLang(language);
   const serverLog = createLogger(bus, "server");
@@ -380,7 +381,51 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
       case "SCENE_SET": {
         const scene = String((payload && payload.scene) || "main").toLowerCase();
         const sceneName = (state.config.obs.sceneMap && state.config.obs.sceneMap[scene]) || "";
-        if (obsCtrl && sceneName) obsCtrl.switchScene(sceneName);
+
+        // Cancel any in-flight splash transition so a manual switch always wins.
+        pendingVideoTarget = null;
+
+        // Заставка (видео/картинка/GIF или стандартная) проигрывается при
+        // переходах: start → main (интро), → brb/talk/end/wheel/poll.
+        // Приоритет: файл сцены → общий файл → стандартная.
+        const current = state.runtime.activeScene;
+        let splashScene = "";
+        if (scene === "main" && current === "start") splashScene = "start";
+        else if (scene === "brb") splashScene = "brb";
+        else if (scene === "talk") splashScene = "talk";
+        else if (scene === "end") splashScene = "end";
+        else if (scene === "wheel") splashScene = "wheel";
+        else if (scene === "poll") splashScene = "poll";
+        const sceneSplashFile = splashScene
+          ? (state.config.scenes[splashScene] && state.config.scenes[splashScene].splashFile) || ""
+          : "";
+        const globalSplashFile = (state.config.splash && state.config.splash.file) || "";
+        const splashFile = sceneSplashFile || globalSplashFile;
+
+        const sceneSplashDuration = splashScene
+          ? (state.config.scenes[splashScene] && state.config.scenes[splashScene].splashDuration) || 0
+          : 0;
+        const globalSplashDuration = (state.config.splash && state.config.splash.duration) || 0;
+        const splashDuration = sceneSplashDuration > 0 ? sceneSplashDuration : globalSplashDuration;
+
+        const videoSceneName = (state.config.obs.sceneMap && state.config.obs.sceneMap.video) || "";
+
+        if (splashScene && obsCtrl && videoSceneName) {
+          const splashPayload = {
+            mediaFile: splashFile,
+            scene: splashScene,
+            title: (state.config.scenes[splashScene] && state.config.scenes[splashScene].title) || "",
+            duration: splashDuration,
+            nextScene: scene,
+          };
+          obsCtrl.switchScene(videoSceneName);
+          pendingVideoTarget = { sceneName, splash: splashPayload };
+          broadcast(EVENT_TYPES.VIDEO_SPLASH_PLAY, splashPayload);
+          serverLog.info("splash playing, pending scene switch", { scene, splashScene, mediaFile: splashFile, videoSceneName });
+        } else if (obsCtrl && sceneName) {
+          obsCtrl.switchScene(sceneName);
+        }
+
         state.setActiveScene(scene);
         broadcast(EVENT_TYPES.REMOTE_ACTION, { action: "SCENE_SET", payload: { scene } });
         serverLog.info("remote scene switch", { scene, sceneName });
@@ -657,6 +702,23 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
         if (state.deleteCustomTheme(id)) broadcastTheme();
         break;
       }
+      case EVENT_TYPES.CMD_DUPLICATE_CUSTOM_THEME: {
+        const { id } = msg.payload || {};
+        if (state.duplicateCustomTheme(id)) broadcastTheme();
+        break;
+      }
+      case EVENT_TYPES.CMD_IMPORT_CUSTOM_THEME: {
+        state.saveCustomTheme(msg.payload || {});
+        broadcastTheme();
+        break;
+      }
+      case EVENT_TYPES.CMD_PREVIEW_THEME_DRAFT: {
+        // Relay the editor's unsaved draft to the theme preview window. It is
+        // broadcast globally, but only the preview overlay (opened with
+        // ?themePreview=1) acts on this event.
+        broadcast(EVENT_TYPES.THEME_DRAFT_PREVIEW, msg.payload || {});
+        break;
+      }
       case EVENT_TYPES.CMD_SET_EDITOR_PREFS: {
         const prefs = state.setEditorPrefs(msg.payload || {});
         broadcast(EVENT_TYPES.EDITOR_PREFS_UPDATE, prefs);
@@ -665,6 +727,30 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
       case EVENT_TYPES.CMD_SET_SCENE_CONFIG: {
         const { sceneId, patch } = msg.payload || {};
         if (state.setSceneConfig(sceneId, patch || {})) broadcast(EVENT_TYPES.SCENES_UPDATE, state.config.scenes);
+        break;
+      }
+      case EVENT_TYPES.CMD_SET_SPLASH_CONFIG: {
+        state.setSplashConfig((msg.payload && msg.payload.config) || {});
+        broadcast(EVENT_TYPES.STATE, stateSnapshot());
+        break;
+      }
+      case EVENT_TYPES.VIDEO_SPLASH_ENDED: {
+        const target = pendingVideoTarget;
+        pendingVideoTarget = null;
+        if (target && obsCtrl && target.sceneName) {
+          obsCtrl.switchScene(target.sceneName);
+          serverLog.info("splash finished — switching to scene", { sceneName: target.sceneName });
+        } else {
+          serverLog.info("splash finished (no pending target)");
+        }
+        break;
+      }
+      case EVENT_TYPES.VIDEO_SPLASH_READY: {
+        // The splash overlay just (re)connected — replay the pending splash so
+        // it never misses the play command if OBS loaded it after the broadcast.
+        if (pendingVideoTarget && pendingVideoTarget.splash) {
+          broadcast(EVENT_TYPES.VIDEO_SPLASH_PLAY, pendingVideoTarget.splash);
+        }
         break;
       }
       case EVENT_TYPES.CMD_RESET_TOP_DONATION: {

@@ -20,10 +20,12 @@
 
   A floating tonal sphere (Material 3 depth) drawn with a diagonal light→dark
   gradient, a specular highlight, a secondary-colored orbiting dot and a
-  tertiary elliptical ring. It breathes, sways and "pops" on chat/donations.
+  tertiary elliptical ring. It breathes, sways and "pops" on donations.
 
-  Unlike the neon Star Citizen / Nuclear signs, this one keeps the MD3
-  language: soft tonal shading, no additive glow, no glitch.
+  Like the Pixel Perfect cube, it is alert-driven: hidden until the first alert,
+  the active alert's icon is decaled onto the sphere and spins with it (a
+  billboard badge in the MD3 language — soft tonal shading, no additive glow, no
+  glitch). Alerts are queued and drained one at a time; donations also pop.
 */
 (function (root, factory) {
   const BaseWidget =
@@ -61,9 +63,10 @@
     return `rgb(${m(r, target[0])}, ${m(g, target[1])}, ${m(b, target[2])})`;
   }
 
-  const DEFAULT_PRIMARY = "#d0bcff";
-  const DEFAULT_SECONDARY = "#ccc2dc";
-  const DEFAULT_TERTIARY = "#efb8c8";
+  const DEFAULT_PRIMARY = "#94cbf9";
+  const DEFAULT_SECONDARY = "#aac6e3";
+  const DEFAULT_TERTIARY = "#94e9f9";
+  const DEFAULT_ON_PRIMARY = "#0f283d";
 
   class WidgetMd3Orb extends BaseWidget {
     constructor(config, context) {
@@ -71,8 +74,17 @@
       // Active theme id, injected by the manager via context.
       this.theme = (context && (context.theme || context.activeThemeId)) || "";
 
-      this.colors = { primary: DEFAULT_PRIMARY, secondary: DEFAULT_SECONDARY, tertiary: DEFAULT_TERTIARY };
+      this.colors = {
+        primary: DEFAULT_PRIMARY,
+        secondary: DEFAULT_SECONDARY,
+        tertiary: DEFAULT_TERTIARY,
+        onPrimary: DEFAULT_ON_PRIMARY,
+      };
       this._popUntil = 0;
+      this._iconQueue = [];
+      this._iconKind = null;
+      this._iconUntil = 0;
+      this._iconImages = {};
     }
 
     onMount() {
@@ -82,11 +94,16 @@
       this._readColors();
       this._applyPerspective();
       this.bindEvents();
+      // Hidden until the first alert — like the Pixel Perfect cube.
+      this._setVisible(false);
       this.startRenderLoop(30); // strictly 30 FPS
     }
 
     onUnmount() {
       this._popUntil = 0;
+      this._iconQueue = [];
+      this._iconKind = null;
+      this._iconUntil = 0;
     }
 
     onUpdate(prev, next) {
@@ -98,6 +115,14 @@
       this.colors.primary = (read && read("--md-primary")) || DEFAULT_PRIMARY;
       this.colors.secondary = (read && read("--md-secondary")) || DEFAULT_SECONDARY;
       this.colors.tertiary = (read && read("--md-tertiary")) || DEFAULT_TERTIARY;
+      this.colors.onPrimary = (read && read("--md-on-primary")) || DEFAULT_ON_PRIMARY;
+
+      // Smooth MD3 fade in/out while staying hidden between alerts.
+      if (this.element) {
+        const easing =
+          (read && read("--alert-enter-easing")) || "cubic-bezier(0.05, 0.7, 0.1, 1)";
+        this.element.style.transition = `opacity 260ms ${easing}`;
+      }
     }
 
     // Perspective tilt (0-100), adjustable from the inspector.
@@ -116,14 +141,59 @@
 
     bindEvents() {
       const { EVENT_TYPES } = this.context;
-      this.subscribe(EVENT_TYPES.CHAT_MESSAGE, () => this.pop());
-      this.subscribe(EVENT_TYPES.ALERT, (alert) => {
-        if (alert && alert.kind === "donation") this.pop();
-      });
+      this.subscribe(EVENT_TYPES.ALERT, (alert) => this.queueAlert(alert));
+    }
+
+    // Queue alerts so their icons are shown one at a time, like the alerts
+    // widget drains its cards. Icons never overwrite each other.
+    queueAlert(alert) {
+      if (!alert) return;
+      this._iconQueue.push(alert);
+      // Start draining only when no icon is currently displayed.
+      if (!this._iconKind || performance.now() >= this._iconUntil) this._drainIcon();
+    }
+
+    _drainIcon() {
+      const alert = this._iconQueue.shift();
+      if (!alert) {
+        this._iconKind = null;
+        this._iconUntil = 0;
+        this._setVisible(false);
+        return;
+      }
+      const duration = alert.durationMs || 5000;
+      this._iconKind = alert.kind || null;
+      this._iconUntil = performance.now() + duration;
+      this._setVisible(true);
+      if (alert.kind === "donation") this.pop();
+      // Advance to the next queued icon once this one has finished.
+      this.later(() => this._drainIcon(), duration);
+    }
+
+    _setVisible(visible) {
+      if (this.element) this.element.style.opacity = visible ? "1" : "0";
+      this.setIdle(!visible);
     }
 
     pop() {
       this._popUntil = performance.now() + 450;
+    }
+
+    // Lazy-loads the alert icon (shared/icons.js) as an on-primary-coloured
+    // 24x24 SVG raster so it can be drawn onto the orb canvas. Cached per
+    // kind + colour.
+    _iconImage(kind) {
+      const icons = this.context.ICONS || {};
+      const svg = icons[kind];
+      if (!svg || typeof Image === "undefined") return null;
+      const key = kind + "|" + this.colors.onPrimary;
+      if (this._iconImages[key]) return this._iconImages[key];
+      const colored = svg.split("currentColor").join(this.colors.onPrimary);
+      const sized = colored.replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" ');
+      const img = new Image();
+      img.src = "data:image/svg+xml," + encodeURIComponent(sized);
+      this._iconImages[key] = img;
+      return img;
     }
 
     render() {
@@ -150,7 +220,7 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, cw, ch);
 
-      // Breathing scale + a quick "pop" on donations/chat.
+      // Breathing scale + a quick "pop" on donations.
       let scale = 1 + 0.035 * Math.sin(t * 1.6);
       if (now < this._popUntil) {
         const k = 1 - (this._popUntil - now) / 450;
@@ -163,13 +233,13 @@
       const swayY = Math.cos(t * 0.4) * 3;
       const cx = cw / 2 + swayX;
       const cy = ch / 2 + swayY;
-      const R = Math.min(cw, ch) * 0.4 * scale;
+      const R = Math.min(cw, ch) * 0.33 * scale;
 
       // Soft outer halo.
       ctx.save();
       ctx.fillStyle = rgba(primary, 0.16);
       ctx.beginPath();
-      ctx.arc(cx, cy, R * 1.32, 0, Math.PI * 2);
+      ctx.arc(cx, cy, R * 1.2, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
 
@@ -201,15 +271,15 @@
       ctx.save();
       ctx.translate(cx, cy);
       ctx.scale(1, 0.36);
-      ctx.arc(0, 0, R * 1.12, 0, Math.PI * 2);
+      ctx.arc(0, 0, R * 1.08, 0, Math.PI * 2);
       ctx.restore();
       ctx.stroke();
       ctx.restore();
 
       // Secondary orbiting dot (depth via the elliptical path).
       const orbitA = t * 1.1;
-      const ox = cx + Math.cos(orbitA) * R * 1.12;
-      const oy = cy + Math.sin(orbitA) * R * 0.36 * 1.12;
+      const ox = cx + Math.cos(orbitA) * R * 1.08;
+      const oy = cy + Math.sin(orbitA) * R * 0.36 * 1.08;
       ctx.save();
       ctx.fillStyle = secondary;
       ctx.shadowColor = secondary;
@@ -218,6 +288,28 @@
       ctx.arc(ox, oy, Math.max(1.5, R * 0.09), 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
+
+      // Alert icon decaled onto the sphere, spinning like a 3D badge. Fades
+      // out over the last 400ms of the alert.
+      if (this._iconKind && now < this._iconUntil) {
+        const img = this._iconImage(this._iconKind);
+        if (img && img.complete && img.naturalWidth) {
+          const remaining = this._iconUntil - now;
+          const alpha = Math.max(0, Math.min(1, remaining / 400));
+          // Billboard spin around the vertical axis, kept front-facing with a
+          // minimum width so the glyph never fully disappears.
+          const sx = Math.max(0.12, Math.abs(Math.cos(t * 1.3)));
+          const tilt = Math.sin(t * 0.5) * 0.08;
+          const h = R * 0.55;
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.translate(cx, cy);
+          ctx.rotate(tilt);
+          ctx.scale(sx, 1);
+          ctx.drawImage(img, -h, -h, h * 2, h * 2);
+          ctx.restore();
+        }
+      }
     }
   }
 
