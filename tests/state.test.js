@@ -123,6 +123,31 @@ describe("AppState config + runtime", () => {
     expect(state.snapshot().donationVoice).toEqual({ donationAlerts: true, volume: 0.5 });
   });
 
+  test("setChatBotConfig нормализует команды и таймеры", () => {
+    state.setChatBotConfig({
+      enabled: true,
+      prefix: "?",
+      commands: [
+        { id: "c1", name: "!Discord", response: "  discord.gg/test  ", level: "bad", cooldown: -5, userCooldown: 2.7 },
+        { id: "c2", name: "", response: "", level: "everyone", cooldown: 0, userCooldown: 0 },
+      ],
+      timers: [
+        { id: "t1", name: "  Соцсети  ", response: "текст", interval: 0, minChat: -3 },
+      ],
+    });
+
+    expect(state.config.chatBot.enabled).toBe(true);
+    expect(state.config.chatBot.prefix).toBe("?");
+    expect(state.config.chatBot.commands[0]).toEqual({
+      id: "c1", name: "discord", response: "discord.gg/test", level: "everyone", cooldown: 0, userCooldown: 3,
+    });
+    // Пустая команда сохраняется как плейсхолдер (как и пустые OBS-команды).
+    expect(state.config.chatBot.commands[1].name).toBe("");
+    expect(state.config.chatBot.timers[0]).toEqual({
+      id: "t1", name: "Соцсети", response: "текст", interval: 1, minChat: 0,
+    });
+  });
+
   test("setAppConfig ограничивает порт диапазоном 1024-65535", () => {
     state.setAppConfig({ port: 80 });
     expect(state.config.port).toBe(1024);

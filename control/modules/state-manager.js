@@ -39,6 +39,7 @@ export function createStateManager() {
     youtubeEnabled: true,
     notificationSound: true,
     notificationVolume: 0.8,
+    notificationRepeats: 1,
     obs: { enabled: false, host: "127.0.0.1", port: 4455, password: "", sceneMap: { main: "", start: "", brb: "", talk: "", end: "", wheel: "", video: "", poll: "" } },
     soundboard: { enabled: true, volume: 0.8, queueMode: false, sounds: [] },
     tts: { enabled: true, volume: 0.9, rate: 1, lang: "ru-RU", voice: "" },
@@ -63,6 +64,7 @@ export function createStateManager() {
     activeSceneId: "start",
     giveaway: { active: false, command: "!go", eliminationMode: false, winner: null, count: 0, participants: [] },
     poll: { active: false, command: "!poll", chartType: "bars", options: [], votes: {}, total: 0 },
+    chatBot: { enabled: false, prefix: "!", commands: [], timers: [] },
     connectionStatus: {},
     participantsConfig: { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82, x: 24, y: 340, w: 340, h: 400 },
     wheelConfig: { musicVolume: 50, x: 960, y: 540 },
@@ -85,6 +87,7 @@ export function createStateManager() {
     state.youtubeEnabled = payload.youtubeEnabled !== false;
     state.notificationSound = payload.notificationSound !== false;
     state.notificationVolume = typeof payload.notificationVolume === "number" ? payload.notificationVolume : state.notificationVolume;
+    state.notificationRepeats = typeof payload.notificationRepeats === "number" ? payload.notificationRepeats : state.notificationRepeats;
     state.obs = payload.obs || state.obs;
     state.soundboard = payload.soundboard || state.soundboard;
     state.tts = payload.tts || state.tts;
@@ -105,6 +108,7 @@ export function createStateManager() {
     state.activeFilters = payload.activeFilters || state.activeFilters;
     state.giveaway = payload.giveaway || state.giveaway;
     state.poll = payload.poll || state.poll;
+    state.chatBot = payload.chatBot || state.chatBot;
     state.connectionStatus = payload.connectionStatus || state.connectionStatus;
   };
 

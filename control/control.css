@@ -1012,6 +1012,53 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   font-size: 12px;
 }
 
+.chatbot-commands,
+.chatbot-timers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.chatbot-command-item,
+.chatbot-timer-item {
+  display: grid;
+  gap: 8px;
+  align-items: center;
+}
+
+.chatbot-command-item {
+  grid-template-columns: minmax(110px, 0.7fr) minmax(180px, 1.6fr) minmax(120px, 0.8fr) minmax(60px, 0.4fr) minmax(60px, 0.4fr) auto;
+}
+
+.chatbot-timer-item {
+  grid-template-columns: minmax(110px, 0.7fr) minmax(180px, 1.6fr) minmax(70px, 0.45fr) minmax(90px, 0.55fr) auto;
+}
+
+.chatbot-command-item input,
+.chatbot-timer-item input {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-sm);
+  background: var(--md-surface-container-low);
+  color: var(--md-on-surface);
+  font: inherit;
+  font-size: 12px;
+}
+
+.chatbot-command-item select,
+.chatbot-timer-item select {
+  min-width: 0;
+  padding: 8px 8px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-sm);
+  background: var(--md-surface-container-low);
+  color: var(--md-on-surface);
+  font: inherit;
+  font-size: 12px;
+}
+
 .terminal-panel {
   position: fixed;
   top: 56px;

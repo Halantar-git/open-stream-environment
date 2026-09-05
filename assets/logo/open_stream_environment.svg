@@ -1,0 +1,32 @@
+<svg viewBox="0 0 1280 640" width="1280" height="640" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  
+  <filter id="shapeShadowL" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="10" result="blur"/>
+    <feOffset in="blur" dx="0" dy="8" result="off"/>
+    <feFlood flood-color="#000000" flood-opacity="0.35" result="fl"/>
+    <feComposite in="fl" in2="off" operator="in" result="sh"/>
+    <feMerge><feMergeNode in="sh"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="shapeShadowR" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="9" result="blur"/>
+    <feOffset in="blur" dx="0" dy="6" result="off"/>
+    <feFlood flood-color="#000000" flood-opacity="0.25" result="fl"/>
+    <feComposite in="fl" in2="off" operator="in" result="sh"/>
+    <feMerge><feMergeNode in="sh"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="textShadow" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
+    <feOffset in="blur" dx="0" dy="4" result="off"/>
+    <feFlood flood-color="#000000" flood-opacity="0.2" result="fl"/>
+    <feComposite in="fl" in2="off" operator="in" result="sh"/>
+    <feMerge><feMergeNode in="sh"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+</defs>
+<g>
+<rect x="0" y="0" width="1280" height="640" fill="#111318"/>
+<polygon points="0,0 320.0,0 192.0,640 0,640" fill="#005faf" filter="url(#shapeShadowL)"/>
+<polygon points="1280,0 960.0,0 1088.0,640 1280,640" fill="#386595" filter="url(#shapeShadowR)"/>
+<text x="640.0" y="320.0" text-anchor="middle" dominant-baseline="central" font-family='"Roboto", "Segoe UI", "Arial", sans-serif' font-weight="bold" font-size="56" letter-spacing="12" fill="#ffffff" filter="url(#textShadow)">OPEN STREAM ENVIRONMENT</text>
+</g>
+</svg>

@@ -28,6 +28,7 @@ const { EVENT_TYPES, ALERT_DURATIONS_MS } = require("../shared/events");
 const { createLogger, enableFileLogging } = require("./logger");
 const { mountOAuthRoutes, buildTwitchAuthorizeUrl, buildDonationAlertsAuthorizeUrl, buildYoutubeAuthorizeUrl } = require("./oauth");
 const { startTwitchChat, sendTwitchChatMessage } = require("./integrations/twitch-chat");
+const { startChatBot } = require("./integrations/chat-bot");
 const { startTwitchEvents } = require("./integrations/twitch-eventsub");
 const { startDonationAlerts } = require("./integrations/donationalerts");
 const { startYoutube } = require("./integrations/youtube-live");
@@ -105,6 +106,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
   app.use("/remote", express.static(path.join(__dirname, "..", "remote")));
 
   let twitchChatCtrl = null;
+  let chatBotCtrl = null;
   let twitchEventsCtrl = null;
   let donationAlertsCtrl = null;
   let youtubeCtrl = null;
@@ -189,6 +191,15 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
       return;
     }
     twitchChatCtrl = startTwitchChat({ bus, channel: state.config.twitch.channel });
+  }
+
+  function restartChatBot() {
+    if (chatBotCtrl) chatBotCtrl.stop();
+    chatBotCtrl = null;
+    if (!state.config.chatBot || !state.config.chatBot.enabled) {
+      return;
+    }
+    chatBotCtrl = startChatBot({ bus, state });
   }
 
   function restartTwitchEvents() {
@@ -673,10 +684,14 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
           switchPort(patch.port);
           // The channel may be sent together with the port; reconnect Twitch
           // only for that part (switchPort already broadcasts fresh STATE).
-          if (patch.twitchChannel !== undefined) restartTwitchChat();
+          if (patch.twitchChannel !== undefined) {
+            restartTwitchChat();
+            restartChatBot();
+          }
         } else {
           state.setAppConfig(patch);
           restartTwitchChat();
+          restartChatBot();
           broadcast(EVENT_TYPES.STATE, stateSnapshot());
         }
         break;
@@ -964,6 +979,11 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
         broadcast(EVENT_TYPES.STATE, stateSnapshot());
         break;
       }
+      case EVENT_TYPES.CMD_SET_NOTIFICATION_REPEATS: {
+        state.setNotificationRepeats(msg.payload && msg.payload.repeats);
+        broadcast(EVENT_TYPES.STATE, stateSnapshot());
+        break;
+      }
       case EVENT_TYPES.CMD_SET_INTEGRATION_ENABLED: {
         const { service, enabled } = msg.payload || {};
         state.setIntegrationEnabled(service, enabled);
@@ -988,6 +1008,12 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
       }
       case EVENT_TYPES.CMD_SET_SOUNDBOARD_CONFIG: {
         state.setSoundboardConfig((msg.payload && msg.payload.config) || {});
+        broadcast(EVENT_TYPES.STATE, stateSnapshot());
+        break;
+      }
+      case EVENT_TYPES.CMD_SET_CHAT_BOT_CONFIG: {
+        state.setChatBotConfig((msg.payload && msg.payload.config) || {});
+        restartChatBot();
         broadcast(EVENT_TYPES.STATE, stateSnapshot());
         break;
       }
@@ -1126,6 +1152,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
     });
 
     restartTwitchChat();
+    restartChatBot();
     restartTwitchEvents();
     restartDonationAlerts();
     restartYoutube();
@@ -1206,6 +1233,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
   function importConfig(newConfig) {
     state.replaceConfig(newConfig);
     restartTwitchChat();
+    restartChatBot();
     restartTwitchEvents();
     restartDonationAlerts();
     restartYoutube();
@@ -1220,6 +1248,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
       currentSession = null;
     }
     if (twitchChatCtrl) twitchChatCtrl.stop();
+    if (chatBotCtrl) chatBotCtrl.stop();
     if (twitchEventsCtrl) twitchEventsCtrl.stop();
     if (donationAlertsCtrl) donationAlertsCtrl.stop();
     if (youtubeCtrl) youtubeCtrl.stop();
@@ -1261,6 +1290,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
     broadcast,
     setHudEditMode,
     restartTwitchChat,
+    restartChatBot,
     restartTwitchEvents,
     restartDonationAlerts,
     importConfig,

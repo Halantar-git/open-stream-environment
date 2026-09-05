@@ -125,6 +125,36 @@ function defaultEditor() {
   return { gridSize: 5, snapEnabled: true, aspectRatio: "16:9" };
 }
 
+const BOT_LEVELS = ["everyone", "subscriber", "moderator", "broadcaster"];
+
+function normalizeBotCommand(command) {
+  if (!command || typeof command !== "object") return null;
+  const name = String(command.name || "")
+    .trim()
+    .toLowerCase()
+    .replace(/^[!./]/, "");
+  return {
+    id: typeof command.id === "string" && command.id ? command.id : crypto.randomUUID(),
+    name,
+    response: String(command.response || "").trim(),
+    level: BOT_LEVELS.includes(command.level) ? command.level : "everyone",
+    cooldown: Math.max(0, Math.round(Number(command.cooldown) || 0)),
+    userCooldown: Math.max(0, Math.round(Number(command.userCooldown) || 0)),
+  };
+}
+
+function normalizeBotTimer(timer) {
+  if (!timer || typeof timer !== "object") return null;
+  const name = String(timer.name || "").trim();
+  return {
+    id: typeof timer.id === "string" && timer.id ? timer.id : crypto.randomUUID(),
+    name,
+    response: String(timer.response || "").trim(),
+    interval: Math.max(1, Math.round(Number(timer.interval) || 0)),
+    minChat: Math.max(0, Math.round(Number(timer.minChat) || 0)),
+  };
+}
+
 const EDITOR_ASPECT_RATIOS = ["16:9", "16:10", "21:9", "32:9", "4:3", "1:1", "9:16", "3:4"];
 
 class AppState {
@@ -153,6 +183,7 @@ class AppState {
     this.config.notificationVolume = typeof this.config.notificationVolume === "number"
       ? Math.min(1, Math.max(0, this.config.notificationVolume))
       : 0.8;
+    this.config.notificationRepeats = Math.min(5, Math.max(1, Math.round(Number(this.config.notificationRepeats) || 1)));
     const ch = this.config.chatHud || {};
     this.config.chatHud = {
       width: typeof ch.width === "number" ? ch.width : 360,
@@ -228,6 +259,13 @@ class AppState {
             .filter((o) => o && typeof o.id === "string" && typeof o.label === "string")
             .map((o) => ({ id: o.id, label: o.label }))
         : [],
+    };
+    const cb = this.config.chatBot || {};
+    this.config.chatBot = {
+      enabled: cb.enabled === true,
+      prefix: typeof cb.prefix === "string" && cb.prefix.trim() ? cb.prefix.trim() : "!",
+      commands: Array.isArray(cb.commands) ? cb.commands.map(normalizeBotCommand).filter(Boolean) : [],
+      timers: Array.isArray(cb.timers) ? cb.timers.map(normalizeBotTimer).filter(Boolean) : [],
     };
     if (this.config.twitch.enabled === undefined) this.config.twitch.enabled = true;
     if (this.config.donationAlerts.enabled === undefined) this.config.donationAlerts.enabled = true;
@@ -602,6 +640,22 @@ class AppState {
     return this.config.donationVoice;
   }
 
+  setChatBotConfig(patch = {}) {
+    const cur = this.config.chatBot;
+    const next = { ...cur, ...(patch || {}) };
+    next.enabled = next.enabled !== false;
+    next.prefix = typeof next.prefix === "string" && next.prefix.trim() ? next.prefix.trim() : "!";
+    next.commands = Array.isArray(next.commands)
+      ? next.commands.map(normalizeBotCommand).filter(Boolean).slice(0, 100)
+      : cur.commands;
+    next.timers = Array.isArray(next.timers)
+      ? next.timers.map(normalizeBotTimer).filter(Boolean).slice(0, 50)
+      : cur.timers;
+    this.config.chatBot = next;
+    saveConfig(this.config);
+    return this.config.chatBot;
+  }
+
   // ---- Death counter (remote quick action) ----
 
   adjustDeathCount(delta) {
@@ -946,6 +1000,13 @@ class AppState {
     return this.config.notificationVolume;
   }
 
+  setNotificationRepeats(repeats) {
+    const n = Math.round(Number(repeats));
+    this.config.notificationRepeats = Number.isFinite(n) ? Math.min(5, Math.max(1, n)) : 1;
+    saveConfig(this.config);
+    return this.config.notificationRepeats;
+  }
+
   // ---- Appearance / themes ----
 
   findCustomTheme(id) {
@@ -1229,6 +1290,7 @@ class AppState {
       port: portValid ? port : this.config.port,
       notificationSound: typeof newConfig.notificationSound === "boolean" ? newConfig.notificationSound : this.config.notificationSound,
       notificationVolume: typeof newConfig.notificationVolume === "number" ? newConfig.notificationVolume : this.config.notificationVolume,
+      notificationRepeats: typeof newConfig.notificationRepeats === "number" ? newConfig.notificationRepeats : this.config.notificationRepeats,
       twitch: { ...this.config.twitch, ...(newConfig.twitch || {}) },
       donationAlerts: { ...this.config.donationAlerts, ...(newConfig.donationAlerts || {}) },
       youtube: { ...this.config.youtube, ...(newConfig.youtube || {}) },
@@ -1264,6 +1326,12 @@ class AppState {
         ...(newConfig.poll || {}),
         options: keepArr(newConfig.poll && newConfig.poll.options, this.config.poll.options),
       },
+      chatBot: {
+        ...this.config.chatBot,
+        ...(newConfig.chatBot || {}),
+        commands: keepArr(newConfig.chatBot && newConfig.chatBot.commands, this.config.chatBot.commands),
+        timers: keepArr(newConfig.chatBot && newConfig.chatBot.timers, this.config.chatBot.timers),
+      },
       scenes: newConfig.scenes ? { ...defaultScenes(), ...newConfig.scenes } : this.config.scenes,
       topDonation: newConfig.topDonation || this.config.topDonation,
     };
@@ -1294,6 +1362,7 @@ class AppState {
       port: this.config.port,
       notificationSound: this.config.notificationSound,
       notificationVolume: this.config.notificationVolume,
+      notificationRepeats: this.config.notificationRepeats,
       twitchChannel: this.config.twitch.channel,
       twitchClientId: this.config.twitch.clientId,
       donationAlertsClientId: this.config.donationAlerts.clientId,
@@ -1316,6 +1385,7 @@ class AppState {
       activeFilters: this.getActiveFilters(),
       giveaway: this.giveawaySnapshot(),
       poll: this.pollSnapshot(),
+      chatBot: this.config.chatBot,
       appearance: {
         activeThemeId: this.config.appearance.activeThemeId,
         activeThemeId3d: theme3d ? theme3d.id : "",

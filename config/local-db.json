@@ -2568,6 +2568,42 @@
       "channel": "halantar",
       "startedAt": 1788625555059,
       "endedAt": 1788625646513
+    },
+    {
+      "id": "7f0964ed-59a3-46dc-a1cb-fb6b61feaad3",
+      "channel": "halantar",
+      "startedAt": 1788628035375,
+      "endedAt": 1788628200984
+    },
+    {
+      "id": "429cfb25-2842-4f51-9176-b0b96ef33ef0",
+      "channel": "halantar",
+      "startedAt": 1788628451913,
+      "endedAt": 1788628490231
+    },
+    {
+      "id": "c2dada5b-2095-4cef-a52b-694f357b793c",
+      "channel": "halantar",
+      "startedAt": 1788628694968,
+      "endedAt": 1788628753067
+    },
+    {
+      "id": "9c77281c-2158-46cd-ad73-4a3a84d12ff1",
+      "channel": "halantar",
+      "startedAt": 1788628820858,
+      "endedAt": 1788628858182
+    },
+    {
+      "id": "125385d2-d4eb-4d03-8e7a-9e5e8b0eb4ab",
+      "channel": "halantar",
+      "startedAt": 1788628970683,
+      "endedAt": 1788629041996
+    },
+    {
+      "id": "e6022829-d76e-45fc-aa54-a4b4bf556eeb",
+      "channel": "halantar",
+      "startedAt": 1788629097430,
+      "endedAt": 1788629151805
     }
   ],
   "chatMessages": [
@@ -10120,6 +10156,136 @@
       "currency": "RUB",
       "message": "Удачного стрима!",
       "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "7305fd58-a293-4ad9-8d97-edbfbdac947d",
+      "timestamp": 1788628040241,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "e4cc3863-cbd1-4bea-8075-98fbb37f18e6",
+      "timestamp": 1788628188801,
+      "type": "donation",
+      "kind": "donation",
+      "username": "orbit_fan",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "590fc117-a27e-44b0-8504-096a6ba7a5d1",
+      "timestamp": 1788628456833,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "aceb5805-5ba7-4159-bd53-db5ae2e4c076",
+      "timestamp": 1788628699792,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "7878d71a-af51-48a4-ba6d-a7fb9fe32590",
+      "timestamp": 1788628719608,
+      "type": "donation",
+      "kind": "donation",
+      "username": "comet_watcher",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "247aa545-c4ee-4a25-acf8-9deb169f2f14",
+      "timestamp": 1788628825596,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "11ae368c-6ff2-4c23-b4e1-8d67e10401a6",
+      "timestamp": 1788628831518,
+      "type": "donation",
+      "kind": "donation",
+      "username": "orbit_fan",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "510fd453-ca2f-4ef0-9dab-58a03e464426",
+      "timestamp": 1788628975448,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "0cb34fb9-b74c-4eca-b9b5-da02422105a1",
+      "timestamp": 1788628987856,
+      "type": "donation",
+      "kind": "donation",
+      "username": "comet_watcher",
+      "amount": 300,
+      "currency": "RUB",
+      "message": "Удачного стрима!",
+      "is_test": true,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "73195343-3278-4e43-8d03-71116f41dae3",
+      "timestamp": 1788629102157,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
       "count": null,
       "tier": null
     }

@@ -126,8 +126,10 @@
     CMD_SET_INTEGRATION_ENABLED: "cmd_set_integration_enabled", // { service, enabled }
     CMD_SET_NOTIFICATION_SOUND: "cmd_set_notification_sound", // { enabled }
     CMD_SET_NOTIFICATION_VOLUME: "cmd_set_notification_volume", // { volume: 0..1 }
+    CMD_SET_NOTIFICATION_REPEATS: "cmd_set_notification_repeats", // { repeats }
     CMD_SET_OBS_CONFIG: "cmd_set_obs_config", // { host?, port?, password?, sceneMap? }
     CMD_SET_SOUNDBOARD_CONFIG: "cmd_set_soundboard_config", // { config }
+    CMD_SET_CHAT_BOT_CONFIG: "cmd_set_chat_bot_config", // { config }
     CMD_SET_TTS_CONFIG: "cmd_set_tts_config", // { config: { enabled?, volume?, rate?, lang? } }
     CMD_SET_DONATION_VOICE: "cmd_set_donation_voice", // { config: { donationAlerts?, volume? } }
     CMD_TEST_SOUNDBOARD: "cmd_test_soundboard", // { soundId }

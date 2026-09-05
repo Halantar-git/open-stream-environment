@@ -63,6 +63,12 @@
       "end": ""
     }
   },
+  "chatBot": {
+    "enabled": false,
+    "prefix": "!",
+    "commands": [],
+    "timers": []
+  },
   "goal": {
     "title": "Донат-цель",
     "current": 0,

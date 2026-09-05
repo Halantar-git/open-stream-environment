@@ -59,6 +59,8 @@ const { EVENT_TYPES } = window.SharedEvents;
   const state = createStateManager();
 
   let ttsVoices = [];
+  let notificationSoundQueue = [];
+  let notificationSoundPlaying = false;
 
   // ---- dom refs ----
   const tabsEl = document.getElementById("tabs");
@@ -136,6 +138,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const notificationSoundSwitch = document.getElementById("notificationSoundSwitch");
   const notificationVolume = document.getElementById("notificationVolume");
   const notificationVolumeValue = document.getElementById("notificationVolumeValue");
+  const notificationRepeats = document.getElementById("notificationRepeats");
   const ttsEnabledSwitch = document.getElementById("ttsEnabledSwitch");
   const ttsVolume = document.getElementById("ttsVolume");
   const ttsVolumeValue = document.getElementById("ttsVolumeValue");
@@ -147,6 +150,12 @@ const { EVENT_TYPES } = window.SharedEvents;
   const daVoiceSwitch = document.getElementById("daVoiceSwitch");
   const soundboardList = document.getElementById("soundboardList");
   const addSoundBtn = document.getElementById("addSoundBtn");
+  const chatBotEnabledSwitch = document.getElementById("chatBotEnabledSwitch");
+  const chatBotPrefixInput = document.getElementById("chatBotPrefix");
+  const chatBotCommandsList = document.getElementById("chatBotCommandsList");
+  const addChatBotCommandBtn = document.getElementById("addChatBotCommandBtn");
+  const chatBotTimersList = document.getElementById("chatBotTimersList");
+  const addChatBotTimerBtn = document.getElementById("addChatBotTimerBtn");
   const streamdeckIconStart = document.getElementById("streamdeckIconStart");
   const streamdeckIconBrb = document.getElementById("streamdeckIconBrb");
   const streamdeckIconWheel = document.getElementById("streamdeckIconWheel");
@@ -156,6 +165,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const appPortInput = document.getElementById("appPort");
   const savePortBtn = document.getElementById("savePortBtn");
   const appOverlayUrlInput = document.getElementById("appOverlayUrl");
+  const copyOverlayUrlBtn = document.getElementById("copyOverlayUrlBtn");
   const hudHotkeyInput = document.getElementById("hudHotkeyInput");
   const saveHudHotkeyBtn = document.getElementById("saveHudHotkeyBtn");
   const hudDisplaySelect = document.getElementById("hudDisplaySelect");
@@ -236,13 +246,40 @@ const { EVENT_TYPES } = window.SharedEvents;
     }, 5000);
   }
   function playNotificationSound() {
+    const repeats = Math.min(5, Math.max(1, Number(state.notificationRepeats ?? 1) || 1));
+    for (let i = 0; i < repeats; i++) notificationSoundQueue.push(true);
+    drainNotificationSoundQueue();
+  }
+
+  function drainNotificationSoundQueue() {
+    if (notificationSoundPlaying) return;
+    if (!notificationSoundQueue.length) return;
+
+    notificationSoundQueue.shift();
+    notificationSoundPlaying = true;
+
+    const finish = () => {
+      notificationSoundPlaying = false;
+      drainNotificationSoundQueue();
+    };
+
     try {
       const a = new Audio(`http://localhost:${port}/assets/audio/buzzer.wav`);
       a.volume = Math.min(1, Math.max(0, Number(state.notificationVolume ?? 0.8)));
+      let done = false;
+      const once = () => {
+        if (done) return;
+        done = true;
+        finish();
+      };
+      a.addEventListener("ended", once);
+      // Фолбэк на случай, если `ended` не придёт (например, проблемы с декодом).
+      setTimeout(once, 2000);
       const p = a.play();
-      if (p && p.catch) p.catch(() => {});
+      if (p && p.catch) p.catch(once);
     } catch {
       /* звук — необязательный */
+      finish();
     }
   }
   function switchHtml(id, on) {
@@ -370,12 +407,19 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (state.donationVoice) {
       setSwitchState(daVoiceSwitch, !!state.donationVoice.donationAlerts);
     }
+    if (state.chatBot) {
+      setSwitchState(chatBotEnabledSwitch, !!state.chatBot.enabled);
+      if (chatBotPrefixInput) chatBotPrefixInput.value = state.chatBot.prefix || "!";
+      renderChatBotCommands();
+      renderChatBotTimers();
+    }
     setSwitchState(notificationSoundSwitch, state.notificationSound !== false);
     if (notificationVolume) {
       const vol = Math.round((state.notificationVolume ?? 0.8) * 100);
       notificationVolume.value = vol;
       if (notificationVolumeValue) notificationVolumeValue.textContent = `${vol}%`;
     }
+    if (notificationRepeats) notificationRepeats.value = String(state.notificationRepeats ?? 1);
     renderStreamDeckIcons();
     renderSplashSettings();
     appPortInput.value = port;
@@ -795,6 +839,171 @@ const { EVENT_TYPES } = window.SharedEvents;
     send(EVENT_TYPES.CMD_SET_TTS_CONFIG, { config: patch });
   }
 
+  function sendChatBotConfig(patch) {
+    send(EVENT_TYPES.CMD_SET_CHAT_BOT_CONFIG, { config: patch });
+  }
+
+  function updateChatBotCommand(id, patch) {
+    const commands = (state.chatBot.commands || []).map((c) => (c.id === id ? { ...c, ...patch } : c));
+    sendChatBotConfig({ commands });
+  }
+
+  function updateChatBotTimer(id, patch) {
+    const timers = (state.chatBot.timers || []).map((t) => (t.id === id ? { ...t, ...patch } : t));
+    sendChatBotConfig({ timers });
+  }
+
+  function chatBotLevelSelect(value) {
+    const select = document.createElement("select");
+    [
+      ["everyone", t("settings.chatBotLevelEveryone")],
+      ["subscriber", t("settings.chatBotLevelSubscriber")],
+      ["moderator", t("settings.chatBotLevelModerator")],
+      ["broadcaster", t("settings.chatBotLevelBroadcaster")],
+    ].forEach(([val, label]) => {
+      const opt = document.createElement("option");
+      opt.value = val;
+      opt.textContent = label;
+      if (val === value) opt.selected = true;
+      select.appendChild(opt);
+    });
+    return select;
+  }
+
+  function renderChatBotCommandItem(cmd) {
+    const row = document.createElement("div");
+    row.className = "chatbot-command-item";
+
+    const name = document.createElement("input");
+    name.type = "text";
+    name.placeholder = t("settings.chatBotCommandName");
+    name.value = cmd.name || "";
+    name.addEventListener("change", () => updateChatBotCommand(cmd.id, { name: name.value }));
+
+    const response = document.createElement("input");
+    response.type = "text";
+    response.placeholder = t("settings.chatBotCommandResponse");
+    response.value = cmd.response || "";
+    response.addEventListener("change", () => updateChatBotCommand(cmd.id, { response: response.value }));
+
+    const level = chatBotLevelSelect(cmd.level || "everyone");
+    level.addEventListener("change", () => updateChatBotCommand(cmd.id, { level: level.value }));
+
+    const cooldown = document.createElement("input");
+    cooldown.type = "number";
+    cooldown.min = "0";
+    cooldown.placeholder = t("settings.chatBotCooldown");
+    cooldown.title = t("settings.chatBotCooldownHint");
+    cooldown.value = cmd.cooldown || 0;
+    cooldown.addEventListener("change", () => updateChatBotCommand(cmd.id, { cooldown: Math.max(0, Number(cooldown.value) || 0) }));
+
+    const userCooldown = document.createElement("input");
+    userCooldown.type = "number";
+    userCooldown.min = "0";
+    userCooldown.placeholder = t("settings.chatBotUserCooldown");
+    userCooldown.title = t("settings.chatBotUserCooldownHint");
+    userCooldown.value = cmd.userCooldown || 0;
+    userCooldown.addEventListener("change", () => updateChatBotCommand(cmd.id, { userCooldown: Math.max(0, Number(userCooldown.value) || 0) }));
+
+    const remove = document.createElement("button");
+    remove.className = "md-button md-button--text";
+    remove.textContent = "✕";
+    remove.title = t("common.remove");
+    remove.addEventListener("click", () => {
+      const commands = (state.chatBot.commands || []).filter((c) => c.id !== cmd.id);
+      sendChatBotConfig({ commands });
+    });
+
+    row.append(name, response, level, cooldown, userCooldown, remove);
+    return row;
+  }
+
+  function renderChatBotCommands() {
+    if (!chatBotCommandsList) return;
+    chatBotCommandsList.innerHTML = "";
+    (state.chatBot.commands || []).forEach((cmd) => {
+      chatBotCommandsList.appendChild(renderChatBotCommandItem(cmd));
+    });
+  }
+
+  function renderChatBotTimerItem(timer) {
+    const row = document.createElement("div");
+    row.className = "chatbot-timer-item";
+
+    const name = document.createElement("input");
+    name.type = "text";
+    name.placeholder = t("settings.chatBotTimerName");
+    name.value = timer.name || "";
+    name.addEventListener("change", () => updateChatBotTimer(timer.id, { name: name.value }));
+
+    const response = document.createElement("input");
+    response.type = "text";
+    response.placeholder = t("settings.chatBotCommandResponse");
+    response.value = timer.response || "";
+    response.addEventListener("change", () => updateChatBotTimer(timer.id, { response: response.value }));
+
+    const interval = document.createElement("input");
+    interval.type = "number";
+    interval.min = "1";
+    interval.placeholder = t("settings.chatBotInterval");
+    interval.title = t("settings.chatBotIntervalHint");
+    interval.value = timer.interval || 1;
+    interval.addEventListener("change", () => updateChatBotTimer(timer.id, { interval: Math.max(1, Number(interval.value) || 1) }));
+
+    const minChat = document.createElement("input");
+    minChat.type = "number";
+    minChat.min = "0";
+    minChat.placeholder = t("settings.chatBotMinChat");
+    minChat.title = t("settings.chatBotMinChatHint");
+    minChat.value = timer.minChat || 0;
+    minChat.addEventListener("change", () => updateChatBotTimer(timer.id, { minChat: Math.max(0, Number(minChat.value) || 0) }));
+
+    const remove = document.createElement("button");
+    remove.className = "md-button md-button--text";
+    remove.textContent = "✕";
+    remove.title = t("common.remove");
+    remove.addEventListener("click", () => {
+      const timers = (state.chatBot.timers || []).filter((t) => t.id !== timer.id);
+      sendChatBotConfig({ timers });
+    });
+
+    row.append(name, response, interval, minChat, remove);
+    return row;
+  }
+
+  function renderChatBotTimers() {
+    if (!chatBotTimersList) return;
+    chatBotTimersList.innerHTML = "";
+    (state.chatBot.timers || []).forEach((timer) => {
+      chatBotTimersList.appendChild(renderChatBotTimerItem(timer));
+    });
+  }
+
+  if (chatBotEnabledSwitch) {
+    chatBotEnabledSwitch.addEventListener("click", () => {
+      const on = !chatBotEnabledSwitch.classList.contains("is-on");
+      setSwitchState(chatBotEnabledSwitch, on);
+      sendChatBotConfig({ enabled: on });
+    });
+  }
+  if (chatBotPrefixInput) {
+    chatBotPrefixInput.addEventListener("change", () => {
+      sendChatBotConfig({ prefix: chatBotPrefixInput.value.trim() || "!" });
+    });
+  }
+  if (addChatBotCommandBtn) {
+    addChatBotCommandBtn.addEventListener("click", () => {
+      const commands = [...(state.chatBot.commands || []), { id: "cmd_" + Date.now(), name: "", response: "", level: "everyone", cooldown: 0, userCooldown: 0 }];
+      sendChatBotConfig({ commands });
+    });
+  }
+  if (addChatBotTimerBtn) {
+    addChatBotTimerBtn.addEventListener("click", () => {
+      const timers = [...(state.chatBot.timers || []), { id: "tmr_" + Date.now(), name: "", response: "", interval: 30, minChat: 0 }];
+      sendChatBotConfig({ timers });
+    });
+  }
+
   function renderTtsVoices() {
     if (!ttsVoice) return;
     const lang = (state.tts && state.tts.lang) || "ru-RU";
@@ -1002,6 +1211,11 @@ const { EVENT_TYPES } = window.SharedEvents;
     });
     notificationVolume.addEventListener("change", (e) => {
       send(EVENT_TYPES.CMD_SET_NOTIFICATION_VOLUME, { volume: Number(e.target.value) / 100 });
+    });
+  }
+  if (notificationRepeats) {
+    notificationRepeats.addEventListener("change", (e) => {
+      send(EVENT_TYPES.CMD_SET_NOTIFICATION_REPEATS, { repeats: Number(e.target.value) });
     });
   }
 
@@ -1956,6 +2170,17 @@ const { EVENT_TYPES } = window.SharedEvents;
     copyUrlBtn.textContent = t("editor.copied");
     setTimeout(() => (copyUrlBtn.textContent = t("editor.copyUrl")), 1400);
   });
+
+  if (copyOverlayUrlBtn) {
+    copyOverlayUrlBtn.textContent = t("common.copy");
+    copyOverlayUrlBtn.addEventListener("click", async () => {
+      const url = appOverlayUrlInput ? appOverlayUrlInput.value : overlayUrl;
+      const ok = await copyText(url);
+      if (!ok) return;
+      copyOverlayUrlBtn.textContent = t("editor.copied");
+      setTimeout(() => (copyOverlayUrlBtn.textContent = t("common.copy")), 1400);
+    });
+  }
 
   remoteUrlHint.addEventListener("click", async () => {
     const url = remoteUrlText.textContent;

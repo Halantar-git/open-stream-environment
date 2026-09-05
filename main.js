@@ -937,6 +937,7 @@ app.whenReady().then(() => {
     if (channel) {
       serverHandle.state.setAppConfig({ twitchChannel: channel });
       serverHandle.restartTwitchChat();
+      serverHandle.restartChatBot();
     }
     const url = buildTwitchAuthorizeUrl(serverHandle.state.config, serverHandle.state.config.port);
     shell.openExternal(url);
