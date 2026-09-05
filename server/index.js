@@ -959,6 +959,11 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
         broadcast(EVENT_TYPES.STATE, stateSnapshot());
         break;
       }
+      case EVENT_TYPES.CMD_SET_NOTIFICATION_VOLUME: {
+        state.setNotificationVolume(msg.payload && msg.payload.volume);
+        broadcast(EVENT_TYPES.STATE, stateSnapshot());
+        break;
+      }
       case EVENT_TYPES.CMD_SET_INTEGRATION_ENABLED: {
         const { service, enabled } = msg.payload || {};
         state.setIntegrationEnabled(service, enabled);

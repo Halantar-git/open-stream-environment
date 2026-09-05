@@ -112,6 +112,7 @@ const SECTIONS = [
     blocks: [
       { type: "p", key: "help.twitch.p1" },
       { type: "p", key: "help.twitch.p2" },
+      { type: "p", key: "help.twitch.p3" },
       { type: "steps", items: ["help.twitch.s1", "help.twitch.s2", "help.twitch.s3", "help.twitch.s4"] },
     ],
   },
@@ -163,6 +164,18 @@ const SECTIONS = [
     blocks: [
       { type: "p", key: "help.remote.p1" },
       { type: "p", key: "help.remote.p2" },
+      { type: "p", key: "help.remote.p3" },
+      { type: "p", key: "help.remote.p4" },
+      { type: "p", key: "help.remote.p5" },
+    ],
+  },
+  {
+    id: "notifications",
+    title: "help.notifications.title",
+    blocks: [
+      { type: "p", key: "help.notifications.p1" },
+      { type: "p", key: "help.notifications.p2" },
+      { type: "p", key: "help.notifications.p3" },
     ],
   },
   {
@@ -199,6 +212,7 @@ const SECTIONS = [
       { type: "p", key: "help.settings.p1" },
       { type: "p", key: "help.settings.p2" },
       { type: "p", key: "help.settings.p3" },
+      { type: "p", key: "help.settings.p4" },
     ],
   },
   {

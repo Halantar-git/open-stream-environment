@@ -125,6 +125,7 @@
     CMD_SET_YOUTUBE_VIDEO_ID: "cmd_set_youtube_video_id", // { videoId }
     CMD_SET_INTEGRATION_ENABLED: "cmd_set_integration_enabled", // { service, enabled }
     CMD_SET_NOTIFICATION_SOUND: "cmd_set_notification_sound", // { enabled }
+    CMD_SET_NOTIFICATION_VOLUME: "cmd_set_notification_volume", // { volume: 0..1 }
     CMD_SET_OBS_CONFIG: "cmd_set_obs_config", // { host?, port?, password?, sceneMap? }
     CMD_SET_SOUNDBOARD_CONFIG: "cmd_set_soundboard_config", // { config }
     CMD_SET_TTS_CONFIG: "cmd_set_tts_config", // { config: { enabled?, volume?, rate?, lang? } }

@@ -38,6 +38,7 @@ export function createStateManager() {
     donationAlertsEnabled: true,
     youtubeEnabled: true,
     notificationSound: true,
+    notificationVolume: 0.8,
     obs: { enabled: false, host: "127.0.0.1", port: 4455, password: "", sceneMap: { main: "", start: "", brb: "", talk: "", end: "", wheel: "", video: "", poll: "" } },
     soundboard: { enabled: true, volume: 0.8, queueMode: false, sounds: [] },
     tts: { enabled: true, volume: 0.9, rate: 1, lang: "ru-RU", voice: "" },
@@ -83,6 +84,7 @@ export function createStateManager() {
     state.donationAlertsEnabled = payload.donationAlertsEnabled !== false;
     state.youtubeEnabled = payload.youtubeEnabled !== false;
     state.notificationSound = payload.notificationSound !== false;
+    state.notificationVolume = typeof payload.notificationVolume === "number" ? payload.notificationVolume : state.notificationVolume;
     state.obs = payload.obs || state.obs;
     state.soundboard = payload.soundboard || state.soundboard;
     state.tts = payload.tts || state.tts;

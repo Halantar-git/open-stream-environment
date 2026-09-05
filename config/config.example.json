@@ -1,6 +1,7 @@
 {
   "port": 8710,
   "notificationSound": true,
+  "notificationVolume": 0.8,
   "twitch": {
     "channel": "halantar",
     "clientId": "",

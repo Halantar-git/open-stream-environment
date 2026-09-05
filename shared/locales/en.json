@@ -278,6 +278,7 @@
     "cameraFilterFilter": "OBS filter name",
     "cameraFilterDuration": "Duration (sec)",
     "notificationSound": "Notification sound",
+    "notificationVolume": "Notification volume",
     "ru": "Русский",
     "en": "English"
   },
@@ -853,6 +854,7 @@
       "title": "Twitch",
       "p1": "Chat connects anonymously and only needs the channel name.",
       "p2": "For follow/sub/cheer alerts you need a Twitch application and authorization.",
+      "p3": "You can send chat messages from the Chat window and Web Remote — they are posted as the streamer via Twitch Helix (scope user:write:chat), so sending requires the authorization described below.",
       "s1": "Register an app at dev.twitch.tv/console/apps.",
       "s2": "Set the Redirect URI to the value shown in Settings → Twitch.",
       "s3": "Paste the Client ID and Client Secret.",
@@ -894,9 +896,16 @@
     "remote": {
       "title": "Web Remote",
       "p1": "Open from a phone or tablet on the same Wi-Fi network using the address shown in the header.",
-      "p2": "From the remote you can switch scenes, control the wheel and death counter, send test alerts, run OBS commands, change the theme, switch cameras and trigger effects.",
+      "p2": "From the remote you can switch scenes, control the wheel and death counter, send test alerts, run OBS commands, change the theme, switch cameras, trigger effects and send chat messages.",
       "p3": "The Wheel tab holds the wheel settings (command, participants, list position, volume, speed) and the participant list: add and remove viewers right from the remote.",
-      "p4": "Next to the webcam there is a microphone mute button — set the audio input name in Settings → OBS."
+      "p4": "Next to the webcam there is a microphone mute button — set the audio input name in Settings → OBS.",
+      "p5": "The Chat tab has an input field at the bottom — you can not only read the message feed but also send your own messages to Twitch chat."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "p1": "When someone follows, subscribes, gifts a sub, donates or cheers, a popup card appears in the top-right corner of the control panel. It disappears on its own after a few seconds.",
+      "p2": "If the panel is minimized to tray or out of focus, a native Windows toast notification is shown instead of the in-panel card.",
+      "p3": "The notification sound (buzzer.wav) and its volume are configured in Settings → Application: the Notification sound toggle and Notification volume slider."
     },
     "terminal": {
       "title": "Terminal and commands",
@@ -921,7 +930,8 @@
       "title": "Application settings",
       "p1": "Port changes the local server port and requires an app restart.",
       "p2": "Appearance manages overlay themes; Export/Import saves the full config.json together with media files (it contains secrets — don't share it).",
-      "p3": "Language switches the whole interface between English and Russian."
+      "p3": "Language switches the whole interface between English and Russian.",
+      "p4": "The event notification sound and its volume are configured in the Application card (the Notification sound toggle and Notification volume slider)."
     },
     "data": {
       "title": "Data and backups",

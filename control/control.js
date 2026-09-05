@@ -134,6 +134,8 @@ const { EVENT_TYPES } = window.SharedEvents;
   const soundboardVolumeValue = document.getElementById("soundboardVolumeValue");
   const soundboardQueueSwitch = document.getElementById("soundboardQueueSwitch");
   const notificationSoundSwitch = document.getElementById("notificationSoundSwitch");
+  const notificationVolume = document.getElementById("notificationVolume");
+  const notificationVolumeValue = document.getElementById("notificationVolumeValue");
   const ttsEnabledSwitch = document.getElementById("ttsEnabledSwitch");
   const ttsVolume = document.getElementById("ttsVolume");
   const ttsVolumeValue = document.getElementById("ttsVolumeValue");
@@ -236,7 +238,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   function playNotificationSound() {
     try {
       const a = new Audio(`http://localhost:${port}/assets/audio/buzzer.wav`);
-      a.volume = 0.8;
+      a.volume = Math.min(1, Math.max(0, Number(state.notificationVolume ?? 0.8)));
       const p = a.play();
       if (p && p.catch) p.catch(() => {});
     } catch {
@@ -369,6 +371,11 @@ const { EVENT_TYPES } = window.SharedEvents;
       setSwitchState(daVoiceSwitch, !!state.donationVoice.donationAlerts);
     }
     setSwitchState(notificationSoundSwitch, state.notificationSound !== false);
+    if (notificationVolume) {
+      const vol = Math.round((state.notificationVolume ?? 0.8) * 100);
+      notificationVolume.value = vol;
+      if (notificationVolumeValue) notificationVolumeValue.textContent = `${vol}%`;
+    }
     renderStreamDeckIcons();
     renderSplashSettings();
     appPortInput.value = port;
@@ -989,6 +996,14 @@ const { EVENT_TYPES } = window.SharedEvents;
   wireSwitch(soundboardEnabledSwitch, (on) => sendSoundboardConfig({ enabled: on }));
 
   wireSwitch(notificationSoundSwitch, (on) => send(EVENT_TYPES.CMD_SET_NOTIFICATION_SOUND, { enabled: on }));
+  if (notificationVolume) {
+    notificationVolume.addEventListener("input", (e) => {
+      if (notificationVolumeValue) notificationVolumeValue.textContent = `${e.target.value}%`;
+    });
+    notificationVolume.addEventListener("change", (e) => {
+      send(EVENT_TYPES.CMD_SET_NOTIFICATION_VOLUME, { volume: Number(e.target.value) / 100 });
+    });
+  }
 
   wireSwitch(ttsEnabledSwitch, (on) => sendTtsConfig({ enabled: on }));
   wireSwitch(daVoiceSwitch, (on) => send(EVENT_TYPES.CMD_SET_DONATION_VOICE, { config: { donationAlerts: on } }));

@@ -150,6 +150,9 @@ class AppState {
         : "Control+Shift+L";
     this.config.chat_hud_display_id = this.config.chat_hud_display_id == null ? null : String(this.config.chat_hud_display_id);
     this.config.notificationSound = this.config.notificationSound !== false;
+    this.config.notificationVolume = typeof this.config.notificationVolume === "number"
+      ? Math.min(1, Math.max(0, this.config.notificationVolume))
+      : 0.8;
     const ch = this.config.chatHud || {};
     this.config.chatHud = {
       width: typeof ch.width === "number" ? ch.width : 360,
@@ -936,6 +939,13 @@ class AppState {
     return this.config.notificationSound;
   }
 
+  setNotificationVolume(volume) {
+    const n = Number(volume);
+    this.config.notificationVolume = Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : this.config.notificationVolume;
+    saveConfig(this.config);
+    return this.config.notificationVolume;
+  }
+
   // ---- Appearance / themes ----
 
   findCustomTheme(id) {
@@ -1218,6 +1228,7 @@ class AppState {
     this.config = {
       port: portValid ? port : this.config.port,
       notificationSound: typeof newConfig.notificationSound === "boolean" ? newConfig.notificationSound : this.config.notificationSound,
+      notificationVolume: typeof newConfig.notificationVolume === "number" ? newConfig.notificationVolume : this.config.notificationVolume,
       twitch: { ...this.config.twitch, ...(newConfig.twitch || {}) },
       donationAlerts: { ...this.config.donationAlerts, ...(newConfig.donationAlerts || {}) },
       youtube: { ...this.config.youtube, ...(newConfig.youtube || {}) },
@@ -1282,6 +1293,7 @@ class AppState {
       goal: this.config.goal,
       port: this.config.port,
       notificationSound: this.config.notificationSound,
+      notificationVolume: this.config.notificationVolume,
       twitchChannel: this.config.twitch.channel,
       twitchClientId: this.config.twitch.clientId,
       donationAlertsClientId: this.config.donationAlerts.clientId,
