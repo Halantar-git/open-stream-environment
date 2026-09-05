@@ -669,12 +669,14 @@ function formatStreamAlert(alert, isRu) {
 }
 
 function onStreamAlert(alert) {
-  if (!alert || alert.isTest) return;
+  if (!alert) return;
   if (!["follow", "sub", "gift_sub", "cheer", "donation"].includes(alert.kind)) return;
 
-  // В панели управления есть свой тост; нативное уведомление показываем,
-  // только когда панель не в фокусе (свёрнута в трей / скрыта / за игрой).
-  if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isFocused()) return;
+  const isTest = !!alert.isTest;
+  // Для реальных событий не дублируем уведомление, когда панель в фокусе
+  // (там уже есть свой тост). Тестовые показываем всегда, чтобы можно было
+  // проверить нативное уведомление по кнопке, не сворачивая панель.
+  if (!isTest && mainWindow && !mainWindow.isDestroyed() && mainWindow.isFocused()) return;
 
   const isRu = db && db.getLanguage() === "ru";
   const { title, body } = formatStreamAlert(alert, isRu);
@@ -756,6 +758,11 @@ function registerChatHudHotkey(hotkey) {
 }
 
 app.whenReady().then(() => {
+  // Windows toast notifications need a stable AppUserModelID (must match the
+  // packaged app's shortcut AUMID), otherwise `new Notification()` silently
+  // fails to show. Set it before any notification is created.
+  app.setAppUserModelId("com.openstreamenvironment.app");
+
   // Disable the default application menu so pressing Alt doesn't reveal a
   // menu bar (the overlay/control UI doesn't need it).
   Menu.setApplicationMenu(null);
