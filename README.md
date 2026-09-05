@@ -1,5 +1,9 @@
 # Open Stream Environment
 
+<p align="center">
+  <img src="assets/logo/git_logo.png" alt="Open Stream Environment" />
+</p>
+
 Стрим-оверлей в стиле Material Design 3 + интуитивный визуальный редактор
 (в стиле drag-and-drop, аналогично механикам Figma) — перетаскивание, ресайз,
 добавление/удаление виджетов на лету, собранные на Electron. Оверлей отдаётся локальным сервером как обычная веб-страница —
