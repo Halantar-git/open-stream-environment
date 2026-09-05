@@ -46,7 +46,7 @@ function buildTwitchAuthorizeUrl(config, port) {
     client_id: config.twitch.clientId,
     redirect_uri: redirectUri(port, "twitch"),
     response_type: "code",
-    scope: "moderator:read:followers channel:read:subscriptions bits:read channel:read:redemptions",
+    scope: "moderator:read:followers channel:read:subscriptions bits:read channel:read:redemptions user:write:chat",
     state,
     force_verify: "true",
   });

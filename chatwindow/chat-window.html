@@ -35,6 +35,10 @@
   </header>
   <div class="chat-list" id="chatList"></div>
   <button class="jump-to-latest" id="jumpToLatest" hidden data-i18n="chatWindow.newMessages">Новые сообщения ↓</button>
+  <form class="chat-composer" id="chatComposer" autocomplete="off">
+    <input class="chat-composer__input" id="chatInput" type="text" maxlength="500" placeholder="Сообщение в чат…" data-i18n-placeholder="chatWindow.sendPlaceholder" />
+    <button class="chat-composer__send" id="chatSendBtn" type="submit" data-i18n="chatWindow.send">Отправить</button>
+  </form>
 
   <script src="../shared/events.js"></script>
   <script src="../shared/i18n.js"></script>

@@ -74,6 +74,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const statusFabStack = document.getElementById("statusFabStack");
   const remoteUrlHint = document.getElementById("remoteUrlHint");
   const remoteUrlText = document.getElementById("remoteUrlText");
+  const alertToasts = document.getElementById("alertToasts");
   const gridSizeSelect = document.getElementById("gridSizeSelect");
   const aspectRatioSelect = document.getElementById("aspectRatioSelect");
   const layoutPresetSelect = document.getElementById("layoutPresetSelect");
@@ -132,6 +133,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const soundboardVolume = document.getElementById("soundboardVolume");
   const soundboardVolumeValue = document.getElementById("soundboardVolumeValue");
   const soundboardQueueSwitch = document.getElementById("soundboardQueueSwitch");
+  const notificationSoundSwitch = document.getElementById("notificationSoundSwitch");
   const ttsEnabledSwitch = document.getElementById("ttsEnabledSwitch");
   const ttsVolume = document.getElementById("ttsVolume");
   const ttsVolumeValue = document.getElementById("ttsVolumeValue");
@@ -199,6 +201,48 @@ const { EVENT_TYPES } = window.SharedEvents;
   function formatMoney(n) { return Number(n || 0).toLocaleString("ru-RU"); }
   const CURRENCY_SYMBOLS = { RUB: "₽", USD: "$", EUR: "€", UAH: "₴", KZT: "₸", GBP: "£" };
   function currencySymbol(code) { return CURRENCY_SYMBOLS[String(code || "").toUpperCase()] || code || ""; }
+  function alertToastTitle(kind, event) {
+    if (kind === "gift_sub") return t("alert.giftSub", { count: event.count ?? event.amount ?? 1 });
+    const key = "alert." + kind;
+    const label = t(key);
+    return label === key ? String(kind) : label;
+  }
+  function showAlertToast(event) {
+    if (!event || !event.kind || !alertToasts) return;
+    const kind = event.kind;
+
+    const parts = [];
+    if (event.user) parts.push(event.user);
+    if (kind === "donation" && typeof event.amount === "number") {
+      parts.push(`${formatMoney(event.amount)} ${currencySymbol(event.currency)}`);
+    } else if (kind === "cheer" && typeof event.amount === "number") {
+      parts.push(t("alert.cheerBits", { amount: event.amount }));
+    }
+    const body = parts.join(" · ");
+
+    const toast = document.createElement("div");
+    toast.className = "alert-toast";
+    toast.setAttribute("data-kind", kind);
+    toast.innerHTML = `<span class="alert-toast__dot"></span><span class="alert-toast__content"><span class="alert-toast__title">${escapeHtml(alertToastTitle(kind, event))}</span>${body ? `<span class="alert-toast__body">${escapeHtml(body)}</span>` : ""}</span>`;
+    alertToasts.prepend(toast);
+
+    while (alertToasts.children.length > 5) alertToasts.removeChild(alertToasts.lastChild);
+
+    setTimeout(() => {
+      toast.classList.add("is-leaving");
+      setTimeout(() => toast.remove(), 240);
+    }, 5000);
+  }
+  function playNotificationSound() {
+    try {
+      const a = new Audio(`http://localhost:${port}/assets/audio/buzzer.wav`);
+      a.volume = 0.8;
+      const p = a.play();
+      if (p && p.catch) p.catch(() => {});
+    } catch {
+      /* звук — необязательный */
+    }
+  }
   function switchHtml(id, on) {
     return `<div class="md-switch${on ? " is-on" : ""}" id="${id}"><div class="md-switch__thumb"></div></div>`;
   }
@@ -324,6 +368,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (state.donationVoice) {
       setSwitchState(daVoiceSwitch, !!state.donationVoice.donationAlerts);
     }
+    setSwitchState(notificationSoundSwitch, state.notificationSound !== false);
     renderStreamDeckIcons();
     renderSplashSettings();
     appPortInput.value = port;
@@ -942,6 +987,8 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   wireSwitch(soundboardQueueSwitch, (on) => sendSoundboardConfig({ queueMode: on }));
   wireSwitch(soundboardEnabledSwitch, (on) => sendSoundboardConfig({ enabled: on }));
+
+  wireSwitch(notificationSoundSwitch, (on) => send(EVENT_TYPES.CMD_SET_NOTIFICATION_SOUND, { enabled: on }));
 
   wireSwitch(ttsEnabledSwitch, (on) => sendTtsConfig({ enabled: on }));
   wireSwitch(daVoiceSwitch, (on) => send(EVENT_TYPES.CMD_SET_DONATION_VOICE, { config: { donationAlerts: on } }));
@@ -2199,8 +2246,12 @@ const { EVENT_TYPES } = window.SharedEvents;
       case EVENT_TYPES.TERMINAL_FILTER:
         loggerPanel.setFilter((msg.payload && msg.payload.level) || "all");
         break;
+      case EVENT_TYPES.RECENT_EVENT:
+        showAlertToast(msg.payload);
+        if (state.notificationSound !== false) playNotificationSound();
+        break;
       default:
-        break; // ALERT / CHAT_MESSAGE / RECENT_EVENT are for the overlay, not the editor
+        break; // ALERT / CHAT_MESSAGE are for the overlay, not the editor
     }
   }
 

@@ -169,6 +169,10 @@
         <div class="remote-chat__list" id="remoteChatList">
           <div class="remote-chat__empty" data-i18n="remote.chatEmpty">Сообщений пока нет</div>
         </div>
+        <form class="remote-chat__composer" id="remoteChatComposer" autocomplete="off">
+          <input class="remote-chat__input" id="remoteChatInput" type="text" maxlength="500" placeholder="Сообщение в чат…" data-i18n-placeholder="remote.chatPlaceholder" />
+          <button class="remote-chat__send" id="remoteChatSend" type="submit" data-i18n="remote.chatSend">Отправить</button>
+        </form>
       </div>
     </section>
   </main>

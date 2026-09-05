@@ -128,6 +128,52 @@ body { display: flex; flex-direction: column; height: 100vh; position: relative;
   margin: 0 1px;
 }
 
+/* ---- Outgoing message composer ---- */
+.chat-composer {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--md-outline-variant);
+  background: var(--md-surface-container-low);
+  -webkit-app-region: no-drag;
+}
+.chat-composer__input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  background: var(--md-surface-container-highest);
+  color: var(--md-on-surface);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-sm);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+}
+.chat-composer__input:focus { border-color: var(--md-primary); }
+.chat-composer__send {
+  flex: 0 0 auto;
+  padding: 0 16px;
+  border: 1px solid var(--md-primary);
+  border-radius: var(--shape-sm);
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.chat-composer__send:active { background: var(--md-on-primary-container); color: var(--md-on-primary-container); }
+.chat-composer__send:disabled { opacity: 0.5; cursor: default; }
+
+/* Outgoing message status (ghost -> confirmed -> failed) */
+.chat-row__status { margin-left: 6px; font-size: 11px; color: var(--md-on-surface-variant); flex-shrink: 0; }
+.chat-row.is-pending { opacity: 0.55; }
+.chat-row.is-pending .chat-row__status { opacity: 1; }
+.chat-row.is-sent .chat-row__status { color: #4caf50; }
+.chat-row.is-error { opacity: 1; }
+.chat-row.is-error .chat-row__status { color: var(--md-error); }
+
 /* ---- Chat HUD overlay (single-monitor, read-only chat over the game) ----
    The window is a small transparent/frameless/click-through panel, so the
    header is hidden and the message list fills the window with a translucent
@@ -141,6 +187,9 @@ body.is-hud {
   --chat-hud-font-size: 14px;
 }
 body.is-hud .chat-header {
+  display: none;
+}
+body.is-hud .chat-composer {
   display: none;
 }
 body.is-hud .chat-list {

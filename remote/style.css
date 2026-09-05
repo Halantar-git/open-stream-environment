@@ -545,6 +545,70 @@ body {
   color: var(--md-on-surface);
 }
 
+.remote-chat__status {
+  margin-left: auto;
+  font-size: 0.72em;
+  color: var(--md-on-surface-variant);
+  flex-shrink: 0;
+}
+
+.remote-chat__msg.is-pending {
+  opacity: 0.55;
+}
+.remote-chat__msg.is-pending .remote-chat__status {
+  opacity: 1;
+}
+.remote-chat__msg.is-sent .remote-chat__status {
+  color: #4caf50;
+}
+.remote-chat__msg.is-error .remote-chat__status {
+  color: var(--md-error);
+}
+
+.remote-chat__composer {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--md-outline-variant);
+  background: var(--md-surface-container);
+}
+.remote-chat__input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-sm);
+  font: inherit;
+  font-size: clamp(14px, 0.85vw, 17px);
+  outline: none;
+}
+.remote-chat__input:focus {
+  border-color: var(--md-primary);
+}
+.remote-chat__send {
+  flex: 0 0 auto;
+  border: 1px solid var(--md-primary);
+  border-radius: var(--shape-sm);
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  font: inherit;
+  font-size: clamp(13px, 0.8vw, 15px);
+  font-weight: 700;
+  padding: 0 14px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.remote-chat__send:active {
+  background: var(--md-on-primary-container);
+  color: var(--md-on-primary-container);
+}
+.remote-chat__send:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* Phone (portrait / narrow): tighten spacing, enlarge touch targets */
 @media (max-width: 599px) {
   .remote-main {

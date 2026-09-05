@@ -277,6 +277,7 @@
     "cameraFilterSource": "Источник в OBS",
     "cameraFilterFilter": "Название фильтра в OBS",
     "cameraFilterDuration": "Длительность (сек)",
+    "notificationSound": "Звук уведомлений",
     "ru": "Русский",
     "en": "English"
   },
@@ -638,7 +639,10 @@
     "error": "ошибка",
     "notConfigured": "не настроено",
     "noMessages": "Пока нет сообщений",
-    "newMessages": "Новые сообщения ↓"
+    "newMessages": "Новые сообщения ↓",
+    "you": "Вы",
+    "sendPlaceholder": "Сообщение в чат…",
+    "send": "Отправить"
   },
   "status": {
     "twitchChat": "Twitch чат",
@@ -783,6 +787,8 @@
     "noFilters": "Нет эффектов",
     "chat": "Чат",
     "chatEmpty": "Сообщений пока нет",
+    "chatPlaceholder": "Сообщение в чат…",
+    "chatSend": "Отправить",
     "tabControl": "Управление",
     "tabWheel": "Колесо",
     "tabChat": "Чат"

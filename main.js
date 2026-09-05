@@ -638,6 +638,49 @@ function showMainWindow() {
   mainWindow.focus();
 }
 
+function formatStreamAlert(alert, isRu) {
+  const kind = alert.kind;
+  const user = String(alert.user || "");
+  let title = "Open Stream Environment";
+  let body = user;
+
+  if (kind === "follow") {
+    title = isRu ? "Новый фолловер" : "New follower";
+  } else if (kind === "sub") {
+    title = isRu ? "Новая подписка" : "New subscription";
+  } else if (kind === "gift_sub") {
+    const count = Number(alert.count ?? alert.amount ?? 1);
+    title = isRu ? "Гифт-подписка" : "Gift subscription";
+    body = user ? `${user} × ${count}` : `× ${count}`;
+  } else if (kind === "cheer") {
+    const bits = Number(alert.amount ?? 0);
+    title = isRu ? "Чир (биты)" : "Cheer (bits)";
+    body = user ? `${user} · ${bits} ${isRu ? "бит" : "bits"}` : `${bits} ${isRu ? "бит" : "bits"}`;
+  } else if (kind === "donation") {
+    title = isRu ? "Новый донат" : "New donation";
+    const parts = [];
+    if (user) parts.push(user);
+    if (typeof alert.amount === "number") parts.push(`${alert.amount} ${String(alert.currency || "").trim()}`.trim());
+    if (alert.message) parts.push(String(alert.message));
+    body = parts.join(" · ");
+  }
+
+  return { title, body };
+}
+
+function onStreamAlert(alert) {
+  if (!alert || alert.isTest) return;
+  if (!["follow", "sub", "gift_sub", "cheer", "donation"].includes(alert.kind)) return;
+
+  // В панели управления есть свой тост; нативное уведомление показываем,
+  // только когда панель не в фокусе (свёрнута в трей / скрыта / за игрой).
+  if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isFocused()) return;
+
+  const isRu = db && db.getLanguage() === "ru";
+  const { title, body } = formatStreamAlert(alert, isRu);
+  new Notification({ title, body }).show();
+}
+
 function trayMenuLabels() {
   const isRu = db && db.getLanguage() === "ru";
   return isRu
@@ -743,6 +786,10 @@ app.whenReady().then(() => {
   serverHandle.bus.on("chat-hud-toggle", toggleChatHudMode);
   serverHandle.bus.on("chat-hud-display-changed", onChatHudDisplayChanged);
   serverHandle.bus.on("chat-hud-config-changed", onChatHudConfigChanged);
+
+  // Нативные OS-уведомления о событиях стрима (фоллоу/подписки/донаты),
+  // когда панель управления не в фокусе.
+  serverHandle.bus.on("alert", onStreamAlert);
 
   createWindow(port);
   createTray();

@@ -36,6 +36,7 @@
     GIVEAWAY_UPDATE: "giveaway_update",
     GIVEAWAY_PARTICIPANTS: "giveaway_participants",
     CHAT_MESSAGE: "chat_message",
+    CHAT_SENT: "chat_sent",
     LOCALES: "locales",
     CMD_SET_PARTICIPANTS_CONFIG: "cmd_set_participants_config",
     CMD_SET_WHEEL_CONFIG: "cmd_set_wheel_config",
@@ -45,6 +46,7 @@
     CMD_REMOVE_GIVEAWAY_PARTICIPANT: "cmd_remove_giveaway_participant",
     CMD_CLEAR_GIVEAWAY_PARTICIPANTS: "cmd_clear_giveaway_participants",
     CMD_TEST_CHAT: "cmd_test_chat",
+    CMD_SEND_CHAT: "cmd_send_chat",
   };
 
   const wsUrl = (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws";
@@ -62,6 +64,9 @@
   const cameraGrid = document.getElementById("cameraGrid");
   const filterGrid = document.getElementById("filterGrid");
   const chatList = document.getElementById("remoteChatList");
+  const remoteChatComposer = document.getElementById("remoteChatComposer");
+  const remoteChatInput = document.getElementById("remoteChatInput");
+  const remoteChatSend = document.getElementById("remoteChatSend");
   const wheelCommand = document.getElementById("wheelCommand");
   const wheelElimination = document.getElementById("wheelElimination");
   const wsMaxNames = document.getElementById("wsMaxNames");
@@ -103,6 +108,10 @@
   let wheelConfig = { musicVolume: 50 };
   let wheelSpeedConfig = { speed: 3 };
   let giveaway = { command: "!go", eliminationMode: false, participants: [], count: 0 };
+  let currentChannel = "";
+  const pendingSends = new Map(); // clientId -> { el, text, at, confirmed }
+  const ECHO_MATCH_MS = 20000;
+  const SEND_COOLDOWN_MS = 1600;
 
   function setStatus(connected) {
     isConnected = connected;
@@ -460,10 +469,72 @@
     chatList.scrollTop = chatList.scrollHeight;
   }
 
+  function setOutgoingStatus(entry, statusClass, symbol) {
+    if (!entry || !entry.el) return;
+    entry.el.classList.remove("is-pending", "is-sent", "is-error");
+    if (statusClass) entry.el.classList.add(statusClass);
+    const statusEl = entry.el.querySelector(".remote-chat__status");
+    if (statusEl) statusEl.textContent = symbol;
+  }
+
+  function pushOutgoing(text) {
+    if (!chatList) return { el: null, text, at: Date.now(), confirmed: false };
+    const empty = chatList.querySelector(".remote-chat__empty");
+    if (empty) empty.remove();
+
+    const row = document.createElement("div");
+    row.className = "remote-chat__msg is-pending";
+    const user = currentChannel || t("chatWindow.you");
+    row.innerHTML = `<span class="remote-chat__user" style="color:#7ee0d6">${escapeHtml(user)}</span><span class="remote-chat__colon">:</span><span class="remote-chat__text">${escapeHtml(text)}</span><span class="remote-chat__status">…</span>`;
+    chatList.appendChild(row);
+    while (chatList.children.length > MAX_CHAT_ROWS) chatList.removeChild(chatList.firstChild);
+    chatList.scrollTop = chatList.scrollHeight;
+    return { el: row, text, at: Date.now(), confirmed: false };
+  }
+
+  function consumeOutgoingEcho(payload) {
+    const text = String((payload && payload.message) || "").trim();
+    if (!text) return false;
+    const now = Date.now();
+    for (const [clientId, entry] of pendingSends) {
+      if (entry.text === text && now - entry.at < ECHO_MATCH_MS) {
+        pendingSends.delete(clientId);
+        setOutgoingStatus(entry, "is-sent", "✓");
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function sendChatMessage() {
+    const text = (remoteChatInput.value || "").trim();
+    if (!text) return;
+    remoteChatInput.value = "";
+
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      setOutgoingStatus(pushOutgoing(text), "is-error", "!");
+      return;
+    }
+
+    const clientId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    pendingSends.set(clientId, pushOutgoing(text));
+    sendCommand(EVENT_TYPES.CMD_SEND_CHAT, { message: text, clientId });
+    cooldownSend();
+  }
+
+  function cooldownSend() {
+    if (!remoteChatSend) return;
+    remoteChatSend.disabled = true;
+    setTimeout(() => {
+      if (remoteChatSend) remoteChatSend.disabled = false;
+    }, SEND_COOLDOWN_MS);
+  }
+
   function handleMessage(msg) {
     switch (msg.type) {
       case EVENT_TYPES.STATE: {
         const p = msg.payload || {};
+        currentChannel = p.twitchChannel || "";
         if (p.appearance) {
           themes = p.appearance.themes || [];
           activeThemeId = p.appearance.activeThemeId || null;
@@ -522,9 +593,24 @@
         if (typeof p.count === "number") deathValue.textContent = String(p.count);
         break;
       }
-      case EVENT_TYPES.CHAT_MESSAGE:
-        pushChat(msg.payload);
+      case EVENT_TYPES.CHAT_MESSAGE: {
+        const payload = msg.payload || {};
+        if (!consumeOutgoingEcho(payload)) pushChat(payload);
         break;
+      }
+      case EVENT_TYPES.CHAT_SENT: {
+        const p = msg.payload || {};
+        const entry = p.clientId ? pendingSends.get(p.clientId) : null;
+        if (!entry) break;
+        if (p.ok) {
+          entry.confirmed = true;
+          setOutgoingStatus(entry, "is-sent", "✓");
+        } else {
+          pendingSends.delete(p.clientId);
+          setOutgoingStatus(entry, "is-error", "!");
+        }
+        break;
+      }
       case EVENT_TYPES.CAMERA_ANGLE_UPDATE: {
         activeCameraAngle = (msg.payload && msg.payload.activeCameraAngle) || null;
         renderCameras();
@@ -642,6 +728,14 @@
         remoteMain.classList.toggle("is-wheel", name === "wheel");
         if (chatList) chatList.scrollTop = chatList.scrollHeight;
       });
+    });
+  }
+
+  if (remoteChatComposer) {
+    remoteChatComposer.addEventListener("submit", (ev) => {
+      ev.preventDefault();
+      vibrate();
+      sendChatMessage();
     });
   }
 

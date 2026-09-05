@@ -1355,6 +1355,74 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.22);
 }
 
+/* ---------- Alert toasts (follow/sub/cheer/donation notifications) ---------- */
+.alert-toasts {
+  position: fixed;
+  top: 64px;
+  right: 14px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.alert-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 220px;
+  max-width: 320px;
+  padding: 10px 12px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-md);
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface);
+  box-shadow: var(--elev-3);
+  animation: alert-toast-in 180ms var(--easing-standard);
+}
+.alert-toast.is-leaving {
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 220ms var(--easing-standard), transform 220ms var(--easing-standard);
+}
+.alert-toast__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 4px;
+  flex-shrink: 0;
+  background: var(--md-primary);
+}
+.alert-toast__content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.alert-toast__title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--md-on-surface-variant);
+}
+.alert-toast__body {
+  font-size: 13px;
+  line-height: 1.35;
+  word-break: break-word;
+}
+.alert-toast[data-kind="follow"] .alert-toast__dot { background: #7ee0d6; }
+.alert-toast[data-kind="sub"] .alert-toast__dot,
+.alert-toast[data-kind="gift_sub"] .alert-toast__dot { background: #a6d189; }
+.alert-toast[data-kind="cheer"] .alert-toast__dot { background: #f4b8e4; }
+.alert-toast[data-kind="donation"] .alert-toast__dot { background: #e5c890; }
+
+@keyframes alert-toast-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* ---------- Help panel ---------- */
 .help-panel {
   position: fixed;

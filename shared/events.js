@@ -28,6 +28,7 @@
     LAYOUT_PRESETS_UPDATE: "layout_presets_update", // { presets: [{ id, name, widgetCount, createdAt, updatedAt }] }
     ALERT: "alert", // { kind: 'follow'|'sub'|'gift_sub'|'cheer'|'donation', ... }
     CHAT_MESSAGE: "chat_message",
+    CHAT_SENT: "chat_sent", // { clientId, ok, messageId, error? } — server -> client confirmation of an outgoing chat message
     RECENT_EVENT: "recent_event",
     GOAL_UPDATE: "goal_update", // { current, target, title, currency }
     CONNECTION_STATUS: "connection_status", // { service, status }
@@ -83,6 +84,7 @@
     CMD_SET_GOAL: "cmd_set_goal", // { title?, current?, target?, currency? }
     CMD_TEST_ALERT: "cmd_test_alert", // { kind }
     CMD_TEST_CHAT: "cmd_test_chat", // { message? }
+    CMD_SEND_CHAT: "cmd_send_chat", // { message, clientId } — send a message to Twitch chat
     CMD_TEST_POLL: "cmd_test_poll", // {} — simulate chat votes
     CMD_SET_APP_CONFIG: "cmd_set_app_config", // { twitchChannel? }
     CMD_SET_ACTIVE_THEME: "cmd_set_active_theme", // { id, enable3d? } — select a theme and optionally toggle its 3D variant
@@ -122,6 +124,7 @@
     CMD_SET_LANGUAGE: "cmd_set_language", // { lang }
     CMD_SET_YOUTUBE_VIDEO_ID: "cmd_set_youtube_video_id", // { videoId }
     CMD_SET_INTEGRATION_ENABLED: "cmd_set_integration_enabled", // { service, enabled }
+    CMD_SET_NOTIFICATION_SOUND: "cmd_set_notification_sound", // { enabled }
     CMD_SET_OBS_CONFIG: "cmd_set_obs_config", // { host?, port?, password?, sceneMap? }
     CMD_SET_SOUNDBOARD_CONFIG: "cmd_set_soundboard_config", // { config }
     CMD_SET_TTS_CONFIG: "cmd_set_tts_config", // { config: { enabled?, volume?, rate?, lang? } }

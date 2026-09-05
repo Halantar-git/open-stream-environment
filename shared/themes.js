@@ -400,6 +400,70 @@
       },
     },
 
+    sf: {
+      id: "sf",
+      name: "Super Four",
+      builtin: true,
+      category: "system",
+      dimension: "2d",
+      family: "sf",
+      borderRadius: "6px",
+      tokens: {
+        // Фиолетовый перламутр (#a855f7) — основной акцент.
+        "--md-primary": "#a855f7",
+        "--md-on-primary": "#2a0a33",
+        "--md-primary-container": "#6b21a8",
+        "--md-on-primary-container": "#f3e8ff",
+
+        // Янтарные «поворотники» (#f59e0b) — вторичный акцент.
+        "--md-secondary": "#f59e0b",
+        "--md-on-secondary": "#3d2500",
+        "--md-secondary-container": "#92400e",
+        "--md-on-secondary-container": "#fef3c7",
+
+        // Холодный циан — третичный (дополняет фиолетовый и янтарь).
+        "--md-tertiary": "#22d3ee",
+        "--md-on-tertiary": "#083344",
+        "--md-tertiary-container": "#0e7490",
+        "--md-on-tertiary-container": "#cffafe",
+
+        "--md-error": "#ffb4ab",
+        "--md-on-error": "#690005",
+        "--md-error-container": "#93000a",
+        "--md-on-error-container": "#ffdad6",
+
+        // Тёмно-фиолетовые поверхности (фон #0f0c19, поверхность #241b35).
+        "--md-surface-dim": "#0f0c19",
+        "--md-surface": "#0f0c19",
+        "--md-surface-bright": "#2a2138",
+        "--md-surface-container-lowest": "#08060d",
+        "--md-surface-container-low": "#17121f",
+        "--md-surface-container": "#241b35",
+        "--md-surface-container-high": "#2a2138",
+        "--md-surface-container-highest": "#33284a",
+
+        "--md-on-surface": "#f3e8ff",
+        "--md-on-surface-variant": "#cbb8de",
+        "--md-outline": "#8f7fa0",
+        "--md-outline-variant": "#493a56",
+
+        "--font-display": '"Rajdhani", "Segoe UI", sans-serif',
+        "--font-body": '"Manrope", "Segoe UI", sans-serif',
+        "--font-mono": '"JetBrains Mono", "Consolas", monospace',
+
+        // Скруглённые панели 6px, фиолетовое свечение, рамка 2px.
+        "--panel-radius": "6px",
+        "--panel-clip": "none",
+        "--panel-decoration": "none",
+        "--panel-glow": "0 0 10px rgba(147, 51, 234, 0.5), inset 0 0 20px rgba(147, 51, 234, 0.05)",
+        "--panel-bg": "rgba(15, 12, 25, 0.90)",
+        "--panel-blur": "12px",
+        "--panel-border": "2px solid rgba(168, 85, 247, 0.35)",
+        "--alert-enter-easing": "cubic-bezier(0.05, 0.7, 0.1, 1)",
+        "--alert-enter-duration": "400ms",
+      },
+    },
+
     elite: {
       id: "elite",
       name: "Elite",

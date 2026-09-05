@@ -41,10 +41,24 @@
   const statusChipEl = document.getElementById("statusChip");
   const statusLabelEl = document.getElementById("statusLabel");
   const jumpBtn = document.getElementById("jumpToLatest");
+  const composerEl = document.getElementById("chatComposer");
+  const chatInputEl = document.getElementById("chatInput");
+  const chatSendBtn = document.getElementById("chatSendBtn");
 
   const MAX_ROWS = 300;
+  const ECHO_MATCH_MS = 20000;
+  const SEND_COOLDOWN_MS = 1600;
   let atBottom = true;
   let currentStatus = null;
+  let currentChannel = "";
+  let ws = null;
+  const pendingSends = new Map(); // clientId -> { el, text, at, confirmed }
+
+  function sendCommand(type, payload) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type, payload: payload || {} }));
+    }
+  }
 
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -92,6 +106,68 @@
     if (empty) empty.remove();
   }
 
+  function setOutgoingStatus(entry, statusClass, symbol) {
+    if (!entry || !entry.el) return;
+    entry.el.classList.remove("is-pending", "is-sent", "is-error");
+    if (statusClass) entry.el.classList.add(statusClass);
+    const statusEl = entry.el.querySelector(".chat-row__status");
+    if (statusEl) statusEl.textContent = symbol;
+  }
+
+  function pushOutgoing(text) {
+    clearEmptyState();
+    const row = document.createElement("div");
+    row.className = "chat-row is-pending";
+    const user = currentChannel || t("chatWindow.you");
+    row.innerHTML = `<span class="chat-row__user" style="color:${escapeAttr("#7ee0d6")}">${escapeHtml(user)}</span><span class="chat-row__colon">:</span><span class="chat-row__text">${escapeHtml(text)}</span><span class="chat-row__status">…</span><span class="chat-row__time">${formatTime(new Date())}</span>`;
+    chatListEl.appendChild(row);
+    while (chatListEl.children.length > MAX_ROWS) chatListEl.removeChild(chatListEl.firstChild);
+    if (atBottom) {
+      chatListEl.scrollTop = chatListEl.scrollHeight;
+    } else {
+      jumpBtn.hidden = false;
+    }
+    return { el: row, text, at: Date.now(), confirmed: false };
+  }
+
+  function consumeOutgoingEcho(payload) {
+    const text = String((payload && payload.message) || "").trim();
+    if (!text) return false;
+    const now = Date.now();
+    for (const [clientId, entry] of pendingSends) {
+      if (entry.text === text && now - entry.at < ECHO_MATCH_MS) {
+        pendingSends.delete(clientId);
+        setOutgoingStatus(entry, "is-sent", "✓");
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function sendChatMessage() {
+    const text = (chatInputEl.value || "").trim();
+    if (!text) return;
+    chatInputEl.value = "";
+
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      setOutgoingStatus(pushOutgoing(text), "is-error", "!");
+      return;
+    }
+
+    const clientId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    pendingSends.set(clientId, pushOutgoing(text));
+    sendCommand(EVENT_TYPES.CMD_SEND_CHAT, { message: text, clientId });
+    cooldownSend();
+  }
+
+  function cooldownSend() {
+    if (!chatSendBtn) return;
+    chatSendBtn.disabled = true;
+    setTimeout(() => {
+      if (chatSendBtn) chatSendBtn.disabled = false;
+    }, SEND_COOLDOWN_MS);
+  }
+
   function pushMessage(msg) {
     clearEmptyState();
     const row = document.createElement("div");
@@ -129,12 +205,28 @@
   function handleMessage(msg) {
     switch (msg.type) {
       case EVENT_TYPES.STATE:
-        channelLabelEl.textContent = msg.payload.twitchChannel || "—";
+        currentChannel = msg.payload.twitchChannel || "";
+        channelLabelEl.textContent = currentChannel || "—";
         setStatus((msg.payload.connectionStatus || {}).twitchChat);
         break;
-      case EVENT_TYPES.CHAT_MESSAGE:
-        pushMessage(msg.payload);
+      case EVENT_TYPES.CHAT_MESSAGE: {
+        const payload = msg.payload || {};
+        if (!consumeOutgoingEcho(payload)) pushMessage(payload);
         break;
+      }
+      case EVENT_TYPES.CHAT_SENT: {
+        const p = msg.payload || {};
+        const entry = p.clientId ? pendingSends.get(p.clientId) : null;
+        if (!entry) break;
+        if (p.ok) {
+          entry.confirmed = true;
+          setOutgoingStatus(entry, "is-sent", "✓");
+        } else {
+          pendingSends.delete(p.clientId);
+          setOutgoingStatus(entry, "is-error", "!");
+        }
+        break;
+      }
       case EVENT_TYPES.CONNECTION_STATUS:
         if (msg.payload.service === "twitchChat") setStatus(msg.payload.status);
         break;
@@ -160,7 +252,7 @@
   }
 
   function connect() {
-    const ws = new WebSocket(`ws://localhost:${port}/ws`);
+    ws = new WebSocket(`ws://localhost:${port}/ws`);
     ws.onmessage = (ev) => {
       try {
         handleMessage(JSON.parse(ev.data));
@@ -170,6 +262,13 @@
     };
     ws.onclose = () => setTimeout(connect, 2000);
     ws.onerror = () => ws.close();
+  }
+
+  if (composerEl) {
+    composerEl.addEventListener("submit", (ev) => {
+      ev.preventDefault();
+      sendChatMessage();
+    });
   }
 
   chatListEl.innerHTML = '<div class="chat-list__empty">' + t("chatWindow.noMessages") + '</div>';

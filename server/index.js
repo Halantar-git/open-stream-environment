@@ -27,7 +27,7 @@ const { getUserMediaDir, getLogsDir } = require("./storage-paths");
 const { EVENT_TYPES, ALERT_DURATIONS_MS } = require("../shared/events");
 const { createLogger, enableFileLogging } = require("./logger");
 const { mountOAuthRoutes, buildTwitchAuthorizeUrl, buildDonationAlertsAuthorizeUrl, buildYoutubeAuthorizeUrl } = require("./oauth");
-const { startTwitchChat } = require("./integrations/twitch-chat");
+const { startTwitchChat, sendTwitchChatMessage } = require("./integrations/twitch-chat");
 const { startTwitchEvents } = require("./integrations/twitch-eventsub");
 const { startDonationAlerts } = require("./integrations/donationalerts");
 const { startYoutube } = require("./integrations/youtube-live");
@@ -761,6 +761,14 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
         bus.emit("alert", { ...buildTestAlert(msg.payload && msg.payload.kind), isTest: true });
         break;
       }
+      case EVENT_TYPES.CMD_SEND_CHAT: {
+        const text = String((msg.payload && msg.payload.message) || "");
+        const clientId = (msg.payload && msg.payload.clientId) || null;
+        sendTwitchChatMessage({ bus, state, message: text }).then((result) => {
+          broadcast(EVENT_TYPES.CHAT_SENT, { clientId, ...result });
+        });
+        break;
+      }
       case EVENT_TYPES.CMD_TEST_CHAT: {
         const count = Math.max(1, Math.min(20, Number((msg.payload && msg.payload.count)) || 1));
         const users = [
@@ -944,6 +952,11 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
       }
       case EVENT_TYPES.CMD_SET_YOUTUBE_VIDEO_ID: {
         state.setYoutubeVideoId(msg.payload && msg.payload.videoId);
+        break;
+      }
+      case EVENT_TYPES.CMD_SET_NOTIFICATION_SOUND: {
+        state.setNotificationSound(!!(msg.payload && msg.payload.enabled));
+        broadcast(EVENT_TYPES.STATE, stateSnapshot());
         break;
       }
       case EVENT_TYPES.CMD_SET_INTEGRATION_ENABLED: {

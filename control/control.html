@@ -60,6 +60,8 @@
       </div>
     </header>
 
+    <div class="alert-toasts" id="alertToasts" aria-live="polite"></div>
+
     <aside class="terminal-panel" id="terminalPanel" hidden>
       <header class="terminal-panel__header">
         <span class="terminal-panel__title" data-i18n="terminal.title">Терминал</span>
@@ -488,6 +490,7 @@
 
         <div class="settings__card md-card">
           <h2 data-i18n="settings.app">Приложение</h2>
+          <div class="properties__toggle-row"><label data-i18n="settings.notificationSound">Звук уведомлений</label><div class="md-switch is-on" id="notificationSoundSwitch" role="switch" aria-checked="true"><div class="md-switch__thumb"></div></div></div>
           <div class="md-field">
             <label data-i18n="settings.port">Порт локального сервера</label>
             <div class="settings__port-row">

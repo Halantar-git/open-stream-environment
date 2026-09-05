@@ -277,6 +277,7 @@
     "cameraFilterSource": "OBS source",
     "cameraFilterFilter": "OBS filter name",
     "cameraFilterDuration": "Duration (sec)",
+    "notificationSound": "Notification sound",
     "ru": "Русский",
     "en": "English"
   },
@@ -638,7 +639,10 @@
     "error": "error",
     "notConfigured": "not configured",
     "noMessages": "No messages yet",
-    "newMessages": "New messages ↓"
+    "newMessages": "New messages ↓",
+    "you": "You",
+    "sendPlaceholder": "Chat message…",
+    "send": "Send"
   },
   "status": {
     "twitchChat": "Twitch chat",
@@ -783,6 +787,8 @@
     "noFilters": "No effects",
     "chat": "Chat",
     "chatEmpty": "No messages yet",
+    "chatPlaceholder": "Chat message…",
+    "chatSend": "Send",
     "tabControl": "Control",
     "tabWheel": "Wheel",
     "tabChat": "Chat"
