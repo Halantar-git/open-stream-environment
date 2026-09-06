@@ -156,6 +156,14 @@ const { EVENT_TYPES } = window.SharedEvents;
   const addChatBotCommandBtn = document.getElementById("addChatBotCommandBtn");
   const chatBotTimersList = document.getElementById("chatBotTimersList");
   const addChatBotTimerBtn = document.getElementById("addChatBotTimerBtn");
+  const moderationEnabledSwitch = document.getElementById("moderationEnabledSwitch");
+  const moderationLinkProtectionSwitch = document.getElementById("moderationLinkProtectionSwitch");
+  const moderationWhitelistInput = document.getElementById("moderationWhitelistInput");
+  const moderationBadWordsInput = document.getElementById("moderationBadWordsInput");
+  const moderationCapsThreshold = document.getElementById("moderationCapsThreshold");
+  const moderationMaxEmotes = document.getElementById("moderationMaxEmotes");
+  const moderationMaxWarns = document.getElementById("moderationMaxWarns");
+  const moderationWarnTimeoutSec = document.getElementById("moderationWarnTimeoutSec");
   const streamdeckIconStart = document.getElementById("streamdeckIconStart");
   const streamdeckIconBrb = document.getElementById("streamdeckIconBrb");
   const streamdeckIconWheel = document.getElementById("streamdeckIconWheel");
@@ -412,6 +420,7 @@ const { EVENT_TYPES } = window.SharedEvents;
       if (chatBotPrefixInput) chatBotPrefixInput.value = state.chatBot.prefix || "!";
       renderChatBotCommands();
       renderChatBotTimers();
+      renderChatBotModeration();
     }
     setSwitchState(notificationSoundSwitch, state.notificationSound !== false);
     if (notificationVolume) {
@@ -1001,6 +1010,71 @@ const { EVENT_TYPES } = window.SharedEvents;
     addChatBotTimerBtn.addEventListener("click", () => {
       const timers = [...(state.chatBot.timers || []), { id: "tmr_" + Date.now(), name: "", response: "", interval: 30, minChat: 0 }];
       sendChatBotConfig({ timers });
+    });
+  }
+
+  function sendChatBotModeration(patch) {
+    const moderation = { ...(state.chatBot.moderation || {}), ...patch };
+    sendChatBotConfig({ moderation });
+  }
+
+  function renderChatBotModeration() {
+    const m = state.chatBot.moderation || {};
+    setSwitchState(moderationEnabledSwitch, !!m.enabled);
+    setSwitchState(moderationLinkProtectionSwitch, m.linkProtection !== false);
+    if (moderationWhitelistInput) moderationWhitelistInput.value = (m.whitelistDomains || []).join(", ");
+    if (moderationBadWordsInput) moderationBadWordsInput.value = (m.badWords || []).join(", ");
+    if (moderationCapsThreshold) moderationCapsThreshold.value = Math.round((m.capsThreshold ?? 0.7) * 100);
+    if (moderationMaxEmotes) moderationMaxEmotes.value = m.maxEmotes ?? 15;
+    if (moderationMaxWarns) moderationMaxWarns.value = m.maxWarns ?? 3;
+    if (moderationWarnTimeoutSec) moderationWarnTimeoutSec.value = m.warnTimeoutSec ?? 600;
+  }
+
+  if (moderationEnabledSwitch) {
+    moderationEnabledSwitch.addEventListener("click", () => {
+      const on = !moderationEnabledSwitch.classList.contains("is-on");
+      setSwitchState(moderationEnabledSwitch, on);
+      sendChatBotModeration({ enabled: on });
+    });
+  }
+  if (moderationLinkProtectionSwitch) {
+    moderationLinkProtectionSwitch.addEventListener("click", () => {
+      const on = !moderationLinkProtectionSwitch.classList.contains("is-on");
+      setSwitchState(moderationLinkProtectionSwitch, on);
+      sendChatBotModeration({ linkProtection: on });
+    });
+  }
+  if (moderationWhitelistInput) {
+    moderationWhitelistInput.addEventListener("change", () => {
+      const whitelistDomains = moderationWhitelistInput.value.split(",").map((x) => x.trim().toLowerCase()).filter(Boolean);
+      sendChatBotModeration({ whitelistDomains });
+    });
+  }
+  if (moderationBadWordsInput) {
+    moderationBadWordsInput.addEventListener("change", () => {
+      const badWords = moderationBadWordsInput.value.split(",").map((x) => x.trim().toLowerCase()).filter(Boolean);
+      sendChatBotModeration({ badWords });
+    });
+  }
+  if (moderationCapsThreshold) {
+    moderationCapsThreshold.addEventListener("change", () => {
+      const v = Math.max(0, Math.min(100, Number(moderationCapsThreshold.value) || 0));
+      sendChatBotModeration({ capsThreshold: v / 100 });
+    });
+  }
+  if (moderationMaxEmotes) {
+    moderationMaxEmotes.addEventListener("change", () => {
+      sendChatBotModeration({ maxEmotes: Math.max(1, Number(moderationMaxEmotes.value) || 15) });
+    });
+  }
+  if (moderationMaxWarns) {
+    moderationMaxWarns.addEventListener("change", () => {
+      sendChatBotModeration({ maxWarns: Math.max(1, Number(moderationMaxWarns.value) || 3) });
+    });
+  }
+  if (moderationWarnTimeoutSec) {
+    moderationWarnTimeoutSec.addEventListener("change", () => {
+      sendChatBotModeration({ warnTimeoutSec: Math.max(1, Number(moderationWarnTimeoutSec.value) || 600) });
     });
   }
 

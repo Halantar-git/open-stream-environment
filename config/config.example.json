@@ -67,7 +67,17 @@
     "enabled": false,
     "prefix": "!",
     "commands": [],
-    "timers": []
+    "timers": [],
+    "moderation": {
+      "enabled": false,
+      "linkProtection": true,
+      "whitelistDomains": ["youtube.com", "youtu.be", "clips.twitch.tv", "twitch.tv", "boosty.to"],
+      "badWords": [],
+      "capsThreshold": 0.7,
+      "maxEmotes": 15,
+      "maxWarns": 3,
+      "warnTimeoutSec": 600
+    }
   },
   "goal": {
     "title": "Донат-цель",

@@ -2604,6 +2604,12 @@
       "channel": "halantar",
       "startedAt": 1788629097430,
       "endedAt": 1788629151805
+    },
+    {
+      "id": "9417f5ac-2114-4167-a4a4-c1fb32b706da",
+      "channel": "halantar",
+      "startedAt": 1788679908355,
+      "endedAt": 1788680183526
     }
   ],
   "chatMessages": [
@@ -10279,6 +10285,19 @@
     {
       "id": "73195343-3278-4e43-8d03-71116f41dae3",
       "timestamp": 1788629102157,
+      "type": "donation",
+      "kind": "donation",
+      "username": "Аноним",
+      "amount": 0,
+      "currency": "RUB",
+      "message": "",
+      "is_test": false,
+      "count": null,
+      "tier": null
+    },
+    {
+      "id": "bdf0849c-d5b9-4d53-b3a8-73461715e1a8",
+      "timestamp": 1788679909067,
       "type": "donation",
       "kind": "donation",
       "username": "Аноним",

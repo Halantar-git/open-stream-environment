@@ -44,6 +44,7 @@ function startTwitchChat({ bus, channel }) {
     if (self) return;
     bus.emit("chat_message", {
       user: tags["display-name"] || tags.username || "viewer",
+      userId: tags["user-id"] || "",
       color: tags.color || "#c9c1d6",
       badges: Object.keys(tags.badges || {}),
       message,
@@ -75,6 +76,7 @@ function startTwitchChat({ bus, channel }) {
 }
 
 const CHAT_SEND_URL = "https://api.twitch.tv/helix/chat/messages";
+const MODERATION_URL = "https://api.twitch.tv/helix/moderation/bans";
 const TOKEN_URL = "https://id.twitch.tv/oauth2/token";
 
 // Twitch silently throttles after ~20 messages/30s. Space outgoing messages
@@ -190,4 +192,104 @@ async function sendTwitchChatMessage({ bus, state, message }) {
   return { ok: true, messageId, isSent: sent ? !!sent.is_sent : true };
 }
 
-module.exports = { startTwitchChat, sendTwitchChatMessage };
+/**
+ * Times out or bans a user via Twitch Helix (POST /helix/moderation/bans).
+ * The bot acts as the broadcaster, so moderator_id === broadcaster_id. When
+ * `duration` is a positive number a timeout is issued (a 1-second timeout is
+ * used to clear a message without the delete-message scope); omit it for a
+ * permanent ban. Requires the moderator:manage:banned_users scope.
+ */
+async function moderateUser({ bus, state, userId, duration, reason }) {
+  const logger = createLogger(bus, "twitch-moderation");
+  const twitch = state.config.twitch;
+  const targetId = String(userId || "").trim();
+
+  if (!targetId) return { ok: false, error: "missing_user_id" };
+
+  if (!twitch.clientId || !twitch.userAccessToken || !twitch.broadcasterId) {
+    logger.warn("cannot moderate — Twitch is not authorized", {
+      hasClientId: !!twitch.clientId,
+      hasToken: !!twitch.userAccessToken,
+      hasBroadcasterId: !!twitch.broadcasterId,
+    });
+    return { ok: false, error: "not_configured" };
+  }
+
+  const refresher = createTokenRefresher({
+    tokenUrl: TOKEN_URL,
+    logger,
+    label: "twitch",
+    getConfig: () => state.config.twitch,
+    buildParams: (cfg) => ({
+      grant_type: "refresh_token",
+      client_id: cfg.clientId,
+      client_secret: cfg.clientSecret,
+      refresh_token: cfg.refreshToken,
+    }),
+    accessTokenKey: "userAccessToken",
+    saveTokens: (json, expiresAt) => {
+      const cfg = state.config.twitch;
+      state.saveTwitchTokens({
+        userAccessToken: json.access_token,
+        refreshToken: json.refresh_token ?? cfg.refreshToken,
+        broadcasterId: cfg.broadcasterId,
+        expiresAt,
+      });
+    },
+  });
+
+  let token;
+  try {
+    token = await refresher.ensureAccessToken();
+  } catch (err) {
+    logger.error("moderation token refresh failed", { message: err.message });
+    return { ok: false, error: "auth" };
+  }
+
+  const doSend = async (accessToken) => {
+    const data = {
+      user_id: targetId,
+      reason: String(reason || "Нарушение правил чата").slice(0, 500),
+    };
+    if (typeof duration === "number" && Number.isFinite(duration) && duration > 0) {
+      data.duration = Math.max(1, Math.round(duration));
+    }
+    const res = await fetch(
+      `${MODERATION_URL}?broadcaster_id=${encodeURIComponent(twitch.broadcasterId)}&moderator_id=${encodeURIComponent(twitch.broadcasterId)}`,
+      {
+        method: "POST",
+        headers: {
+          "Client-Id": twitch.clientId,
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ data }),
+      }
+    );
+    const json = await res.json().catch(() => ({}));
+    return { res, json };
+  };
+
+  let result = await doSend(token);
+  if (result.res.status === 401) {
+    logger.warn("moderation returned 401 — refreshing and retrying once");
+    try {
+      token = await refresher.refreshAccessToken();
+    } catch (err) {
+      logger.error("moderation token refresh failed", { message: err.message });
+      return { ok: false, error: "auth" };
+    }
+    result = await doSend(token);
+  }
+
+  if (!result.res.ok) {
+    const apiMessage = result.json && result.json.message;
+    logger.error("moderation failed", { status: result.res.status, message: apiMessage });
+    return { ok: false, error: apiMessage || `http_${result.res.status}` };
+  }
+
+  logger.success("moderation action applied", { userId: targetId, duration: typeof duration === "number" ? duration : null });
+  return { ok: true };
+}
+
+module.exports = { startTwitchChat, sendTwitchChatMessage, moderateUser };

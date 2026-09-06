@@ -71,6 +71,7 @@
       "lists": "sounds | cameras | filters — resource lists",
       "logs": "logs <info|success|warn|error|hint|all> — filter log levels",
       "media": "media list | cleanup — list/remove orphaned media files",
+      "modtest": "modtest <message> — test moderation without banning",
       "lang": "lang <ru|en> — interface language",
       "status": "status — current system state",
       "clear": "clear — clear logs",
@@ -121,6 +122,7 @@
     "lang": { "done": "Interface language: {{lang}}" },
     "logs": { "usage": "Usage: logs <info|success|warn|error|hint|all>", "all": "Log filter: all levels", "set": "Log filter: {{level}}", "unknown": "Unknown level. Available: {{levels}}, all" },
     "media": { "cleaned": "Orphaned files removed: {{count}}", "none": "No orphaned media files found", "empty": "Media directory is empty", "title": "Media files:" },
+    "modtest": { "usage": "Usage: modtest <message>", "ok": "Moderation: no violations", "hit": "Moderation: {{type}} → warn {{warn}}, action {{action}}" },
     "status": { "obs": "OBS: {{status}}", "scene": "Active scene: {{scene}}", "camera": "Active camera angle: {{cam}}", "theme": "Theme: {{theme}}", "channel": "Channel: {{channel}}", "death": "Deaths: {{death}}", "goal": "Goal: {{goal}}", "uptime": "Uptime: {{uptime}}" },
     "clear": { "done": "Logs cleared" }
   },
@@ -304,6 +306,15 @@
     "chatBotIntervalHint": "How often to post the message, in minutes",
     "chatBotMinChat": "Min messages",
     "chatBotMinChatHint": "Minimum chat lines between timer posts",
+    "chatBotModeration": "Moderation",
+    "chatBotModerationEnabled": "Auto moderation",
+    "chatBotLinkProtection": "Link protection",
+    "chatBotWhitelist": "Allowed domains (comma-separated)",
+    "chatBotBadWords": "Blocked words (comma-separated)",
+    "chatBotCapsThreshold": "Caps (%)",
+    "chatBotMaxEmotes": "Max emotes",
+    "chatBotMaxWarns": "Max warns",
+    "chatBotWarnTimeout": "Warn timeout (sec)",
     "ru": "Русский",
     "en": "English"
   },
@@ -884,6 +895,13 @@
       "s2": "Set the Redirect URI to the value shown in Settings → Twitch.",
       "s3": "Paste the Client ID and Client Secret.",
       "s4": "Press Connect Twitch and approve the authorization in the browser."
+    },
+    "chatbot": {
+      "title": "Chat bot and moderation",
+      "p1": "In Settings → Chat bot you can enable the bot, set the command prefix and add your own commands (responses support $(user), $(channel), $(args), $(count), $(random a|b|c)) and timers. Each command has an access level (everyone / subscribers / moderators / broadcaster), a global cooldown and a per-user cooldown. The built-in !commands command lists the commands available to the viewer.",
+      "p2": "The bot can only reply when Twitch is connected with the user:write:chat scope — messages are posted as the channel via Twitch Helix.",
+      "p3": "The Moderation section enables auto moderation: link protection (with an allowed-domain whitelist), a blocked-word list with de-leetization of lookalike characters, caps and emote limits, and cumulative warnings: first offense clears the message and warns, second times out, third bans.",
+      "p4": "Timeouts and bans require the additional moderator:manage:banned_users scope — reconnect Twitch. In the terminal, the modtest <message> command checks a message without actually banning."
     },
     "donationalerts": {
       "title": "DonationAlerts",

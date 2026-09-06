@@ -385,6 +385,26 @@
           <div class="settings__actions">
             <button class="md-button md-button--tonal" id="addChatBotTimerBtn" data-i18n="settings.addChatBotTimer">+ Добавить таймер</button>
           </div>
+
+          <div class="settings__subhead"><h3 data-i18n="settings.chatBotModeration">Модерация</h3></div>
+          <div class="properties__toggle-row"><label data-i18n="settings.chatBotModerationEnabled">Автомодерация</label><div class="md-switch" id="moderationEnabledSwitch" role="switch" aria-checked="false"><div class="md-switch__thumb"></div></div></div>
+          <div class="properties__toggle-row"><label data-i18n="settings.chatBotLinkProtection">Защита от ссылок</label><div class="md-switch is-on" id="moderationLinkProtectionSwitch" role="switch" aria-checked="true"><div class="md-switch__thumb"></div></div></div>
+          <div class="md-field">
+            <label data-i18n="settings.chatBotWhitelist">Разрешённые домены (через запятую)</label>
+            <input type="text" id="moderationWhitelistInput" placeholder="youtube.com, clips.twitch.tv, boosty.to" />
+          </div>
+          <div class="md-field">
+            <label data-i18n="settings.chatBotBadWords">Запрещённые слова (через запятую)</label>
+            <input type="text" id="moderationBadWordsInput" placeholder="слово1, слово2" />
+          </div>
+          <div class="properties__row">
+            <div class="md-field"><label data-i18n="settings.chatBotCapsThreshold">Капс (%)</label><input type="number" id="moderationCapsThreshold" min="0" max="100" step="5" value="70" /></div>
+            <div class="md-field"><label data-i18n="settings.chatBotMaxEmotes">Макс. смайлов</label><input type="number" id="moderationMaxEmotes" min="1" max="100" step="1" value="15" /></div>
+          </div>
+          <div class="properties__row">
+            <div class="md-field"><label data-i18n="settings.chatBotMaxWarns">Макс. варнов</label><input type="number" id="moderationMaxWarns" min="1" max="10" step="1" value="3" /></div>
+            <div class="md-field"><label data-i18n="settings.chatBotWarnTimeout">Таймаут варна (сек)</label><input type="number" id="moderationWarnTimeoutSec" min="1" max="86400" step="1" value="600" /></div>
+          </div>
         </div>
 
         <div class="settings__card md-card" id="settingsCardDonationAlerts">

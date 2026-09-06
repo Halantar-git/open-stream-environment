@@ -29,6 +29,7 @@
 const { createLogger } = require("./logger");
 const { EVENT_TYPES } = require("../shared/events");
 const { matchCameraAngle, matchCameraFilter } = require("./integrations/twitch-eventsub");
+const { createModerationEngine } = require("./integrations/chat-moderation");
 const { cleanupOrphanedMedia, listMediaFiles } = require("./media");
 
 const LOCALES = {
@@ -61,7 +62,7 @@ function makeT(lang) {
 const HELP_KEYS = [
   "scene", "cam", "filter", "sound", "death", "wheel", "giveaway",
   "simSub", "simPoints", "simRaid", "alert", "chat", "theme", "goal",
-  "obs", "lists", "logs", "media", "lang", "status", "clear", "help",
+  "obs", "lists", "logs", "media", "modtest", "lang", "status", "clear", "help",
 ];
 
 function formatUptime(ms) {
@@ -79,7 +80,7 @@ const HELP_LINES = HELP_KEYS.map((k) => resolveDict(`cli.help.${k}`, LOCALES.ru)
 const COMMANDS = [
   "scene", "cam", "filter", "sound", "death", "wheel", "giveaway",
   "sim", "alert", "chat", "theme", "themes", "goal", "obs",
-  "sounds", "cameras", "filters", "logs", "media", "lang", "status", "clear", "help",
+  "sounds", "cameras", "filters", "logs", "media", "modtest", "lang", "status", "clear", "help",
 ];
 
 const SUBCOMMANDS = {
@@ -394,6 +395,29 @@ function createCliHandler({ state, bus, obsCtrl, broadcast, startedAt, logger, h
     log("success", translate("cli.chat.done", { message }));
   }
 
+  // Проверяет текст через движок модерации без реального бана/таймаута.
+  function modtestCommand(message) {
+    if (!message) {
+      log("error", translate("cli.modtest.usage"));
+      return;
+    }
+    const cfg = (state.config.chatBot && state.config.chatBot.moderation) || {};
+    const engine = createModerationEngine({ ...cfg, enabled: true });
+    const verdict = engine.check({
+      user: "test_user",
+      userId: "modtest",
+      message,
+      emotes: {},
+      level: "everyone",
+    });
+    if (!verdict) {
+      log("success", translate("cli.modtest.ok"));
+      return;
+    }
+    const action = verdict.ban ? "ban" : `timeout ${verdict.timeoutSec}s`;
+    log("warn", translate("cli.modtest.hit", { type: verdict.type, warn: verdict.warn, action }));
+  }
+
   // ---- theme / goal / obs / lists / lang ----
 
   function themeCommand(id) {
@@ -673,6 +697,9 @@ function createCliHandler({ state, bus, obsCtrl, broadcast, startedAt, logger, h
         break;
       case "chat":
         chatCommand(args.join(" "));
+        break;
+      case "modtest":
+        modtestCommand(args.join(" "));
         break;
       case "theme":
         themeCommand(args[0]);

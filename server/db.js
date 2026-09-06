@@ -74,6 +74,8 @@ function defaultData() {
       barGap: 2,
       peakFall: 2.5, // скорость спада пика эквалайзера (ячеек/сек)
     },
+    // Накопительные предупреждения автомодерации чата: userId -> количество варнов.
+    moderation_warns: {},
     // Язык интерфейса ("en" | "ru").
     language: "en",
   };
@@ -349,6 +351,24 @@ function createDatabase(dbPath = getDbPath()) {
     return next;
   }
 
+  function getModerationWarns() {
+    const raw = get("moderation_warns");
+    return raw && typeof raw === "object" && !Array.isArray(raw) ? { ...raw } : {};
+  }
+
+  function saveModerationWarns(warns) {
+    const clean = {};
+    if (warns && typeof warns === "object" && !Array.isArray(warns)) {
+      Object.keys(warns).forEach((key) => {
+        const n = Number(warns[key]);
+        if (Number.isFinite(n) && n > 0) clean[key] = Math.round(n);
+      });
+    }
+    set("moderation_warns", clean);
+    persist();
+    return clean;
+  }
+
   function getLanguage() {
     return get("language") === "ru" ? "ru" : "en";
   }
@@ -403,6 +423,8 @@ function createDatabase(dbPath = getDbPath()) {
     savePollConfig,
     getMicConfig,
     saveMicConfig,
+    getModerationWarns,
+    saveModerationWarns,
     getLanguage,
     saveLanguage,
     clearStreamEvents,

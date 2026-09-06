@@ -29,7 +29,8 @@
 */
 
 const { createLogger } = require("../logger");
-const { sendTwitchChatMessage } = require("./twitch-chat");
+const { sendTwitchChatMessage, moderateUser } = require("./twitch-chat");
+const { createModerationEngine } = require("./chat-moderation");
 
 const LEVELS = ["everyone", "subscriber", "moderator", "broadcaster"];
 const LEVEL_RANK = { everyone: 0, subscriber: 1, moderator: 2, broadcaster: 3 };
@@ -211,6 +212,25 @@ function startChatBot({ bus, state }) {
     commands: config.commands || [],
     timers: config.timers || [],
   });
+  // Persist warn counts in local-db when available; otherwise fall back to an
+  // in-memory store (session-scoped) so `server:only` still works.
+  let moderationStore;
+  if (state.db && typeof state.db.getModerationWarns === "function") {
+    moderationStore = {
+      get: (key) => state.db.getModerationWarns()[key] || 0,
+      set: (key, count) => {
+        const warns = state.db.getModerationWarns();
+        warns[key] = count;
+        state.db.saveModerationWarns(warns);
+      },
+      delete: (key) => {
+        const warns = state.db.getModerationWarns();
+        delete warns[key];
+        state.db.saveModerationWarns(warns);
+      },
+    };
+  }
+  const moderation = createModerationEngine(config.moderation || {}, moderationStore);
 
   // The bot reads chat on the anonymous tmi socket but sends replies through
   // the Helix API, so its own messages come back as ordinary `chat_message`
@@ -242,6 +262,30 @@ function startChatBot({ bus, state }) {
   function onChat(msg) {
     if (!msg || msg.isTest) return;
     if (isRecentReply(msg.message)) return;
+
+    const level = userLevel({ user: msg.user, badges: msg.badges || [], channel });
+    const verdict = moderation.check({
+      user: msg.user,
+      userId: msg.userId,
+      badges: msg.badges || [],
+      message: msg.message,
+      emotes: msg.emotes,
+      level,
+    });
+    if (verdict) {
+      if (verdict.message) sendReply(verdict.message);
+      moderateUser({
+        bus,
+        state,
+        userId: msg.userId,
+        duration: verdict.timeoutSec,
+        reason: verdict.reason,
+      }).then((result) => {
+        if (!result.ok && result.error) logger.warn("moderation action failed", { error: result.error });
+      });
+      return;
+    }
+
     const result = engine.handleChat({
       user: msg.user,
       badges: msg.badges || [],
@@ -260,6 +304,7 @@ function startChatBot({ bus, state }) {
     channel,
     commands: (config.commands || []).length,
     timers: (config.timers || []).length,
+    moderation: !!(config.moderation && config.moderation.enabled),
   });
 
   return {

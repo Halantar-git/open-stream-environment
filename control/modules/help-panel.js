@@ -117,6 +117,16 @@ const SECTIONS = [
     ],
   },
   {
+    id: "chatbot",
+    title: "help.chatbot.title",
+    blocks: [
+      { type: "p", key: "help.chatbot.p1" },
+      { type: "p", key: "help.chatbot.p2" },
+      { type: "p", key: "help.chatbot.p3" },
+      { type: "p", key: "help.chatbot.p4" },
+    ],
+  },
+  {
     id: "donationalerts",
     title: "help.donationalerts.title",
     blocks: [

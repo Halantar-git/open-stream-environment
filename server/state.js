@@ -24,6 +24,7 @@ const { WIDGET_TYPES } = require("../shared/widget-catalog");
 const { BUILTIN_THEMES } = require("../shared/themes");
 const { buildThemeTokens, SHAPE_MODES } = require("../shared/theme-engine");
 const { defaultScenes } = require("../shared/scenes-catalog");
+const { defaultModerationConfig } = require("./integrations/chat-moderation");
 const { getConfigPath, getExamplePath } = require("./storage-paths");
 
 function loadConfig() {
@@ -155,6 +156,25 @@ function normalizeBotTimer(timer) {
   };
 }
 
+function normalizeChatBotModeration(m) {
+  const d = defaultModerationConfig();
+  const src = m && typeof m === "object" ? m : {};
+  return {
+    enabled: src.enabled === true,
+    linkProtection: src.linkProtection !== false,
+    whitelistDomains: Array.isArray(src.whitelistDomains)
+      ? src.whitelistDomains.map((x) => String(x).trim().toLowerCase()).filter(Boolean).slice(0, 50)
+      : d.whitelistDomains,
+    badWords: Array.isArray(src.badWords)
+      ? src.badWords.map((x) => String(x).trim().toLowerCase()).filter(Boolean).slice(0, 200)
+      : d.badWords,
+    capsThreshold: typeof src.capsThreshold === "number" ? clamp(src.capsThreshold, 0, 1) : d.capsThreshold,
+    maxEmotes: Math.round(typeof src.maxEmotes === "number" ? clamp(src.maxEmotes, 1, 100) : d.maxEmotes),
+    maxWarns: Math.round(typeof src.maxWarns === "number" ? clamp(src.maxWarns, 1, 10) : d.maxWarns),
+    warnTimeoutSec: Math.round(typeof src.warnTimeoutSec === "number" ? clamp(src.warnTimeoutSec, 1, 86400) : d.warnTimeoutSec),
+  };
+}
+
 const EDITOR_ASPECT_RATIOS = ["16:9", "16:10", "21:9", "32:9", "4:3", "1:1", "9:16", "3:4"];
 
 class AppState {
@@ -266,6 +286,7 @@ class AppState {
       prefix: typeof cb.prefix === "string" && cb.prefix.trim() ? cb.prefix.trim() : "!",
       commands: Array.isArray(cb.commands) ? cb.commands.map(normalizeBotCommand).filter(Boolean) : [],
       timers: Array.isArray(cb.timers) ? cb.timers.map(normalizeBotTimer).filter(Boolean) : [],
+      moderation: normalizeChatBotModeration(cb.moderation),
     };
     if (this.config.twitch.enabled === undefined) this.config.twitch.enabled = true;
     if (this.config.donationAlerts.enabled === undefined) this.config.donationAlerts.enabled = true;
@@ -651,6 +672,7 @@ class AppState {
     next.timers = Array.isArray(next.timers)
       ? next.timers.map(normalizeBotTimer).filter(Boolean).slice(0, 50)
       : cur.timers;
+    next.moderation = normalizeChatBotModeration({ ...cur.moderation, ...(next.moderation || {}) });
     this.config.chatBot = next;
     saveConfig(this.config);
     return this.config.chatBot;
@@ -1331,6 +1353,10 @@ class AppState {
         ...(newConfig.chatBot || {}),
         commands: keepArr(newConfig.chatBot && newConfig.chatBot.commands, this.config.chatBot.commands),
         timers: keepArr(newConfig.chatBot && newConfig.chatBot.timers, this.config.chatBot.timers),
+        moderation: normalizeChatBotModeration({
+          ...this.config.chatBot.moderation,
+          ...((newConfig.chatBot && newConfig.chatBot.moderation) || {}),
+        }),
       },
       scenes: newConfig.scenes ? { ...defaultScenes(), ...newConfig.scenes } : this.config.scenes,
       topDonation: newConfig.topDonation || this.config.topDonation,
