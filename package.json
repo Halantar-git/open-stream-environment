@@ -1,12 +1,16 @@
 {
   "name": "open-stream-environment",
   "productName": "Open Stream Environment",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "description": "Material Design 3 stream overlay + Figma-style drag-and-drop control panel for Twitch/OBS. Overlay served locally as an OBS Browser Source; Twitch chat/follows/subs and DonationAlerts donations drive live alerts.",
   "main": "main.js",
   "private": true,
   "author": "Halantar <tranquility.rus@gmail.com>",
   "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Halantar-git/open-stream-environment.git"
+  },
   "scripts": {
     "start": "electron .",
     "server:only": "node server/index.js",

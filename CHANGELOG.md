@@ -7,6 +7,14 @@
 где PATCH — исправления, MINOR — новая функциональность без слома
 совместимости, MAJOR — несовместимые изменения (пока не было).
 
+## [2.6.1] — 2026-09-06
+
+### Changed
+- В package.json добавлено поле `repository` (для авто-публикации релизов через
+  electron-builder).
+- GitHub Actions workflow: добавлены `permissions: contents: write` и флаг
+  `--publish always` для надёжной загрузки артефактов в релиз.
+
 ## [2.6.0] — 2026-09-06
 
 ### Added
