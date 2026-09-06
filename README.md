@@ -317,6 +317,7 @@ graph TD
         DB[(Локальный JSON Store db.js)]
         Crypt[Electron safeStorage Vault]
         CLI[Интерактивный CLI Контроллер]
+        Bot[Чат-бот: команды и таймеры]
     end
 
     subgraph "Окна и Отображение (Chromium / OBS)"
@@ -334,6 +335,8 @@ graph TD
     Bus <--> DB
     DB <--> Crypt
     CLI <--> Bus
+    Bus -->|chat_message| Bot
+    Bot -->|Helix chat/messages| Twitch
 
     %% Связи отображения
     Admin <-->|Локальный WebSocket /ws| Bus
