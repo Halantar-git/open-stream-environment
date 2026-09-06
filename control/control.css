@@ -45,6 +45,22 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .topbar__actions { margin-left: auto; display: flex; align-items: center; }
 .topbar__actions > :first-child { margin-left: 0; }
 
+.update-banner {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  border-bottom: 1px solid var(--md-outline-variant);
+  font-size: 13px;
+}
+.update-banner[hidden] { display: none; }
+.update-banner__text { font-weight: 600; }
+.update-banner__actions { display: flex; gap: 8px; }
+
 /* ---------- Views ---------- */
 .view { flex: 1; display: flex; overflow: hidden; }
 .view[hidden] { display: none; }

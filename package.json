@@ -1,7 +1,7 @@
 {
   "name": "open-stream-environment",
   "productName": "Open Stream Environment",
-  "version": "2.6.2",
+  "version": "2.6.3",
   "description": "Material Design 3 stream overlay + Figma-style drag-and-drop control panel for Twitch/OBS. Overlay served locally as an OBS Browser Source; Twitch chat/follows/subs and DonationAlerts donations drive live alerts.",
   "main": "main.js",
   "private": true,
@@ -22,6 +22,7 @@
     "dist:dir": "electron-builder --dir"
   },
   "dependencies": {
+    "electron-updater": "^6.8.9",
     "express": "^4.19.2",
     "tmi.js": "^1.8.5",
     "ws": "^8.18.0"
@@ -32,7 +33,10 @@
     "jest": "^29.7.0"
   },
   "jest": {
-    "testPathIgnorePatterns": ["/node_modules/", "/backup/"]
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/backup/"
+    ]
   },
   "engines": {
     "node": ">=22.12.0"
@@ -63,13 +67,18 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "assets/icons/icon.ico"
     },
     "mac": {
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "category": "public.app-category.video",
       "icon": "assets/icons/icon.icns"
     },
@@ -77,11 +86,15 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "deb",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "category": "AudioVideo",
@@ -96,6 +109,11 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Open Stream Environment",
       "artifactName": "${productName}-${version}-setup.${ext}"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Halantar-git",
+      "repo": "open-stream-environment"
     },
     "asar": true
   }

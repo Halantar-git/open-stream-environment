@@ -315,6 +315,10 @@
     "chatBotMaxEmotes": "Макс. смайлов",
     "chatBotMaxWarns": "Макс. варнов",
     "chatBotWarnTimeout": "Таймаут варна (сек)",
+    "updateAvailable": "Доступно обновление {{version}}",
+    "updateAvailableGeneric": "Доступно обновление",
+    "updateInstall": "Установить и перезапустить",
+    "updateDismiss": "Позже",
     "ru": "Русский",
     "en": "English"
   },

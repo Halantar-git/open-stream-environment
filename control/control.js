@@ -74,6 +74,10 @@ const { EVENT_TYPES } = window.SharedEvents;
   const appVersionEl = document.getElementById("appVersion");
   if (appVersionEl) appVersionEl.textContent = appVersion ? `v${appVersion}` : "";
   const statusFabStack = document.getElementById("statusFabStack");
+  const updateBanner = document.getElementById("updateBanner");
+  const updateBannerText = document.getElementById("updateBannerText");
+  const updateInstallBtn = document.getElementById("updateInstallBtn");
+  const updateDismissBtn = document.getElementById("updateDismissBtn");
   const remoteUrlHint = document.getElementById("remoteUrlHint");
   const remoteUrlText = document.getElementById("remoteUrlText");
   const alertToasts = document.getElementById("alertToasts");
@@ -2721,4 +2725,30 @@ const { EVENT_TYPES } = window.SharedEvents;
     const hasMic = Array.isArray(state.layout) && state.layout.some((w) => w.type === "mic");
     if (hasMic) micBridge.start();
     else micBridge.stop();
+  }
+
+  // ---- auto-updates banner ----
+  function showUpdateBanner(info) {
+    if (!updateBanner) return;
+    const version = (info && info.version) || "";
+    if (updateBannerText) {
+      updateBannerText.textContent = version
+        ? t("settings.updateAvailable", { version })
+        : t("settings.updateAvailableGeneric");
+    }
+    updateBanner.hidden = false;
+  }
+
+  if (updateInstallBtn) {
+    updateInstallBtn.addEventListener("click", () => {
+      if (window.desktop && window.desktop.quitAndInstall) window.desktop.quitAndInstall();
+    });
+  }
+  if (updateDismissBtn) {
+    updateDismissBtn.addEventListener("click", () => {
+      if (updateBanner) updateBanner.hidden = true;
+    });
+  }
+  if (window.desktop && window.desktop.onUpdateDownloaded) {
+    window.desktop.onUpdateDownloaded((info) => showUpdateBanner(info));
   }

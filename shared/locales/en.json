@@ -315,6 +315,10 @@
     "chatBotMaxEmotes": "Max emotes",
     "chatBotMaxWarns": "Max warns",
     "chatBotWarnTimeout": "Warn timeout (sec)",
+    "updateAvailable": "Update {{version}} is available",
+    "updateAvailableGeneric": "An update is available",
+    "updateInstall": "Install and restart",
+    "updateDismiss": "Later",
     "ru": "Русский",
     "en": "English"
   },
