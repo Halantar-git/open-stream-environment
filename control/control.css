@@ -79,6 +79,25 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .library-card__desc { font-size: 10.5px; color: var(--md-on-surface-variant); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .library__hint { font-size: 11px; color: var(--md-on-surface-variant); opacity: 0.75; padding: 4px; line-height: 1.4; margin-top: auto; }
 
+.widget-tooltip {
+  position: fixed;
+  z-index: 1000;
+  max-width: 260px;
+  padding: 8px 12px;
+  border-radius: var(--shape-md);
+  background: var(--md-surface-container-highest);
+  color: var(--md-on-surface);
+  border: 1px solid var(--md-outline-variant);
+  box-shadow: 0 6px 20px var(--md-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  pointer-events: none;
+}
+.widget-tooltip[hidden] { display: none; }
+.widget-tooltip__label { font-family: var(--font-body); font-size: 12.5px; font-weight: 700; color: var(--md-on-surface); }
+.widget-tooltip__desc { font-family: var(--font-body); font-size: 11.5px; line-height: 1.4; color: var(--md-on-surface-variant); }
+
 /* ---------- Canvas ---------- */
 .canvas-area { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .canvas-wrap {

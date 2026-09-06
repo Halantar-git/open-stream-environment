@@ -69,6 +69,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const viewSplashes = document.getElementById("view-splashes");
   const viewSettings = document.getElementById("view-settings");
   const libraryListEl = document.getElementById("libraryList");
+  const widgetTooltip = document.getElementById("widgetTooltip");
   const obsUrlLabel = document.getElementById("obsUrlLabel");
   const copyUrlBtn = document.getElementById("copyUrlBtn");
   const appVersionEl = document.getElementById("appVersion");
@@ -349,6 +350,28 @@ const { EVENT_TYPES } = window.SharedEvents;
   }
 
   // ---- library rail ----
+  function hideWidgetTooltip() {
+    if (widgetTooltip) widgetTooltip.hidden = true;
+  }
+
+  function showWidgetTooltip(card, def) {
+    if (!widgetTooltip) return;
+    widgetTooltip.innerHTML = `
+      <span class="widget-tooltip__label">${escapeHtml(t("widgets." + def.type))}</span>
+      <span class="widget-tooltip__desc">${escapeHtml(t("widgets." + def.type + "Desc"))}</span>`;
+    widgetTooltip.hidden = false;
+    const rect = card.getBoundingClientRect();
+    const gap = 10;
+    const tw = widgetTooltip.offsetWidth;
+    const th = widgetTooltip.offsetHeight;
+    let left = rect.right + gap;
+    let top = rect.top;
+    if (left + tw > window.innerWidth - 8) left = Math.max(8, rect.left - tw - gap);
+    if (top + th > window.innerHeight - 8) top = Math.max(8, window.innerHeight - th - 8);
+    widgetTooltip.style.left = `${left}px`;
+    widgetTooltip.style.top = `${top}px`;
+  }
+
   function renderLibrary() {
     libraryListEl.innerHTML = "";
     Object.values(WIDGET_TYPES).forEach((def) => {
@@ -366,6 +389,8 @@ const { EVENT_TYPES } = window.SharedEvents;
           <span class="library-card__desc">${t("widgets." + def.type + "Desc")}</span>
         </span>`;
       card.addEventListener("click", () => canvasEditor.addWidget(def.type, null));
+      card.addEventListener("mouseenter", () => showWidgetTooltip(card, def));
+      card.addEventListener("mouseleave", hideWidgetTooltip);
       card.addEventListener("dragstart", (e) => {
         e.dataTransfer.setData("text/widget-type", def.type);
         e.dataTransfer.effectAllowed = "copy";
@@ -2754,6 +2779,8 @@ const { EVENT_TYPES } = window.SharedEvents;
   if (window.desktop && window.desktop.onUpdateDownloaded) {
     window.desktop.onUpdateDownloaded((info) => showUpdateBanner(info));
   }
+
+  if (libraryListEl) libraryListEl.addEventListener("scroll", hideWidgetTooltip);
 
   if (checkUpdatesBtn && checkUpdatesStatus) {
     checkUpdatesBtn.addEventListener("click", async () => {
