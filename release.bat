@@ -29,8 +29,17 @@ if errorlevel 1 goto :error
 git add .
 if errorlevel 1 goto :error
 
-git commit -m "chore: release v%version% with write permissions"
-if errorlevel 1 goto :error
+rem Use commit.txt as the message when present (multi-line friendly);
+rem otherwise prompt, with Enter keeping the default.
+if exist commit.txt (
+  git commit -F commit.txt
+  if errorlevel 1 goto :error
+) else (
+  set "commitMsg=chore: release v%version%"
+  set /p commitMsg="Commit message [%commitMsg%]: "
+  git commit -m "%commitMsg%"
+  if errorlevel 1 goto :error
+)
 
 git push origin main
 if errorlevel 1 goto :error
