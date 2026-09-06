@@ -1,0 +1,42 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Скрипт будет срабатывать при пуше тегов, например v2.5.2
+
+jobs:
+  release:
+    name: Build and Publish
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        # Запускаем сборку параллельно на трех виртуальных машинах
+        os: [windows-latest, ubuntu-latest, macos-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0' # Точно под вашу версию в engines
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build and Publish Electron App
+        # Специальный экшен для работы с electron-builder и релизами GitHub
+        uses: samuelmeuli/action-electron-builder@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Выпускаем релиз сразу при успешной сборке
+          release: true
+          # Для Mac собираем универсальный билд, если нужно, или доверяем package.json
+          args: ${{ matrix.os == 'macos-latest' && '--mac' || (matrix.os == 'windows-latest' && '--win' || '--linux') }}
