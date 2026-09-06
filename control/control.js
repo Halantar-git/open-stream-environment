@@ -73,7 +73,33 @@ const { EVENT_TYPES } = window.SharedEvents;
   const obsUrlLabel = document.getElementById("obsUrlLabel");
   const copyUrlBtn = document.getElementById("copyUrlBtn");
   const appVersionEl = document.getElementById("appVersion");
-  if (appVersionEl) appVersionEl.textContent = appVersion ? `v${appVersion}` : "";
+  let knownUpdateVersion = null;
+
+  function renderAppVersion() {
+    if (!appVersionEl) return;
+    if (knownUpdateVersion) {
+      appVersionEl.textContent = t("settings.updateNow");
+      appVersionEl.title = t("settings.updateAvailable", { version: knownUpdateVersion });
+    } else {
+      appVersionEl.textContent = appVersion ? `v${appVersion}` : "";
+      appVersionEl.title = "";
+    }
+    appVersionEl.classList.toggle("has-update", !!knownUpdateVersion);
+  }
+
+  function applyKnownUpdate(version) {
+    knownUpdateVersion = version || null;
+    renderAppVersion();
+  }
+
+  if (appVersionEl) {
+    appVersionEl.addEventListener("click", () => {
+      if (knownUpdateVersion && window.desktop && window.desktop.quitAndInstall) {
+        window.desktop.quitAndInstall();
+      }
+    });
+  }
+  renderAppVersion();
   const statusFabStack = document.getElementById("statusFabStack");
   const updateBanner = document.getElementById("updateBanner");
   const updateBannerText = document.getElementById("updateBannerText");
@@ -2756,8 +2782,9 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   // ---- auto-updates banner ----
   function showUpdateBanner(info) {
-    if (!updateBanner) return;
     const version = (info && info.version) || "";
+    applyKnownUpdate(version);
+    if (!updateBanner) return;
     if (updateBannerText) {
       updateBannerText.textContent = version
         ? t("settings.updateAvailable", { version })
@@ -2795,6 +2822,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         if (!res || !res.ok) {
           checkUpdatesStatus.textContent = t("settings.updateUnavailable");
         } else if (res.updateAvailable && res.version) {
+          applyKnownUpdate(res.version);
           checkUpdatesStatus.textContent = t("settings.updateAvailable", { version: res.version });
         } else {
           checkUpdatesStatus.textContent = t("settings.updateNone");

@@ -318,6 +318,7 @@
     "updateAvailable": "Доступно обновление {{version}}",
     "updateAvailableGeneric": "Доступно обновление",
     "updateInstall": "Установить и перезапустить",
+    "updateNow": "Обновить",
     "updateDismiss": "Позже",
     "checkUpdates": "Проверить обновления",
     "updateChecking": "Проверяю…",

@@ -318,6 +318,7 @@
     "updateAvailable": "Update {{version}} is available",
     "updateAvailableGeneric": "An update is available",
     "updateInstall": "Install and restart",
+    "updateNow": "Update",
     "updateDismiss": "Later",
     "checkUpdates": "Check for updates",
     "updateChecking": "Checking…",
