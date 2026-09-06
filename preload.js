@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld("desktop", {
   onThemeEditorInit: (cb) => ipcRenderer.on("theme-editor:init", (_event, data) => cb(data)),
   closeCurrentWindow: () => ipcRenderer.send("app:close-current-window"),
   quitAndInstall: () => ipcRenderer.invoke("app:quit-and-install"),
+  checkForUpdates: () => ipcRenderer.invoke("app:check-for-updates"),
   onUpdateDownloaded: (cb) => ipcRenderer.on("update:downloaded", (_event, info) => cb(info)),
   pickSoundFile: (kind) => ipcRenderer.invoke("app:pick-sound-file", kind),
   replayEvent: (id) => ipcRenderer.invoke("trigger-event-replay", id),

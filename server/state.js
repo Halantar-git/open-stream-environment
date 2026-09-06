@@ -300,6 +300,7 @@ class AppState {
     }
 
     this.runtime = {
+      startedAt: Date.now(),
       connectionStatus: {
         twitchChat: "disconnected",
         twitchEvents: this.config.twitch.userAccessToken ? "connecting" : "not_configured",

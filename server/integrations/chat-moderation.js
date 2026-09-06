@@ -164,15 +164,17 @@ function createModerationEngine(config = {}, store = createMemoryStore()) {
     .map((w) => String(w).trim().toLowerCase())
     .filter(Boolean);
 
-  function isPrivileged(level) {
-    return level === "broadcaster" || level === "moderator";
+  function isPrivileged(level, badges) {
+    if (level === "broadcaster" || level === "moderator") return true;
+    const set = new Set((badges || []).map((b) => String(b).toLowerCase()));
+    return set.has("vip");
   }
 
   function check(msg = {}) {
     if (!cfg.enabled) return null;
 
     const level = msg.level || "everyone";
-    if (isPrivileged(level)) return null;
+    if (isPrivileged(level, msg.badges)) return null;
 
     const message = String(msg.message || "");
     const key = String(msg.userId || msg.user || "").toLowerCase();

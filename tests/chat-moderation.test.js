@@ -85,6 +85,11 @@ describe("createModerationEngine", () => {
     expect(engine.check({ user: "owner", userId: "6", message: "evil.com", level: "broadcaster" })).toBeNull();
   });
 
+  test("VIP не трогается модерацией", () => {
+    const engine = createModerationEngine({ enabled: true, linkProtection: false, badWords: ["дурак"], maxEmotes: 0 });
+    expect(engine.check({ user: "vip", userId: "8", badges: ["vip"], message: "ты дурак", level: "subscriber" })).toBeNull();
+  });
+
   test("система варнов: 1 → таймаут → бан", () => {
     const engine = createModerationEngine({
       enabled: true,

@@ -17,6 +17,8 @@
 
 const {
   createBotEngine,
+  parseModCommand,
+  formatUptime,
   userLevel,
   renderTemplate,
   normalizeName,
@@ -27,6 +29,18 @@ describe("chat-bot helpers", () => {
     expect(normalizeName("!Discord")).toBe("discord");
     expect(normalizeName("ДИСКОРД")).toBe("дискорд");
     expect(normalizeName(".points")).toBe("points");
+  });
+
+  test("formatUptime форматирует время", () => {
+    expect(formatUptime(60000)).toBe("1м 0с");
+    expect(formatUptime(3661000)).toBe("1ч 1м 1с");
+    expect(formatUptime(45000)).toBe("45с");
+  });
+
+  test("parseModCommand парсит !timeout и !ban", () => {
+    expect(parseModCommand("!", "!ban @user")).toEqual({ name: "ban", target: "user", durationRaw: null });
+    expect(parseModCommand("!", "!timeout @user 120")).toEqual({ name: "timeout", target: "user", durationRaw: "120" });
+    expect(parseModCommand("!", "!hello")).toBeNull();
   });
 
   test("userLevel определяет уровень по бейджам и каналу", () => {
@@ -86,12 +100,24 @@ describe("createBotEngine commands", () => {
     expect(engine.handleChat({ user: "mod", badges: ["moderator"], message: "!secret" }).reply).toBe("Только для модов");
   });
 
-  test("встроенная команда !commands перечисляет доступные команды", () => {
+  test("встроенная команда !commands перечисляет встроенные и свои команды", () => {
     const engine = createBotEngine({ prefix: "!", channel: "chan", commands });
     const result = engine.handleChat({ user: "guest", badges: [], message: "!commands" });
     expect(result.reply).toContain("!discord");
     expect(result.reply).toContain("!hello");
+    expect(result.reply).toContain("!uptime");
+    expect(result.reply).toContain("!8ball");
     expect(result.reply).not.toContain("!secret");
+    expect(result.reply).not.toContain("!timeout");
+    expect(result.reply).not.toContain("!ban");
+  });
+
+  test("!commands для модератора включает !timeout и !ban", () => {
+    const engine = createBotEngine({ prefix: "!", channel: "chan", commands });
+    const result = engine.handleChat({ user: "mod", badges: ["moderator"], message: "!commands" });
+    expect(result.reply).toContain("!timeout");
+    expect(result.reply).toContain("!ban");
+    expect(result.reply).toContain("!secret");
   });
 });
 
@@ -125,5 +151,20 @@ describe("createBotEngine timers", () => {
 
     engine.handleChat({ user: "c", badges: [], message: "третье сообщение" });
     expect(engine.tick()).toEqual(["Тихо не пишу"]);
+  });
+});
+
+describe("createBotEngine built-in commands", () => {
+  test("!so, !uptime, !8ball и !roll отвечают", () => {
+    const engine = createBotEngine({ prefix: "!", channel: "chan", commands: [], now: () => 60000, startedAt: 0 });
+
+    expect(engine.handleChat({ user: "u", badges: [], message: "!so bob" }).reply).toContain("bob");
+    expect(engine.handleChat({ user: "u", badges: [], message: "!uptime" }).reply).toBe("Стрим идёт: 1м 0с");
+
+    const ball = engine.handleChat({ user: "u", badges: [], message: "!8ball" }).reply;
+    expect(typeof ball).toBe("string");
+    expect(ball.length).toBeGreaterThan(0);
+
+    expect(engine.handleChat({ user: "u", badges: [], message: "!roll 6" }).reply).toMatch(/выбросил \d+ \(1–6\)/);
   });
 });

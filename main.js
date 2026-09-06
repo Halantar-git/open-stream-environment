@@ -61,6 +61,21 @@ let quitting = false;
 let tray = null;
 let trayNotificationShown = false;
 
+// Single-instance guard: opening a second copy would clash on the local server
+// port and show a duplicate overlay. Focus the already-running window instead.
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
 // ---- Window state persistence ----
 
 function windowStatePath() {
@@ -767,6 +782,8 @@ function registerChatHudHotkey(hotkey) {
 }
 
 app.whenReady().then(() => {
+  if (!gotSingleInstanceLock) return;
+
   // Windows toast notifications need a stable AppUserModelID (must match the
   // packaged app's shortcut AUMID), otherwise `new Notification()` silently
   // fails to show. Set it before any notification is created.
@@ -862,6 +879,19 @@ app.whenReady().then(() => {
     // Перезапускает приложение и применяет уже скачанное обновление.
     autoUpdater.quitAndInstall();
     return true;
+  });
+
+  ipcMain.handle("app:check-for-updates", async () => {
+    if (!autoUpdater || !app.isPackaged) {
+      return { ok: false, error: "not_available" };
+    }
+    try {
+      const result = await autoUpdater.checkForUpdates();
+      const version = result && result.updateInfo ? result.updateInfo.version : null;
+      return { ok: true, updateAvailable: !!version, version: version || null };
+    } catch (err) {
+      return { ok: false, error: String((err && err.message) || err) };
+    }
   });
 
   ipcMain.handle("app:open-chat-window", () => {

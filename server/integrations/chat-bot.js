@@ -46,6 +46,27 @@ function pickRandom(items) {
   return items[Math.floor(Math.random() * items.length)];
 }
 
+function formatUptime(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) return `${h}ч ${m}м ${s}с`;
+  if (m > 0) return `${m}м ${s}с`;
+  return `${s}с`;
+}
+
+const EIGHT_BALL = [
+  "Да",
+  "Нет",
+  "Определённо да",
+  "Скорее всего",
+  "Не сейчас",
+  "Сомнительно",
+  "Однозначно нет",
+  "Знаки говорят — да",
+];
+
 function userLevel({ user, badges, channel }) {
   const set = new Set((badges || []).map((b) => String(b).toLowerCase()));
   if (set.has("broadcaster") || (channel && String(user || "").toLowerCase() === String(channel).toLowerCase())) {
@@ -76,8 +97,9 @@ function renderTemplate(template, ctx) {
  * Pure command/timer engine. `commands` and `timers` are the normalized config
  * arrays from state.config.chatBot. `now` is an injectable clock for tests.
  */
-function createBotEngine({ prefix, channel, commands, timers, now }) {
+function createBotEngine({ prefix, channel, commands, timers, now, startedAt }) {
   const nowFn = now || (() => Date.now());
+  const startedAtMs = typeof startedAt === "number" ? startedAt : null;
   const cmds = new Map((commands || []).map((c) => [normalizeName(c.name), c]));
   const timerList = (timers || []).map((t) => ({ ...t }));
   const counters = new Map(); // command name -> usage count
@@ -104,6 +126,29 @@ function createBotEngine({ prefix, channel, commands, timers, now }) {
     return LEVEL_RANK[actual] >= LEVEL_RANK[required || "everyone"];
   }
 
+  function builtinReply(matched, user) {
+    switch (matched.name) {
+      case "uptime": {
+        if (startedAtMs == null) return null;
+        return `Стрим идёт: ${formatUptime(nowFn() - startedAtMs)}`;
+      }
+      case "so": {
+        const target = String(matched.args || "").replace(/^@/, "").trim();
+        if (!target) return "Использование: !so <ник>";
+        return `Шаут-аут ${target}! Загляните: https://twitch.tv/${target}`;
+      }
+      case "8ball":
+        return pickRandom(EIGHT_BALL);
+      case "roll": {
+        const max = Math.max(1, Math.min(100000, Math.round(Number(matched.args) || 100)));
+        const n = 1 + Math.floor(Math.random() * max);
+        return `@${user || "viewer"} выбросил ${n} (1–${max})`;
+      }
+      default:
+        return null;
+    }
+  }
+
   function handleChat({ user, badges, message }) {
     chatLinesSinceTimer += 1;
 
@@ -112,14 +157,20 @@ function createBotEngine({ prefix, channel, commands, timers, now }) {
 
     const level = userLevel({ user, badges, channel });
 
-    // Built-in command listing: shows the commands the caller is allowed to use.
+    // Built-in command listing: shows the built-ins plus the custom commands
+    // the caller is allowed to use.
     if (matched.name === "commands" || matched.name === "help") {
-      const visible = (commands || [])
+      const isMod = level === "moderator" || level === "broadcaster";
+      const builtins = ["uptime", "so", "8ball", "roll", ...(isMod ? ["timeout", "ban"] : [])];
+      const custom = (commands || [])
         .filter((c) => normalizeName(c.name) && levelOk(c.level, level))
         .map((c) => (prefix || "!") + normalizeName(c.name));
-      const names = visible.length ? visible.join(" ") : "";
-      return { reply: `Команды: ${names}` };
+      const names = [...builtins.map((n) => (prefix || "!") + n), ...custom];
+      return { reply: `Команды: ${names.join(" ")}` };
     }
+
+    const builtin = builtinReply(matched, user);
+    if (builtin != null) return { reply: builtin };
 
     const cmd = cmds.get(matched.name);
     if (!cmd) return null;
@@ -195,6 +246,25 @@ function createBotEngine({ prefix, channel, commands, timers, now }) {
 }
 
 /**
+ * Parses the moderation chat commands `!timeout @user [sec]` and `!ban @user`.
+ * Returns null when the message is not a moderation command.
+ */
+function parseModCommand(prefix, message) {
+  const text = String(message || "").trim();
+  const p = prefix || "!";
+  if (!text.startsWith(p)) return null;
+  const body = text.slice(p.length).trim();
+  const parts = body.split(/\s+/);
+  const name = (parts[0] || "").toLowerCase();
+  if (name !== "timeout" && name !== "ban") return null;
+  return {
+    name,
+    target: (parts[1] || "").replace(/^@/, "").trim(),
+    durationRaw: name === "timeout" ? parts[2] : null,
+  };
+}
+
+/**
  * Wires the engine onto the bus. Returns a controller with `stop()`.
  */
 function startChatBot({ bus, state }) {
@@ -211,6 +281,7 @@ function startChatBot({ bus, state }) {
     channel,
     commands: config.commands || [],
     timers: config.timers || [],
+    startedAt: state.runtime && state.runtime.startedAt,
   });
   // Persist warn counts in local-db when available; otherwise fall back to an
   // in-memory store (session-scoped) so `server:only` still works.
@@ -259,11 +330,51 @@ function startChatBot({ bus, state }) {
     });
   }
 
+  const userIds = new Map(); // username (lowercase) -> userId
+
+  function handleModCommand(msg, modCmd, level) {
+    if (level !== "moderator" && level !== "broadcaster") {
+      sendReply(`@${msg.user}, у вас нет прав на модерацию.`);
+      return;
+    }
+    const targetName = modCmd.target;
+    if (!targetName) {
+      sendReply("Использование: !timeout @user [сек] | !ban @user");
+      return;
+    }
+    const targetId = userIds.get(targetName.toLowerCase());
+    if (!targetId) {
+      sendReply(`@${msg.user}, не знаю ID пользователя ${targetName} — он ещё не писал в чат.`);
+      return;
+    }
+    if (modCmd.name === "ban") {
+      moderateUser({ bus, state, userId: targetId, reason: `Бан по команде ${msg.user}` }).then((result) => {
+        if (result.ok) sendReply(`@${targetName} забанен.`);
+        else logger.warn("ban command failed", { error: result.error });
+      });
+    } else {
+      const duration = Math.max(1, Math.min(1209600, Math.round(Number(modCmd.durationRaw) || 600)));
+      moderateUser({ bus, state, userId: targetId, duration, reason: `Таймаут по команде ${msg.user}` }).then((result) => {
+        if (result.ok) sendReply(`@${targetName} в таймауте на ${duration} сек.`);
+        else logger.warn("timeout command failed", { error: result.error });
+      });
+    }
+  }
+
   function onChat(msg) {
     if (!msg || msg.isTest) return;
     if (isRecentReply(msg.message)) return;
 
+    if (msg.userId) userIds.set(String(msg.user || "").toLowerCase(), msg.userId);
+
     const level = userLevel({ user: msg.user, badges: msg.badges || [], channel });
+
+    const modCmd = parseModCommand(config.prefix, msg.message);
+    if (modCmd) {
+      handleModCommand(msg, modCmd, level);
+      return;
+    }
+
     const verdict = moderation.check({
       user: msg.user,
       userId: msg.userId,
@@ -318,6 +429,8 @@ function startChatBot({ bus, state }) {
 module.exports = {
   startChatBot,
   createBotEngine,
+  parseModCommand,
+  formatUptime,
   userLevel,
   renderTemplate,
   normalizeName,

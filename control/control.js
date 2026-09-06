@@ -78,6 +78,8 @@ const { EVENT_TYPES } = window.SharedEvents;
   const updateBannerText = document.getElementById("updateBannerText");
   const updateInstallBtn = document.getElementById("updateInstallBtn");
   const updateDismissBtn = document.getElementById("updateDismissBtn");
+  const checkUpdatesBtn = document.getElementById("checkUpdatesBtn");
+  const checkUpdatesStatus = document.getElementById("checkUpdatesStatus");
   const remoteUrlHint = document.getElementById("remoteUrlHint");
   const remoteUrlText = document.getElementById("remoteUrlText");
   const alertToasts = document.getElementById("alertToasts");
@@ -2751,4 +2753,29 @@ const { EVENT_TYPES } = window.SharedEvents;
   }
   if (window.desktop && window.desktop.onUpdateDownloaded) {
     window.desktop.onUpdateDownloaded((info) => showUpdateBanner(info));
+  }
+
+  if (checkUpdatesBtn && checkUpdatesStatus) {
+    checkUpdatesBtn.addEventListener("click", async () => {
+      if (!window.desktop || !window.desktop.checkForUpdates) {
+        checkUpdatesStatus.textContent = t("settings.updateUnavailable");
+        return;
+      }
+      checkUpdatesBtn.disabled = true;
+      checkUpdatesStatus.textContent = t("settings.updateChecking");
+      try {
+        const res = await window.desktop.checkForUpdates();
+        if (!res || !res.ok) {
+          checkUpdatesStatus.textContent = t("settings.updateUnavailable");
+        } else if (res.updateAvailable && res.version) {
+          checkUpdatesStatus.textContent = t("settings.updateAvailable", { version: res.version });
+        } else {
+          checkUpdatesStatus.textContent = t("settings.updateNone");
+        }
+      } catch {
+        checkUpdatesStatus.textContent = t("settings.updateError");
+      } finally {
+        checkUpdatesBtn.disabled = false;
+      }
+    });
   }

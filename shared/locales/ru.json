@@ -319,6 +319,11 @@
     "updateAvailableGeneric": "Доступно обновление",
     "updateInstall": "Установить и перезапустить",
     "updateDismiss": "Позже",
+    "checkUpdates": "Проверить обновления",
+    "updateChecking": "Проверяю…",
+    "updateNone": "Обновлений нет",
+    "updateUnavailable": "Автообновление недоступно",
+    "updateError": "Ошибка проверки обновлений",
     "ru": "Русский",
     "en": "English"
   },

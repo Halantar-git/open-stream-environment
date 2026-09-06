@@ -319,6 +319,11 @@
     "updateAvailableGeneric": "An update is available",
     "updateInstall": "Install and restart",
     "updateDismiss": "Later",
+    "checkUpdates": "Check for updates",
+    "updateChecking": "Checking…",
+    "updateNone": "No updates available",
+    "updateUnavailable": "Auto-update unavailable",
+    "updateError": "Update check failed",
     "ru": "Русский",
     "en": "English"
   },
