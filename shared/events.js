@@ -64,6 +64,9 @@
     CHAT_HUD_HOTKEY_UPDATE: "chat_hud_hotkey_update", // { hotkey } — current chat HUD toggle hotkey (after save)
     CHAT_HUD_DISPLAY_UPDATE: "chat_hud_display_update", // { displayId } — selected monitor for the chat HUD overlay
     CHAT_HUD_CONFIG_UPDATE: "chat_hud_config_update", // { config } — chat HUD window geometry/opacity/font (after save)
+    REWARD_TTS: "reward_tts", // { text } — server -> overlay: speak a channel-point reward phrase
+    TWITCH_ACTION_RESULT: "twitch_action_result", // { action, ok, message?, error? } — server -> control: clip/marker feedback
+    SCENE_PROFILES_UPDATE: "scene_profiles_update", // { profiles: [{ id, name, ... }] }
 
     // control -> server commands
     CMD_ADD_WIDGET: "cmd_add_widget", // { type }
@@ -78,6 +81,13 @@
     CMD_SET_CHAT_HUD_HOTKEY: "cmd_set_chat_hud_hotkey", // { hotkey } — change the global chat HUD toggle hotkey
     CMD_SET_CHAT_HUD_DISPLAY: "cmd_set_chat_hud_display", // { displayId } — change the monitor for the chat HUD overlay
     CMD_SET_CHAT_HUD_CONFIG: "cmd_set_chat_hud_config", // { config } — change the chat HUD window geometry/opacity/font
+    CMD_SET_TWITCH_REWARDS: "cmd_set_twitch_rewards", // { rewards } — channel-point reward -> action mappings
+    CMD_TEST_TWITCH_REWARD: "cmd_test_twitch_reward", // { rewardId } — simulate a channel-point redemption
+    CMD_CREATE_CLIP: "cmd_create_clip", // {} — create a Twitch clip via Helix
+    CMD_CREATE_STREAM_MARKER: "cmd_create_stream_marker", // { description? } — create a Twitch stream marker
+    CMD_SAVE_SCENE_PROFILE: "cmd_save_scene_profile", // { id?, name }
+    CMD_APPLY_SCENE_PROFILE: "cmd_apply_scene_profile", // { id }
+    CMD_DELETE_SCENE_PROFILE: "cmd_delete_scene_profile", // { id }
     CMD_SAVE_LAYOUT_PRESET: "cmd_save_layout_preset", // { id?, name }
     CMD_APPLY_LAYOUT_PRESET: "cmd_apply_layout_preset", // { id }
     CMD_DELETE_LAYOUT_PRESET: "cmd_delete_layout_preset", // { id }
@@ -155,6 +165,7 @@
     boosty_resub: 6000,
     wheel_start: 6000,
     wheel_winner: 8000,
+    reward: 6000,
   };
 
   const api = { EVENT_TYPES, CONNECTION_SERVICES, ALERT_DURATIONS_MS };

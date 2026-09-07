@@ -161,6 +161,7 @@
       case "donation": return t("alert.donation");
       case "wheel_start": return t("alert.wheelStart");
       case "wheel_winner": return t("alert.wheelWinner");
+      case "reward": return t("alert.reward");
       default: return "";
     }
   }
@@ -188,10 +189,12 @@
       if (alert.isElimination) nameHtml = t("alert.eliminated", { name });
       else if (alert.isFinalWinner) nameHtml = t("alert.finalWinner", { name });
       else nameHtml = t("alert.winner", { name });
+    } else if (alert.kind === "reward") {
+      nameHtml = escapeHtml(alert.rewardTitle || alert.user || "");
     }
 
     const amount = formatAmount(alert);
-    const messageHtml = (alert.kind === "donation" || alert.kind === "cheer") && alert.message
+    const messageHtml = (alert.kind === "donation" || alert.kind === "cheer" || alert.kind === "reward") && alert.message
       ? `<div class="scene-alert__message">«${escapeHtml(alert.message)}»</div>`
       : "";
 

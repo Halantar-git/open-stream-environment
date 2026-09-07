@@ -102,6 +102,8 @@
           return t("alert.wheelStart");
         case "wheel_winner":
           return t("alert.wheelWinner");
+        case "reward":
+          return t("alert.reward");
         default:
           return "";
       }
@@ -141,6 +143,9 @@
         if (alert.isElimination) nameHtml = t("alert.eliminated", { name });
         else if (alert.isFinalWinner) nameHtml = t("alert.finalWinner", { name });
         else nameHtml = t("alert.winner", { name });
+      } else if (alert.kind === "reward") {
+        nameHtml = escapeHtml(alert.rewardTitle || alert.user || "");
+        if (alert.message) messageHtml = `<div class="widget-alert__message">«${escapeHtml(alert.message)}»</div>`;
       } else if (alert.kind === "donation" || alert.kind === "cheer") {
         if (alert.message) messageHtml = `<div class="widget-alert__message">«${escapeHtml(alert.message)}»</div>`;
       }

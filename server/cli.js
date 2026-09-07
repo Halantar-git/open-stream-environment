@@ -28,7 +28,7 @@
 
 const { createLogger } = require("./logger");
 const { EVENT_TYPES } = require("../shared/events");
-const { matchCameraAngle, matchCameraFilter } = require("./integrations/twitch-eventsub");
+const { matchCameraAngle, matchCameraFilter, triggerRewardActions } = require("./integrations/twitch-eventsub");
 const { createModerationEngine } = require("./integrations/chat-moderation");
 const { cleanupOrphanedMedia, listMediaFiles } = require("./media");
 
@@ -299,6 +299,12 @@ function createCliHandler({ state, bus, obsCtrl, broadcast, startedAt, logger, h
       return;
     }
     let matched = false;
+
+    const didReward = triggerRewardActions({ bus, state, rewardId: "", rewardTitle: title, user: "CLI", userInput: "" });
+    if (didReward) {
+      log("success", translate("cli.sim.pointsActions", { title }));
+      matched = true;
+    }
 
     const sounds = (state.config.soundboard && state.config.soundboard.sounds) || [];
     const sound = sounds.find(

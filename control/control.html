@@ -43,7 +43,14 @@
       <div class="topbar__brand">
         <span class="topbar__brand-mark"></span>
         <span class="topbar__brand-name">Open Stream <b>Environment</b></span>
-        <span class="topbar__version" id="appVersion"></span>
+        <span class="topbar__version-wrap">
+          <span class="topbar__version" id="appVersion"></span>
+          <div class="update-menu" id="updateMenu" hidden>
+            <div class="update-menu__title" id="updateMenuTitle" data-i18n="settings.updateAvailableGeneric">Доступно обновление</div>
+            <button class="update-menu__item update-menu__item--primary" id="updateMenuInstallBtn" data-i18n="settings.updateNow">Обновить</button>
+            <button class="update-menu__item" id="updateMenuLaterBtn" data-i18n="settings.updateDismiss">Позже</button>
+          </div>
+        </span>
       </div>
       <nav class="topbar__tabs" id="tabs">
         <button class="topbar__tab is-active" data-view="editor" data-i18n="nav.editor">Редактор</button>
@@ -238,6 +245,23 @@
         <div class="inspector__section" id="sceneFormSection">
           <div class="inspector__title" id="sceneFormTitle" data-i18n="scenes.properties">Свойства сцены</div>
           <div class="properties" id="sceneForm"></div>
+        </div>
+        <div class="inspector__section">
+          <div class="inspector__title" data-i18n="settings.sceneProfiles">Профили сцен</div>
+          <p class="settings__desc" data-i18n="settings.sceneProfilesDesc">Сохранение и применение полного набора: сцены, виджеты, темы, раскладка и заставки.</p>
+          <div class="settings__port-row" style="margin-bottom:8px;">
+            <input type="text" id="sceneProfileName" data-i18n-placeholder="settings.profileNamePlaceholder" placeholder="Название профиля" autocomplete="off" />
+            <button class="md-button md-button--tonal" id="saveSceneProfileBtn" data-i18n="settings.saveProfile">Сохранить</button>
+          </div>
+          <div class="scene-profiles" id="sceneProfilesList"></div>
+        </div>
+        <div class="inspector__section">
+          <div class="inspector__title" data-i18n="settings.clipMarker">Клип и маркер стрима</div>
+          <p class="settings__desc" data-i18n="settings.clipMarkerDesc">Быстрое создание клипа и маркера стрима через Twitch. Требует подключения Twitch с правами clips:edit и channel:manage:broadcast.</p>
+          <div class="settings__actions">
+            <button class="md-button md-button--tonal" id="createClipBtn" data-i18n="settings.createClip">Создать клип</button>
+            <button class="md-button md-button--tonal" id="createMarkerBtn" data-i18n="settings.createMarker">Маркер стрима</button>
+          </div>
         </div>
       </aside>
     </section>
@@ -584,6 +608,17 @@
           <div class="soundboard-list" id="soundboardList"></div>
           <div class="settings__actions">
             <button class="md-button md-button--tonal" id="addSoundBtn" data-i18n="settings.addSound">+ Добавить звук</button>
+          </div>
+        </div>
+
+        <div class="settings__card md-card">
+          <div class="settings__card-head">
+            <h2 data-i18n="settings.twitchRewards">Награды канала (действия)</h2>
+          </div>
+          <p class="settings__desc" data-i18n="settings.twitchRewardsDesc">Награда за баллы канала Twitch может запускать алерт, озвучку и переключать сцену. Можно использовать {user}, {reward} и {input}.</p>
+          <div class="twitch-rewards" id="twitchRewardsList"></div>
+          <div class="settings__actions">
+            <button class="md-button md-button--tonal" id="addRewardBtn" data-i18n="settings.addReward">+ Добавить награду</button>
           </div>
         </div>
 

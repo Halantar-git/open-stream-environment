@@ -104,7 +104,8 @@
       "pointsSound": "Reward \"{{title}}\" → sound: {{name}}",
       "pointsCam": "Reward \"{{title}}\" → camera angle: {{id}}",
       "pointsFilter": "Reward \"{{title}}\" → filter: {{id}}",
-      "pointsNone": "Reward \"{{title}}\" is not bound to a sound, camera angle or filter",
+      "pointsActions": "Reward \"{{title}}\" → action (alert/voice/scene)",
+      "pointsNone": "Reward \"{{title}}\" is not bound to an action, sound, camera angle or filter",
       "raidUsage": "Usage: sim raid <username> <viewers>",
       "raidMessage": "{{user}} raids with {{count}} viewers!",
       "raidDone": "Simulated raid: {{user}} ({{count}} viewers)",
@@ -325,6 +326,33 @@
     "updateNone": "No updates available",
     "updateUnavailable": "Auto-update unavailable",
     "updateError": "Update check failed",
+    "twitchRewards": "Channel rewards (actions)",
+    "twitchRewardsDesc": "A Twitch channel-points reward can trigger an alert, voice-over and scene switch. You can use {user}, {reward} and {input}.",
+    "addReward": "+ Add reward",
+    "rewardTitle": "Twitch reward name",
+    "rewardId": "Reward ID (optional)",
+    "rewardAlert": "Show alert",
+    "rewardAlertMessage": "Alert text",
+    "rewardTts": "Speak (TTS)",
+    "rewardTtsText": "Speech text",
+    "rewardScene": "Switch scene",
+    "rewardSceneNone": "— don't change —",
+    "rewardTest": "Test",
+    "clipMarker": "Clip & stream marker",
+    "clipMarkerDesc": "Create a Twitch clip and stream marker. Requires connecting Twitch with clips:edit and channel:manage:broadcast scopes.",
+    "createClip": "Create clip",
+    "createMarker": "Stream marker",
+    "clipCreated": "Clip created",
+    "markerCreated": "Marker created",
+    "clipFailed": "Clip failed: {{error}}",
+    "markerFailed": "Marker failed: {{error}}",
+    "twitchActionDenied": "Connect Twitch and re-authorize (new scopes required)",
+    "sceneProfiles": "Scene profiles",
+    "sceneProfilesDesc": "Save and apply a full set: scenes, widgets, themes, layout and splashes.",
+    "saveProfile": "Save",
+    "applyProfile": "Apply",
+    "deleteProfile": "Delete profile",
+    "profileNamePlaceholder": "Profile name",
     "ru": "Русский",
     "en": "English"
   },
@@ -408,7 +436,8 @@
     "cheerBits": "{{amount}} bits",
     "eliminated": "❌ Eliminated: {{name}}",
     "finalWinner": "🎉 Winner: {{name}}!",
-    "winner": "🏆 Winner: {{name}}!"
+    "winner": "🏆 Winner: {{name}}!",
+    "reward": "Reward"
   },
   "wheelScene": {
     "participantsTitle": "Participants: {{count}}"
@@ -882,6 +911,11 @@
       "p2": "A preset also saves the active 2D/3D themes, so loading one brings back its 3D widgets automatically.",
       "p3": "Save overwrites the selected preset or creates a new one from the entered name; Delete removes a preset. Presets live in local-db.json and don't touch other settings."
     },
+    "sceneprofiles": {
+      "title": "Scene profiles",
+      "p1": "A scene profile saves the whole scene set at once: widgets (layout), scene settings (statuses, titles, splashes), the global splash and the active theme (2D/3D).",
+      "p2": "In the Scenes tab, enter a name in the right panel and press Save to create a profile; Apply restores it and ✕ deletes it. Profiles are stored in local-db.json."
+    },
     "themes": {
       "title": "Themes",
       "p1": "In Settings → Appearance each theme is a \"family\" with a base 2D palette and, for some, a 3D variant: Material You, Orbital (a Star Citizen HUD), Pixel Perfect (a minimal pixel-style UI), Elite (an orange Elite Dangerous HUD) and Nuclear (a CRT terminal).",
@@ -941,6 +975,16 @@
       "p1": "Map a Twitch channel-points reward to a sound file and an image/GIF animation.",
       "p2": "Adjust the volume and queue mode, then test each sound from the panel."
     },
+    "rewards": {
+      "title": "Channel rewards (actions)",
+      "p1": "In Settings → Channel rewards (actions) a Twitch channel-points reward is mapped to actions: show an alert, speak a phrase (TTS) and/or switch a scene. You can use {user}, {reward} and {input} (the text the viewer enters when redeeming).",
+      "p2": "One reward can trigger several actions at once. Twitch must be connected with the channel:read:redemptions scope. Test with the ▶ button or the sim points <name> terminal command."
+    },
+    "clipmarker": {
+      "title": "Clip & stream marker",
+      "p1": "The Scenes tab has Create clip and Stream marker buttons — they create a Twitch clip and marker via the Helix API in one click.",
+      "p2": "A clip needs the clips:edit scope, a marker needs channel:manage:broadcast. If the buttons report an error, reconnect Twitch in Settings — the old token doesn't include the new scopes."
+    },
     "streamdeck": {
       "title": "Stream Deck",
       "p1": "The Elgato plugin switches scenes: Start, BRB, Wheel, Talk and End.",
@@ -985,6 +1029,11 @@
       "p2": "Appearance manages overlay themes; Export/Import saves the full config.json together with media files (it contains secrets — don't share it).",
       "p3": "Language switches the whole interface between English and Russian.",
       "p4": "The event notification sound and its volume are configured in the Application card (the Notification sound toggle and Notification volume slider)."
+    },
+    "updates": {
+      "title": "Updates",
+      "p1": "On startup the app checks for an update (without downloading) and, if one is available, highlights the Update button in the header.",
+      "p2": "Click Update to open a small menu with Later or Update. Update downloads and installs the new version; Later closes the menu. You can also press Check for updates in Settings → Application. In dev mode (npm start) auto-update is unavailable and only works in packaged builds."
     },
     "data": {
       "title": "Data and backups",

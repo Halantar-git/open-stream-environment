@@ -81,25 +81,25 @@ function decryptConfig(config) {
     ...config,
     twitch: {
       ...twitch,
-      clientSecret: open(twitch.clientSecret),
-      userAccessToken: open(twitch.userAccessToken),
-      refreshToken: open(twitch.refreshToken),
+      clientSecret: open(twitch.clientSecret, "Twitch Client Secret"),
+      userAccessToken: open(twitch.userAccessToken, "Twitch User Access Token"),
+      refreshToken: open(twitch.refreshToken, "Twitch Refresh Token"),
     },
     donationAlerts: {
       ...donationAlerts,
-      clientSecret: open(donationAlerts.clientSecret),
-      accessToken: open(donationAlerts.accessToken),
-      refreshToken: open(donationAlerts.refreshToken),
+      clientSecret: open(donationAlerts.clientSecret, "DonationAlerts Client Secret"),
+      accessToken: open(donationAlerts.accessToken, "DonationAlerts Access Token"),
+      refreshToken: open(donationAlerts.refreshToken, "DonationAlerts Refresh Token"),
     },
     youtube: {
       ...youtube,
-      clientSecret: open(youtube.clientSecret),
-      accessToken: open(youtube.accessToken),
-      refreshToken: open(youtube.refreshToken),
+      clientSecret: open(youtube.clientSecret, "YouTube Client Secret"),
+      accessToken: open(youtube.accessToken, "YouTube Access Token"),
+      refreshToken: open(youtube.refreshToken, "YouTube Refresh Token"),
     },
     obs: {
       ...obs,
-      password: open(obs.password),
+      password: open(obs.password, "OBS Password"),
     },
   };
 }
@@ -172,6 +172,25 @@ function normalizeChatBotModeration(m) {
     maxEmotes: Math.round(typeof src.maxEmotes === "number" ? clamp(src.maxEmotes, 1, 100) : d.maxEmotes),
     maxWarns: Math.round(typeof src.maxWarns === "number" ? clamp(src.maxWarns, 1, 10) : d.maxWarns),
     warnTimeoutSec: Math.round(typeof src.warnTimeoutSec === "number" ? clamp(src.warnTimeoutSec, 1, 86400) : d.warnTimeoutSec),
+  };
+}
+
+const REWARD_SCENES = ["", "main", "start", "brb", "talk", "end", "wheel", "poll"];
+
+function normalizeTwitchReward(reward) {
+  if (!reward || typeof reward !== "object") return null;
+  const rewardTitle = String(reward.rewardTitle || "").trim();
+  const rewardId = String(reward.rewardId || "").trim();
+  if (!rewardTitle && !rewardId) return null;
+  return {
+    id: typeof reward.id === "string" && reward.id ? reward.id : crypto.randomUUID(),
+    rewardId,
+    rewardTitle,
+    alert: reward.alert === true,
+    alertMessage: String(reward.alertMessage || "").trim(),
+    tts: reward.tts === true,
+    ttsText: String(reward.ttsText || "").trim(),
+    scene: REWARD_SCENES.includes(reward.scene) ? reward.scene : "",
   };
 }
 
@@ -288,6 +307,9 @@ class AppState {
       timers: Array.isArray(cb.timers) ? cb.timers.map(normalizeBotTimer).filter(Boolean) : [],
       moderation: normalizeChatBotModeration(cb.moderation),
     };
+    this.config.twitchRewards = Array.isArray(this.config.twitchRewards)
+      ? this.config.twitchRewards.map(normalizeTwitchReward).filter(Boolean)
+      : [];
     if (this.config.twitch.enabled === undefined) this.config.twitch.enabled = true;
     if (this.config.donationAlerts.enabled === undefined) this.config.donationAlerts.enabled = true;
     if (this.config.youtube.enabled === undefined) this.config.youtube.enabled = true;
@@ -552,6 +574,81 @@ class AppState {
     return this._getLayoutPresets().length !== before ? this.listLayoutPresets() : null;
   }
 
+  // ---- Scene profiles (scenes + widgets + themes + layout + splash) ----
+
+  _getSceneProfiles() {
+    if (this.db) return this.db.getSceneProfiles ? this.db.getSceneProfiles() : [];
+    if (!this._memorySceneProfiles) this._memorySceneProfiles = [];
+    return this._memorySceneProfiles;
+  }
+
+  _setSceneProfiles(profiles) {
+    if (this.db && this.db.saveSceneProfiles) return this.db.saveSceneProfiles(profiles);
+    this._memorySceneProfiles = profiles;
+    return this._memorySceneProfiles;
+  }
+
+  listSceneProfiles() {
+    return this._getSceneProfiles().map((p) => ({
+      id: p.id,
+      name: p.name,
+      widgetCount: Array.isArray(p.widgets) ? p.widgets.length : 0,
+      themeId: p.themeId || "",
+      enable3d: !!p.enable3d,
+      createdAt: p.createdAt || 0,
+      updatedAt: p.updatedAt || 0,
+    }));
+  }
+
+  saveSceneProfile({ id, name } = {}) {
+    const cleanName = String(name || "").trim().slice(0, 60);
+    if (!cleanName) return null;
+    const profiles = this._getSceneProfiles();
+    const profile = {
+      widgets: this._layout.map((w) => ({ ...w, config: { ...(w.config || {}) } })),
+      scenes: JSON.parse(JSON.stringify(this.config.scenes || {})),
+      splash: { ...(this.config.splash || {}) },
+      themeId: this.config.appearance.activeThemeId || "nebula",
+      enable3d: !!this.config.appearance.enable3d,
+    };
+    if (id) {
+      const existing = profiles.find((p) => p.id === id);
+      if (!existing) return null;
+      existing.name = cleanName;
+      Object.assign(existing, profile, { updatedAt: Date.now() });
+    } else {
+      profiles.push({ id: crypto.randomUUID(), name: cleanName, ...profile, createdAt: Date.now(), updatedAt: Date.now() });
+    }
+    this._setSceneProfiles(profiles);
+    return this.listSceneProfiles();
+  }
+
+  applySceneProfile(id) {
+    const profile = this._getSceneProfiles().find((p) => p.id === id);
+    if (!profile || !Array.isArray(profile.widgets)) return null;
+    this._layout = profile.widgets.map((w) => ({ ...w, config: { ...(w.config || {}) } }));
+    if (profile.scenes && typeof profile.scenes === "object") {
+      this.config.scenes = { ...defaultScenes(), ...JSON.parse(JSON.stringify(profile.scenes)) };
+    }
+    if (profile.splash && typeof profile.splash === "object") {
+      this.config.splash = { ...this.config.splash, ...profile.splash };
+    }
+    const rawThemeId = profile.themeId || "";
+    const builtin = BUILTIN_THEMES[rawThemeId];
+    const themeId = builtin && builtin.variant ? builtin.base2d : rawThemeId;
+    if (themeId && this.themeDimension(themeId)) this.config.appearance.activeThemeId = themeId;
+    this.config.appearance.enable3d = !!profile.enable3d;
+    saveConfig(this.config);
+    this._persistLayout();
+    return this._layout;
+  }
+
+  deleteSceneProfile(id) {
+    const before = this._getSceneProfiles().length;
+    this._setSceneProfiles(this._getSceneProfiles().filter((p) => p.id !== id));
+    return this._getSceneProfiles().length !== before ? this.listSceneProfiles() : null;
+  }
+
   // ---- Goal / app config ----
 
   setGoal({ title, current, target, currency }) {
@@ -646,6 +743,9 @@ class AppState {
   }
 
   setTtsConfig(patch = {}) {
+    // Защита: если по какой-то причине tts отсутствует в конфиге (например,
+    // после импорта старого файла), не падаем, а создаём пустой объект.
+    this.config.tts = this.config.tts || {};
     if (patch.enabled !== undefined) this.config.tts.enabled = !!patch.enabled;
     if (patch.volume !== undefined) this.config.tts.volume = clamp(Number(patch.volume) || 0, 0, 1);
     if (patch.rate !== undefined) this.config.tts.rate = clamp(Number(patch.rate) || 1, 0.5, 2);
@@ -677,6 +777,18 @@ class AppState {
     this.config.chatBot = next;
     saveConfig(this.config);
     return this.config.chatBot;
+  }
+
+  setTwitchRewards(patch = {}) {
+    if (Array.isArray(patch.rewards)) {
+      this.config.twitchRewards = patch.rewards.slice(0, 100).map(normalizeTwitchReward).filter(Boolean);
+      saveConfig(this.config);
+    }
+    return this.config.twitchRewards;
+  }
+
+  getTwitchRewardById(id) {
+    return this.config.twitchRewards.find((r) => r.id === id) || null;
   }
 
   // ---- Death counter (remote quick action) ----
@@ -1359,8 +1471,16 @@ class AppState {
           ...((newConfig.chatBot && newConfig.chatBot.moderation) || {}),
         }),
       },
+      twitchRewards: keepArr(newConfig.twitchRewards, this.config.twitchRewards),
       scenes: newConfig.scenes ? { ...defaultScenes(), ...newConfig.scenes } : this.config.scenes,
       topDonation: newConfig.topDonation || this.config.topDonation,
+      tts: { ...this.config.tts, ...(newConfig.tts || {}) },
+      splash: { ...this.config.splash, ...(newConfig.splash || {}) },
+      chatHud: { ...this.config.chatHud, ...(newConfig.chatHud || {}) },
+      hud_edit_hotkey: this.config.hud_edit_hotkey,
+      hud_display_id: this.config.hud_display_id,
+      chat_hud_hotkey: this.config.chat_hud_hotkey,
+      chat_hud_display_id: this.config.chat_hud_display_id,
     };
 
     this._migrateAppearance();
@@ -1385,6 +1505,7 @@ class AppState {
     return {
       layout: this._layout,
       layoutPresets: this.listLayoutPresets(),
+      sceneProfiles: this.listSceneProfiles(),
       goal: this.config.goal,
       port: this.config.port,
       notificationSound: this.config.notificationSound,
@@ -1413,6 +1534,7 @@ class AppState {
       giveaway: this.giveawaySnapshot(),
       poll: this.pollSnapshot(),
       chatBot: this.config.chatBot,
+      twitchRewards: this.config.twitchRewards,
       appearance: {
         activeThemeId: this.config.appearance.activeThemeId,
         activeThemeId3d: theme3d ? theme3d.id : "",

@@ -145,6 +145,25 @@
     }
   }
 
+  // Озвучка произвольной фразы (награда за баллы канала). Текст готовится на
+  // сервере (плейсхолдеры уже подставлены) и приходит через REWARD_TTS.
+  function speakReward(text) {
+    if (!text) return;
+    if (!state.tts || !state.tts.enabled) return;
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    try {
+      const u = new SpeechSynthesisUtterance(String(text));
+      u.lang = state.tts.lang || "ru-RU";
+      u.volume = Math.max(0, Math.min(1, Number(state.tts.volume) || 0.9));
+      u.rate = Math.max(0.5, Math.min(2, Number(state.tts.rate) || 1));
+      const voice = pickTtsVoice();
+      if (voice) u.voice = voice;
+      window.speechSynthesis.speak(u);
+    } catch (_) {
+      /* speech unavailable */
+    }
+  }
+
   // Озвучка от самого сервиса (готовый аудиофайл доната: DonationAlerts voice).
   // Возвращает true, если взяла озвучку на себя — тогда встроенный TTS для
   // этого доната не запускается.
@@ -748,6 +767,9 @@
         break;
       case EVENT_TYPES.SOUNDBOARD_PLAY:
         bus.emit(EVENT_TYPES.SOUNDBOARD_PLAY, msg.payload);
+        break;
+      case EVENT_TYPES.REWARD_TTS:
+        speakReward(msg.payload && msg.payload.text);
         break;
       case EVENT_TYPES.RECENT_EVENT:
         state.recentEvents = [msg.payload, ...state.recentEvents].slice(0, 15);

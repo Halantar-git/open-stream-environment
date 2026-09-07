@@ -73,6 +73,9 @@ const { EVENT_TYPES } = window.SharedEvents;
   const obsUrlLabel = document.getElementById("obsUrlLabel");
   const copyUrlBtn = document.getElementById("copyUrlBtn");
   const appVersionEl = document.getElementById("appVersion");
+  const updateMenu = document.getElementById("updateMenu");
+  const updateMenuInstallBtn = document.getElementById("updateMenuInstallBtn");
+  const updateMenuLaterBtn = document.getElementById("updateMenuLaterBtn");
   let knownUpdateVersion = null;
 
   function renderAppVersion() {
@@ -83,6 +86,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     } else {
       appVersionEl.textContent = appVersion ? `v${appVersion}` : "";
       appVersionEl.title = "";
+      setUpdateMenu(false);
     }
     appVersionEl.classList.toggle("has-update", !!knownUpdateVersion);
   }
@@ -92,13 +96,44 @@ const { EVENT_TYPES } = window.SharedEvents;
     renderAppVersion();
   }
 
+  function setUpdateMenu(open) {
+    if (!updateMenu) return;
+    updateMenu.hidden = !open;
+  }
+
+  function toggleUpdateMenu() {
+    if (!updateMenu) return;
+    setUpdateMenu(updateMenu.hidden);
+  }
+
   if (appVersionEl) {
     appVersionEl.addEventListener("click", () => {
-      if (knownUpdateVersion && window.desktop && window.desktop.quitAndInstall) {
-        window.desktop.quitAndInstall();
+      if (!knownUpdateVersion) return;
+      toggleUpdateMenu();
+    });
+  }
+
+  if (updateMenuInstallBtn) {
+    updateMenuInstallBtn.addEventListener("click", () => {
+      setUpdateMenu(false);
+      if (window.desktop && window.desktop.downloadAndInstall) {
+        window.desktop.downloadAndInstall();
       }
     });
   }
+
+  if (updateMenuLaterBtn) {
+    updateMenuLaterBtn.addEventListener("click", () => setUpdateMenu(false));
+  }
+
+  // Закрываем меню по клику вне его (или по клику на саму кнопку версии).
+  document.addEventListener("click", (e) => {
+    if (!updateMenu || updateMenu.hidden) return;
+    if (appVersionEl && appVersionEl.contains(e.target)) return;
+    if (updateMenu.contains(e.target)) return;
+    setUpdateMenu(false);
+  });
+
   renderAppVersion();
   const statusFabStack = document.getElementById("statusFabStack");
   const updateBanner = document.getElementById("updateBanner");
@@ -183,6 +218,13 @@ const { EVENT_TYPES } = window.SharedEvents;
   const daVoiceSwitch = document.getElementById("daVoiceSwitch");
   const soundboardList = document.getElementById("soundboardList");
   const addSoundBtn = document.getElementById("addSoundBtn");
+  const twitchRewardsList = document.getElementById("twitchRewardsList");
+  const addRewardBtn = document.getElementById("addRewardBtn");
+  const createClipBtn = document.getElementById("createClipBtn");
+  const createMarkerBtn = document.getElementById("createMarkerBtn");
+  const sceneProfileName = document.getElementById("sceneProfileName");
+  const saveSceneProfileBtn = document.getElementById("saveSceneProfileBtn");
+  const sceneProfilesList = document.getElementById("sceneProfilesList");
   const chatBotEnabledSwitch = document.getElementById("chatBotEnabledSwitch");
   const chatBotPrefixInput = document.getElementById("chatBotPrefix");
   const chatBotCommandsList = document.getElementById("chatBotCommandsList");
@@ -273,10 +315,14 @@ const { EVENT_TYPES } = window.SharedEvents;
     }
     const body = parts.join(" · ");
 
+    showToast(alertToastTitle(kind, event), body, kind);
+  }
+  function showToast(title, body, kind) {
+    if (!alertToasts) return;
     const toast = document.createElement("div");
     toast.className = "alert-toast";
-    toast.setAttribute("data-kind", kind);
-    toast.innerHTML = `<span class="alert-toast__dot"></span><span class="alert-toast__content"><span class="alert-toast__title">${escapeHtml(alertToastTitle(kind, event))}</span>${body ? `<span class="alert-toast__body">${escapeHtml(body)}</span>` : ""}</span>`;
+    toast.setAttribute("data-kind", kind || "");
+    toast.innerHTML = `<span class="alert-toast__dot"></span><span class="alert-toast__content"><span class="alert-toast__title">${escapeHtml(title)}</span>${body ? `<span class="alert-toast__body">${escapeHtml(body)}</span>` : ""}</span>`;
     alertToasts.prepend(toast);
 
     while (alertToasts.children.length > 5) alertToasts.removeChild(alertToasts.lastChild);
@@ -459,6 +505,7 @@ const { EVENT_TYPES } = window.SharedEvents;
       soundboardVolumeValue.textContent = `${vol}%`;
       renderSoundboard();
     }
+    renderTwitchRewards();
     if (state.tts) {
       setSwitchState(ttsEnabledSwitch, !!state.tts.enabled);
       const ttsVol = Math.round((state.tts.volume ?? 0.9) * 100);
@@ -1324,6 +1371,186 @@ const { EVENT_TYPES } = window.SharedEvents;
     const sounds = [...(state.soundboard.sounds || []), { id: "sound_" + Date.now(), rewardTitle: "", rewardId: "", audioFile: "", imageFile: "", videoFile: "", title: "" }];
     sendSoundboardConfig({ sounds });
   });
+
+  // ---- Twitch channel-point reward actions ----
+
+  function sendTwitchRewards(rewards) {
+    send(EVENT_TYPES.CMD_SET_TWITCH_REWARDS, { rewards });
+  }
+
+  function updateTwitchReward(id, patch) {
+    const rewards = (state.twitchRewards || []).map((r) => (r.id === id ? { ...r, ...patch } : r));
+    sendTwitchRewards(rewards);
+  }
+
+  function rewardSceneSelect(value) {
+    const select = document.createElement("select");
+    const scenes = ["", "main", "start", "brb", "talk", "end", "wheel", "poll"];
+    scenes.forEach((id) => {
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = id === "" ? t("settings.rewardSceneNone") : t("scene." + id + "Label");
+      if (id === (value || "")) opt.selected = true;
+      select.appendChild(opt);
+    });
+    return select;
+  }
+
+  function renderTwitchRewardItem(reward) {
+    const row = document.createElement("div");
+    row.className = "twitch-reward-item";
+
+    const title = document.createElement("input");
+    title.type = "text";
+    title.placeholder = t("settings.rewardTitle");
+    title.value = reward.rewardTitle || "";
+    title.addEventListener("change", () => updateTwitchReward(reward.id, { rewardTitle: title.value }));
+
+    const id = document.createElement("input");
+    id.type = "text";
+    id.placeholder = t("settings.rewardId");
+    id.value = reward.rewardId || "";
+    id.addEventListener("change", () => updateTwitchReward(reward.id, { rewardId: id.value }));
+
+    const alertWrap = document.createElement("label");
+    alertWrap.className = "twitch-reward-flag";
+    alertWrap.appendChild(document.createTextNode(t("settings.rewardAlert")));
+    const alertSwitch = document.createElement("div");
+    alertSwitch.className = "md-switch" + (reward.alert ? " is-on" : "");
+    alertSwitch.innerHTML = `<div class="md-switch__thumb"></div>`;
+    wireSwitch(alertSwitch, (on) => updateTwitchReward(reward.id, { alert: on }));
+    alertWrap.appendChild(alertSwitch);
+
+    const alertMessage = document.createElement("input");
+    alertMessage.type = "text";
+    alertMessage.placeholder = t("settings.rewardAlertMessage");
+    alertMessage.value = reward.alertMessage || "";
+    alertMessage.addEventListener("change", () => updateTwitchReward(reward.id, { alertMessage: alertMessage.value }));
+
+    const ttsWrap = document.createElement("label");
+    ttsWrap.className = "twitch-reward-flag";
+    ttsWrap.appendChild(document.createTextNode(t("settings.rewardTts")));
+    const ttsSwitch = document.createElement("div");
+    ttsSwitch.className = "md-switch" + (reward.tts ? " is-on" : "");
+    ttsSwitch.innerHTML = `<div class="md-switch__thumb"></div>`;
+    wireSwitch(ttsSwitch, (on) => updateTwitchReward(reward.id, { tts: on }));
+    ttsWrap.appendChild(ttsSwitch);
+
+    const ttsText = document.createElement("input");
+    ttsText.type = "text";
+    ttsText.placeholder = t("settings.rewardTtsText");
+    ttsText.value = reward.ttsText || "";
+    ttsText.addEventListener("change", () => updateTwitchReward(reward.id, { ttsText: ttsText.value }));
+
+    const scene = rewardSceneSelect(reward.scene);
+    scene.title = t("settings.rewardScene");
+    scene.addEventListener("change", () => updateTwitchReward(reward.id, { scene: scene.value }));
+
+    const test = document.createElement("button");
+    test.className = "md-button md-button--tonal";
+    test.textContent = "▶";
+    test.title = t("settings.rewardTest");
+    test.addEventListener("click", () => send(EVENT_TYPES.CMD_TEST_TWITCH_REWARD, { id: reward.id }));
+
+    const remove = document.createElement("button");
+    remove.className = "md-button md-button--text";
+    remove.textContent = "✕";
+    remove.title = t("common.remove");
+    remove.addEventListener("click", () => {
+      const rewards = (state.twitchRewards || []).filter((r) => r.id !== reward.id);
+      sendTwitchRewards(rewards);
+    });
+
+    row.append(title, id, alertWrap, alertMessage, ttsWrap, ttsText, scene, test, remove);
+    return row;
+  }
+
+  function renderTwitchRewards() {
+    if (!twitchRewardsList) return;
+    twitchRewardsList.innerHTML = "";
+    (state.twitchRewards || []).forEach((reward) => {
+      twitchRewardsList.appendChild(renderTwitchRewardItem(reward));
+    });
+  }
+
+  if (addRewardBtn) {
+    addRewardBtn.addEventListener("click", () => {
+      const rewards = [...(state.twitchRewards || []), { id: "r_" + Date.now(), rewardId: "", rewardTitle: "", alert: false, alertMessage: "", tts: false, ttsText: "", scene: "" }];
+      sendTwitchRewards(rewards);
+    });
+  }
+
+  // ---- Scene profiles ----
+
+  function renderSceneProfiles() {
+    if (!sceneProfilesList) return;
+    const profiles = state.sceneProfiles || [];
+    if (!profiles.length) {
+      sceneProfilesList.innerHTML = `<div class="settings__hint">${escapeHtml(t("presets.placeholder"))}</div>`;
+      return;
+    }
+    sceneProfilesList.innerHTML = "";
+    profiles.forEach((p) => {
+      const row = document.createElement("div");
+      row.className = "scene-profile-item";
+      const label = document.createElement("span");
+      label.className = "scene-profile-item__name";
+      label.textContent = p.name;
+      const apply = document.createElement("button");
+      apply.className = "md-button md-button--tonal";
+      apply.textContent = t("settings.applyProfile");
+      apply.addEventListener("click", () => send(EVENT_TYPES.CMD_APPLY_SCENE_PROFILE, { id: p.id }));
+      const remove = document.createElement("button");
+      remove.className = "md-button md-button--text";
+      remove.textContent = "✕";
+      remove.title = t("settings.deleteProfile");
+      remove.addEventListener("click", () => {
+        if (confirm(t("presets.deleteConfirm", { name: p.name }))) {
+          send(EVENT_TYPES.CMD_DELETE_SCENE_PROFILE, { id: p.id });
+        }
+      });
+      row.append(label, apply, remove);
+      sceneProfilesList.appendChild(row);
+    });
+  }
+
+  if (saveSceneProfileBtn) {
+    saveSceneProfileBtn.addEventListener("click", () => {
+      const name = sceneProfileName ? String(sceneProfileName.value).trim() : "";
+      if (!name) return;
+      send(EVENT_TYPES.CMD_SAVE_SCENE_PROFILE, { name });
+      if (sceneProfileName) sceneProfileName.value = "";
+    });
+    if (sceneProfileName) {
+      sceneProfileName.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          saveSceneProfileBtn.click();
+        }
+      });
+    }
+  }
+
+  // ---- Clip / stream marker ----
+
+  function showTwitchActionResult(result) {
+    if (!result) return;
+    const action = result.action === "clip" ? "clip" : "marker";
+    if (result.ok) {
+      showToast(action === "clip" ? t("settings.clipCreated") : t("settings.markerCreated"), "", action);
+    } else {
+      const key = action === "clip" ? "settings.clipFailed" : "settings.markerFailed";
+      const friendly = result.error === "not_configured" || result.error === "auth" ? t("settings.twitchActionDenied") : String(result.error || "");
+      showToast(t(key, { error: friendly }), "", action);
+    }
+  }
+
+  if (createClipBtn) {
+    createClipBtn.addEventListener("click", () => send(EVENT_TYPES.CMD_CREATE_CLIP, {}));
+  }
+  if (createMarkerBtn) {
+    createMarkerBtn.addEventListener("click", () => send(EVENT_TYPES.CMD_CREATE_STREAM_MARKER, { description: "" }));
+  }
 
   soundboardVolume.addEventListener("input", (e) => {
     soundboardVolumeValue.textContent = `${e.target.value}%`;
@@ -2455,6 +2682,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         canvasEditor.applyCanvasRatio();
         renderThemeGrid();
         renderLayoutPresets();
+        renderSceneProfiles();
         renderLibrary();
         canvasEditor.renderCanvas();
         canvasEditor.renderLayers();
@@ -2472,6 +2700,13 @@ const { EVENT_TYPES } = window.SharedEvents;
       case EVENT_TYPES.LAYOUT_PRESETS_UPDATE:
         state.layoutPresets = (msg.payload && msg.payload.presets) || [];
         renderLayoutPresets();
+        break;
+      case EVENT_TYPES.SCENE_PROFILES_UPDATE:
+        state.sceneProfiles = (msg.payload && msg.payload.profiles) || [];
+        renderSceneProfiles();
+        break;
+      case EVENT_TYPES.TWITCH_ACTION_RESULT:
+        showTwitchActionResult(msg.payload || {});
         break;
       case EVENT_TYPES.THEME_UPDATE:
         state.appearance = msg.payload;
@@ -2795,13 +3030,18 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   if (updateInstallBtn) {
     updateInstallBtn.addEventListener("click", () => {
-      if (window.desktop && window.desktop.quitAndInstall) window.desktop.quitAndInstall();
+      if (window.desktop && window.desktop.downloadAndInstall) window.desktop.downloadAndInstall();
     });
   }
   if (updateDismissBtn) {
     updateDismissBtn.addEventListener("click", () => {
       if (updateBanner) updateBanner.hidden = true;
     });
+  }
+  if (window.desktop && window.desktop.onUpdateAvailable) {
+    // При наличии обновления (например, после стартовой проверки) просто
+    // зажигаем кнопку «Обновить» в шапке — без скачивания и без баннера.
+    window.desktop.onUpdateAvailable((info) => applyKnownUpdate(info && info.version));
   }
   if (window.desktop && window.desktop.onUpdateDownloaded) {
     window.desktop.onUpdateDownloaded((info) => showUpdateBanner(info));

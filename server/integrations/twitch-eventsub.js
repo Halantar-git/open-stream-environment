@@ -67,6 +67,52 @@ function matchCameraFilter(filters, rewardTitle) {
   ) || null;
 }
 
+function findRewardRule(rewards, rewardId, rewardTitle) {
+  const id = String(rewardId || "").trim();
+  const title = String(rewardTitle || "").trim().toLowerCase();
+  if (!id && !title) return null;
+  return (Array.isArray(rewards) ? rewards : []).find(
+    (r) => (r.rewardId && id && r.rewardId === id) ||
+      (r.rewardTitle && title && r.rewardTitle.toLowerCase() === title)
+  ) || null;
+}
+
+function fillRewardPlaceholders(text, { user, rewardTitle, userInput }) {
+  return String(text || "")
+    .split("{user}").join(String(user || "Зритель"))
+    .split("{reward}").join(String(rewardTitle || ""))
+    .split("{input}").join(String(userInput || ""));
+}
+
+// Универсальные действия за баллы канала (алерт / озвучка / смена сцены).
+// Отдельно от старых маппингов саундборда/камер, чтобы один redemption мог
+// одновременно запускать несколько независимых действий.
+function triggerRewardActions({ bus, state, rewardId, rewardTitle, user, userInput }) {
+  const rule = findRewardRule(state.config.twitchRewards, rewardId, rewardTitle);
+  if (!rule) return false;
+
+  if (rule.alert) {
+    const message = fillRewardPlaceholders(rule.alertMessage, { user, rewardTitle, userInput });
+    bus.emit("alert", {
+      kind: "reward",
+      user: user || "Зритель",
+      rewardTitle: rewardTitle || rule.rewardTitle || "",
+      message,
+    });
+  }
+
+  if (rule.tts) {
+    const text = fillRewardPlaceholders(rule.ttsText || rule.alertMessage, { user, rewardTitle, userInput });
+    if (text) bus.emit("reward_tts", { text });
+  }
+
+  if (rule.scene) {
+    bus.emit("reward_scene_request", { scene: rule.scene });
+  }
+
+  return true;
+}
+
 function startTwitchEvents({ bus, state }) {
   const logger = createLogger(bus, "twitch-eventsub");
 
@@ -312,6 +358,9 @@ function handleNotification(payload, bus, state) {
       const rewardTitle = (event.reward && event.reward.title) || "";
       const rewardId = (event.reward && event.reward.id) || "";
       const user = event.user_name || "Зритель";
+      const userInput = event.user_input || "";
+      triggerRewardActions({ bus, state, rewardId, rewardTitle, user, userInput });
+
       const sounds = (state.config.soundboard && state.config.soundboard.sounds) || [];
       const sound = sounds.find((s) =>
         (s.rewardId && s.rewardId === rewardId) ||
@@ -343,4 +392,4 @@ function handleNotification(payload, bus, state) {
   }
 }
 
-module.exports = { startTwitchEvents, matchCameraAngle, matchCameraFilter };
+module.exports = { startTwitchEvents, matchCameraAngle, matchCameraFilter, triggerRewardActions, findRewardRule };

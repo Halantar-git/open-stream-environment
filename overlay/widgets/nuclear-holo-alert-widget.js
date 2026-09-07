@@ -242,6 +242,7 @@
         case "donation": return t("alert.donation");
         case "wheel_start": return t("alert.wheelStart");
         case "wheel_winner": return t("alert.wheelWinner");
+        case "reward": return t("alert.reward");
         default: return "";
       }
     }

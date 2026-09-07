@@ -2622,6 +2622,24 @@
       "channel": "halantar",
       "startedAt": 1788691679514,
       "endedAt": 1788691704505
+    },
+    {
+      "id": "4c8c4e53-5c55-4e03-ad21-5723d3438190",
+      "channel": "halantar",
+      "startedAt": 1788799867638,
+      "endedAt": 1788799897471
+    },
+    {
+      "id": "a26723d4-e9a8-4ff6-a647-e05a250f03cb",
+      "channel": "halantar",
+      "startedAt": 1788800740967,
+      "endedAt": 1788800780704
+    },
+    {
+      "id": "5d5b8257-cf82-4ee7-8604-308122ca39b0",
+      "channel": "halantar",
+      "startedAt": 1788800845214,
+      "endedAt": 1788800868395
     }
   ],
   "chatMessages": [
@@ -11085,5 +11103,6 @@
       }
     ]
   },
-  "moderation_warns": {}
+  "moderation_warns": {},
+  "scene_profiles": []
 }

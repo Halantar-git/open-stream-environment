@@ -30,6 +30,8 @@ const { mountOAuthRoutes, buildTwitchAuthorizeUrl, buildDonationAlertsAuthorizeU
 const { startTwitchChat, sendTwitchChatMessage } = require("./integrations/twitch-chat");
 const { startChatBot } = require("./integrations/chat-bot");
 const { startTwitchEvents } = require("./integrations/twitch-eventsub");
+const { triggerRewardActions } = require("./integrations/twitch-eventsub");
+const { createTwitchClip, createStreamMarker } = require("./integrations/twitch-helix");
 const { startDonationAlerts } = require("./integrations/donationalerts");
 const { startYoutube } = require("./integrations/youtube-live");
 const { startObsWebSocket } = require("./integrations/obs-websocket");
@@ -1048,6 +1050,62 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
         setCameraFilter(msg.payload && msg.payload.filterId);
         break;
       }
+      case EVENT_TYPES.CMD_SET_TWITCH_REWARDS: {
+        const rewards = state.setTwitchRewards((msg.payload && msg.payload.rewards) || []);
+        broadcast(EVENT_TYPES.STATE, stateSnapshot());
+        break;
+      }
+      case EVENT_TYPES.CMD_TEST_TWITCH_REWARD: {
+        const rule = state.getTwitchRewardById((msg.payload && msg.payload.id) || "");
+        if (!rule) {
+          serverLog.warn("reward test skipped (unknown rule)", { id: (msg.payload && msg.payload.id) || "" });
+          break;
+        }
+        triggerRewardActions({
+          bus,
+          state,
+          rewardId: rule.rewardId,
+          rewardTitle: rule.rewardTitle,
+          user: "Тест",
+          userInput: "",
+        });
+        break;
+      }
+      case EVENT_TYPES.CMD_CREATE_CLIP: {
+        createTwitchClip({ bus, state }).then((result) => {
+          broadcast(EVENT_TYPES.TWITCH_ACTION_RESULT, { action: "clip", ...result });
+        });
+        break;
+      }
+      case EVENT_TYPES.CMD_CREATE_STREAM_MARKER: {
+        createStreamMarker({ bus, state, description: (msg.payload && msg.payload.description) || "" }).then((result) => {
+          broadcast(EVENT_TYPES.TWITCH_ACTION_RESULT, { action: "marker", ...result });
+        });
+        break;
+      }
+      case EVENT_TYPES.CMD_SAVE_SCENE_PROFILE: {
+        const profiles = state.saveSceneProfile(msg.payload || {});
+        if (profiles) {
+          broadcast(EVENT_TYPES.SCENE_PROFILES_UPDATE, { profiles });
+          broadcast(EVENT_TYPES.STATE, stateSnapshot());
+        }
+        break;
+      }
+      case EVENT_TYPES.CMD_APPLY_SCENE_PROFILE: {
+        const layout = state.applySceneProfile((msg.payload && msg.payload.id) || "");
+        if (layout) {
+          broadcast(EVENT_TYPES.LAYOUT_UPDATE, { layout });
+          broadcast(EVENT_TYPES.THEME_UPDATE, state.snapshot().appearance);
+          broadcast(EVENT_TYPES.SCENES_UPDATE, state.config.scenes);
+          broadcast(EVENT_TYPES.STATE, stateSnapshot());
+        }
+        break;
+      }
+      case EVENT_TYPES.CMD_DELETE_SCENE_PROFILE: {
+        const profiles = state.deleteSceneProfile((msg.payload && msg.payload.id) || "");
+        if (profiles) broadcast(EVENT_TYPES.SCENE_PROFILES_UPDATE, { profiles });
+        break;
+      }
       default:
         break;
     }
@@ -1142,6 +1200,16 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
 
   bus.on("camera_filter_request", ({ filterId }) => {
     setCameraFilter(filterId);
+  });
+
+  bus.on("reward_tts", (payload) => {
+    if (!payload || !payload.text) return;
+    broadcast(EVENT_TYPES.REWARD_TTS, { text: payload.text });
+  });
+
+  bus.on("reward_scene_request", ({ scene }) => {
+    if (!scene) return;
+    handleRemoteAction("SCENE_SET", { scene });
   });
 
   function start() {

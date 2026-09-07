@@ -87,6 +87,14 @@ const SECTIONS = [
     ],
   },
   {
+    id: "sceneprofiles",
+    title: "help.sceneprofiles.title",
+    blocks: [
+      { type: "p", key: "help.sceneprofiles.p1" },
+      { type: "p", key: "help.sceneprofiles.p2" },
+    ],
+  },
+  {
     id: "themes",
     title: "help.themes.title",
     blocks: [
@@ -161,6 +169,22 @@ const SECTIONS = [
     ],
   },
   {
+    id: "rewards",
+    title: "help.rewards.title",
+    blocks: [
+      { type: "p", key: "help.rewards.p1" },
+      { type: "p", key: "help.rewards.p2" },
+    ],
+  },
+  {
+    id: "clipmarker",
+    title: "help.clipmarker.title",
+    blocks: [
+      { type: "p", key: "help.clipmarker.p1" },
+      { type: "p", key: "help.clipmarker.p2" },
+    ],
+  },
+  {
     id: "streamdeck",
     title: "help.streamdeck.title",
     blocks: [
@@ -223,6 +247,14 @@ const SECTIONS = [
       { type: "p", key: "help.settings.p2" },
       { type: "p", key: "help.settings.p3" },
       { type: "p", key: "help.settings.p4" },
+    ],
+  },
+  {
+    id: "updates",
+    title: "help.updates.title",
+    blocks: [
+      { type: "p", key: "help.updates.p1" },
+      { type: "p", key: "help.updates.p2" },
     ],
   },
   {
