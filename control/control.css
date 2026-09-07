@@ -478,10 +478,6 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .topbar__help-btn.is-active { background: var(--md-primary-container); color: var(--md-on-primary-container); }
 
 .topbar__boosty-btn {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
   margin-left: 0;
   font-size: 12px;
   font-weight: 700;
@@ -495,7 +491,7 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 }
 .topbar__boosty-btn:hover {
   box-shadow: 0 0 22px rgba(255, 77, 77, 0.55);
-  transform: translate(-50%, -50%) translateY(-1px);
+  transform: translateY(-1px);
 }
 .topbar__boosty-btn svg { width: 14px; height: 14px; }
 
@@ -715,6 +711,8 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .topbar__poll-btn { margin-left: 10px; font-size: 12px; padding: 7px 14px; }
 .topbar__poll-btn svg { width: 14px; height: 14px; }
 .topbar__poll-btn.is-active { background: var(--md-primary-container); color: var(--md-on-primary-container); }
+.topbar__clip-btn { margin-left: 10px; font-size: 12px; padding: 7px 14px; }
+.topbar__marker-btn { margin-left: 10px; font-size: 12px; padding: 7px 14px; }
 
 .wheel-panel {
   position: fixed;
@@ -1092,8 +1090,7 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   font-size: 12px;
 }
 
-.twitch-rewards,
-.scene-profiles {
+.twitch-rewards {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1138,21 +1135,6 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   gap: 6px;
   font-size: 12px;
   color: var(--md-on-surface-variant);
-  white-space: nowrap;
-}
-
-.scene-profile-item {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 8px;
-  align-items: center;
-}
-
-.scene-profile-item__name {
-  font-size: 13px;
-  color: var(--md-on-surface);
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

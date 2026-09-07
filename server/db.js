@@ -27,8 +27,6 @@ function defaultData() {
     overlay: { widgets: [] },
     // Сохранённые пользовательские пресеты раскладки (виджеты + геометрия).
     layout_presets: [],
-    // Сохранённые профили сцен (сцены + виджеты + темы + раскладка + заставки).
-    scene_profiles: [],
     // Сессии стрима.
     sessions: [],
     // История чата / логов, привязанная к sessionId.
@@ -162,17 +160,6 @@ function createDatabase(dbPath = getDbPath()) {
     set("layout_presets", Array.isArray(presets) ? presets : []);
     persist();
     return getLayoutPresets();
-  }
-
-  function getSceneProfiles() {
-    const raw = get("scene_profiles");
-    return Array.isArray(raw) ? raw : [];
-  }
-
-  function saveSceneProfiles(profiles) {
-    set("scene_profiles", Array.isArray(profiles) ? profiles : []);
-    persist();
-    return getSceneProfiles();
   }
 
   function startSession(channel) {
@@ -418,8 +405,6 @@ function createDatabase(dbPath = getDbPath()) {
     saveWidgets,
     getLayoutPresets,
     saveLayoutPresets,
-    getSceneProfiles,
-    saveSceneProfiles,
     startSession,
     endSession,
     appendChat,

@@ -87,14 +87,6 @@ const SECTIONS = [
     ],
   },
   {
-    id: "sceneprofiles",
-    title: "help.sceneprofiles.title",
-    blocks: [
-      { type: "p", key: "help.sceneprofiles.p1" },
-      { type: "p", key: "help.sceneprofiles.p2" },
-    ],
-  },
-  {
     id: "themes",
     title: "help.themes.title",
     blocks: [

@@ -1083,29 +1083,6 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
         });
         break;
       }
-      case EVENT_TYPES.CMD_SAVE_SCENE_PROFILE: {
-        const profiles = state.saveSceneProfile(msg.payload || {});
-        if (profiles) {
-          broadcast(EVENT_TYPES.SCENE_PROFILES_UPDATE, { profiles });
-          broadcast(EVENT_TYPES.STATE, stateSnapshot());
-        }
-        break;
-      }
-      case EVENT_TYPES.CMD_APPLY_SCENE_PROFILE: {
-        const layout = state.applySceneProfile((msg.payload && msg.payload.id) || "");
-        if (layout) {
-          broadcast(EVENT_TYPES.LAYOUT_UPDATE, { layout });
-          broadcast(EVENT_TYPES.THEME_UPDATE, state.snapshot().appearance);
-          broadcast(EVENT_TYPES.SCENES_UPDATE, state.config.scenes);
-          broadcast(EVENT_TYPES.STATE, stateSnapshot());
-        }
-        break;
-      }
-      case EVENT_TYPES.CMD_DELETE_SCENE_PROFILE: {
-        const profiles = state.deleteSceneProfile((msg.payload && msg.payload.id) || "");
-        if (profiles) broadcast(EVENT_TYPES.SCENE_PROFILES_UPDATE, { profiles });
-        break;
-      }
       default:
         break;
     }

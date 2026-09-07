@@ -63,11 +63,12 @@
           <button class="md-button md-button--tonal topbar__lang-btn" data-lang="ru" type="button">RU</button>
           <button class="md-button md-button--tonal topbar__lang-btn" data-lang="en" type="button">EN</button>
         </div>
-        <button class="md-button md-button--filled topbar__boosty-btn" id="openBoostyBtn" title="Boosty" data-i18n="boosty.support">Поддержать автора</button>
         <button class="md-button md-button--tonal topbar__chat-btn" id="openChatWindowBtn"></button>
         <button class="md-button md-button--tonal topbar__debug-btn" id="toggleDebugBtn" data-i18n-title="debug.title"></button>
         <button class="md-button md-button--tonal topbar__wheel-btn" id="toggleWheelBtn" data-i18n-title="nav.wheel"></button>
         <button class="md-button md-button--tonal topbar__poll-btn" id="togglePollBtn" data-i18n-title="nav.poll"></button>
+        <button class="md-button md-button--tonal topbar__clip-btn" id="createClipBtn" data-i18n="settings.clipShort" data-i18n-title="settings.createClip">Клип</button>
+        <button class="md-button md-button--tonal topbar__marker-btn" id="createMarkerBtn" data-i18n="settings.markerShort" data-i18n-title="settings.createMarker">Маркер</button>
         <button class="md-button md-button--tonal topbar__terminal-btn" id="toggleTerminalBtn" data-i18n-title="editor.terminal"></button>
         <button class="md-button md-button--tonal topbar__history-btn" id="toggleHistoryBtn" data-i18n-title="settings.history"></button>
         <button class="md-button md-button--tonal topbar__help-btn" id="toggleHelpBtn" data-i18n-title="help.title"></button>
@@ -246,23 +247,6 @@
           <div class="inspector__title" id="sceneFormTitle" data-i18n="scenes.properties">Свойства сцены</div>
           <div class="properties" id="sceneForm"></div>
         </div>
-        <div class="inspector__section">
-          <div class="inspector__title" data-i18n="settings.sceneProfiles">Профили сцен</div>
-          <p class="settings__desc" data-i18n="settings.sceneProfilesDesc">Сохранение и применение полного набора: сцены, виджеты, темы, раскладка и заставки.</p>
-          <div class="settings__port-row" style="margin-bottom:8px;">
-            <input type="text" id="sceneProfileName" data-i18n-placeholder="settings.profileNamePlaceholder" placeholder="Название профиля" autocomplete="off" />
-            <button class="md-button md-button--tonal" id="saveSceneProfileBtn" data-i18n="settings.saveProfile">Сохранить</button>
-          </div>
-          <div class="scene-profiles" id="sceneProfilesList"></div>
-        </div>
-        <div class="inspector__section">
-          <div class="inspector__title" data-i18n="settings.clipMarker">Клип и маркер стрима</div>
-          <p class="settings__desc" data-i18n="settings.clipMarkerDesc">Быстрое создание клипа и маркера стрима через Twitch. Требует подключения Twitch с правами clips:edit и channel:manage:broadcast.</p>
-          <div class="settings__actions">
-            <button class="md-button md-button--tonal" id="createClipBtn" data-i18n="settings.createClip">Создать клип</button>
-            <button class="md-button md-button--tonal" id="createMarkerBtn" data-i18n="settings.createMarker">Маркер стрима</button>
-          </div>
-        </div>
       </aside>
     </section>
 
@@ -277,6 +261,14 @@
 
     <section class="view" id="view-settings" hidden>
       <div class="settings">
+        <div class="settings__card md-card">
+          <h2>Open Stream Environment</h2>
+          <p class="settings__desc" data-i18n="settings.aboutDesc">Стрим-оверлей и панель управления для Twitch и OBS.</p>
+          <div class="settings__actions">
+            <button class="md-button md-button--filled topbar__boosty-btn" id="openBoostyBtn" title="Boosty" data-i18n="boosty.support">Поддержать автора</button>
+          </div>
+        </div>
+
         <div class="settings__card md-card">
           <h2 data-i18n="settings.appearance">Оформление</h2>
           <p class="settings__desc" data-i18n="settings.appearanceDesc">Тема влияет только на сам оверлей (и его превью на канвасе) — панель управления всегда выглядит одинаково.</p>

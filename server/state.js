@@ -574,81 +574,6 @@ class AppState {
     return this._getLayoutPresets().length !== before ? this.listLayoutPresets() : null;
   }
 
-  // ---- Scene profiles (scenes + widgets + themes + layout + splash) ----
-
-  _getSceneProfiles() {
-    if (this.db) return this.db.getSceneProfiles ? this.db.getSceneProfiles() : [];
-    if (!this._memorySceneProfiles) this._memorySceneProfiles = [];
-    return this._memorySceneProfiles;
-  }
-
-  _setSceneProfiles(profiles) {
-    if (this.db && this.db.saveSceneProfiles) return this.db.saveSceneProfiles(profiles);
-    this._memorySceneProfiles = profiles;
-    return this._memorySceneProfiles;
-  }
-
-  listSceneProfiles() {
-    return this._getSceneProfiles().map((p) => ({
-      id: p.id,
-      name: p.name,
-      widgetCount: Array.isArray(p.widgets) ? p.widgets.length : 0,
-      themeId: p.themeId || "",
-      enable3d: !!p.enable3d,
-      createdAt: p.createdAt || 0,
-      updatedAt: p.updatedAt || 0,
-    }));
-  }
-
-  saveSceneProfile({ id, name } = {}) {
-    const cleanName = String(name || "").trim().slice(0, 60);
-    if (!cleanName) return null;
-    const profiles = this._getSceneProfiles();
-    const profile = {
-      widgets: this._layout.map((w) => ({ ...w, config: { ...(w.config || {}) } })),
-      scenes: JSON.parse(JSON.stringify(this.config.scenes || {})),
-      splash: { ...(this.config.splash || {}) },
-      themeId: this.config.appearance.activeThemeId || "nebula",
-      enable3d: !!this.config.appearance.enable3d,
-    };
-    if (id) {
-      const existing = profiles.find((p) => p.id === id);
-      if (!existing) return null;
-      existing.name = cleanName;
-      Object.assign(existing, profile, { updatedAt: Date.now() });
-    } else {
-      profiles.push({ id: crypto.randomUUID(), name: cleanName, ...profile, createdAt: Date.now(), updatedAt: Date.now() });
-    }
-    this._setSceneProfiles(profiles);
-    return this.listSceneProfiles();
-  }
-
-  applySceneProfile(id) {
-    const profile = this._getSceneProfiles().find((p) => p.id === id);
-    if (!profile || !Array.isArray(profile.widgets)) return null;
-    this._layout = profile.widgets.map((w) => ({ ...w, config: { ...(w.config || {}) } }));
-    if (profile.scenes && typeof profile.scenes === "object") {
-      this.config.scenes = { ...defaultScenes(), ...JSON.parse(JSON.stringify(profile.scenes)) };
-    }
-    if (profile.splash && typeof profile.splash === "object") {
-      this.config.splash = { ...this.config.splash, ...profile.splash };
-    }
-    const rawThemeId = profile.themeId || "";
-    const builtin = BUILTIN_THEMES[rawThemeId];
-    const themeId = builtin && builtin.variant ? builtin.base2d : rawThemeId;
-    if (themeId && this.themeDimension(themeId)) this.config.appearance.activeThemeId = themeId;
-    this.config.appearance.enable3d = !!profile.enable3d;
-    saveConfig(this.config);
-    this._persistLayout();
-    return this._layout;
-  }
-
-  deleteSceneProfile(id) {
-    const before = this._getSceneProfiles().length;
-    this._setSceneProfiles(this._getSceneProfiles().filter((p) => p.id !== id));
-    return this._getSceneProfiles().length !== before ? this.listSceneProfiles() : null;
-  }
-
   // ---- Goal / app config ----
 
   setGoal({ title, current, target, currency }) {
@@ -1505,7 +1430,6 @@ class AppState {
     return {
       layout: this._layout,
       layoutPresets: this.listLayoutPresets(),
-      sceneProfiles: this.listSceneProfiles(),
       goal: this.config.goal,
       port: this.config.port,
       notificationSound: this.config.notificationSound,

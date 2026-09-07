@@ -201,6 +201,7 @@
     "replay": "Replay",
     "appearance": "Appearance",
     "appearanceDesc": "The theme only affects the overlay itself (and its canvas preview) — the control panel always looks the same.",
+    "aboutDesc": "Stream overlay and control panel for Twitch and OBS.",
     "createTheme": "Create custom theme",
     "themeCategorySystem": "System",
     "themeCategoryStarCitizen": "Star Citizen",
@@ -342,17 +343,13 @@
     "clipMarkerDesc": "Create a Twitch clip and stream marker. Requires connecting Twitch with clips:edit and channel:manage:broadcast scopes.",
     "createClip": "Create clip",
     "createMarker": "Stream marker",
+    "clipShort": "Clip",
+    "markerShort": "Marker",
     "clipCreated": "Clip created",
     "markerCreated": "Marker created",
     "clipFailed": "Clip failed: {{error}}",
     "markerFailed": "Marker failed: {{error}}",
     "twitchActionDenied": "Connect Twitch and re-authorize (new scopes required)",
-    "sceneProfiles": "Scene profiles",
-    "sceneProfilesDesc": "Save and apply a full set: scenes, widgets, themes, layout and splashes.",
-    "saveProfile": "Save",
-    "applyProfile": "Apply",
-    "deleteProfile": "Delete profile",
-    "profileNamePlaceholder": "Profile name",
     "ru": "Русский",
     "en": "English"
   },
@@ -867,7 +864,10 @@
     "chatSend": "Send",
     "tabControl": "Control",
     "tabWheel": "Wheel",
-    "tabChat": "Chat"
+    "tabChat": "Chat",
+    "clipMarker": "Clip & marker",
+    "createClip": "Clip",
+    "createMarker": "Marker"
   },
   "overlay": {
     "soundboardPlayed": "<b>{{user}}</b> played <b>{{title}}</b>"
@@ -910,11 +910,6 @@
       "p1": "The Presets block in the toolbar under the canvas saves the current widget layout under a name for quick layout switching.",
       "p2": "A preset also saves the active 2D/3D themes, so loading one brings back its 3D widgets automatically.",
       "p3": "Save overwrites the selected preset or creates a new one from the entered name; Delete removes a preset. Presets live in local-db.json and don't touch other settings."
-    },
-    "sceneprofiles": {
-      "title": "Scene profiles",
-      "p1": "A scene profile saves the whole scene set at once: widgets (layout), scene settings (statuses, titles, splashes), the global splash and the active theme (2D/3D).",
-      "p2": "In the Scenes tab, enter a name in the right panel and press Save to create a profile; Apply restores it and ✕ deletes it. Profiles are stored in local-db.json."
     },
     "themes": {
       "title": "Themes",
@@ -982,7 +977,7 @@
     },
     "clipmarker": {
       "title": "Clip & stream marker",
-      "p1": "The Scenes tab has Create clip and Stream marker buttons — they create a Twitch clip and marker via the Helix API in one click.",
+      "p1": "The Clip and Marker buttons live in the app header — they create a Twitch clip and marker via the Helix API in one click.",
       "p2": "A clip needs the clips:edit scope, a marker needs channel:manage:broadcast. If the buttons report an error, reconnect Twitch in Settings — the old token doesn't include the new scopes."
     },
     "streamdeck": {

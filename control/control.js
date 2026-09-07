@@ -222,9 +222,6 @@ const { EVENT_TYPES } = window.SharedEvents;
   const addRewardBtn = document.getElementById("addRewardBtn");
   const createClipBtn = document.getElementById("createClipBtn");
   const createMarkerBtn = document.getElementById("createMarkerBtn");
-  const sceneProfileName = document.getElementById("sceneProfileName");
-  const saveSceneProfileBtn = document.getElementById("saveSceneProfileBtn");
-  const sceneProfilesList = document.getElementById("sceneProfilesList");
   const chatBotEnabledSwitch = document.getElementById("chatBotEnabledSwitch");
   const chatBotPrefixInput = document.getElementById("chatBotPrefix");
   const chatBotCommandsList = document.getElementById("chatBotCommandsList");
@@ -1480,57 +1477,6 @@ const { EVENT_TYPES } = window.SharedEvents;
     });
   }
 
-  // ---- Scene profiles ----
-
-  function renderSceneProfiles() {
-    if (!sceneProfilesList) return;
-    const profiles = state.sceneProfiles || [];
-    if (!profiles.length) {
-      sceneProfilesList.innerHTML = `<div class="settings__hint">${escapeHtml(t("presets.placeholder"))}</div>`;
-      return;
-    }
-    sceneProfilesList.innerHTML = "";
-    profiles.forEach((p) => {
-      const row = document.createElement("div");
-      row.className = "scene-profile-item";
-      const label = document.createElement("span");
-      label.className = "scene-profile-item__name";
-      label.textContent = p.name;
-      const apply = document.createElement("button");
-      apply.className = "md-button md-button--tonal";
-      apply.textContent = t("settings.applyProfile");
-      apply.addEventListener("click", () => send(EVENT_TYPES.CMD_APPLY_SCENE_PROFILE, { id: p.id }));
-      const remove = document.createElement("button");
-      remove.className = "md-button md-button--text";
-      remove.textContent = "✕";
-      remove.title = t("settings.deleteProfile");
-      remove.addEventListener("click", () => {
-        if (confirm(t("presets.deleteConfirm", { name: p.name }))) {
-          send(EVENT_TYPES.CMD_DELETE_SCENE_PROFILE, { id: p.id });
-        }
-      });
-      row.append(label, apply, remove);
-      sceneProfilesList.appendChild(row);
-    });
-  }
-
-  if (saveSceneProfileBtn) {
-    saveSceneProfileBtn.addEventListener("click", () => {
-      const name = sceneProfileName ? String(sceneProfileName.value).trim() : "";
-      if (!name) return;
-      send(EVENT_TYPES.CMD_SAVE_SCENE_PROFILE, { name });
-      if (sceneProfileName) sceneProfileName.value = "";
-    });
-    if (sceneProfileName) {
-      sceneProfileName.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          saveSceneProfileBtn.click();
-        }
-      });
-    }
-  }
-
   // ---- Clip / stream marker ----
 
   function showTwitchActionResult(result) {
@@ -2682,7 +2628,6 @@ const { EVENT_TYPES } = window.SharedEvents;
         canvasEditor.applyCanvasRatio();
         renderThemeGrid();
         renderLayoutPresets();
-        renderSceneProfiles();
         renderLibrary();
         canvasEditor.renderCanvas();
         canvasEditor.renderLayers();
@@ -2700,10 +2645,6 @@ const { EVENT_TYPES } = window.SharedEvents;
       case EVENT_TYPES.LAYOUT_PRESETS_UPDATE:
         state.layoutPresets = (msg.payload && msg.payload.presets) || [];
         renderLayoutPresets();
-        break;
-      case EVENT_TYPES.SCENE_PROFILES_UPDATE:
-        state.sceneProfiles = (msg.payload && msg.payload.profiles) || [];
-        renderSceneProfiles();
         break;
       case EVENT_TYPES.TWITCH_ACTION_RESULT:
         showTwitchActionResult(msg.payload || {});

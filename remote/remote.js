@@ -47,6 +47,9 @@
     CMD_CLEAR_GIVEAWAY_PARTICIPANTS: "cmd_clear_giveaway_participants",
     CMD_TEST_CHAT: "cmd_test_chat",
     CMD_SEND_CHAT: "cmd_send_chat",
+    CMD_CREATE_CLIP: "cmd_create_clip",
+    CMD_CREATE_STREAM_MARKER: "cmd_create_stream_marker",
+    TWITCH_ACTION_RESULT: "twitch_action_result",
   };
 
   const wsUrl = (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws";
@@ -63,6 +66,8 @@
   const obsCommandGrid = document.getElementById("obsCommandGrid");
   const cameraGrid = document.getElementById("cameraGrid");
   const filterGrid = document.getElementById("filterGrid");
+  const remoteClipBtn = document.getElementById("remoteClipBtn");
+  const remoteMarkerBtn = document.getElementById("remoteMarkerBtn");
   const chatList = document.getElementById("remoteChatList");
   const remoteChatComposer = document.getElementById("remoteChatComposer");
   const remoteChatInput = document.getElementById("remoteChatInput");
@@ -129,6 +134,19 @@
         /* vibration is best-effort (secure-context / device dependent) */
       }
     }
+  }
+
+  let toastTimer = null;
+  function showToast(message, isError) {
+    const toast = document.getElementById("remoteToast");
+    if (!toast) return;
+    toast.textContent = message || "";
+    toast.classList.toggle("is-error", !!isError);
+    toast.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toast.hidden = true;
+    }, 3000);
   }
 
   function send(action, payload) {
@@ -682,6 +700,20 @@
         }
         break;
       }
+      case EVENT_TYPES.TWITCH_ACTION_RESULT: {
+        const r = msg.payload || {};
+        const isClip = r.action === "clip";
+        if (r.ok) {
+          showToast(isClip ? t("settings.clipCreated") : t("settings.markerCreated"), false);
+        } else {
+          const friendly =
+            r.error === "not_configured" || r.error === "auth"
+              ? t("settings.twitchActionDenied")
+              : String(r.error || "");
+          showToast(t(isClip ? "settings.clipFailed" : "settings.markerFailed", { error: friendly }), true);
+        }
+        break;
+      }
       default:
         break;
     }
@@ -715,6 +747,20 @@
       send(btn.dataset.action, {});
     });
   });
+
+  // Clip / stream marker (raw commands, не REMOTE_ACTION).
+  if (remoteClipBtn) {
+    remoteClipBtn.addEventListener("click", () => {
+      vibrate();
+      sendCommand(EVENT_TYPES.CMD_CREATE_CLIP, {});
+    });
+  }
+  if (remoteMarkerBtn) {
+    remoteMarkerBtn.addEventListener("click", () => {
+      vibrate();
+      sendCommand(EVENT_TYPES.CMD_CREATE_STREAM_MARKER, { description: "" });
+    });
+  }
 
   // Tabs: control pad, wheel, and live chat.
   const remoteMain = document.getElementById("remoteMain");

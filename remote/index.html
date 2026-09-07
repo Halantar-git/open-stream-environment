@@ -26,10 +26,20 @@
     <button class="remote-tab" type="button" data-tab="chat" data-i18n="remote.tabChat">Чат</button>
   </nav>
 
+  <div class="remote-toast" id="remoteToast" hidden></div>
+
   <main class="remote-main" id="remoteMain">
     <section class="grid-section grid-section--scenes">
       <h2 class="grid-section__title" data-i18n="remote.scenes">Сцены</h2>
       <div class="action-grid action-grid--scenes" id="sceneGrid"></div>
+    </section>
+
+    <section class="grid-section">
+      <h2 class="grid-section__title" data-i18n="remote.clipMarker">Клип и маркер</h2>
+      <div class="action-grid action-grid--scenes">
+        <button class="action-btn" type="button" id="remoteClipBtn" data-i18n="remote.createClip">Клип</button>
+        <button class="action-btn" type="button" id="remoteMarkerBtn" data-i18n="remote.createMarker">Маркер</button>
+      </div>
     </section>
 
     <section class="grid-section grid-section--wheel">
