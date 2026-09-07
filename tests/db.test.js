@@ -54,6 +54,14 @@ describe("server/db", () => {
     expect(db.getLayoutPresets()[0].name).toBe("Основной");
   });
 
+  test("сохраняет и читает пресеты голосования", () => {
+    expect(db.getPollPresets()).toEqual([]);
+
+    const saved = db.savePollPresets([{ id: "pp1", name: "Опрос", command: "!poll", chartType: "bars", options: [{ id: "o1", label: "Да" }] }]);
+    expect(saved).toHaveLength(1);
+    expect(db.getPollPresets()[0].name).toBe("Опрос");
+  });
+
   test("записывает и читает донат из истории", () => {
     const row = db.appendStreamEvent({
       type: "donation",

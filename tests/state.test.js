@@ -333,6 +333,46 @@ describe("AppState config + runtime", () => {
     expect(updated[0].widgetCount).toBe(2);
   });
 
+  test("сохранение/загрузка/удаление пресетов голосования", () => {
+    state.setPollConfig({ command: "!vote", chartType: "pie", options: [{ id: "a", label: "Да" }, { id: "b", label: "Нет" }] });
+
+    const saved = state.savePollPreset({ name: "  Опрос недели  " });
+    expect(saved).toHaveLength(1);
+    expect(saved[0].name).toBe("Опрос недели");
+    expect(saved[0].command).toBe("!vote");
+    expect(saved[0].chartType).toBe("pie");
+    expect(saved[0].optionCount).toBe(2);
+
+    // Меняем конфигурацию, затем возвращаем её из пресета.
+    state.setPollConfig({ command: "!poll", chartType: "bars", options: [] });
+    const applied = state.applyPollPreset(saved[0].id);
+    expect(applied.command).toBe("!vote");
+    expect(applied.chartType).toBe("pie");
+    expect(applied.options).toHaveLength(2);
+
+    const snap = state.snapshot();
+    expect(snap.pollPresets).toHaveLength(1);
+    expect(snap.pollPresets[0].name).toBe("Опрос недели");
+
+    const deleted = state.deletePollPreset(saved[0].id);
+    expect(deleted).toHaveLength(0);
+    expect(state.applyPollPreset(saved[0].id)).toBeNull();
+  });
+
+  test("перезапись пресета голосования по id не создаёт дубль", () => {
+    state.setPollConfig({ command: "!poll", chartType: "bars", options: [{ id: "a", label: "Раз" }] });
+    const created = state.savePollPreset({ name: "Опрос" });
+    const id = created[0].id;
+
+    state.setPollConfig({ command: "!go", chartType: "pie", options: [{ id: "a", label: "Раз" }, { id: "b", label: "Два" }] });
+    const updated = state.savePollPreset({ id, name: "Опрос v2" });
+
+    expect(updated).toHaveLength(1);
+    expect(updated[0].id).toBe(id);
+    expect(updated[0].name).toBe("Опрос v2");
+    expect(updated[0].optionCount).toBe(2);
+  });
+
   test("snapshot включает новые поля состояния", () => {
     state.setObsConfig({ cameraAngles: [{ id: "cam1", label: "", twitchRewardTitle: "", sceneName: "", cameraSource: "" }] });
     state.setStreamDeckConfig({ icons: { scene: "media/x.png" } });

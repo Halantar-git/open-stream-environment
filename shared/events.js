@@ -43,6 +43,7 @@
     GIVEAWAY_SPIN: "giveaway_spin", // {}
     GIVEAWAY_PARTICIPANTS: "giveaway_participants", // { count, participants }
     POLL_UPDATE: "poll_update", // { poll }
+    POLL_PRESETS_UPDATE: "poll_presets_update", // { presets: [{ id, name, ... }] }
     OVERLAY_PARTICIPANTS_CONFIG: "overlay_participants_config", // { config }
     WHEEL_CONFIG: "wheel_config", // { config }
     WHEEL_SPEED_CONFIG: "wheel_speed_config", // { config }
@@ -126,6 +127,9 @@
     CMD_ADD_POLL_OPTION: "cmd_add_poll_option", // { label }
     CMD_REMOVE_POLL_OPTION: "cmd_remove_poll_option", // { id }
     CMD_CLEAR_POLL_OPTIONS: "cmd_clear_poll_options",
+    CMD_SAVE_POLL_PRESET: "cmd_save_poll_preset", // { id?, name }
+    CMD_APPLY_POLL_PRESET: "cmd_apply_poll_preset", // { id }
+    CMD_DELETE_POLL_PRESET: "cmd_delete_poll_preset", // { id }
     CMD_SET_MIC_CONFIG: "cmd_set_mic_config", // { config }
     CMD_SET_LANGUAGE: "cmd_set_language", // { lang }
     CMD_SET_YOUTUBE_VIDEO_ID: "cmd_set_youtube_video_id", // { videoId }

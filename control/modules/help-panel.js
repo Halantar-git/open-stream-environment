@@ -87,6 +87,14 @@ const SECTIONS = [
     ],
   },
   {
+    id: "pollpresets",
+    title: "help.pollpresets.title",
+    blocks: [
+      { type: "p", key: "help.pollpresets.p1" },
+      { type: "p", key: "help.pollpresets.p2" },
+    ],
+  },
+  {
     id: "themes",
     title: "help.themes.title",
     blocks: [
@@ -262,6 +270,7 @@ const SECTIONS = [
 
 export function initHelpPanel({ t, ICONS }) {
   const panel = el("helpPanel");
+  const navPanel = el("helpNavPanel");
   const body = el("helpBody");
   const nav = el("helpNav");
   const toggleBtn = el("toggleHelpBtn");
@@ -305,6 +314,7 @@ export function initHelpPanel({ t, ICONS }) {
   function setOpen(open) {
     if (!panel || !toggleBtn) return;
     panel.hidden = !open;
+    if (navPanel) navPanel.hidden = !open;
     toggleBtn.classList.toggle("is-active", open);
   }
 

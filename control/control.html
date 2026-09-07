@@ -59,19 +59,19 @@
         <button class="topbar__tab" data-view="settings" data-i18n="nav.settings">Настройки</button>
       </nav>
       <div class="topbar__actions">
-        <div class="topbar__lang" id="languageSwitcher" role="group" data-i18n-title="settings.language">
-          <button class="md-button md-button--tonal topbar__lang-btn" data-lang="ru" type="button">RU</button>
-          <button class="md-button md-button--tonal topbar__lang-btn" data-lang="en" type="button">EN</button>
-        </div>
+        <button class="md-button md-button--tonal topbar__clip-btn" id="createClipBtn" data-i18n="settings.clipShort" data-i18n-title="settings.createClip">Клип</button>
+        <button class="md-button md-button--tonal topbar__marker-btn" id="createMarkerBtn" data-i18n="settings.markerShort" data-i18n-title="settings.createMarker">Маркер</button>
         <button class="md-button md-button--tonal topbar__chat-btn" id="openChatWindowBtn"></button>
         <button class="md-button md-button--tonal topbar__debug-btn" id="toggleDebugBtn" data-i18n-title="debug.title"></button>
         <button class="md-button md-button--tonal topbar__wheel-btn" id="toggleWheelBtn" data-i18n-title="nav.wheel"></button>
         <button class="md-button md-button--tonal topbar__poll-btn" id="togglePollBtn" data-i18n-title="nav.poll"></button>
-        <button class="md-button md-button--tonal topbar__clip-btn" id="createClipBtn" data-i18n="settings.clipShort" data-i18n-title="settings.createClip">Клип</button>
-        <button class="md-button md-button--tonal topbar__marker-btn" id="createMarkerBtn" data-i18n="settings.markerShort" data-i18n-title="settings.createMarker">Маркер</button>
         <button class="md-button md-button--tonal topbar__terminal-btn" id="toggleTerminalBtn" data-i18n-title="editor.terminal"></button>
         <button class="md-button md-button--tonal topbar__history-btn" id="toggleHistoryBtn" data-i18n-title="settings.history"></button>
         <button class="md-button md-button--tonal topbar__help-btn" id="toggleHelpBtn" data-i18n-title="help.title"></button>
+        <div class="topbar__lang" id="languageSwitcher" role="group" data-i18n-title="settings.language">
+          <button class="md-button md-button--tonal topbar__lang-btn" data-lang="ru" type="button">RU</button>
+          <button class="md-button md-button--tonal topbar__lang-btn" data-lang="en" type="button">EN</button>
+        </div>
       </div>
     </header>
 
@@ -107,12 +107,18 @@
       </div>
     </aside>
 
+    <aside class="help-nav-panel" id="helpNavPanel" hidden>
+      <header class="help-nav-panel__header">
+        <span class="help-nav-panel__title" data-i18n="help.toc">Оглавление</span>
+      </header>
+      <nav class="help-nav-panel__nav" id="helpNav"></nav>
+    </aside>
+
     <aside class="help-panel" id="helpPanel" hidden>
       <header class="help-panel__header">
         <span class="help-panel__title" data-i18n="help.title">Справка</span>
         <button class="help-panel__close" id="helpCloseBtn" aria-label="Закрыть" data-i18n-title="common.close">×</button>
       </header>
-      <nav class="help-panel__nav" id="helpNav"></nav>
       <div class="help-panel__body" id="helpBody"></div>
     </aside>
 
@@ -161,6 +167,13 @@
         <button class="wheel-panel__close" id="pollCloseBtn" aria-label="Закрыть" data-i18n-title="common.close">×</button>
       </header>
       <div class="wheel-panel__body" id="pollPanelBody"></div>
+    </aside>
+
+    <aside class="participants-panel" id="pollOptionsPanel" hidden>
+      <header class="participants-panel__header">
+        <span class="participants-panel__title" data-i18n="poll.optionsTitle">Пункты голосования</span>
+      </header>
+      <div class="participants-panel__body" id="pollOptionsPanelBody"></div>
     </aside>
 
     <section class="view" id="view-editor">

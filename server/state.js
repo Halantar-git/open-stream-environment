@@ -574,6 +574,78 @@ class AppState {
     return this._getLayoutPresets().length !== before ? this.listLayoutPresets() : null;
   }
 
+  // ---- Poll presets ----
+
+  _getPollPresets() {
+    if (this.db) return this.db.getPollPresets();
+    if (!this._memoryPollPresets) this._memoryPollPresets = [];
+    return this._memoryPollPresets;
+  }
+
+  _setPollPresets(presets) {
+    if (this.db) return this.db.savePollPresets(presets);
+    this._memoryPollPresets = presets;
+    return this._memoryPollPresets;
+  }
+
+  listPollPresets() {
+    return this._getPollPresets().map((p) => ({
+      id: p.id,
+      name: p.name,
+      command: typeof p.command === "string" && p.command.trim() ? p.command.trim() : "!poll",
+      chartType: p.chartType === "pie" ? "pie" : "bars",
+      optionCount: Array.isArray(p.options) ? p.options.length : 0,
+      createdAt: p.createdAt || 0,
+      updatedAt: p.updatedAt || 0,
+    }));
+  }
+
+  savePollPreset({ id, name } = {}) {
+    const cleanName = String(name || "").trim().slice(0, 60);
+    if (!cleanName) return null;
+    const presets = this._getPollPresets();
+    const payload = {
+      command: this.config.poll.command || "!poll",
+      chartType: this.config.poll.chartType === "pie" ? "pie" : "bars",
+      options: (this.config.poll.options || []).map((o) => ({ id: o.id, label: o.label })),
+    };
+    if (id) {
+      const existing = presets.find((p) => p.id === id);
+      if (!existing) return null;
+      existing.name = cleanName;
+      existing.command = payload.command;
+      existing.chartType = payload.chartType;
+      existing.options = payload.options;
+      existing.updatedAt = Date.now();
+    } else {
+      presets.push({ id: crypto.randomUUID(), name: cleanName, ...payload, createdAt: Date.now(), updatedAt: Date.now() });
+    }
+    this._setPollPresets(presets);
+    return this.listPollPresets();
+  }
+
+  applyPollPreset(id) {
+    const preset = this._getPollPresets().find((p) => p.id === id);
+    if (!preset) return null;
+    this.config.poll = {
+      command: typeof preset.command === "string" && preset.command.trim() ? preset.command.trim() : "!poll",
+      chartType: preset.chartType === "pie" ? "pie" : "bars",
+      options: Array.isArray(preset.options)
+        ? preset.options
+            .filter((o) => o && typeof o.id === "string" && typeof o.label === "string")
+            .map((o) => ({ id: o.id, label: o.label }))
+        : [],
+    };
+    if (this.db) this.db.savePollConfig(this.config.poll);
+    return this.pollSnapshot();
+  }
+
+  deletePollPreset(id) {
+    const before = this._getPollPresets().length;
+    this._setPollPresets(this._getPollPresets().filter((p) => p.id !== id));
+    return this._getPollPresets().length !== before ? this.listPollPresets() : null;
+  }
+
   // ---- Goal / app config ----
 
   setGoal({ title, current, target, currency }) {
@@ -1457,6 +1529,7 @@ class AppState {
       activeFilters: this.getActiveFilters(),
       giveaway: this.giveawaySnapshot(),
       poll: this.pollSnapshot(),
+      pollPresets: this.listPollPresets(),
       chatBot: this.config.chatBot,
       twitchRewards: this.config.twitchRewards,
       appearance: {

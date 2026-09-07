@@ -28,6 +28,7 @@ export function createStateManager() {
   const state = {
     layout: [],
     layoutPresets: [],
+    pollPresets: [],
     goal: { title: "Цель", current: 0, target: 1, currency: "RUB" },
     twitchChannel: "",
     twitchClientId: "",
@@ -92,6 +93,7 @@ export function createStateManager() {
   state.applySnapshot = (payload) => {
     state.layout = payload.layout || [];
     state.layoutPresets = payload.layoutPresets || [];
+    state.pollPresets = payload.pollPresets || [];
     state.goal = payload.goal;
     state.twitchChannel = payload.twitchChannel;
     state.twitchClientId = payload.twitchClientId;

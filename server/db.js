@@ -27,6 +27,8 @@ function defaultData() {
     overlay: { widgets: [] },
     // Сохранённые пользовательские пресеты раскладки (виджеты + геометрия).
     layout_presets: [],
+    // Сохранённые пресеты голосования (команда, тип диаграммы и пункты).
+    poll_presets: [],
     // Сессии стрима.
     sessions: [],
     // История чата / логов, привязанная к sessionId.
@@ -160,6 +162,17 @@ function createDatabase(dbPath = getDbPath()) {
     set("layout_presets", Array.isArray(presets) ? presets : []);
     persist();
     return getLayoutPresets();
+  }
+
+  function getPollPresets() {
+    const raw = get("poll_presets");
+    return Array.isArray(raw) ? raw : [];
+  }
+
+  function savePollPresets(presets) {
+    set("poll_presets", Array.isArray(presets) ? presets : []);
+    persist();
+    return getPollPresets();
   }
 
   function startSession(channel) {
@@ -405,6 +418,8 @@ function createDatabase(dbPath = getDbPath()) {
     saveWidgets,
     getLayoutPresets,
     saveLayoutPresets,
+    getPollPresets,
+    savePollPresets,
     startSession,
     endSession,
     appendChat,

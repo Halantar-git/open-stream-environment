@@ -398,6 +398,7 @@
   },
   "poll": {
     "panelTitle": "Poll",
+    "presetsTitle": "Poll presets",
     "panelHint": "Poll settings now live in a dedicated panel.",
     "openSettings": "Open poll settings",
     "command": "Vote command",
@@ -874,6 +875,7 @@
   },
   "help": {
     "title": "Help",
+    "toc": "Contents",
     "overview": {
       "title": "About",
       "p1": "Open Stream Environment is a Material Design 3 overlay plus a drag-and-drop control panel for Twitch and OBS. The overlay is served locally and added to OBS as a Browser Source.",
@@ -910,6 +912,11 @@
       "p1": "The Presets block in the toolbar under the canvas saves the current widget layout under a name for quick layout switching.",
       "p2": "A preset also saves the active 2D/3D themes, so loading one brings back its 3D widgets automatically.",
       "p3": "Save overwrites the selected preset or creates a new one from the entered name; Delete removes a preset. Presets live in local-db.json and don't touch other settings."
+    },
+    "pollpresets": {
+      "title": "Poll presets",
+      "p1": "In the left column of the Poll panel you can save the current configuration (command, chart type and options) as a named preset.",
+      "p2": "Selecting a preset in the list loads its options, command and chart type. Save overwrites the selected preset or creates a new one from the entered name; Delete removes it. Presets live in local-db.json."
     },
     "themes": {
       "title": "Themes",

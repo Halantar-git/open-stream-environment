@@ -280,6 +280,8 @@ const { EVENT_TYPES } = window.SharedEvents;
   const wheelCloseBtn = document.getElementById("wheelCloseBtn");
   const pollPanelEl = document.getElementById("pollPanel");
   const pollPanelBody = document.getElementById("pollPanelBody");
+  const pollOptionsPanelEl = document.getElementById("pollOptionsPanel");
+  const pollOptionsPanelBody = document.getElementById("pollOptionsPanelBody");
   const togglePollBtn = document.getElementById("togglePollBtn");
   const pollCloseBtn = document.getElementById("pollCloseBtn");
 
@@ -1938,6 +1940,20 @@ const { EVENT_TYPES } = window.SharedEvents;
         <button class="md-button md-button--tonal" id="pollBarsBtn">${t("poll.bars")}</button>
         <button class="md-button md-button--tonal" id="pollPieBtn">${t("poll.pie")}</button>
       </div>
+    `;
+    wirePollControls();
+  }
+
+  function renderPollOptionsPanel() {
+    if (!pollOptionsPanelBody) return;
+    pollOptionsPanelBody.innerHTML = `
+      <div class="inspector__title">${t("poll.presetsTitle")}</div>
+      <div class="poll-presets">
+        <select id="pollPresetSelect"><option value="">${t("presets.placeholder")}</option></select>
+        <input type="text" id="pollPresetName" placeholder="${escapeAttr(t("presets.promptName"))}" autocomplete="off" />
+        <button class="md-button md-button--tonal" id="savePollPresetBtn">${t("presets.save")}</button>
+        <button class="md-button md-button--tonal" id="deletePollPresetBtn" hidden>${t("presets.delete")}</button>
+      </div>
 
       <div class="inspector__title" style="margin-top:10px;">${t("poll.optionsTitle")}</div>
       <div class="giveaway-manual">
@@ -1947,8 +1963,15 @@ const { EVENT_TYPES } = window.SharedEvents;
       <div class="giveaway-participants" id="pollOptionsList"></div>
       <button class="md-button md-button--outlined" id="clearPollOptionsBtn">${t("poll.clearOptions")}</button>
     `;
-    wirePollControls();
+    wirePollOptionsControls();
+    wirePollPresetControls();
     renderPollOptions();
+    renderPollPresets();
+  }
+
+  function renderPollPanels() {
+    renderPollPanel();
+    renderPollOptionsPanel();
   }
 
   function renderPollOptions() {
@@ -1981,6 +2004,9 @@ const { EVENT_TYPES } = window.SharedEvents;
     document.getElementById("pollBarsBtn")?.addEventListener("click", () => sendPollConfig({ chartType: "bars" }));
     document.getElementById("pollPieBtn")?.addEventListener("click", () => sendPollConfig({ chartType: "pie" }));
     document.getElementById("pollCommand")?.addEventListener("change", (e) => sendPollConfig({ command: e.target.value.trim() || "!poll" }));
+  }
+
+  function wirePollOptionsControls() {
     document.getElementById("addPollOptionBtn")?.addEventListener("click", () => {
       const input = document.getElementById("pollOptionName");
       if (!input) return;
@@ -2005,6 +2031,81 @@ const { EVENT_TYPES } = window.SharedEvents;
   function sendPollConfig(patch) {
     state.poll = { ...state.poll, ...patch };
     send(EVENT_TYPES.CMD_SET_POLL_CONFIG, { config: patch });
+  }
+
+  function renderPollPresets() {
+    const select = document.getElementById("pollPresetSelect");
+    if (!select) return;
+    const presets = state.pollPresets || [];
+    const current = select.value;
+    select.innerHTML =
+      `<option value="">${escapeHtml(t("presets.placeholder"))}</option>` +
+      presets.map((p) => `<option value="${escapeAttr(p.id)}">${escapeHtml(p.name)}</option>`).join("");
+    select.value = presets.some((p) => p.id === current) ? current : "";
+    const delBtn = document.getElementById("deletePollPresetBtn");
+    if (delBtn) delBtn.hidden = !select.value;
+  }
+
+  function wirePollPresetControls() {
+    const select = document.getElementById("pollPresetSelect");
+    const nameInput = document.getElementById("pollPresetName");
+    const saveBtn = document.getElementById("savePollPresetBtn");
+    const delBtn = document.getElementById("deletePollPresetBtn");
+
+    const createFromName = () => {
+      const clean = nameInput ? String(nameInput.value).trim() : "";
+      if (!clean) return;
+      const existing = (state.pollPresets || []).find((p) => p.name === clean);
+      if (existing) {
+        if (!confirm(t("presets.overwriteConfirm", { name: clean }))) return;
+        send(EVENT_TYPES.CMD_SAVE_POLL_PRESET, { id: existing.id, name: clean });
+      } else {
+        send(EVENT_TYPES.CMD_SAVE_POLL_PRESET, { name: clean });
+      }
+      if (nameInput) nameInput.value = "";
+    };
+
+    saveBtn?.addEventListener("click", () => {
+      // Если выбран пресет в списке — перезаписываем именно его.
+      const selectedId = select ? select.value : "";
+      if (selectedId) {
+        const preset = (state.pollPresets || []).find((p) => p.id === selectedId);
+        if (preset) {
+          if (confirm(t("presets.overwriteConfirm", { name: preset.name }))) {
+            send(EVENT_TYPES.CMD_SAVE_POLL_PRESET, { id: preset.id, name: preset.name });
+          }
+          return;
+        }
+      }
+      createFromName();
+    });
+
+    nameInput?.addEventListener("input", () => {
+      if (select) {
+        select.value = "";
+        if (delBtn) delBtn.hidden = true;
+      }
+    });
+    nameInput?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        createFromName();
+      }
+    });
+
+    select?.addEventListener("change", () => {
+      const id = select.value;
+      if (delBtn) delBtn.hidden = !id;
+      if (id) send(EVENT_TYPES.CMD_APPLY_POLL_PRESET, { id });
+    });
+
+    delBtn?.addEventListener("click", () => {
+      const id = select ? select.value : "";
+      if (!id) return;
+      const preset = (state.pollPresets || []).find((p) => p.id === id);
+      if (!confirm(t("presets.deleteConfirm", { name: preset ? preset.name : "" }))) return;
+      send(EVENT_TYPES.CMD_DELETE_POLL_PRESET, { id });
+    });
   }
 
   // ---- participants widget settings ----
@@ -2547,10 +2648,11 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   // ---- poll settings panel ----
   function setPollOpen(open) {
-    if (!pollPanelEl || !togglePollBtn) return;
+    if (!pollPanelEl || !pollOptionsPanelEl || !togglePollBtn) return;
     pollPanelEl.hidden = !open;
+    pollOptionsPanelEl.hidden = !open;
     togglePollBtn.classList.toggle("is-active", open);
-    if (open) renderPollPanel();
+    if (open) renderPollPanels();
   }
   if (togglePollBtn) {
     togglePollBtn.innerHTML = `${ICONS.scenePoll} ${t("nav.poll")}`;
@@ -2635,7 +2737,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         populateSettings();
         syncIntegrationSwitches();
         renderWheelPanels();
-        if (!pollPanelEl.hidden) renderPollPanel();
+        if (!pollPanelEl.hidden) renderPollPanels();
         selectScene(state.activeSceneId);
         syncMicBridge();
         break;
@@ -2759,6 +2861,10 @@ const { EVENT_TYPES } = window.SharedEvents;
         state.poll = (msg.payload && msg.payload.poll) || state.poll;
         if (!pollPanelEl.hidden) renderPollOptions();
         break;
+      case EVENT_TYPES.POLL_PRESETS_UPDATE:
+        state.pollPresets = (msg.payload && msg.payload.presets) || [];
+        renderPollPresets();
+        break;
       case EVENT_TYPES.OVERLAY_MIC_CONFIG:
         state.micConfig = (msg.payload && msg.payload.config) || state.micConfig;
         canvasEditor.renderCanvas();
@@ -2825,7 +2931,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     propertiesPanel.render();
     renderSceneForm();
     renderWheelPanels();
-    if (!pollPanelEl.hidden) renderPollPanel();
+    if (!pollPanelEl.hidden) renderPollPanels();
     renderThemeGrid();
     renderLayoutPresets();
     wsClient.refreshStatusChips();

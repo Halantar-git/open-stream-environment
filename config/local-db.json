@@ -2700,6 +2700,42 @@
       "channel": "halantar",
       "startedAt": 1788805941042,
       "endedAt": 1788806006576
+    },
+    {
+      "id": "5271e5da-b762-4925-b7ab-1746e811b9af",
+      "channel": "halantar",
+      "startedAt": 1788809589204,
+      "endedAt": 1788809664618
+    },
+    {
+      "id": "6caa81a9-3382-4aa4-98ba-d8cb2c4a456e",
+      "channel": "halantar",
+      "startedAt": 1788809854388,
+      "endedAt": 1788809892950
+    },
+    {
+      "id": "978cb62c-fcf0-4285-982f-54ff7858e403",
+      "channel": "halantar",
+      "startedAt": 1788809958215,
+      "endedAt": 1788810161333
+    },
+    {
+      "id": "dcef8e58-4f66-4f86-881c-d57535dea89b",
+      "channel": "halantar",
+      "startedAt": 1788810163618,
+      "endedAt": 1788810183478
+    },
+    {
+      "id": "2a1344a8-63fd-4892-bcab-8a7e90bec664",
+      "channel": "halantar",
+      "startedAt": 1788810249974,
+      "endedAt": 1788810266222
+    },
+    {
+      "id": "127db71c-aa1c-4bdf-97e0-77bac919f2f4",
+      "channel": "halantar",
+      "startedAt": 1788810390852,
+      "endedAt": 1788810419814
     }
   ],
   "chatMessages": [
@@ -11144,25 +11180,70 @@
   "poll_config": {
     "command": "!poll",
     "chartType": "pie",
-    "options": [
-      {
-        "id": "47ebb9cd-ac63-4b6c-9556-a780b5eaca00",
-        "label": "1"
-      },
-      {
-        "id": "c0a38089-3e9a-445e-9bfd-bf55d628e67c",
-        "label": "2"
-      },
-      {
-        "id": "4174b858-7c57-437c-8dbc-79b8140b5b1d",
-        "label": "2"
-      },
-      {
-        "id": "6394b462-79a4-4f71-99f6-487c24ff8698",
-        "label": "3"
-      }
-    ]
+    "options": []
   },
   "moderation_warns": {},
-  "scene_profiles": []
+  "scene_profiles": [],
+  "poll_presets": [
+    {
+      "id": "4a041efb-3928-41ca-8c8d-8baa64533b09",
+      "name": "test",
+      "command": "!poll",
+      "chartType": "pie",
+      "options": [
+        {
+          "id": "47ebb9cd-ac63-4b6c-9556-a780b5eaca00",
+          "label": "1"
+        },
+        {
+          "id": "c0a38089-3e9a-445e-9bfd-bf55d628e67c",
+          "label": "2"
+        },
+        {
+          "id": "4174b858-7c57-437c-8dbc-79b8140b5b1d",
+          "label": "2"
+        },
+        {
+          "id": "6394b462-79a4-4f71-99f6-487c24ff8698",
+          "label": "3"
+        }
+      ],
+      "createdAt": 1788809628562,
+      "updatedAt": 1788809628562
+    },
+    {
+      "id": "65d6a715-40cd-44f3-9cdc-2ff3477e6bd4",
+      "name": "test2",
+      "command": "!poll",
+      "chartType": "pie",
+      "options": [
+        {
+          "id": "47ebb9cd-ac63-4b6c-9556-a780b5eaca00",
+          "label": "1"
+        },
+        {
+          "id": "c0a38089-3e9a-445e-9bfd-bf55d628e67c",
+          "label": "2"
+        },
+        {
+          "id": "4174b858-7c57-437c-8dbc-79b8140b5b1d",
+          "label": "2"
+        },
+        {
+          "id": "6394b462-79a4-4f71-99f6-487c24ff8698",
+          "label": "3"
+        },
+        {
+          "id": "045ff50b-ffe3-4e7a-b94e-3ce0fb0d4271",
+          "label": "111"
+        },
+        {
+          "id": "81542571-9a4c-4927-afef-791aedb81d6c",
+          "label": "222"
+        }
+      ],
+      "createdAt": 1788809644731,
+      "updatedAt": 1788809644731
+    }
+  ]
 }

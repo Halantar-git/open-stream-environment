@@ -950,6 +950,21 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
         broadcastPoll(state.clearPollOptions());
         break;
       }
+      case EVENT_TYPES.CMD_SAVE_POLL_PRESET: {
+        const presets = state.savePollPreset(msg.payload || {});
+        if (presets) broadcast(EVENT_TYPES.POLL_PRESETS_UPDATE, { presets });
+        break;
+      }
+      case EVENT_TYPES.CMD_APPLY_POLL_PRESET: {
+        const poll = state.applyPollPreset((msg.payload && msg.payload.id) || "");
+        if (poll) broadcastPoll(poll);
+        break;
+      }
+      case EVENT_TYPES.CMD_DELETE_POLL_PRESET: {
+        const presets = state.deletePollPreset((msg.payload && msg.payload.id) || "");
+        if (presets) broadcast(EVENT_TYPES.POLL_PRESETS_UPDATE, { presets });
+        break;
+      }
       case EVENT_TYPES.MIC_AUDIO_DATA: {
         // Mic bridge: the control panel captures audio (its getUserMedia works
         // in Electron) and forwards it here so the overlay visualizer works
