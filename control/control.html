@@ -23,7 +23,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&family=PT+Sans+Caption:wght@400;700&family=Roboto+Condensed:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=block"
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&family=PT+Sans+Caption:wght@400;700&family=Roboto+Condensed:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600;700&family=Cinzel:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&display=block"
     rel="stylesheet"
   />
   <link rel="stylesheet" href="../shared/theme.css" />
@@ -581,6 +581,7 @@
           <div class="md-field"><label>Wheel</label><input type="text" id="obsSceneWheel" placeholder="Колесо" /></div>
           <div class="md-field"><label>Opening</label><input type="text" id="obsSceneVideo" placeholder="Заставка" /></div>
           <div class="md-field"><label>Poll</label><input type="text" id="obsScenePoll" placeholder="Голосование" /></div>
+          <div class="md-field"><label>Pause</label><input type="text" id="obsScenePause" placeholder="Пауза" /></div>
           <p class="settings__desc" data-i18n="settings.obsCommands">Кастомные OBS команды (RAW Requests, obs-websocket v5).</p>
           <div class="obs-commands" id="obsCommandsList"></div>
           <div class="settings__actions">
@@ -639,6 +640,7 @@
             <div class="md-field"><label data-i18n="settings.streamdeckIconTalk">Иконка «Разговор»</label><div id="streamdeckIconTalk"></div></div>
             <div class="md-field"><label data-i18n="settings.streamdeckIconMain">Иконка «Main»</label><div id="streamdeckIconMain"></div></div>
             <div class="md-field"><label data-i18n="settings.streamdeckIconEnd">Иконка «Конец»</label><div id="streamdeckIconEnd"></div></div>
+            <div class="md-field"><label data-i18n="settings.streamdeckIconPause">Иконка «Пауза»</label><div id="streamdeckIconPause"></div></div>
           </div>
         </div>
 
@@ -703,6 +705,7 @@
   <script src="../shared/theme-engine.js"></script>
   <script src="../shared/themes.js"></script>
   <script src="../shared/scenes-catalog.js"></script>
+  <script src="../shared/teso-emblem.js"></script>
   <script type="module" src="control.js"></script>
 </body>
 </html>

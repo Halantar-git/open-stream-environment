@@ -191,6 +191,7 @@
     [
       [t("scene.startLabel"), "start"],
       [t("scene.mainLabel"), "main"],
+      [t("scene.pauseLabel"), "pause"],
       [t("scene.brbLabel"), "brb"],
       [t("scene.talkLabel"), "talk"],
       [t("scene.endLabel"), "end"],

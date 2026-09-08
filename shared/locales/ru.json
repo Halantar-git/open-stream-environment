@@ -261,6 +261,7 @@
     "streamdeckIconTalk": "Иконка «Разговор»",
     "streamdeckIconMain": "Иконка «Main»",
     "streamdeckIconEnd": "Иконка «Конец»",
+    "streamdeckIconPause": "Иконка «Пауза»",
     "chooseFile": "Выбрать файл",
     "run": "Выполнить",
     "test": "Тест",
@@ -497,6 +498,14 @@
     "cobraDesc": "Анимированная голограмма корабля Cobra Mk II (только для темы Cobra Mk II)",
     "elite-sign": "Вывеска Elite",
     "elite-signDesc": "Анимированная неоновая вывеска с эмблемой Elite (только для темы Cobra Mk II)",
+    "teso-seal": "Печать Уроборос",
+    "teso-sealDesc": "Анимированная золотая печать Уроборос (только для темы TESO)",
+    "teso-chat": "Чат TESO",
+    "teso-chatDesc": "Чат стрима в золотом HUD TESO (только для темы TESO)",
+    "teso-goal": "Цель TESO",
+    "teso-goalDesc": "Донат-цель с золотой шкалой в стиле TESO (только для темы TESO)",
+    "teso-holo-alert": "Голограмма TESO",
+    "teso-holo-alertDesc": "Голографический терминал с вращающейся золотой печатью (только для темы TESO)",
     "cobra-chat": "Чат Cobra",
     "cobra-chatDesc": "Чат стрима в оранжевом HUD Cobra Mk II",
     "cobra-goal": "Цель Cobra",
@@ -555,7 +564,9 @@
     "resetTopDonationConfirm": "Сбросить топ донат сессии?",
     "splashVideo": "Видео-заставка",
     "splashDuration": "Длительность заставки, сек",
-    "splashVideoHint": "Видео, картинка или GIF проигрывается при переходе: «Начало» → Main, → BRB и → «Окончание». Без файла показывается стандартная заставка. Нужна OBS-сцена «Opening» с источником /overlay/video-splash.html."
+    "splashVideoHint": "Видео, картинка или GIF проигрывается при переходе: «Начало» → Main, → BRB и → «Окончание». Без файла показывается стандартная заставка. Нужна OBS-сцена «Opening» с источником /overlay/video-splash.html.",
+    "pauseBackground": "Фон (видео/картинка)",
+    "pauseBackgroundHint": "Пусто — стандартный размытый фон темы."
   },
   "themeEditor": {
     "themeName": "Название темы",
@@ -650,6 +661,7 @@
     "testGift": "Гифт",
     "testCheer": "Чир",
     "testDonation": "Донат",
+    "testDonationLong": "Донат (длинный текст)",
     "statMetric": "Что показывать",
     "metricFollowers": "Фолловеры — число (Twitch)",
     "metricSubscribers": "Подписчики — число (Twitch)",
@@ -803,7 +815,8 @@
     "wheelLabel": "Колесо Фортуны",
     "pollLabel": "Голосование",
     "mainLabel": "Main",
-    "talkLabel": "Разговор"
+    "talkLabel": "Разговор",
+    "pauseLabel": "Пауза"
   },
   "sceneContent": {
     "start": {
@@ -828,6 +841,12 @@
       "statusLabel": "ОБЩАЕМСЯ",
       "title": "Разговор со зрителями",
       "subtitle": "Задавайте вопросы в чате!",
+      "timerDoneText": ""
+    },
+    "pause": {
+      "statusLabel": "ПАУЗА",
+      "title": "Пауза",
+      "subtitle": "",
       "timerDoneText": ""
     }
   },

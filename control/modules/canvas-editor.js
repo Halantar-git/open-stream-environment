@@ -288,6 +288,73 @@ export function initCanvasEditor({
           </svg>
         </div>`;
       }
+      case "teso-seal": {
+        const gold = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#c7a75c";
+        const emblem = window.SharedTesoEmblem || { d: "", w: 652.32001, h: 626.40002 };
+        return `<div class="widget-grimhex-preview" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 ${emblem.w} ${emblem.h}" preserveAspectRatio="xMidYMid meet" style="width:82%;height:82%;filter:drop-shadow(0 0 6px ${escapeAttr(gold)});">
+            <path d="${escapeAttr(emblem.d)}" fill="${escapeAttr(gold)}" stroke="none"/>
+          </svg>
+        </div>`;
+      }
+      case "teso-chat": {
+        const gold = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#c7a75c";
+        const goldBright = (state.appearance.tokens && state.appearance.tokens["--md-secondary"]) || "#e2c47e";
+        const rows = [
+          { user: "Vestige_99", message: t("preview.chat1") },
+          { user: "TamrielHero", message: t("preview.chat2") },
+          { user: "SkoomaDealer", message: t("preview.chat3") },
+        ]
+          .map(
+            (m) =>
+              `<div class="teso-chat__row" style="font-family:'Montserrat','Segoe UI',sans-serif;font-size:13px;line-height:1.5;color:#e6e3d8;text-shadow:1px 1px 2px rgba(0,0,0,0.9);">` +
+              `<span style="color:${goldBright};font-weight:600;">${escapeHtml(m.user)}</span><span style="color:#bfc3b0;">:</span> <span>${escapeHtml(m.message)}</span></div>`
+          )
+          .join("");
+        return `<div class="teso-chat" style="position:relative;height:100%;">
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:18px 24px 20px;box-sizing:border-box;">
+            <div style="font-family:'Cinzel','Georgia',serif;color:${gold};text-align:center;font-size:14px;letter-spacing:2px;text-transform:uppercase;">Game Chat</div>
+            <div style="display:flex;align-items:center;margin:8px 0 10px;">
+              <div style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(199,167,92,0.4),transparent);"></div>
+              <div style="width:6px;height:6px;background:${gold};transform:rotate(45deg);margin:0 10px;box-shadow:0 0 5px ${gold};flex-shrink:0;"></div>
+              <div style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(199,167,92,0.4),transparent);"></div>
+            </div>
+            <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;gap:10px;">${rows}</div>
+          </div>
+        </div>`;
+      }
+      case "teso-goal": {
+        const gold = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#c7a75c";
+        const goldBright = (state.appearance.tokens && state.appearance.tokens["--md-secondary"]) || "#e2c47e";
+        const goal = state.goal || {};
+        const pct = goal.target ? Math.min(100, (goal.current / goal.target) * 100) : 0;
+        const pctStr = config.showPercentage ? `<span style="color:${goldBright};"> (${Math.round(pct)}%)</span>` : "";
+        return `<div class="teso-goal" style="position:relative;height:100%;display:flex;flex-direction:column;justify-content:center;padding:12px 16px;gap:4px;box-sizing:border-box;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;">
+            <span style="font-family:'Cinzel','Georgia',serif;color:${gold};font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:1px 1px 2px rgba(0,0,0,0.9);">${escapeHtml(goal.title || t("preview.goalTitle"))}</span>
+            <span style="font-family:'Cinzel','Georgia',serif;color:#bfc3b0;font-size:12px;white-space:nowrap;"><b style="color:${goldBright};">${formatMoney(goal.current)}</b> / ${formatMoney(goal.target)}${pctStr}</span>
+          </div>
+          <div style="position:relative;height:20px;background:rgba(0,0,0,0.6);border:1px solid rgba(199,167,92,0.4);box-shadow:inset 0 0 8px rgba(0,0,0,0.9);padding:2px;box-sizing:border-box;">
+            <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#611313,#a62323,#da3636);box-shadow:0 0 8px rgba(166,35,35,0.6);"></div>
+          </div>
+        </div>`;
+      }
+      case "teso-holo-alert": {
+        const gold = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#c7a75c";
+        const goldBright = (state.appearance.tokens && state.appearance.tokens["--md-secondary"]) || "#e2c47e";
+        return `<div class="teso-holo-preview" style="position:relative;height:100%;display:flex;align-items:center;gap:10px;padding:8px 12px;box-sizing:border-box;">
+          <svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" style="flex-shrink:0;width:40px;height:40px;">
+            <circle cx="12" cy="12" r="10" fill="none" stroke="${gold}" stroke-width="1.2"/>
+            <circle cx="12" cy="12" r="6.5" fill="none" stroke="${gold}" stroke-width="0.9" stroke-dasharray="2 1.4"/>
+            <path d="M12 8.4c-1.2-1.7-3.4-1.6-4.2 0-0.7 1.4.1 3.1 1.2 4.1 1 .9 2.2 1.7 3 2.4.8-.7 2-1.5 3-2.4 1.1-1 1.9-2.7 1.2-4.1-0.8-1.6-3-1.7-4.2 0z" fill="none" stroke="${gold}" stroke-width="0.9"/>
+          </svg>
+          <div style="min-width:0;display:flex;flex-direction:column;gap:2px;">
+            <span style="font-family:'Cinzel','Georgia',serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#bfc3b0;">TESO // ALERT</span>
+            <span style="font-family:'Cinzel','Georgia',serif;font-size:13px;font-weight:700;color:#e6e3d8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">nova_viewer</span>
+            <span style="font-family:'Cinzel','Georgia',serif;font-size:10px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:${goldBright};">${escapeHtml(t("properties.testFollow"))}</span>
+          </div>
+        </div>`;
+      }
       case "grimhex-chat": {
         const rows = [
           { user: "nova_viewer", message: t("preview.chat1") },

@@ -57,6 +57,10 @@
     widgetNuclearHoloAlert: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/><path d="M12 12 L7.5 4.21 A9 9 0 0 1 16.5 4.21 Z" fill="currentColor" stroke="none"/><path d="M12 12 L7.5 4.21 A9 9 0 0 1 16.5 4.21 Z" fill="currentColor" stroke="none" transform="rotate(120 12 12)"/><path d="M12 12 L7.5 4.21 A9 9 0 0 1 16.5 4.21 Z" fill="currentColor" stroke="none" transform="rotate(240 12 12)"/></svg>`,
     widgetCobra: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 2l2.2 6.2L20 10l-2.6 1.4 1.2 6.6L12 16.4 5.4 18l1.2-6.6L4 10l5.8-1.8L12 2z"/><circle cx="12" cy="9" r="1.2" fill="currentColor" stroke="none"/></svg>`,
     widgetEliteSign: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 3l2.5 4.5L21 5.5l-1.8 4.7 4.4 1.8-5.6 1.2 2 4.3-5.5-1.6L12 21l-2.5-5.1-5.5 1.6 2-4.3-5.6-1.2 4.4-1.8L3 5.5l6.5 2L12 3z"/></svg>`,
+    widgetTesoSeal: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.5" stroke-dasharray="2.5 1.8"/><path d="M12 9.5l1.8 2.5-1.8 2.5-1.8-2.5z"/></svg>`,
+    widgetTesoChat: `<svg viewBox="0 0 24 24" ${stroke}><path d="M4 5h16v11H8l-4 4V5z"/><path d="M8 9.5h8"/><path d="M12 15.5l1.3 1.3-1.3 1.3-1.3-1.3z"/></svg>`,
+    widgetTesoGoal: `<svg viewBox="0 0 24 24" ${stroke}><rect x="3" y="11" width="18" height="4" rx="1"/><path d="M6 13h8" stroke-width="2.5"/><path d="M12 6.5l1.4 1.4-1.4 1.4-1.4-1.4z"/></svg>`,
+    widgetTesoHoloAlert: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.5" stroke-dasharray="2 1.4"/><path d="M12 9.5l1.5 2.5-1.5 2.5-1.5-2.5z"/></svg>`,
     widgetCobraChat: `<svg viewBox="0 0 24 24" ${stroke}><path d="M4 5h16v11H8l-4 4V5z"/><path d="M12 8l2 3h-1.3l.8 3h-3l.8-3H10l2-3z"/></svg>`,
     widgetCobraGoal: `<svg viewBox="0 0 24 24" ${stroke}><rect x="3" y="12" width="2.8" height="8" rx="0.8"/><rect x="7.1" y="10" width="2.8" height="10" rx="0.8"/><rect x="11.2" y="8" width="2.8" height="12" rx="0.8"/><rect x="15.3" y="10" width="2.8" height="10" rx="0.8"/><rect x="19.4" y="12" width="2.8" height="8" rx="0.8"/></svg>`,
     widgetCobraHoloAlert: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="12" r="9"/><path d="M12 6.5l1.8 4.7 5 .8-3.7 3.4 1 5-4.1-2.4-4.1 2.4 1-5L5 12l5-.8 2-4.7z"/></svg>`,
@@ -81,6 +85,7 @@
     sceneWheel: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M12 3v6M12 15v6M3 12h6M15 12h6M5.6 5.6l4.2 4.2M14.2 14.2l4.2 4.2M18.4 5.6l-4.2 4.2M9.8 14.2l-4.2 4.2"/></svg>`,
     sceneTalk: `<svg viewBox="0 0 24 24" ${stroke}><path d="M4 5h16v11H8l-4 4V5z"/><path d="M8 9h8M8 12h5"/></svg>`,
     scenePoll: `<svg viewBox="0 0 24 24" ${stroke}><path d="M4 19h16M8 19V9M13 19V5M18 19v-7"/></svg>`,
+    scenePause: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/></svg>`,
     // editor chrome icons
     trash: `<svg viewBox="0 0 24 24" ${stroke}><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>`,
     eye: `<svg viewBox="0 0 24 24" ${stroke}><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>`,

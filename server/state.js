@@ -175,7 +175,7 @@ function normalizeChatBotModeration(m) {
   };
 }
 
-const REWARD_SCENES = ["", "main", "start", "brb", "talk", "end", "wheel", "poll"];
+const REWARD_SCENES = ["", "main", "start", "brb", "talk", "end", "wheel", "poll", "pause"];
 
 function normalizeTwitchReward(reward) {
   if (!reward || typeof reward !== "object") return null;
@@ -251,7 +251,7 @@ class AppState {
       ...(this.config.obs || {}),
       webcamSource: String((this.config.obs && this.config.obs.webcamSource) || ""),
       micSource: String((this.config.obs && this.config.obs.micSource) || ""),
-      sceneMap: { main: "", start: "", brb: "", talk: "", end: "", wheel: "", video: "", poll: "", ...((this.config.obs && this.config.obs.sceneMap) || {}) },
+      sceneMap: { main: "", start: "", brb: "", talk: "", end: "", wheel: "", video: "", poll: "", pause: "", ...((this.config.obs && this.config.obs.sceneMap) || {}) },
       customCommands: Array.isArray(this.config.obs && this.config.obs.customCommands) ? this.config.obs.customCommands : [],
       cameraAngles: Array.isArray(this.config.obs && this.config.obs.cameraAngles) ? this.config.obs.cameraAngles : [],
       cameraFilters: Array.isArray(this.config.obs && this.config.obs.cameraFilters) ? this.config.obs.cameraFilters : [],
@@ -272,6 +272,7 @@ class AppState {
         talk: "",
         main: "",
         end: "",
+        pause: "",
         ...(sd.icons || {}),
       },
     };
@@ -1374,6 +1375,7 @@ class AppState {
     if (typeof patch.showSocials === "boolean") scene.showSocials = patch.showSocials;
     if (patch.splashFile !== undefined) scene.splashFile = String(patch.splashFile || "").slice(0, 200);
     if (patch.splashDuration !== undefined) scene.splashDuration = Math.max(0, Math.min(30, Math.round(Number(patch.splashDuration) || 0)));
+    if (patch.backgroundFile !== undefined) scene.backgroundFile = String(patch.backgroundFile || "").slice(0, 200);
     if (Array.isArray(patch.socials)) {
       scene.socials = patch.socials
         .slice(0, 6)

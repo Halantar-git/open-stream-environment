@@ -682,6 +682,10 @@
   manager.register("nuclear-holo-alert", OW.WidgetNuclearHoloAlert);
   manager.register("cobra", OW.WidgetCobra);
   manager.register("elite-sign", OW.WidgetEliteSign);
+  manager.register("teso-seal", OW.WidgetTesoSeal);
+  manager.register("teso-chat", OW.WidgetTesoChat);
+  manager.register("teso-goal", OW.WidgetTesoGoal);
+  manager.register("teso-holo-alert", OW.WidgetTesoHoloAlert);
   manager.register("cobra-chat", OW.WidgetCobraChat);
   manager.register("cobra-goal", OW.WidgetCobraGoal);
   manager.register("cobra-holo-alert", OW.WidgetCobraHoloAlert);

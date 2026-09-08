@@ -63,12 +63,14 @@
       const alert = this.queue.shift();
       if (!alert) {
         this.playing = false;
+        this.element.style.height = this.geometry.h + "%"; // reset to layout height
         return;
       }
       this.playing = true;
 
       const card = this.buildCard(alert);
       this.host.appendChild(card);
+      this._autoSize(card);
       requestAnimationFrame(() => card.classList.add("alert-enter-active"));
 
       const holdMs = alert.durationMs || 5000;
@@ -161,6 +163,24 @@
         </div>
         <div class="widget-alert__lockbar"><div class="widget-alert__lockbar-fill"></div></div>`;
       return card;
+    }
+
+    // Grow the panel to fit the message (bounded), so long donation texts
+    // don't get clipped by the fixed layout height.
+    _autoSize(card) {
+      if (!this.element) return;
+      this.element.style.height = this.geometry.h + "%";
+      const base = this.element.clientHeight || 120;
+
+      let needed = base;
+      if (card) {
+        card.style.height = "auto";
+        needed = card.offsetHeight;
+        card.style.height = ""; // restore the CSS height:100%
+      }
+
+      const cap = Math.max(360, base);
+      this.element.style.height = Math.min(Math.max(base, needed), cap) + "px";
     }
 
     render() {}

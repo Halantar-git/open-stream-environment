@@ -16,44 +16,58 @@
  */
 
 /*
-  WidgetCobraHoloAlert — holographic terminal + rotating radar badge for the
-  Elite Dangerous "Cobra Mk II" theme.
+  WidgetTesoHoloAlert — holographic alert terminal with a rotating gold seal
+  badge for the TESO "Ouroboros Seal" 3D theme.
 
   Alerts arrive on the shared bus ({ kind: follow|sub|gift_sub|cheer|donation|
   wheel_start|wheel_winner, ... }) and are queued one at a time. The background
   is a filled panel surface matching the Recent events widget (var(--panel-bg)
   + border + radius + shadow + scanlines + corner brackets). The canvas draws a
-  slowly rotating circular radar reticle (the Cobra's scanner); on each new alert
-  the badge flashes and ejects a small particle burst. The text (type, user,
-  amount, message) lives in a DOM layer beside the badge.
+  slowly rotating gold seal badge (outer ring + dashed inner ring — the
+  ouroboros motif); on each new alert the badge flashes and ejects a small
+  particle burst. The text (type, user, amount, message) lives in a DOM layer
+  beside the badge, set in Cinzel/Montserrat.
 
-  Theme isolation: hard-gated to "cobra-mk2" in onMount() and via the manager.
+  Theme isolation: hard-gated to "teso-seal" in onMount() and via the manager.
 */
 (function (root, factory) {
   const BaseWidget =
     typeof module !== "undefined" && module.exports
       ? require("./base-widget")
       : root.OSEWidgets && root.OSEWidgets.BaseWidget;
-  const WidgetCobraHoloAlert = factory(BaseWidget);
+  const WidgetTesoHoloAlert = factory(BaseWidget);
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = WidgetCobraHoloAlert;
+    module.exports = WidgetTesoHoloAlert;
   } else {
     root.OSEWidgets = root.OSEWidgets || {};
-    root.OSEWidgets.WidgetCobraHoloAlert = WidgetCobraHoloAlert;
+    root.OSEWidgets.WidgetTesoHoloAlert = WidgetTesoHoloAlert;
   }
 })(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
   "use strict";
 
-  const ORANGE = "#ff7605";
-  const BLUE = "#00d2ff";
-  const RED = "#ff3b30";
-  const TEXT = "#ffb07c";
-  const MUTED = "#bdb0a1";
+  const GOLD = "#c7a75c";
+  const GOLD_BRIGHT = "#e2c47e";
+  const HEALTH_RED = "#e0604f";
+  const TEXT = "#e6e3d8";
+  const MUTED = "#bfc3b0";
+  const FONT_DISPLAY = "'Cinzel', 'Georgia', serif";
+  const FONT_BODY = "'Montserrat', 'Segoe UI', sans-serif";
 
   const clamp = (v, min, max) => (v < min ? min : v > max ? max : v);
 
-  class WidgetCobraHoloAlert extends BaseWidget {
+  // ESO item-quality tiers for donations, 200₽ wide, from 0 to 1000₽.
+  function donationQualityColor(amount) {
+    const a = Number(amount) || 0;
+    if (a < 200) return "#ffffff";   // White (Trash)
+    if (a < 400) return "#2dc50e";   // Green (Fine)
+    if (a < 600) return "#3a92ff";   // Blue (Superior)
+    if (a < 800) return "#a02dc5";   // Purple (Epic)
+    if (a < 1000) return "#e5a823";  // Gold (Legendary)
+    return "#ee6a00";                // Orange (Mythic)
+  }
+
+  class WidgetTesoHoloAlert extends BaseWidget {
     constructor(config, context) {
       super(config, context);
       this.theme = (context && (context.theme || context.activeThemeId)) || "";
@@ -75,17 +89,17 @@
       this._particles = [];
     }
 
-    // The hologram + badge + particles animate.
+    // The seal badge + particles animate.
     _isAnimated() {
       return true;
     }
 
     onMount() {
-      // HARD theme gate: no canvas, no loop, no events on a non-Cobra Mk II theme.
-      if (this.theme !== "cobra-mk2") return;
+      // HARD theme gate: no canvas, no loop, no events on a non-TESO theme.
+      if (this.theme !== "teso-seal") return;
 
       this.canvas = document.createElement("canvas");
-      this.canvas.className = "cobra-holo-alert__canvas";
+      this.canvas.className = "teso-holo-alert__canvas";
       Object.assign(this.canvas.style, {
         position: "absolute",
         left: "0",
@@ -97,12 +111,12 @@
       this.ctx = this.canvas.getContext("2d");
 
       this.contentEl = document.createElement("div");
-      this.contentEl.className = "cobra-holo-alert__content";
+      this.contentEl.className = "teso-holo-alert__content";
       this.contentEl.style.cssText =
         "position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;box-sizing:border-box;padding:12px 16px 16px 40%;";
       this.element.appendChild(this.contentEl);
 
-      this.element.classList.add("elite-surface");
+      this.element.classList.add("teso-holo-alert-surface");
       this._applySurface();
       this._applyTilt();
       this._nextFlickerAt = performance.now() + 2000 + Math.random() * 3000;
@@ -135,20 +149,18 @@
       const read = this.context.readCssVar;
       const s = this.element.style;
 
-      const bg = (read && read("--panel-bg")) || "rgba(10, 8, 6, 0.92)";
-      const blur = (read && read("--panel-blur")) || "0px";
-      const border = (read && read("--panel-border")) || "1px solid rgba(255, 118, 5, 0.35)";
-      const radius = (read && read("--panel-radius")) || "0px";
+      const bg = (read && read("--panel-bg")) || "rgba(13, 17, 15, 0.92)";
+      const blur = (read && read("--panel-blur")) || "4px";
+      const border = (read && read("--panel-border")) || "1px solid #a38652";
+      const radius = (read && read("--panel-radius")) || "2px";
       const clip = (read && read("--panel-clip")) || "none";
       const elev =
         (read && read("--elev-1")) ||
         "0 1px 3px rgba(0,0,0,0.55), 0 1px 2px rgba(0,0,0,0.35)";
       const glow =
         (read && read("--panel-glow")) ||
-        "0 0 15px rgba(255,118,5,0.28), inset 0 0 30px rgba(255,118,5,0.04)";
+        "0 0 15px rgba(199,167,92,0.35), inset 0 0 30px rgba(199,167,92,0.05)";
 
-      // Set only backgroundColor so the scanline background-image from the
-      // HUD decoration ([data-decoration]) can layer on top, like Recent events.
       s.backgroundColor = bg;
       s.backgroundImage = "";
       s.backdropFilter = blur === "0px" ? "none" : `blur(${blur})`;
@@ -224,19 +236,21 @@
 
     // ---- content helpers ----
 
-    kindColor(kind) {
+    kindColor(alert) {
       const read = this.context.readCssVar;
+      const kind = alert && alert.kind;
       switch (kind) {
         case "sub":
         case "gift_sub":
         case "wheel_start":
         case "wheel_winner":
-          return (read && read("--md-secondary")) || BLUE;
+          return (read && read("--md-secondary")) || GOLD_BRIGHT;
         case "cheer":
+          return (read && read("--md-tertiary")) || HEALTH_RED;
         case "donation":
-          return (read && read("--md-tertiary")) || RED;
+          return donationQualityColor(alert.amount);
         default:
-          return (read && read("--md-primary")) || ORANGE;
+          return (read && read("--md-primary")) || GOLD;
       }
     }
 
@@ -267,15 +281,13 @@
     renderContent(alert) {
       if (!this.contentEl) return;
       const { t, ICONS, escapeHtml } = this.context;
-      const color = this.kindColor(alert.kind);
+      const color = this.kindColor(alert);
       const amount = this.formatAmount(alert);
       const message =
         (alert.kind === "donation" || alert.kind === "cheer") && alert.message
           ? escapeHtml(alert.message)
           : "";
 
-      // Keep the terminal text in lock-step with AlertsWidget: wheel events
-      // carry no plain username, so they render a dedicated status line.
       let icon = ICONS[alert.kind] || "";
       let nameHtml = escapeHtml(alert.user || "");
 
@@ -291,14 +303,14 @@
       }
 
       this.contentEl.innerHTML =
-        `<span style="font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:${MUTED};">COBRA // TERMINAL</span>` +
-        `<div style="display:flex;align-items:center;gap:8px;margin-top:5px;">
+        `<span style="font-family:${FONT_DISPLAY};font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:${MUTED};">TESO // ALERT</span>` +
+        `<div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
           <span style="width:15px;height:15px;flex-shrink:0;color:${color};display:inline-flex;">${icon}</span>
-          <span style="font-size:11px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:${color};min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(this.kindLabel(alert))}</span>
+          <span style="font-family:${FONT_DISPLAY};font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${color};min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(this.kindLabel(alert))}</span>
         </div>` +
-        `<span style="font-size:20px;font-weight:700;color:${TEXT};line-height:1.15;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${nameHtml}</span>` +
-        (amount ? `<span style="font-size:14px;font-weight:700;color:${color};margin-top:4px;">${amount}</span>` : "") +
-        (message ? `<span style="font-size:12px;color:${MUTED};line-height:1.35;margin-top:4px;overflow-wrap:anywhere;word-break:break-word;">«${message}»</span>` : "");
+        `<span style="font-family:${FONT_DISPLAY};font-size:20px;font-weight:700;color:${TEXT};line-height:1.15;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:1px 1px 2px rgba(0,0,0,0.9);">${nameHtml}</span>` +
+        (amount ? `<span style="font-family:${FONT_DISPLAY};font-size:14px;font-weight:700;color:${color};margin-top:4px;">${amount}</span>` : "") +
+        (message ? `<span style="font-family:${FONT_BODY};font-size:12px;color:${MUTED};line-height:1.35;margin-top:4px;overflow-wrap:anywhere;word-break:break-word;">«${message}»</span>` : "");
     }
 
     // Grow the panel to fit the message (bounded), so long donation texts
@@ -330,7 +342,7 @@
     // ---- rendering ----
 
     render() {
-      if (this.theme !== "cobra-mk2") return;
+      if (this.theme !== "teso-seal") return;
       const ctx = this.ctx;
       if (!ctx || !this.canvas) return;
 
@@ -366,14 +378,16 @@
         const bx = cw * 0.2;
         const by = ch * 0.5;
         const R = Math.min(cw, ch) * 0.18;
-        this._drawBadge(ctx, bx, by, R, t * 1.6, this.kindColor(this.current.kind), intensity);
-        this._drawParticles(ctx, bx, by, this.kindColor(this.current.kind));
+        this._drawBadge(ctx, bx, by, R, t * 1.6, this.kindColor(this.current), intensity);
+        this._drawParticles(ctx, bx, by, this.kindColor(this.current));
         if (now < this._flashUntil) this._drawFlash(ctx, bx, by, R, (this._flashUntil - now) / 260);
       }
 
       if (glitching) this._glitchBands(ctx, bw, bh, dpr);
     }
 
+    // Gold seal badge: outer ring + dashed inner ring (ouroboros motif) with a
+    // kind-specific symbol in the center, spinning on its vertical axis.
     _drawBadge(ctx, cx, cy, R, angle, color, intensity) {
       const s = Math.cos(angle); // Y-rotation projection
       const a = Math.max(0.06, Math.abs(s));
@@ -384,7 +398,7 @@
       const alpha = clamp(Math.abs(s), 0.15, 1);
       ctx.globalAlpha = alpha;
 
-      // Outer radar ring.
+      // Outer gold ring.
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
       ctx.shadowColor = color;
@@ -393,27 +407,18 @@
       ctx.arc(0, 0, R, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Inner ring.
-      ctx.lineWidth = 1;
+      // Dashed inner ring.
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([R * 0.16, R * 0.08]);
       ctx.shadowBlur = 0;
       ctx.globalAlpha = alpha * 0.55;
       ctx.beginPath();
-      ctx.arc(0, 0, R * 0.66, 0, Math.PI * 2);
+      ctx.arc(0, 0, R * 0.7, 0, Math.PI * 2);
       ctx.stroke();
-
-      // Radar crosshair ticks.
-      ctx.globalAlpha = alpha * 0.7;
-      for (let i = 0; i < 4; i++) {
-        const aa = (Math.PI / 2) * i;
-        ctx.beginPath();
-        ctx.moveTo(Math.cos(aa) * R * 0.66, Math.sin(aa) * R * 0.66);
-        ctx.lineTo(Math.cos(aa) * R, Math.sin(aa) * R);
-        ctx.stroke();
-      }
+      ctx.setLineDash([]);
 
       // Kind-specific symbol inside the badge.
       ctx.lineWidth = 1.6;
-      ctx.shadowBlur = 0;
       ctx.globalAlpha = alpha;
       this._drawKindSymbol(ctx, R, color);
 
@@ -558,5 +563,5 @@
     }
   }
 
-  return WidgetCobraHoloAlert;
+  return WidgetTesoHoloAlert;
 });

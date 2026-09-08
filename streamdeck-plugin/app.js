@@ -60,6 +60,7 @@ const SCENES = [
   ["main", "Main"],
   ["end", "End"],
   ["poll", "Poll"],
+  ["pause", "Pause"],
 ];
 
 let sd = null; // Stream Deck app
@@ -74,7 +75,7 @@ const appliedIcon = new Map(); // context -> iconPath
 
 let oseState = {
   activeScene: null,
-  icons: { start: "", brb: "", wheel: "", talk: "", main: "", end: "" },
+  icons: { start: "", brb: "", wheel: "", talk: "", main: "", end: "", pause: "" },
 };
 
 function sceneLabel(scene) {

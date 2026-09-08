@@ -182,6 +182,7 @@
       if (!alert) {
         this.current = null;
         this.element.style.opacity = "0";
+        this.element.style.height = this.geometry.h + "%"; // reset to layout height while hidden
         this.setIdle(true);
         return;
       }
@@ -195,6 +196,7 @@
       this.element.style.opacity = "1";
       this.setIdle(false);
       this.renderContent(alert);
+      this._autoSize();
 
       if (this._hideId != null) this.clearTimer(this._hideId);
       this._hideId = this.later(() => {
@@ -297,6 +299,32 @@
         `<span style="font-size:20px;font-weight:700;color:${TEXT};line-height:1.15;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${nameHtml}</span>` +
         (amount ? `<span style="font-size:14px;font-weight:700;color:${color};margin-top:4px;">${amount}</span>` : "") +
         (message ? `<span style="font-size:12px;color:${MUTED};line-height:1.35;margin-top:4px;overflow-wrap:anywhere;word-break:break-word;">«${message}»</span>` : "");
+    }
+
+    // Grow the panel to fit the message (bounded), so long donation texts
+    // don't get clipped by the fixed layout height.
+    _autoSize() {
+      if (!this.element || !this.contentEl) return;
+
+      // Reset to the layout height first so `clientHeight` reflects the true
+      // base, not a leftover auto-sized height from a previous (longer) alert.
+      this.element.style.height = this.geometry.h + "%";
+      const base = this.element.clientHeight || 140;
+
+      const el = this.contentEl;
+      const prev = el.style.cssText;
+
+      // Temporarily let the content size naturally (same width + padding) to
+      // measure the full wrapped height, then restore the fixed layout.
+      el.style.height = "auto";
+      el.style.bottom = "auto";
+      el.style.justifyContent = "flex-start";
+      const needed = el.offsetHeight;
+
+      el.style.cssText = prev;
+
+      const cap = Math.max(360, base);
+      this.element.style.height = Math.min(Math.max(base, needed), cap) + "px";
     }
 
     // ---- rendering ----

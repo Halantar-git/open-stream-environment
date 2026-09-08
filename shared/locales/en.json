@@ -261,6 +261,7 @@
     "streamdeckIconTalk": "Talk icon",
     "streamdeckIconMain": "Main icon",
     "streamdeckIconEnd": "End icon",
+    "streamdeckIconPause": "Pause icon",
     "chooseFile": "Choose file",
     "run": "Run",
     "test": "Test",
@@ -497,6 +498,14 @@
     "cobraDesc": "Animated Cobra Mk II ship hologram (Cobra Mk II theme only)",
     "elite-sign": "Elite Sign",
     "elite-signDesc": "Animated neon sign with the Elite emblem (Cobra Mk II theme only)",
+    "teso-seal": "Ouroboros Seal",
+    "teso-sealDesc": "Animated gold Ouroboros seal (TESO theme only)",
+    "teso-chat": "TESO Chat",
+    "teso-chatDesc": "Stream chat in the gold TESO HUD (TESO theme only)",
+    "teso-goal": "TESO Goal",
+    "teso-goalDesc": "Donation goal with a gold TESO-style bar (TESO theme only)",
+    "teso-holo-alert": "TESO Hologram",
+    "teso-holo-alertDesc": "Holographic terminal with a rotating gold seal (TESO theme only)",
     "cobra-chat": "Cobra Chat",
     "cobra-chatDesc": "Stream chat in the Cobra Mk II orange HUD",
     "cobra-goal": "Cobra Goal",
@@ -555,7 +564,9 @@
     "resetTopDonationConfirm": "Reset session top donation?",
     "splashVideo": "Splash video",
     "splashDuration": "Splash duration, sec",
-    "splashVideoHint": "Video, image or GIF plays on transition: Start → Main, → BRB and → End. Without a file a standard splash is shown. Requires an Opening OBS scene with the /overlay/video-splash.html browser source."
+    "splashVideoHint": "Video, image or GIF plays on transition: Start → Main, → BRB and → End. Without a file a standard splash is shown. Requires an Opening OBS scene with the /overlay/video-splash.html browser source.",
+    "pauseBackground": "Background (video/image)",
+    "pauseBackgroundHint": "Empty — the default blurred theme background."
   },
   "themeEditor": {
     "themeName": "Theme name",
@@ -650,6 +661,7 @@
     "testGift": "Gift",
     "testCheer": "Cheer",
     "testDonation": "Donation",
+    "testDonationLong": "Donation (long text)",
     "statMetric": "Show",
     "metricFollowers": "Followers — count (Twitch)",
     "metricSubscribers": "Subscribers — count (Twitch)",
@@ -803,7 +815,8 @@
     "wheelLabel": "Fortune Wheel",
     "pollLabel": "Poll",
     "mainLabel": "Main",
-    "talkLabel": "Just Chatting"
+    "talkLabel": "Just Chatting",
+    "pauseLabel": "Pause"
   },
   "sceneContent": {
     "start": {
@@ -828,6 +841,12 @@
       "statusLabel": "JUST CHATTING",
       "title": "Chatting with viewers",
       "subtitle": "Ask your questions in chat!",
+      "timerDoneText": ""
+    },
+    "pause": {
+      "statusLabel": "PAUSED",
+      "title": "Pause",
+      "subtitle": "",
       "timerDoneText": ""
     }
   },

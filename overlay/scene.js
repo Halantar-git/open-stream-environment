@@ -23,6 +23,7 @@
   const params = new URLSearchParams(location.search);
   const sceneType = params.get("type") || "brb";
   const isTalk = sceneType === "talk";
+  const isPause = sceneType === "pause";
   const MAX_CHAT = 50;
 
   let recentEvents = [];
@@ -50,6 +51,9 @@
     sceneChatTitle: document.getElementById("sceneChatTitle"),
     sceneChatList: document.getElementById("sceneChatList"),
     sceneAlerts: document.getElementById("sceneAlerts"),
+    pauseMedia: document.getElementById("pauseMedia"),
+    pauseVideo: document.getElementById("pauseVideo"),
+    pauseImage: document.getElementById("pauseImage"),
   };
 
   document.querySelectorAll(".event-icon[data-icon]").forEach((el) => {
@@ -79,6 +83,18 @@
     document.body.dataset.theme = appearance.activeThemeId || "";
   }
 
+  function mediaKind(file) {
+    if (/\.(mp4|webm|mov)$/i.test(file)) return "video";
+    if (/\.(png|jpe?g|gif|webp)$/i.test(file)) return "image";
+    return "";
+  }
+
+  function resolveMediaUrl(p) {
+    if (!p) return "";
+    if (/^(https?:)?\/\//i.test(p) || p.startsWith("data:")) return p;
+    return location.origin + "/" + String(p).replace(/^\/+/, "");
+  }
+
   // Scene content lives in config as editable text, but its defaults come from
   // the (Russian) catalog. Localize the default values, but keep any user edits.
   function localizedField(field, value) {
@@ -101,6 +117,11 @@
     if (!scene) return;
     currentScene = scene;
     renderSceneText(scene);
+
+    if (isPause) {
+      renderPause(scene);
+      return;
+    }
 
     if (isTalk) {
       els.sceneCard.hidden = true;
@@ -126,6 +147,44 @@
     els.socialsFooter.innerHTML = socials
       .map((s) => `<div class="social-pill"><span class="pill-icon">${escapeHtml(s.platform)}</span><span class="pill-text">${escapeHtml(s.text)}</span></div>`)
       .join("");
+  }
+
+  function renderPause(scene) {
+    els.sceneChat.hidden = true;
+    els.sceneCard.hidden = true;
+    els.eventsGrid.hidden = true;
+    els.socialsFooter.hidden = true;
+    els.timerBox.hidden = true;
+    els.sceneAlerts.hidden = true;
+    stopTimer();
+
+    const file = scene.backgroundFile || "";
+    const kind = mediaKind(file);
+    const url = resolveMediaUrl(file);
+
+    if (kind === "video" && url) {
+      els.pauseVideo.src = url;
+      els.pauseVideo.hidden = false;
+      els.pauseImage.removeAttribute("src");
+      els.pauseImage.hidden = true;
+      els.pauseMedia.hidden = false;
+      const attempt = els.pauseVideo.play();
+      if (attempt && typeof attempt.catch === "function") attempt.catch(() => {});
+    } else if (kind === "image" && url) {
+      els.pauseImage.src = url;
+      els.pauseImage.hidden = false;
+      els.pauseVideo.pause();
+      els.pauseVideo.removeAttribute("src");
+      els.pauseVideo.hidden = true;
+      els.pauseMedia.hidden = false;
+    } else {
+      els.pauseVideo.pause();
+      els.pauseVideo.removeAttribute("src");
+      els.pauseVideo.hidden = true;
+      els.pauseImage.removeAttribute("src");
+      els.pauseImage.hidden = true;
+      els.pauseMedia.hidden = true;
+    }
   }
 
   function renderEvents() {

@@ -132,6 +132,7 @@
       if (!alert) {
         this.playing = false;
         this.element.style.opacity = "0";
+        this.element.style.height = this.geometry.h + "%"; // reset to layout height while hidden
         return;
       }
       this.playing = true;
@@ -139,6 +140,7 @@
       const card = this.buildCard(alert);
       this.host.appendChild(card);
       this.element.style.opacity = "1";
+      this._autoSize(card);
 
       const ring = card.querySelector(".md3-holo__ring");
       if (ring && ring.animate) {
@@ -254,6 +256,17 @@
         </div>`;
 
       return card;
+    }
+
+    // Grow the panel to fit the message (bounded), so long donation texts
+    // don't get clipped by the fixed layout height.
+    _autoSize(card) {
+      if (!this.element) return;
+      this.element.style.height = this.geometry.h + "%";
+      const base = this.element.clientHeight || 100;
+      const needed = (card ? card.offsetHeight : 0) + 20;
+      const cap = Math.max(360, base);
+      this.element.style.height = Math.min(Math.max(base, needed), cap) + "px";
     }
   }
 

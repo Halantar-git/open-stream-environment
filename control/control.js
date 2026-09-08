@@ -192,6 +192,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const obsSceneWheelInput = document.getElementById("obsSceneWheel");
   const obsSceneVideoInput = document.getElementById("obsSceneVideo");
   const obsScenePollInput = document.getElementById("obsScenePoll");
+  const obsScenePauseInput = document.getElementById("obsScenePause");
   const splashSettingsFormEl = document.getElementById("splashSettingsForm");
   const obsCommandsList = document.getElementById("obsCommandsList");
   const addObsCommandBtn = document.getElementById("addObsCommandBtn");
@@ -242,6 +243,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const streamdeckIconTalk = document.getElementById("streamdeckIconTalk");
   const streamdeckIconMain = document.getElementById("streamdeckIconMain");
   const streamdeckIconEnd = document.getElementById("streamdeckIconEnd");
+  const streamdeckIconPause = document.getElementById("streamdeckIconPause");
   const appPortInput = document.getElementById("appPort");
   const savePortBtn = document.getElementById("savePortBtn");
   const appOverlayUrlInput = document.getElementById("appOverlayUrl");
@@ -492,6 +494,7 @@ const { EVENT_TYPES } = window.SharedEvents;
       obsSceneWheelInput.value = sm.wheel || "";
       obsSceneVideoInput.value = sm.video || "";
       obsScenePollInput.value = sm.poll || "";
+      obsScenePauseInput.value = sm.pause || "";
     }
     renderObsCommands();
     renderCameraAngles();
@@ -744,6 +747,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   obsSceneWheelInput.addEventListener("change", () => sendObsConfig({ sceneMap: { wheel: obsSceneWheelInput.value.trim() } }));
   obsSceneVideoInput.addEventListener("change", () => sendObsConfig({ sceneMap: { video: obsSceneVideoInput.value.trim() } }));
   obsScenePollInput.addEventListener("change", () => sendObsConfig({ sceneMap: { poll: obsScenePollInput.value.trim() } }));
+  obsScenePauseInput.addEventListener("change", () => sendObsConfig({ sceneMap: { pause: obsScenePauseInput.value.trim() } }));
 
   function updateObsCommand(id, patch) {
     const commands = (state.obs.customCommands || []).map((c) => (c.id === id ? { ...c, ...patch } : c));
@@ -1222,6 +1226,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     makeStreamDeckIconField(streamdeckIconTalk, "talk", "media/...png");
     makeStreamDeckIconField(streamdeckIconMain, "main", "media/...png");
     makeStreamDeckIconField(streamdeckIconEnd, "end", "media/...png");
+    makeStreamDeckIconField(streamdeckIconPause, "pause", "media/...png");
   }
 
   function durationSelectHtml(id, value) {
@@ -1384,7 +1389,7 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   function rewardSceneSelect(value) {
     const select = document.createElement("select");
-    const scenes = ["", "main", "start", "brb", "talk", "end", "wheel", "poll"];
+    const scenes = ["", "main", "start", "brb", "talk", "end", "wheel", "poll", "pause"];
     scenes.forEach((id) => {
       const opt = document.createElement("option");
       opt.value = id;
@@ -2461,6 +2466,20 @@ const { EVENT_TYPES } = window.SharedEvents;
         <button class="md-button md-button--tonal" id="openPollSettingsBtn" style="margin-top:10px;">${t("poll.openSettings")}</button>
       `;
       sceneFormEl.querySelector("#openPollSettingsBtn").addEventListener("click", () => setPollOpen(true));
+      return;
+    }
+
+    if (state.activeSceneId === "pause") {
+      sceneFormEl.innerHTML = `
+        <div class="md-field">
+          <label>${t("sceneForm.pauseBackground")}</label>
+          <div id="pauseBackgroundFile"></div>
+          <p class="properties__hint" style="margin:6px 0 0;">${t("sceneForm.pauseBackgroundHint")}</p>
+        </div>
+      `;
+      sceneFormEl.querySelector("#pauseBackgroundFile").appendChild(
+        makeSoundFileInput(scene.backgroundFile || "", "media/...mp4/gif", "media", (v) => sendSceneUpdate({ backgroundFile: v }))
+      );
       return;
     }
 

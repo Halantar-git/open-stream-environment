@@ -45,7 +45,7 @@ export function createStateManager() {
     soundboard: { enabled: true, volume: 0.8, queueMode: false, sounds: [] },
     twitchRewards: [],
     tts: { enabled: true, volume: 0.9, rate: 1, lang: "ru-RU", voice: "" },
-    streamdeck: { icons: { start: "", brb: "", wheel: "", talk: "", end: "" } },
+    streamdeck: { icons: { start: "", brb: "", wheel: "", talk: "", end: "", pause: "" } },
     selectedId: null,
     pendingAdd: null,
     appearance: { activeThemeId: "nebula", enable3d: false, activeThemeId3d: "", enabled3d: {}, tokens: {}, customCss: "", themes: [] },

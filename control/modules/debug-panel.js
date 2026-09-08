@@ -29,6 +29,7 @@ const ALERT_TESTS = [
   ["gift_sub", "properties.testGift"],
   ["cheer", "properties.testCheer"],
   ["donation", "properties.testDonation"],
+  ["donation_long", "properties.testDonationLong"],
 ];
 
 export function initDebugPanel({ t, ICONS, send, EVENT_TYPES }) {

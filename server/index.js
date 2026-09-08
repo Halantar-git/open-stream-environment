@@ -1372,6 +1372,15 @@ function buildTestAlert(kind = "follow") {
       return { kind: "cheer", user, amount: 250 };
     case "donation":
       return { kind: "donation", user, amount: 300, currency: "RUB", message: "Удачного стрима!" };
+    case "donation_long": {
+      // ~200-char message to exercise wrapping/truncation in the alert widgets.
+      const longText = (
+        "Спасибо за поддержку канала и за уютную атмосферу на каждом стриме! " +
+        "Твой вклад очень важен, он помогает каналу расти и развиваться дальше. " +
+        "Желаю тебе удачи, вдохновения, здоровья и как можно больше позитивных эмоций!"
+      ).slice(0, 200);
+      return { kind: "donation", user, amount: 750, currency: "RUB", message: longText };
+    }
     case "follow":
     default:
       return { kind: "follow", user };

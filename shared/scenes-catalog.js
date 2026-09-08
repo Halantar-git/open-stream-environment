@@ -28,6 +28,7 @@
     end: { id: "end", label: "Окончание стрима", icon: "sceneEnd" },
     wheel: { id: "wheel", label: "Колесо Фортуны", icon: "sceneWheel" },
     poll: { id: "poll", label: "Голосование", icon: "scenePoll" },
+    pause: { id: "pause", label: "Пауза", icon: "scenePause" },
   };
 
   const DEFAULT_SOCIALS = [
@@ -109,6 +110,20 @@
         subtitle: "Голосуйте в чате!",
         splashFile: "",
         splashDuration: 0,
+        showTimer: false,
+        timerDuration: 0,
+        timerDoneText: "",
+        showEvents: false,
+        showSocials: false,
+        socials: [],
+      },
+      pause: {
+        statusLabel: "ПАУЗА",
+        title: "Пауза",
+        subtitle: "",
+        splashFile: "",
+        splashDuration: 0,
+        backgroundFile: "",
         showTimer: false,
         timerDuration: 0,
         timerDoneText: "",

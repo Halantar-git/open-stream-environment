@@ -81,6 +81,67 @@
     "--alert-enter-duration": "320ms",
   };
 
+  // The Elder Scrolls Online (TESO) HUD palette: aged Tamriel gold on warm
+  // near-black parchment-green surfaces, with the health-red as the alarm
+  // accent. Shared verbatim by the 2D "TESO" theme and its 3D "Ouroboros
+  // Seal" variant (same relationship as Elite ↔ Cobra Mk II).
+  const TESO_TOKENS = {
+    // Tamriel gold (#c7a75c) — the primary HUD accent (frames, brackets, headers).
+    "--md-primary": "#c7a75c",
+    "--md-on-primary": "#2a2006",
+    "--md-primary-container": "#4a3a12",
+    "--md-on-primary-container": "#f2dfa6",
+
+    // Bright gold (#e2c47e) — secondary accent (chat usernames, secondary icons).
+    "--md-secondary": "#e2c47e",
+    "--md-on-secondary": "#352c08",
+    "--md-secondary-container": "#52450f",
+    "--md-on-secondary-container": "#f7ecc0",
+
+    // Health red (#a62323) — the alarm accent (goal fill, hostile alerts).
+    "--md-tertiary": "#e0604f",
+    "--md-on-tertiary": "#3c0a04",
+    "--md-tertiary-container": "#7a1f18",
+    "--md-on-tertiary-container": "#ffd8d3",
+
+    "--md-error": "#ffb4ab",
+    "--md-on-error": "#690005",
+    "--md-error-container": "#93000a",
+    "--md-on-error-container": "#ffdad6",
+
+    // Warm near-black green surfaces (parchment-and-shadow backgrounds).
+    "--md-surface-dim": "#0a0c0a",
+    "--md-surface": "#0d110f",
+    "--md-surface-bright": "#2a2f2a",
+    "--md-surface-container-lowest": "#050605",
+    "--md-surface-container-low": "#141a15",
+    "--md-surface-container": "#1a211b",
+    "--md-surface-container-high": "#202822",
+    "--md-surface-container-highest": "#283029",
+
+    "--md-on-surface": "#e6e3d8",
+    "--md-on-surface-variant": "#bfc3b0",
+    "--md-outline": "#868d7a",
+    "--md-outline-variant": "#3d4438",
+
+    // Cinzel serif for headings/numbers, Montserrat for body and chat text.
+    "--font-display": '"Cinzel", "Georgia", serif',
+    "--font-body": '"Montserrat", "Segoe UI", sans-serif',
+    "--font-mono": '"Cinzel", "Georgia", serif',
+
+    // Elder Scrolls HUD panels: two gold corner brackets, gold frame, parchment
+    // glow, faint blur over a dark green-black surface.
+    "--panel-radius": "2px",
+    "--panel-clip": "none",
+    "--panel-decoration": "brackets2",
+    "--panel-glow": "0 0 15px rgba(199, 167, 92, 0.35), inset 0 0 30px rgba(199, 167, 92, 0.05)",
+    "--panel-bg": "rgba(13, 17, 15, 0.92)",
+    "--panel-blur": "4px",
+    "--panel-border": "1px solid #a38652",
+    "--alert-enter-easing": "cubic-bezier(0.2, 0, 0, 1)",
+    "--alert-enter-duration": "400ms",
+  };
+
   const BUILTIN_THEMES = {
     nebula: {
       id: "nebula",
@@ -461,6 +522,39 @@
         "--panel-border": "2px solid rgba(168, 85, 247, 0.35)",
         "--alert-enter-easing": "cubic-bezier(0.05, 0.7, 0.1, 1)",
         "--alert-enter-duration": "400ms",
+      },
+    },
+
+    teso: {
+      id: "teso",
+      name: "TESO",
+      builtin: true,
+      category: "teso",
+      dimension: "2d",
+      family: "teso",
+      variant3d: "teso-seal",
+      borderRadius: "2px",
+      tokens: TESO_TOKENS,
+    },
+
+    "teso-seal": {
+      id: "teso-seal",
+      name: "Ouroboros Seal",
+      builtin: true,
+      category: "teso",
+      dimension: "3d",
+      family: "teso",
+      variant: true,
+      base2d: "teso",
+      borderRadius: "2px",
+      tokens: {
+        ...TESO_TOKENS,
+        "--shape-xs": "0px",
+        "--shape-sm": "0px",
+        "--shape-md": "0px",
+        "--shape-lg": "0px",
+        "--shape-xl": "0px",
+        "--shape-full": "999px",
       },
     },
 
