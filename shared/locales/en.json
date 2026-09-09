@@ -206,6 +206,8 @@
     "themeCategorySystem": "System",
     "themeCategoryStarCitizen": "Star Citizen",
     "themeCategoryCustom": "Custom",
+    "themeCategoryNuclear": "Nuclear",
+    "themeCategoryTeso": "TESO",
     "themeCategory3d": "3D",
     "themeCategory2d": "2D",
     "themeNone": "Off",
@@ -506,6 +508,7 @@
     "teso-goalDesc": "Donation goal with a gold TESO-style bar (TESO theme only)",
     "teso-holo-alert": "TESO Hologram",
     "teso-holo-alertDesc": "Holographic terminal with a rotating gold seal (TESO theme only)",
+
     "cobra-chat": "Cobra Chat",
     "cobra-chatDesc": "Stream chat in the Cobra Mk II orange HUD",
     "cobra-goal": "Cobra Goal",

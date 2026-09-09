@@ -20,6 +20,7 @@ const path = require("path");
 const crypto = require("crypto");
 
 const { getDbPath } = require("./storage-paths");
+const { atomicWriteFileSync } = require("./atomic-write");
 
 function defaultData() {
   return {
@@ -124,7 +125,7 @@ function createDatabase(dbPath = getDbPath()) {
   let data = deepDefaults(defaultData(), readJson(dbPath));
 
   function persist() {
-    fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
+    atomicWriteFileSync(dbPath, JSON.stringify(data, null, 2));
   }
   persist(); // при первом запуске создаём файл с дефолтами
 

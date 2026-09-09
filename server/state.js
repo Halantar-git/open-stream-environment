@@ -26,18 +26,19 @@ const { buildThemeTokens, SHAPE_MODES } = require("../shared/theme-engine");
 const { defaultScenes } = require("../shared/scenes-catalog");
 const { defaultModerationConfig } = require("./integrations/chat-moderation");
 const { getConfigPath, getExamplePath } = require("./storage-paths");
+const { atomicWriteFileSync } = require("./atomic-write");
 
 function loadConfig() {
   const configPath = getConfigPath();
   if (!fs.existsSync(configPath)) {
     const example = fs.readFileSync(getExamplePath(), "utf-8");
-    fs.writeFileSync(configPath, example);
+    atomicWriteFileSync(configPath, example);
   }
   return decryptConfig(JSON.parse(fs.readFileSync(configPath, "utf-8")));
 }
 
 function saveConfig(config) {
-  fs.writeFileSync(getConfigPath(), JSON.stringify(encryptConfig(config), null, 2));
+  atomicWriteFileSync(getConfigPath(), JSON.stringify(encryptConfig(config), null, 2));
 }
 
 function encryptConfig(config) {
@@ -1184,6 +1185,11 @@ class AppState {
         dimension: t.dimension || "2d",
         has3d: !!t.variant3d,
         variant3d: t.variant3d || null,
+        colors: [
+          t.tokens["--md-primary"],
+          t.tokens["--md-secondary"],
+          t.tokens["--md-tertiary"],
+        ],
       }));
     const custom = this.config.appearance.customThemes.map((t) => ({
       id: t.id,
@@ -1194,6 +1200,11 @@ class AppState {
       has3d: false,
       variant3d: null,
       seeds: t.seeds,
+      colors: [
+        (t.seeds && t.seeds.primary) || "#888888",
+        (t.seeds && t.seeds.secondary) || "#888888",
+        (t.seeds && t.seeds.tertiary) || "#888888",
+      ],
     }));
     return [...builtins, ...custom];
   }

@@ -262,6 +262,75 @@ body {
   height: clamp(18px, 1.6vw, 26px);
 }
 
+/* Theme picker swatches (mirrors the control panel's theme cards). */
+.theme-swatch {
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-md);
+  background: var(--md-surface-container);
+  padding: clamp(10px, 0.8vw, 14px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  touch-action: manipulation;
+  text-align: left;
+  transition: background 120ms var(--easing), border-color 120ms var(--easing), transform 80ms var(--easing);
+}
+.theme-swatch:active {
+  background: var(--md-surface-container-high);
+  border-color: var(--md-primary);
+  transform: scale(0.97);
+}
+.theme-swatch.is-active {
+  background: var(--md-primary-container);
+  border-color: var(--md-primary);
+}
+.theme-swatch__dots {
+  display: flex;
+  gap: 5px;
+}
+.theme-swatch__dot {
+  width: clamp(14px, 1.2vw, 18px);
+  height: clamp(14px, 1.2vw, 18px);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+.theme-swatch__name {
+  font-size: clamp(12px, 0.8vw, 14px);
+  font-weight: 600;
+  color: var(--md-on-surface);
+  overflow-wrap: break-word;
+}
+.theme-swatch.is-active .theme-swatch__name {
+  color: var(--md-on-primary-container);
+}
+.theme-swatch__3d {
+  align-self: flex-start;
+  appearance: none;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-sm);
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  padding: 3px 8px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: border-color 120ms var(--easing), background 120ms var(--easing), color 120ms var(--easing);
+}
+.theme-swatch__3d:active {
+  border-color: var(--md-primary);
+  color: var(--md-on-surface);
+}
+.theme-swatch__3d.is-on {
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  border-color: var(--md-primary);
+}
+
 .death-counter {
   display: flex;
   align-items: center;

@@ -388,6 +388,51 @@
     alertGrid.appendChild(chatBtn);
   }
 
+  function themeCategoryLabel(category) {
+    switch (category) {
+      case "custom": return t("settings.themeCategoryCustom");
+      case "nuclear": return t("settings.themeCategoryNuclear");
+      case "teso": return t("settings.themeCategoryTeso");
+      default: return t("settings.themeCategorySystem");
+    }
+  }
+
+  function renderThemeSwatch(theme) {
+    const isActive = theme.id === activeThemeId;
+    const colors = Array.isArray(theme.colors) && theme.colors.length
+      ? theme.colors
+      : ["#888888", "#888888", "#888888"];
+    const dots = colors
+      .map((c) => `<span class="theme-swatch__dot" style="background:${escapeHtml(c)}"></span>`)
+      .join("");
+
+    const card = document.createElement("div");
+    card.className = "theme-swatch" + (isActive ? " is-active" : "");
+    card.setAttribute("role", "button");
+    card.setAttribute("tabindex", "0");
+    card.innerHTML = `
+      <span class="theme-swatch__dots">${dots}</span>
+      <span class="theme-swatch__name">${escapeHtml(theme.name)}</span>
+      ${theme.has3d ? `<button class="theme-swatch__3d${isActive && enable3d ? " is-on" : ""}" type="button" data-action="3d" title="${escapeHtml(t("settings.theme3dToggleHint"))}">${escapeHtml(t("settings.theme3dToggle"))}</button>` : ""}
+    `;
+
+    card.addEventListener("click", () => {
+      vibrate();
+      send("THEME_SET", { themeId: theme.id });
+    });
+
+    const tgl = card.querySelector('[data-action="3d"]');
+    if (tgl) {
+      tgl.addEventListener("click", (e) => {
+        e.stopPropagation();
+        vibrate();
+        send("THEME_SET", { themeId: theme.id, enable3d: !(isActive && enable3d) });
+      });
+    }
+
+    return card;
+  }
+
   function renderThemes() {
     themeGrid.innerHTML = "";
     if (!themes.length) {
@@ -398,23 +443,27 @@
       return;
     }
 
+    // Group themes by category, preserving the server-provided order.
+    const groups = [];
+    const byCategory = new Map();
     themes.forEach((theme) => {
-      const isActive = theme.id === activeThemeId;
-      const btn = makeButton(theme.name, "THEME_SET", { themeId: theme.id });
-      if (isActive) btn.classList.add("is-active");
-      themeGrid.appendChild(btn);
-
-      if (theme.has3d) {
-        const on = isActive && enable3d;
-        const tgl = makeButton(
-          t("settings.theme3dToggle"),
-          "THEME_SET",
-          { themeId: theme.id, enable3d: !on },
-          { title: t("settings.theme3dToggleHint") }
-        );
-        if (on) tgl.classList.add("is-active");
-        themeGrid.appendChild(tgl);
+      const category = theme.category || "system";
+      let group = byCategory.get(category);
+      if (!group) {
+        group = { category, themes: [] };
+        byCategory.set(category, group);
+        groups.push(group);
       }
+      group.themes.push(theme);
+    });
+
+    groups.forEach((group) => {
+      const header = document.createElement("div");
+      header.className = "remote-theme-group";
+      header.textContent = themeCategoryLabel(group.category);
+      themeGrid.appendChild(header);
+
+      group.themes.forEach((theme) => themeGrid.appendChild(renderThemeSwatch(theme)));
     });
   }
 

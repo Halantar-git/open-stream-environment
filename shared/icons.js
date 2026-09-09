@@ -61,6 +61,7 @@
     widgetTesoChat: `<svg viewBox="0 0 24 24" ${stroke}><path d="M4 5h16v11H8l-4 4V5z"/><path d="M8 9.5h8"/><path d="M12 15.5l1.3 1.3-1.3 1.3-1.3-1.3z"/></svg>`,
     widgetTesoGoal: `<svg viewBox="0 0 24 24" ${stroke}><rect x="3" y="11" width="18" height="4" rx="1"/><path d="M6 13h8" stroke-width="2.5"/><path d="M12 6.5l1.4 1.4-1.4 1.4-1.4-1.4z"/></svg>`,
     widgetTesoHoloAlert: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.5" stroke-dasharray="2 1.4"/><path d="M12 9.5l1.5 2.5-1.5 2.5-1.5-2.5z"/></svg>`,
+
     widgetCobraChat: `<svg viewBox="0 0 24 24" ${stroke}><path d="M4 5h16v11H8l-4 4V5z"/><path d="M12 8l2 3h-1.3l.8 3h-3l.8-3H10l2-3z"/></svg>`,
     widgetCobraGoal: `<svg viewBox="0 0 24 24" ${stroke}><rect x="3" y="12" width="2.8" height="8" rx="0.8"/><rect x="7.1" y="10" width="2.8" height="10" rx="0.8"/><rect x="11.2" y="8" width="2.8" height="12" rx="0.8"/><rect x="15.3" y="10" width="2.8" height="10" rx="0.8"/><rect x="19.4" y="12" width="2.8" height="8" rx="0.8"/></svg>`,
     widgetCobraHoloAlert: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="12" r="9"/><path d="M12 6.5l1.8 4.7 5 .8-3.7 3.4 1 5-4.1-2.4-4.1 2.4 1-5L5 12l5-.8 2-4.7z"/></svg>`,

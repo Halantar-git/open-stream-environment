@@ -22,9 +22,8 @@
   Reproduces the reference emblem (TESO.svg): a single filled silhouette,
   rendered as layered additive gold neon (outer halo, mid glow, crisp warm
   core) with a slow clockwise spin and a gentle hover sway. On chat messages
-  and donations the sign briefly glitches (horizontal slice offset). While an
-  alert plays, its icon is shown in the center of the seal (like the Pixel
-  Perfect cube), with a quick "pop" on donations.
+  the sign briefly glitches (horizontal slice offset). On a donation it takes
+  the ESO item-quality colour for the amount and pops slightly larger.
 
   Runs on the built-in 30 FPS loop and tears down to 0% GPU in onUnmount().
 
@@ -64,7 +63,25 @@
     return "#ee6a00";                // Orange (Mythic)
   }
 
-  const DEFAULT_ICON_COLOR = "#e2c47e"; // bright-gold core of the sign
+  // Blend two #rrggbb colours for the donation tint fade.
+  function hexToRgb(hex) {
+    const h = String(hex || "").replace("#", "");
+    if (h.length !== 6) return null;
+    const n = parseInt(h, 16);
+    if (Number.isNaN(n)) return null;
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+
+  function mixHex(a, b, t) {
+    const ca = hexToRgb(a);
+    const cb = hexToRgb(b);
+    if (!ca || !cb) return b;
+    const k = clamp(t, 0, 1);
+    const r = Math.round(ca[0] + (cb[0] - ca[0]) * k);
+    const g = Math.round(ca[1] + (cb[1] - ca[1]) * k);
+    const bl = Math.round(ca[2] + (cb[2] - ca[2]) * k);
+    return "#" + ((1 << 24) + (r << 16) + (g << 8) + bl).toString(16).slice(1);
+  }
 
   // The TESO emblem path and its viewBox, from shared/teso-emblem.js.
   const EMBLEM_D = emblem && emblem.d ? emblem.d : "";
@@ -86,24 +103,19 @@
 
       this._path = typeof Path2D !== "undefined" && EMBLEM_D ? new Path2D(EMBLEM_D) : null;
 
-      this.gold = DEFAULT_ICON_COLOR;
-      this._iconAmount = 0;
       this._nextFlickerAt = 0;
       this._flickerUntil = 0;
       this._glitchUntil = 0;
       this._popUntil = 0;
-      this._iconQueue = [];
-      this._iconKind = null;
-      this._iconUntil = 0;
-      this._iconStartedAt = 0;
-      this._iconImages = {};
+      this._donationColor = "";
+      this._donationUntil = 0;
+      this._donationStartedAt = 0;
     }
 
     onMount() {
       // HARD theme gate: never spin up the loop or draw on a non-TESO theme.
       if (this.theme !== "teso-seal") return;
 
-      this._readColors();
       this._applyPerspective();
       this._nextFlickerAt = performance.now() + 2000 + Math.random() * 3000;
       this.bindEvents();
@@ -114,11 +126,9 @@
       this._glitchUntil = 0;
       this._flickerUntil = 0;
       this._popUntil = 0;
-      this._iconQueue = [];
-      this._iconKind = null;
-      this._iconAmount = 0;
-      this._iconUntil = 0;
-      this._iconStartedAt = 0;
+      this._donationColor = "";
+      this._donationUntil = 0;
+      this._donationStartedAt = 0;
     }
 
     onUpdate(prev, next) {
@@ -140,14 +150,13 @@
       }
     }
 
-    // ---- interactivity: glitch on chat, icon queue + glitch on alerts ----
+    // ---- interactivity: glitch on chat, tint + pop on donations ----
 
     bindEvents() {
       const { EVENT_TYPES } = this.context;
       this.subscribe(EVENT_TYPES.CHAT_MESSAGE, () => this.glitch());
       this.subscribe(EVENT_TYPES.ALERT, (alert) => {
-        this.queueAlert(alert);
-        if (alert && alert.kind === "donation") this.glitch();
+        if (alert && alert.kind === "donation") this.onDonation(alert);
       });
     }
 
@@ -155,57 +164,18 @@
       this._glitchUntil = performance.now() + 500;
     }
 
-    // Queue alerts so their icons show one at a time, like the alerts widget
-    // drains its cards. Icons never overwrite each other.
-    queueAlert(alert) {
-      if (!alert) return;
-      this._iconQueue.push(alert);
-      if (!this._iconKind || performance.now() >= this._iconUntil) this._drainIcon();
-    }
-
-    _drainIcon() {
-      const alert = this._iconQueue.shift();
-      if (!alert) {
-        this._iconKind = null;
-        this._iconUntil = 0;
-        this._iconStartedAt = 0;
-        return;
-      }
-      const duration = alert.durationMs || 5000;
-      this._iconKind = alert.kind || null;
-      this._iconAmount = alert.kind === "donation" ? (Number(alert.amount) || 0) : 0;
-      this._iconUntil = performance.now() + duration;
-      this._iconStartedAt = performance.now();
-      if (alert.kind === "donation") this.pop();
-      this.later(() => this._drainIcon(), duration);
+    // On donation the seal takes the ESO item-quality colour for the amount
+    // and pops slightly larger; no icon is drawn (see the alerts widget).
+    onDonation(alert) {
+      const amount = Number(alert.amount) || 0;
+      this._donationColor = donationQualityColor(amount);
+      this._donationStartedAt = performance.now();
+      this._donationUntil = this._donationStartedAt + (alert.durationMs || 5000);
+      this.pop();
     }
 
     pop() {
       this._popUntil = performance.now() + 450;
-    }
-
-    _readColors() {
-      const read = this.context.readCssVar;
-      // Match the sign's bright-gold core (--md-secondary), not the deeper
-      // primary gold, so the icon reads as part of the seal.
-      this.gold = (read && read("--md-secondary")) || DEFAULT_ICON_COLOR;
-    }
-
-    // Lazy-loads the alert icon (shared/icons.js) as a gold-coloured 24x24 SVG
-    // raster so it can be drawn onto the canvas. Cached per kind + colour.
-    _iconImage(kind) {
-      const icons = this.context.ICONS || {};
-      const svg = icons[kind];
-      if (!svg || typeof Image === "undefined") return null;
-      const color = kind === "donation" ? donationQualityColor(this._iconAmount) : this.gold;
-      const key = kind + "|" + color;
-      if (this._iconImages[key]) return this._iconImages[key];
-      const colored = svg.split("currentColor").join(color);
-      const sized = colored.replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" ');
-      const img = new Image();
-      img.src = "data:image/svg+xml," + encodeURIComponent(sized);
-      this._iconImages[key] = img;
-      return img;
     }
 
     // ---- rendering ----
@@ -262,6 +232,15 @@
       }
       const R = Math.min(cw, ch) * 0.42; // reference radius for glow blur math
 
+      // Donation tint: shift the gold neon toward the item-quality colour for
+      // the amount, fading in/out around the donation duration.
+      let tintMix = 0;
+      if (this._donationColor && now < this._donationUntil) {
+        const fadeIn = clamp((now - this._donationStartedAt) / 200, 0, 1);
+        const fadeOut = clamp((this._donationUntil - now) / 400, 0, 1);
+        tintMix = Math.min(fadeIn, fadeOut);
+      }
+
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(rot);
@@ -270,12 +249,13 @@
 
       // --- neon fill layers (additive bloom) ---
       for (const layer of LAYERS) {
+        const color = tintMix > 0 ? mixHex(layer.color, this._donationColor, tintMix) : layer.color;
         ctx.save();
         if (layer.blurR > 0) ctx.globalCompositeOperation = "lighter";
-        ctx.fillStyle = layer.color;
+        ctx.fillStyle = color;
         ctx.globalAlpha = layer.alpha * intensity;
         if (layer.blurR > 0) {
-          ctx.shadowColor = layer.color;
+          ctx.shadowColor = color;
           ctx.shadowBlur = layer.blurR * R * dpr * intensity;
         }
         ctx.fill(path);
@@ -283,26 +263,6 @@
       }
 
       ctx.restore();
-
-      // Alert icon in the center of the seal — a gold coin spinning on its
-      // vertical axis (horizontal flip) while the seal spins behind it.
-      if (this._iconKind && now < this._iconUntil) {
-        const img = this._iconImage(this._iconKind);
-        if (img && img.complete && img.naturalWidth) {
-          const fadeIn = clamp((now - this._iconStartedAt) / 200, 0, 1);
-          const fadeOut = clamp((this._iconUntil - now) / 400, 0, 1);
-          const alpha = Math.min(fadeIn, fadeOut);
-          const size = Math.min(cw, ch) * 0.40;
-          const spin = (now / 1000) * 1.3; // rad/s
-          const sx = Math.cos(spin); // -1..1 → full smooth coin rotation (front → back)
-          ctx.save();
-          ctx.translate(cx, cy);
-          ctx.scale(sx, 1);
-          ctx.globalAlpha = alpha;
-          ctx.drawImage(img, -size / 2, -size / 2, size, size);
-          ctx.restore();
-        }
-      }
 
       // Analog horizontal glitch: shift a few random slices of the finished frame.
       if (glitching) this._glitchBands(ctx, bw, bh, dpr);

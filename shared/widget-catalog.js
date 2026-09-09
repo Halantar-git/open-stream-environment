@@ -350,15 +350,15 @@
     "teso-goal": {
       type: "teso-goal",
       label: "Цель TESO",
-      description: "Донат-цель с золотой шкалой в стиле TESO (только для темы TESO)",
+      description: "ХП-бар цели в стиле TESO (только для темы TESO)",
       icon: "widgetTesoGoal",
       services: ["donationAlerts", "youtube"],
       dimension: "3d",
       theme: "teso-seal",
       renderType: "2d",
-      defaultGeometry: { x: 3, y: 84, w: 32, h: 8 },
+      defaultGeometry: { x: 3, y: 84, w: 32, h: 3 },
       minW: 16,
-      minH: 4,
+      minH: 2,
       defaultConfig: { showPercentage: false },
     },
     "teso-holo-alert": {

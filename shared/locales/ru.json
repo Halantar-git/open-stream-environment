@@ -206,6 +206,8 @@
     "themeCategorySystem": "Системные",
     "themeCategoryStarCitizen": "Star Citizen",
     "themeCategoryCustom": "Свои",
+    "themeCategoryNuclear": "Nuclear",
+    "themeCategoryTeso": "TESO",
     "themeCategory3d": "3D",
     "themeCategory2d": "2D",
     "themeNone": "Выкл",
@@ -506,6 +508,7 @@
     "teso-goalDesc": "Донат-цель с золотой шкалой в стиле TESO (только для темы TESO)",
     "teso-holo-alert": "Голограмма TESO",
     "teso-holo-alertDesc": "Голографический терминал с вращающейся золотой печатью (только для темы TESO)",
+
     "cobra-chat": "Чат Cobra",
     "cobra-chatDesc": "Чат стрима в оранжевом HUD Cobra Mk II",
     "cobra-goal": "Цель Cobra",
