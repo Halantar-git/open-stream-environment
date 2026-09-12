@@ -16,6 +16,7 @@
  */
 
 const { WIDGET_TYPES, widgetsForTheme, replacedBy3d, widgetRole, resolveTypeForTheme } = require("../shared/widget-catalog");
+const { THREE_D_STYLES } = require("../shared/themes");
 
 describe("widget-catalog helpers", () => {
   test("replacedBy3d маппит 3D-виджеты на их 2D-аналоги", () => {
@@ -105,6 +106,19 @@ describe("widget-catalog helpers", () => {
       if (d.dimension === "3d") {
         expect(d.theme).toBeTruthy();
       }
+    });
+  });
+
+  test("THREE_D_STYLES покрывает ровно все 3D-наборы виджетов", () => {
+    const widgetThemes = new Set(
+      Object.values(WIDGET_TYPES)
+        .filter((d) => d.dimension === "3d")
+        .map((d) => d.theme)
+    );
+    expect(new Set(THREE_D_STYLES.map((s) => s.id))).toEqual(widgetThemes);
+
+    THREE_D_STYLES.forEach((s) => {
+      expect(widgetsForTheme(s.id).length).toBeGreaterThan(0);
     });
   });
 });

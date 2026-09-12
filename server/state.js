@@ -21,7 +21,7 @@ const crypto = require("crypto");
 
 const { seal, open } = require("./secret-store");
 const { WIDGET_TYPES } = require("../shared/widget-catalog");
-const { BUILTIN_THEMES } = require("../shared/themes");
+const { BUILTIN_THEMES, THREE_D_STYLES } = require("../shared/themes");
 const { buildThemeTokens, SHAPE_MODES } = require("../shared/theme-engine");
 const { defaultScenes } = require("../shared/scenes-catalog");
 const { defaultModerationConfig } = require("./integrations/chat-moderation");
@@ -336,6 +336,7 @@ class AppState {
       stats: { followerCount: null, subscriberCount: null },
       deathCount: 0,
       activeScene: "main",
+      sceneStartedAt: null,
       activeCameraAngle: null,
       activeFilters: new Set(),
       giveaway: {
@@ -804,7 +805,18 @@ class AppState {
 
   setActiveScene(scene) {
     this.runtime.activeScene = String(scene || "main");
+    // Момент активации сцены: к нему привязан обратный отсчёт в оверлее.
+    // Благодаря этому таймер не сбрасывается при обычных обновлениях STATE
+    // и переживает перезагрузку страницы OBS-источника.
+    this.runtime.sceneStartedAt = Date.now();
     return this.runtime.activeScene;
+  }
+
+  // Повторно берёт текущий момент как начало отсчёта активной сцены — например,
+  // когда сцена реально становится видимой после заставки.
+  markSceneStarted() {
+    this.runtime.sceneStartedAt = Date.now();
+    return this.runtime.sceneStartedAt;
   }
 
   setActiveCameraAngle(angleId) {
@@ -1156,7 +1168,17 @@ class AppState {
   resolveTheme(id) {
     if (BUILTIN_THEMES[id]) return BUILTIN_THEMES[id];
     const custom = this.findCustomTheme(id);
-    if (custom) return { id: custom.id, name: custom.name, builtin: false, tokens: custom.tokens, customCss: (custom.seeds && custom.seeds.customCss) || "" };
+    if (custom) {
+      return {
+        id: custom.id,
+        name: custom.name,
+        builtin: false,
+        tokens: custom.tokens,
+        customCss: (custom.seeds && custom.seeds.customCss) || "",
+        // Своя тема может взять готовый набор 3D-виджетов (один из THREE_D_STYLES).
+        variant3d: (custom.seeds && custom.seeds.variant3d) || "",
+      };
+    }
     return null;
   }
 
@@ -1170,8 +1192,9 @@ class AppState {
   resolvedTheme3d() {
     if (!this.config.appearance.enable3d) return null;
     const base = this.resolvedTheme();
-    if (!base || !base.builtin || !base.variant3d) return null;
-    return this.resolveTheme(base.variant3d) || null;
+    const variantId = base && base.variant3d;
+    if (!variantId) return null;
+    return this.resolveTheme(variantId) || null;
   }
 
   listThemes() {
@@ -1197,8 +1220,8 @@ class AppState {
       builtin: false,
       category: "custom",
       dimension: "2d",
-      has3d: false,
-      variant3d: null,
+      has3d: !!(t.seeds && t.seeds.variant3d),
+      variant3d: (t.seeds && t.seeds.variant3d) || null,
       seeds: t.seeds,
       colors: [
         (t.seeds && t.seeds.primary) || "#888888",
@@ -1231,8 +1254,9 @@ class AppState {
       this.config.appearance.enable3d = true;
     } else {
       this.config.appearance.activeThemeId = t.id;
-      this.config.appearance.enable3d =
-        typeof enable3d === "boolean" ? enable3d : this._defaultEnable3d(t.id);
+      const requested = typeof enable3d === "boolean" ? enable3d : this._defaultEnable3d(t.id);
+      // 3D нельзя включить у темы без 3D-набора виджетов.
+      this.config.appearance.enable3d = requested && !!t.variant3d;
     }
     saveConfig(this.config);
     return true;
@@ -1271,6 +1295,8 @@ class AppState {
       text: String(seeds.text || "").trim(),
       panelOpacity: seeds.panelOpacity === "" || seeds.panelOpacity == null ? "" : Math.max(0, Math.min(100, Number(seeds.panelOpacity) || 0)),
       panelBlur: String(seeds.panelBlur || "").trim(),
+      // Готовый набор 3D-виджетов для своей темы; пусто — без 3D.
+      variant3d: THREE_D_STYLES.some((s) => s.id === seeds.variant3d) ? seeds.variant3d : "",
       customCss: String(seeds.customCss || ""),
     };
     const tokens = buildThemeTokens(cleanSeeds);
@@ -1386,6 +1412,7 @@ class AppState {
     if (typeof patch.showSocials === "boolean") scene.showSocials = patch.showSocials;
     if (patch.splashFile !== undefined) scene.splashFile = String(patch.splashFile || "").slice(0, 200);
     if (patch.splashDuration !== undefined) scene.splashDuration = Math.max(0, Math.min(30, Math.round(Number(patch.splashDuration) || 0)));
+    if (typeof patch.splashEnabled === "boolean") scene.splashEnabled = patch.splashEnabled;
     if (patch.backgroundFile !== undefined) scene.backgroundFile = String(patch.backgroundFile || "").slice(0, 200);
     if (Array.isArray(patch.socials)) {
       scene.socials = patch.socials
@@ -1511,7 +1538,9 @@ class AppState {
     // `appearance.activeThemeId3d`. When 3D is off, the base theme drives tokens.
     const theme2d = this.resolvedTheme();
     const theme3d = this.resolvedTheme3d();
-    const effective = theme3d || theme2d;
+    // A builtin 3D variant restyles the whole overlay (its tokens win). A custom
+    // base theme keeps its own palette — the 3D style only unlocks widgets.
+    const effective = theme3d && theme2d && theme2d.builtin ? theme3d : theme2d;
     return {
       layout: this._layout,
       layoutPresets: this.listLayoutPresets(),
@@ -1538,6 +1567,7 @@ class AppState {
       stats: this.runtime.stats,
       deathCount: this.runtime.deathCount,
       activeScene: this.runtime.activeScene,
+      sceneStartedAt: this.runtime.sceneStartedAt,
       activeCameraAngle: this.runtime.activeCameraAngle,
       activeFilters: this.getActiveFilters(),
       giveaway: this.giveawaySnapshot(),

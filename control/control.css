@@ -966,6 +966,11 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   align-items: center;
 }
 
+.splash-scene.is-off .splash-row {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
 .splash-row > div {
   flex: 1 1 auto;
   min-width: 0;

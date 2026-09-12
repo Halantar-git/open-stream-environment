@@ -1253,13 +1253,18 @@ const { EVENT_TYPES } = window.SharedEvents;
       </div>
       <p class="properties__hint" style="margin:0;">${t("scenes.splashDurationHint")}</p>
       <div class="inspector__title" style="margin-top:10px;">${t("scenes.splashPerScene")}</div>
+      <p class="properties__hint" style="margin:0 0 6px;">${t("scenes.splashPerSceneHint")}</p>
     `;
 
     sceneIds.forEach((id) => {
       const sc = state.scenes[id] || {};
+      const enabled = sc.splashEnabled !== false;
       html += `
-        <div class="md-field">
-          <label>${t("scene." + id + "Label")}</label>
+        <div class="md-field splash-scene${enabled ? "" : " is-off"}">
+          <div class="properties__toggle-row">
+            <label>${t("scene." + id + "Label")}</label>
+            ${switchHtml("splashEnabled_" + id, enabled)}
+          </div>
           <div class="splash-row">
             <div id="splashFile_${id}"></div>
             ${durationSelectHtml("splashDuration_" + id, sc.splashDuration || 0)}
@@ -1286,6 +1291,9 @@ const { EVENT_TYPES } = window.SharedEvents;
       );
       splashSettingsFormEl.querySelector(`#splashDuration_${id}`).addEventListener("change", (e) =>
         sendSceneConfigFor(id, { splashDuration: Number(e.target.value) || 0 })
+      );
+      wireSwitch(splashSettingsFormEl.querySelector(`#splashEnabled_${id}`), (on) =>
+        sendSceneConfigFor(id, { splashEnabled: on })
       );
     });
   }

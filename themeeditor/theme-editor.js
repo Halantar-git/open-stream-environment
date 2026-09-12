@@ -145,6 +145,7 @@
       text: document.getElementById("seedTextAuto").checked ? "" : document.getElementById("seedText").value,
       panelOpacity: document.getElementById("seedPanelOpacityAuto").checked ? "" : document.getElementById("seedPanelOpacity").value,
       panelBlur: document.getElementById("seedPanelBlurAuto").checked ? "" : (document.getElementById("seedPanelBlur").value + "px"),
+      variant3d: document.getElementById("seedVariant3d").value,
       customCss: document.getElementById("seedCustomCss").value,
     };
   }
@@ -174,6 +175,7 @@
           fontDisplay: "", fontBody: "", fontMono: "",
           panelRadius: "", panelBorderWidth: "", panelBorderStyle: "", panelBorderColor: "", panelGlowColor: "", panelGlowStrength: 40,
           background: "", text: "", panelOpacity: "", panelBlur: "",
+          variant3d: "",
           customCss: "",
         };
 
@@ -207,6 +209,13 @@
     const shapeOptionsHtml = shapeOptions
       .map((o) => `<option value="${o.value}" ${seeds.shapeMode === o.value ? "selected" : ""}>${escapeHtml(o.label)}</option>`)
       .join("");
+
+    const threeDOptionsHtml = [
+      `<option value="" ${seeds.variant3d ? "" : "selected"}>${escapeHtml(t("themeEditor.threeDNone"))}</option>`,
+      ...(BuiltinThemes.THREE_D_STYLES || []).map(
+        (s) => `<option value="${escapeAttr(s.id)}" ${seeds.variant3d === s.id ? "selected" : ""}>${escapeHtml(s.name)}</option>`
+      ),
+    ].join("");
 
     document.getElementById("titleLabel").textContent = theme ? t("themeEditor.editTitle") : t("themeEditor.createTitle");
     document.getElementById("saveBtn").textContent = t("themeEditor.save");
@@ -316,6 +325,13 @@
         <div class="theme-editor__reset">
           <button class="md-button md-button--text" id="resetOverridesBtn" type="button">${t("themeEditor.resetOverrides")}</button>
         </div>
+      </div>
+      <div class="theme-editor__section">
+        <div class="theme-editor__section-title">${t("themeEditor.threeD")}</div>
+        <div class="md-field"><label>${t("themeEditor.threeDStyle")}</label>
+          <select id="seedVariant3d">${threeDOptionsHtml}</select>
+        </div>
+        <div class="md-field__hint">${t("themeEditor.threeDHint")}</div>
       </div>
       <div class="theme-editor__section">
         <div class="theme-editor__section-title">${t("themeEditor.customCss")}</div>

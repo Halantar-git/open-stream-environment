@@ -28,11 +28,12 @@
 
   let recentEvents = [];
   let topDonation = { user: "", amount: 0, currency: "RUB" };
-  let timerInterval = null;
-  let timeLeft = 0;
-  let totalDuration = 0;
   let doneText = "";
+  let activeScene = null;
+  let sceneStartedAt = null;
   let currentScene = null;
+
+  const sceneTimer = window.SceneTimer.createSceneTimer();
 
   const els = {
     statusLabel: document.getElementById("statusLabel"),
@@ -126,7 +127,7 @@
     if (isTalk) {
       els.sceneCard.hidden = true;
       els.sceneChat.hidden = false;
-      stopTimer();
+      sceneTimer.stop();
       return;
     }
 
@@ -139,8 +140,7 @@
     renderSocials(scene.socials || []);
     renderEvents();
 
-    if (scene.showTimer) startTimer(scene.timerDuration || 0, localizedField("timerDoneText", scene.timerDoneText));
-    else stopTimer();
+    applyTimer(scene);
   }
 
   function renderSocials(socials) {
@@ -156,7 +156,7 @@
     els.socialsFooter.hidden = true;
     els.timerBox.hidden = true;
     els.sceneAlerts.hidden = true;
-    stopTimer();
+    sceneTimer.stop();
 
     const file = scene.backgroundFile || "";
     const kind = mediaKind(file);
@@ -276,27 +276,29 @@
     }, holdMs);
   }
 
-  function startTimer(duration, doneMsg) {
-    stopTimer();
-    totalDuration = duration;
-    timeLeft = duration;
-    doneText = doneMsg;
-    updateTimerDisplay();
-    if (duration <= 0) return;
-    timerInterval = setInterval(() => {
-      timeLeft = Math.max(0, timeLeft - 1);
-      updateTimerDisplay();
-      if (timeLeft <= 0) {
-        if (doneText) els.subtitle.textContent = doneText;
-        stopTimer();
+  // Обратный отсчёт привязан к моменту активации сцены (sceneStartedAt), а не к
+  // загрузке страницы: перезагрузка/реконнект OBS-источника не сбрасывает таймер,
+  // а обычные обновления STATE / SCENES_UPDATE его не перезапускают. Отсчёт идёт
+  // только пока сцена активна; в остальных случаях показывается полная длительность.
+  function applyTimer(scene) {
+    doneText = localizedField("timerDoneText", scene.timerDoneText);
+    sceneTimer.apply(
+      {
+        showTimer: scene.showTimer,
+        duration: scene.timerDuration,
+        isActive: activeScene === sceneType,
+        startedAt: sceneStartedAt,
+      },
+      (state) => {
+        updateTimerDisplay(state.timeLeft, state.totalDuration);
+        // renderSceneText() уже сбросил подзаголовок — возвращаем текст окончания.
+        if (state.finished && doneText) els.subtitle.textContent = doneText;
       }
-    }, 1000);
+    );
   }
-  function stopTimer() {
-    if (timerInterval) clearInterval(timerInterval);
-    timerInterval = null;
-  }
-  function updateTimerDisplay() {
+
+  function updateTimerDisplay(timeLeft, totalDuration) {
+    if (!els.timerDisplay) return;
     const m = Math.floor(timeLeft / 60);
     const s = timeLeft % 60;
     els.timerDisplay.textContent = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
@@ -310,8 +312,20 @@
         applyTheme(msg.payload.appearance);
         recentEvents = msg.payload.recentEvents || [];
         topDonation = msg.payload.topDonation || topDonation;
+        if (typeof msg.payload.activeScene === "string") activeScene = msg.payload.activeScene;
+        sceneStartedAt = typeof msg.payload.sceneStartedAt === "number" ? msg.payload.sceneStartedAt : null;
         renderScene(msg.payload.scenes && msg.payload.scenes[sceneType]);
         break;
+      case EVENT_TYPES.REMOTE_ACTION: {
+        const action = msg.payload && msg.payload.action;
+        const payload = (msg.payload && msg.payload.payload) || {};
+        if (action === "SCENE_SET") {
+          if (typeof payload.scene === "string") activeScene = payload.scene;
+          if (typeof payload.startedAt === "number") sceneStartedAt = payload.startedAt;
+          if (currentScene) renderScene(currentScene);
+        }
+        break;
+      }
       case EVENT_TYPES.THEME_UPDATE:
         applyTheme(msg.payload);
         break;
@@ -338,10 +352,7 @@
           window.I18n.setLang(msg.payload && msg.payload.lang);
           window.I18n.apply();
         }
-        if (currentScene) {
-          renderSceneText(currentScene);
-          doneText = localizedField("timerDoneText", currentScene.timerDoneText);
-        }
+        if (currentScene) renderScene(currentScene);
         renderEvents();
         break;
       default:

@@ -592,7 +592,19 @@
     },
   };
 
-  const api = { BUILTIN_THEMES };
+  // 3D-стили, доступные для выбора. id совпадает со значением `theme`
+  // соответствующих 3D-виджетов в widget-catalog (то, что принимает
+  // widgetsForTheme), поэтому своя тема может взять готовый набор 3D-виджетов.
+  const THREE_D_STYLES = [
+    { id: "nebula", name: "Material You" },
+    { id: "grimhex", name: "Star Citizen (Grim HEX)" },
+    { id: "nuclear", name: "Nuclear" },
+    { id: "pixel", name: "Pixel Perfect" },
+    { id: "teso-seal", name: "TESO" },
+    { id: "cobra-mk2", name: "Cobra Mk II" },
+  ];
+
+  const api = { BUILTIN_THEMES, THREE_D_STYLES };
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;

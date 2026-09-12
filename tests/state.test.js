@@ -21,7 +21,8 @@ const path = require("path");
 
 const { configureStorage } = require("../server/storage-paths");
 const { AppState } = require("../server/state");
-const { BUILTIN_THEMES } = require("../shared/themes");
+const { BUILTIN_THEMES, THREE_D_STYLES } = require("../shared/themes");
+const { buildThemeTokens } = require("../shared/theme-engine");
 
 function makeConfig() {
   return {
@@ -165,6 +166,22 @@ describe("AppState config + runtime", () => {
 
     expect(state.setActiveCameraAngle("cam_top")).toBe("cam_top");
     expect(state.runtime.activeCameraAngle).toBe("cam_top");
+  });
+
+  test("sceneStartedAt фиксирует момент активации сцены", () => {
+    expect(state.runtime.sceneStartedAt).toBeNull();
+
+    const before = Date.now();
+    state.setActiveScene("start");
+    const first = state.runtime.sceneStartedAt;
+    expect(first).toBeGreaterThanOrEqual(before);
+    expect(first).toBeLessThanOrEqual(Date.now());
+
+    const restarted = state.markSceneStarted();
+    expect(restarted).toBeGreaterThanOrEqual(first);
+    expect(state.runtime.sceneStartedAt).toBe(restarted);
+
+    expect(state.snapshot().sceneStartedAt).toBe(restarted);
   });
 
   test("счётчик смертей не уходит в минус и сбрасывается", () => {
@@ -412,6 +429,46 @@ describe("AppState config + runtime", () => {
     expect(theme.tokens["--panel-radius"]).toBe("10px");
     expect(theme.tokens["--panel-border"]).toBe("2px solid #ff0000");
     expect(theme.tokens["--panel-glow"]).toMatch(/^0 0 /);
+  });
+
+  test("своя тема может использовать 3D-виджеты выбранного стиля", () => {
+    const seeds = {
+      primary: "#ff3300", secondary: "#00cc88", tertiary: "#3366ff", surfaceSeed: "#201018",
+      shapeMode: "rounded", fontPreset: "nebula", variant3d: "cobra-mk2",
+    };
+    const theme = state.saveCustomTheme({ name: "Своя 3D", seeds });
+
+    expect(theme.seeds.variant3d).toBe("cobra-mk2");
+    const entry = state.listThemes().find((t) => t.id === theme.id);
+    expect(entry.has3d).toBe(true);
+    expect(entry.variant3d).toBe("cobra-mk2");
+
+    state.setActiveTheme(theme.id, true);
+    const snap = state.snapshot();
+    expect(snap.appearance.activeThemeId).toBe(theme.id);
+    expect(snap.appearance.enable3d).toBe(true);
+    expect(snap.appearance.activeThemeId3d).toBe("cobra-mk2");
+    // Палитра остаётся кастомной и не подменяется токенами 3D-варианта.
+    expect(snap.appearance.tokens).toEqual(buildThemeTokens(seeds));
+    expect(state.resolvedTheme3d().id).toBe("cobra-mk2");
+  });
+
+  test("неизвестный 3D-стиль сбрасывается, тема без 3D не включает enable3d", () => {
+    const base = { primary: "#123456", secondary: "#654321", tertiary: "#abcdef", surfaceSeed: "#101010" };
+    const bad = state.saveCustomTheme({ name: "Плохая", seeds: { ...base, variant3d: "nope" } });
+    expect(bad.seeds.variant3d).toBe("");
+
+    state.setActiveTheme(bad.id, true);
+    const snap = state.snapshot();
+    expect(snap.appearance.enable3d).toBe(false);
+    expect(snap.appearance.activeThemeId3d).toBe("");
+    expect(state.resolvedTheme3d()).toBeNull();
+  });
+
+  test("каждый 3D-стиль указывает на существующую встроенную тему", () => {
+    THREE_D_STYLES.forEach((s) => {
+      expect(BUILTIN_THEMES[s.id]).toBeTruthy();
+    });
   });
 
   test("duplicateCustomTheme создаёт копию с новым id и именем", () => {

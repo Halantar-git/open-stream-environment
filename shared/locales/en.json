@@ -139,6 +139,7 @@
     "splashDurationAuto": "auto",
     "sec": "sec",
     "splashPerScene": "Per scene",
+    "splashPerSceneHint": "The switch next to a scene enables the splash when entering it and when returning from it to the game. Without its own file the global splash is used.",
     "splashDurationHint": "auto — video plays to the end, image/GIF uses the default. 1–30 — fixed duration."
   },
   "settings": {
@@ -586,6 +587,10 @@
     "shapeBrackets4": "Brackets (4 corners)",
     "shapeHazard": "Hazard",
     "fonts": "Fonts",
+    "threeD": "3D widgets",
+    "threeDStyle": "3D style",
+    "threeDNone": "No 3D",
+    "threeDHint": "Pick a set of 3D widgets (neon signs, chat, goal, alerts, etc.) for your theme. Enable it with the \"3D\" toggle on the theme card. Panel 3D widgets use your palette; decorative signs keep the set's signature colors.",
     "save": "Save theme",
     "cancel": "Cancel",
     "myTheme": "My theme",
@@ -942,17 +947,34 @@
     },
     "themes": {
       "title": "Themes",
-      "p1": "In Settings → Appearance each theme is a \"family\" with a base 2D palette and, for some, a 3D variant: Material You, Orbital (a Star Citizen HUD), Pixel Perfect (a minimal pixel-style UI), Elite (an orange Elite Dangerous HUD) and Nuclear (a CRT terminal).",
-      "p2": "The 3D toggle on a theme card turns on its 3D widgets over the same palette: Material You → orb, chat, goal and alert, Pixel Perfect → cube, chat, goal and alert, Orbital → Star Citizen (Grim HEX), Elite → Cobra Mk II (ship hologram and radar where donors appear as ships), Nuclear → radiation sign, chat, goal and holo-alert.",
+      "p1": "In Settings → Appearance each theme is a \"family\" with a base 2D palette and, for some, a 3D variant: Material You, Orbital (a Star Citizen HUD), Pixel Perfect (a minimal pixel-style UI), Elite (an orange Elite Dangerous HUD), Nuclear (a CRT terminal) and TESO (dark gold/bronze, Cinzel/Montserrat fonts).",
+      "p2": "The 3D toggle on a theme card turns on its 3D widgets over the same palette: Material You → orb, chat, goal and alert, Pixel Perfect → cube, chat, goal and alert, Orbital → Star Citizen (Grim HEX), Elite → Cobra Mk II (ship hologram and radar where donors appear as ships), Nuclear → radiation sign, chat, goal and holo-alert, TESO → Ouroboros Seal, chat, goal and holo-alert.",
       "p3": "When 3D is on, its widgets appear over the base overlay and the matching 2D widgets (chat, goal, alerts) are hidden — their 3D versions replace them; switching 3D off brings them back. An active 3D theme also shows a \"3D widgets\" list below, where each widget can be toggled individually. The theme only affects the overlay and its canvas preview.",
-      "p4": "Create custom theme opens the 2D theme editor (4 seed colors, panel shape and a font pair). Pixel Perfect snaps widget text to the pixel grid (12/16/24/32px). Custom themes have no 3D variant."
+      "p4": "Create custom theme and Edit open a full theme editor in a separate window: 4 seed colors, seven panel shapes, separate fonts for headings/body/data, border, glow, background and text color, panel opacity and blur, plus a CSS editor. Pixel Perfect snaps widget text to the pixel grid (12/16/24/32px).",
+      "p5": "A custom theme can pick a 3D style — a ready-made set of 3D widgets (Material You, Star Citizen/Grim HEX, Nuclear, Pixel Perfect, TESO, Cobra Mk II). The \"3D\" toggle on its card enables it: all widgets of the set become available; panel 3D widgets (chat, goal, alerts) use your palette, while decorative signs/radar/shield keep the set's signature colors. 2D→3D auto-replacement and role following work just like for built-in themes."
     },
     "scenes": {
       "title": "Scenes",
       "p1": "Each scene is a separate OBS source that replaces the gameplay view entirely (not drawn on top of it).",
       "p2": "Available scenes: Start, BRB, Main, Just Chatting, End and Fortune Wheel.",
       "p3": "Just Chatting shows a large chat feed and alerts, leaving room for your webcam on the left.",
-      "p4": "Copy each scene's URL into its own OBS Browser Source and switch scenes from the remote or Stream Deck."
+      "p4": "Copy each scene's URL into its own OBS Browser Source and switch scenes from the remote or Stream Deck. Each scene can show a banner (title, subtitle, socials, recent events) and a countdown timer.",
+      "p5": "Scenes have a countdown timer: enable Timer, set the duration in seconds and the text shown when it ends. It starts when the scene is activated, survives an OBS browser-source reload and is not reset by settings changes; when entering through a splash it starts after the splash finishes."
+    },
+    "splashes": {
+      "title": "Splashes",
+      "p1": "A splash is a video, image or GIF played during scene transitions: when entering BRB, Talk, End, Wheel and Poll, and when returning to gameplay from these scenes or from Start (the stream intro).",
+      "p2": "Configured on the Splashes tab: one file for all scenes plus a file and duration per scene. Priority: the scene's file → the global file → the standard brand splash (when no file is set).",
+      "p3": "Duration is auto or 1–30 seconds: video always plays to the end, while an image/GIF with auto holds the default time. The switch to the target scene happens automatically — on the video's end or on the timer.",
+      "p4": "Every scene has a toggle: a disabled scene skips its splash and switches immediately. It affects both entering the scene and returning from it to gameplay.",
+      "p5": "Playback needs an OBS scene \"Opening\" with the http://localhost:8710/overlay/video-splash.html browser source; its name is set in Settings → OBS WebSocket → Opening. If the browser source loads mid-splash, it is replayed so nothing is missed."
+    },
+    "hotkeys": {
+      "title": "Hotkeys",
+      "p1": "Global hotkeys work even when the game has focus. The first two are changed in Settings → Application (format like Control+Shift+H); on macOS use Command instead of Control.",
+      "p2": "Control+Shift+H — HUD edit mode: a transparent overlay appears over the game, widgets can be dragged and resized, and the grid/snap turns on.",
+      "p3": "Control+Shift+L — chat over the game: a transparent chat window that stays above other windows and passes clicks through (handy on a single monitor).",
+      "p4": "Control+Shift+C — pin/unpin the chat window (always on top). Control+Shift+G — game mode: hide or show the control panel so it stays out of the way while streaming."
     },
     "twitch": {
       "title": "Twitch",

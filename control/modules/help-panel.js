@@ -69,6 +69,16 @@ const SECTIONS = [
     ],
   },
   {
+    id: "hotkeys",
+    title: "help.hotkeys.title",
+    blocks: [
+      { type: "p", key: "help.hotkeys.p1" },
+      { type: "p", key: "help.hotkeys.p2" },
+      { type: "p", key: "help.hotkeys.p3" },
+      { type: "p", key: "help.hotkeys.p4" },
+    ],
+  },
+  {
     id: "widget",
     title: "help.widget.title",
     blocks: [
@@ -102,6 +112,7 @@ const SECTIONS = [
       { type: "p", key: "help.themes.p2" },
       { type: "p", key: "help.themes.p3" },
       { type: "p", key: "help.themes.p4" },
+      { type: "p", key: "help.themes.p5" },
     ],
   },
   {
@@ -112,6 +123,18 @@ const SECTIONS = [
       { type: "p", key: "help.scenes.p2" },
       { type: "p", key: "help.scenes.p3" },
       { type: "p", key: "help.scenes.p4" },
+      { type: "p", key: "help.scenes.p5" },
+    ],
+  },
+  {
+    id: "splashes",
+    title: "help.splashes.title",
+    blocks: [
+      { type: "p", key: "help.splashes.p1" },
+      { type: "p", key: "help.splashes.p2" },
+      { type: "p", key: "help.splashes.p3" },
+      { type: "p", key: "help.splashes.p4" },
+      { type: "p", key: "help.splashes.p5" },
     ],
   },
   {

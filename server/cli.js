@@ -129,7 +129,10 @@ function createCliHandler({ state, bus, obsCtrl, broadcast, startedAt, logger, h
 
     if (obsConnected && obsCtrl) obsCtrl.switchScene(sceneName);
     state.setActiveScene(scene);
-    broadcast(EVENT_TYPES.REMOTE_ACTION, { action: "SCENE_SET", payload: { scene } });
+    broadcast(EVENT_TYPES.REMOTE_ACTION, {
+      action: "SCENE_SET",
+      payload: { scene, startedAt: state.runtime.sceneStartedAt },
+    });
     log("success", translate("cli.scene.switched", { scene, name: sceneName }) + (obsConnected ? "" : translate("cli.obsOffline")));
   }
 

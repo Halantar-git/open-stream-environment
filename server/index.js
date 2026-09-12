@@ -408,6 +408,11 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
         let splashScene = "";
         if (scene === "main" && RETURN_SPLASH.includes(current)) splashScene = current;
         else if (ENTER_SPLASH.includes(scene)) splashScene = scene;
+        // Переключатель в «Заставках»: выключенная сцена пропускает заставку
+        // и переключается сразу на целевую сцену.
+        if (splashScene && state.config.scenes[splashScene] && state.config.scenes[splashScene].splashEnabled === false) {
+          splashScene = "";
+        }
         const sceneSplashFile = splashScene
           ? (state.config.scenes[splashScene] && state.config.scenes[splashScene].splashFile) || ""
           : "";
@@ -439,7 +444,10 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
         }
 
         state.setActiveScene(scene);
-        broadcast(EVENT_TYPES.REMOTE_ACTION, { action: "SCENE_SET", payload: { scene } });
+        broadcast(EVENT_TYPES.REMOTE_ACTION, {
+          action: "SCENE_SET",
+          payload: { scene, startedAt: state.runtime.sceneStartedAt },
+        });
         serverLog.info("remote scene switch", { scene, sceneName });
         break;
       }
@@ -755,6 +763,13 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
         pendingVideoTarget = null;
         if (target && obsCtrl && target.sceneName) {
           obsCtrl.switchScene(target.sceneName);
+          // Сцена становится видимой только сейчас, после заставки, — с этого
+          // момента и стартует обратный отсчёт.
+          const startedAt = state.markSceneStarted();
+          const nextScene = target.splash && target.splash.nextScene;
+          if (nextScene) {
+            broadcast(EVENT_TYPES.REMOTE_ACTION, { action: "SCENE_SET", payload: { scene: nextScene, startedAt } });
+          }
           serverLog.info("splash finished — switching to scene", { sceneName: target.sceneName });
         } else {
           serverLog.info("splash finished (no pending target)");
