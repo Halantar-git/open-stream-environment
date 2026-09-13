@@ -52,7 +52,7 @@
     TWITCH_ACTION_RESULT: "twitch_action_result",
   };
 
-  const wsUrl = (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws";
+  const wsUrl = (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws?role=remote";
 
   const t = (key, params) => (window.I18n ? window.I18n.t(key, params) : key);
 

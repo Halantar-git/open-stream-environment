@@ -94,3 +94,17 @@ body { display: flex; flex-direction: column; }
 .theme-editor__glow-value { min-width: 40px; text-align: right; font-size: 11px; color: var(--md-on-surface-variant); font-variant-numeric: tabular-nums; }
 .theme-editor__reset { display: flex; justify-content: flex-end; }
 .theme-editor__actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.theme-editor__3d-list {
+  display: flex; flex-direction: column; gap: 12px;
+  max-height: 260px; overflow-y: auto; padding-right: 4px;
+}
+.theme-editor__3d-group { display: flex; flex-direction: column; gap: 4px; }
+.theme-editor__3d-group-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.5px; color: var(--md-on-surface-variant);
+}
+.theme-editor__3d-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--md-on-surface); cursor: pointer;
+}
+.theme-editor__3d-row input[type="checkbox"] { accent-color: var(--md-primary); }

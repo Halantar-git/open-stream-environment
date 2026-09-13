@@ -71,6 +71,11 @@
       // theme's 3D counterpart; must be pure (no mutation) and preserve `id`.
       this.transform = options.transform || null;
 
+      // (item) => string — the widget's own 3D family id. Handed to the widget
+      // as `context.theme` so widgets from several families can coexist
+      // (custom themes) while each still passes its hard internal theme gate.
+      this.widgetTheme = options.widgetTheme || null;
+
       this.hooks = {
         mount: options.onMount || null,
         update: options.onUpdate || null,
@@ -87,7 +92,12 @@
       const WidgetClass =
         (this.factory && this.factory(item)) || this.registry.get(item.type) || BaseWidget;
       const renderType = this.resolveRenderType(item) || "2d";
-      return new WidgetClass(Object.assign({}, item, { renderType }), this.context);
+      let context = this.context;
+      if (this.widgetTheme) {
+        const family = this.widgetTheme(item);
+        if (family) context = Object.assign({}, this.context, { theme: family });
+      }
+      return new WidgetClass(Object.assign({}, item, { renderType }), context);
     }
 
     syncLayout(layoutConfig) {

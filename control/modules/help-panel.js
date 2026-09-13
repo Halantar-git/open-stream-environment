@@ -263,6 +263,30 @@ const SECTIONS = [
     ],
   },
   {
+    id: "history",
+    title: "help.history.title",
+    blocks: [
+      { type: "p", key: "help.history.p1" },
+      { type: "p", key: "help.history.p2" },
+      { type: "p", key: "help.history.p3" },
+      { type: "p", key: "help.history.p4" },
+    ],
+  },
+  {
+    id: "performance",
+    title: "help.performance.title",
+    blocks: [
+      { type: "p", key: "help.performance.p1" },
+      { type: "callout", key: "help.performance.shutdown" },
+      { type: "p", key: "help.performance.p2" },
+      { type: "p", key: "help.performance.p3" },
+      { type: "p", key: "help.performance.p4" },
+      { type: "p", key: "help.performance.p5" },
+      { type: "p", key: "help.performance.p6" },
+      { type: "p", key: "help.performance.p7" },
+    ],
+  },
+  {
     id: "settings",
     title: "help.settings.title",
     blocks: [
@@ -305,6 +329,9 @@ export function initHelpPanel({ t, ICONS }) {
     if (block.type === "steps") {
       const items = (block.items || []).map((k) => `<li>${escapeHtml(t(k))}</li>`).join("");
       return `<ol>${items}</ol>`;
+    }
+    if (block.type === "callout") {
+      return `<p class="help-callout">${escapeHtml(t(block.key))}</p>`;
     }
     // paragraph
     return `<p>${escapeHtml(t(block.key))}</p>`;

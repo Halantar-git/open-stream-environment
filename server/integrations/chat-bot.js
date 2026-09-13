@@ -67,13 +67,24 @@ const EIGHT_BALL = [
   "Знаки говорят — да",
 ];
 
+// Без аллокации Set: бейджей обычно 0–3, скан массива дешевле.
+function hasBadge(badges, name) {
+  if (!badges || !badges.length) return false;
+  for (const badge of badges) {
+    if (String(badge).toLowerCase() === name) return true;
+  }
+  return false;
+}
+
 function userLevel({ user, badges, channel }) {
-  const set = new Set((badges || []).map((b) => String(b).toLowerCase()));
-  if (set.has("broadcaster") || (channel && String(user || "").toLowerCase() === String(channel).toLowerCase())) {
+  if (
+    hasBadge(badges, "broadcaster") ||
+    (channel && String(user || "").toLowerCase() === String(channel).toLowerCase())
+  ) {
     return "broadcaster";
   }
-  if (set.has("moderator")) return "moderator";
-  if (set.has("subscriber") || set.has("founder") || set.has("vip")) return "subscriber";
+  if (hasBadge(badges, "moderator")) return "moderator";
+  if (hasBadge(badges, "subscriber") || hasBadge(badges, "founder") || hasBadge(badges, "vip")) return "subscriber";
   return "everyone";
 }
 

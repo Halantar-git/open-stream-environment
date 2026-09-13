@@ -15,10 +15,28 @@
  * along with this program.  If not, see <https://gnu.org>.
  */
 
-const { WIDGET_TYPES, widgetsForTheme, replacedBy3d, widgetRole, resolveTypeForTheme } = require("../shared/widget-catalog");
+const { WIDGET_TYPES, widgetsForTheme, themeAllowsWidget, replacedBy3d, widgetRole, resolveTypeForTheme, isAnimatedWidget } = require("../shared/widget-catalog");
 const { THREE_D_STYLES } = require("../shared/themes");
 
 describe("widget-catalog helpers", () => {
+  test("isAnimatedWidget отмечает только виджеты с canvas-циклом", () => {
+    // Тяжёлые: собственный rAF (20–30 FPS).
+    expect(isAnimatedWidget("mic")).toBe(true);
+    expect(isAnimatedWidget("grimhex-radar")).toBe(true);
+    expect(isAnimatedWidget("cobra-shield")).toBe(true);
+    expect(isAnimatedWidget("md3-orb")).toBe(true);
+    expect(isAnimatedWidget("pixel-cube")).toBe(true);
+    expect(isAnimatedWidget("teso-seal")).toBe(true);
+
+    // Лёгкие: DOM-only, без цикла.
+    expect(isAnimatedWidget("chat")).toBe(false);
+    expect(isAnimatedWidget("goal")).toBe(false);
+    expect(isAnimatedWidget("grimhex-chat")).toBe(false);
+    expect(isAnimatedWidget("teso-goal")).toBe(false);
+    expect(isAnimatedWidget("md3-holo-alert")).toBe(false);
+    expect(isAnimatedWidget(undefined)).toBe(false);
+  });
+
   test("replacedBy3d маппит 3D-виджеты на их 2D-аналоги", () => {
     expect(replacedBy3d("md3-chat")).toBe("chat");
     expect(replacedBy3d("grimhex-goal")).toBe("goal");
@@ -30,6 +48,9 @@ describe("widget-catalog helpers", () => {
     expect(replacedBy3d("cobra-radar")).toBeNull();
     expect(replacedBy3d("cobra-shield")).toBeNull();
     expect(replacedBy3d("chat")).toBeNull(); // 2D-виджет не заменяет
+
+    // Таймер: 3D-вариант заменяет 2D-таймер по роли.
+    expect(replacedBy3d("grimhex-timer")).toBe("timer");
   });
 
   test("widgetsForTheme возвращает 3D-виджеты темы", () => {
@@ -56,6 +77,10 @@ describe("widget-catalog helpers", () => {
     expect(widgetRole("md3-goal")).toBe("goal");
     expect(widgetRole("grimhex-holo-alert")).toBe("alerts");
     expect(widgetRole("alerts")).toBe("alerts");
+
+    // Таймер: 2D-база и 3D-вариант — одна роль.
+    expect(widgetRole("timer")).toBe("timer");
+    expect(widgetRole("grimhex-timer")).toBe("timer");
 
     // Декоративные 3D-виджеты (основные вывески) имеют роль для кросс-темной
     // замены. Вторичные вывески (musain/elite-sign) остаются без роли — они
@@ -99,6 +124,25 @@ describe("widget-catalog helpers", () => {
     expect(resolveTypeForTheme("grimhex-radar", "cobra-mk2", {})).toBe("cobra-radar");
     // Нет аналога в активной теме — остаётся исходный тип (будет скрыт).
     expect(resolveTypeForTheme("cobra-shield", "grimhex", {})).toBe("cobra-shield");
+
+    // 2D-таймер подменяется Grim HEX-вариантом при активной 3D-теме.
+    expect(resolveTypeForTheme("timer", "grimhex", {})).toBe("grimhex-timer");
+    expect(resolveTypeForTheme("timer", "", {})).toBe("timer");
+  });
+
+  test("resolveTypeForTheme с явным набором 3D-виджетов (своя тема)", () => {
+    // Уникальный аналог роли — подмена работает.
+    expect(resolveTypeForTheme("chat", ["teso-chat", "cobra-radar"])).toBe("teso-chat");
+    expect(resolveTypeForTheme("goal", ["teso-goal"])).toBe("teso-goal");
+    expect(resolveTypeForTheme("md3-chat", ["cobra-chat"])).toBe("cobra-chat");
+
+    // Несколько кандидатов одной роли — неоднозначно, тип не меняется.
+    expect(resolveTypeForTheme("chat", ["teso-chat", "cobra-chat"])).toBe("chat");
+    expect(resolveTypeForTheme("md3-chat", ["teso-chat", "cobra-chat"])).toBe("md3-chat");
+
+    // Пустой набор — без изменений; виджеты без роли не трогаем.
+    expect(resolveTypeForTheme("chat", [])).toBe("chat");
+    expect(resolveTypeForTheme("recent", ["teso-chat"])).toBe("recent");
   });
 
   test("все 3D-виджеты имеют привязку theme и dimension 3d", () => {
@@ -107,6 +151,28 @@ describe("widget-catalog helpers", () => {
         expect(d.theme).toBeTruthy();
       }
     });
+  });
+
+  test("themeAllowsWidget: 2D-таймер доступен в Orbital и своих темах", () => {
+    const timer = WIDGET_TYPES.timer;
+    const themes = [
+      { id: "nebula", builtin: true },
+      { id: "orbital", builtin: true },
+      { id: "pixel", builtin: true },
+      { id: "custom-1", builtin: false },
+    ];
+
+    expect(themeAllowsWidget(timer, { activeThemeId: "orbital", themes })).toBe(true);
+    expect(themeAllowsWidget(timer, { activeThemeId: "custom-1", themes })).toBe(true);
+    expect(themeAllowsWidget(timer, { activeThemeId: "nebula", themes })).toBe(false);
+    expect(themeAllowsWidget(timer, { activeThemeId: "pixel", themes })).toBe(false);
+    // Своя тема не подтверждена списком — считаем встроенной.
+    expect(themeAllowsWidget(timer, { activeThemeId: "custom-1" })).toBe(false);
+
+    // Виджеты без привязки доступны в любой теме.
+    expect(themeAllowsWidget(WIDGET_TYPES.chat, { activeThemeId: "nebula", themes })).toBe(true);
+    expect(themeAllowsWidget(WIDGET_TYPES.chat, null)).toBe(true);
+    expect(themeAllowsWidget(null, { activeThemeId: "orbital", themes })).toBe(true);
   });
 
   test("THREE_D_STYLES покрывает ровно все 3D-наборы виджетов", () => {

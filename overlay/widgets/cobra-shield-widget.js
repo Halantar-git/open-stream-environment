@@ -73,7 +73,7 @@
       this._applyOpacity();
       this._updateGoal();
       this.bindEvents();
-      this.startRenderLoop(30); // strictly 30 FPS
+      this.startRenderLoop(BaseWidget.AMBIENT_FPS); // ambient: 20 FPS
     }
 
     onUnmount() {

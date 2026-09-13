@@ -145,7 +145,12 @@
       text: document.getElementById("seedTextAuto").checked ? "" : document.getElementById("seedText").value,
       panelOpacity: document.getElementById("seedPanelOpacityAuto").checked ? "" : document.getElementById("seedPanelOpacity").value,
       panelBlur: document.getElementById("seedPanelBlurAuto").checked ? "" : (document.getElementById("seedPanelBlur").value + "px"),
-      variant3d: document.getElementById("seedVariant3d").value,
+      error: document.getElementById("seedErrorAuto").checked ? "" : document.getElementById("seedError").value,
+      alertEnterDuration: document.getElementById("seedAlertDurationAuto").checked ? "" : document.getElementById("seedAlertDuration").value,
+      alertEnterEasing: document.getElementById("seedAlertEasing").value,
+      threeDWidgets: Array.from(document.querySelectorAll("#seed3dList input[data-3d-widget]"))
+        .filter((el) => el.checked)
+        .map((el) => el.getAttribute("data-3d-widget")),
       customCss: document.getElementById("seedCustomCss").value,
     };
   }
@@ -155,6 +160,7 @@
     send(EVENT_TYPES.CMD_PREVIEW_THEME_DRAFT, {
       tokens: ThemeEngine.buildThemeTokens(liveSeeds),
       customCss: liveSeeds.customCss,
+      threeDWidgets: liveSeeds.threeDWidgets,
       themeId: (theme && theme.id) || "",
       name: document.getElementById("themeName").value.trim() || t("themeEditor.myTheme"),
     });
@@ -175,7 +181,9 @@
           fontDisplay: "", fontBody: "", fontMono: "",
           panelRadius: "", panelBorderWidth: "", panelBorderStyle: "", panelBorderColor: "", panelGlowColor: "", panelGlowStrength: 40,
           background: "", text: "", panelOpacity: "", panelBlur: "",
-          variant3d: "",
+          error: "",
+          alertEnterDuration: "", alertEnterEasing: "",
+          threeDWidgets: [],
           customCss: "",
         };
 
@@ -197,6 +205,35 @@
     const blurValue = Math.max(0, Math.min(40, parseFloat(seeds.panelBlur) || 20));
     const blurAuto = seeds.panelBlur ? "" : "checked";
 
+    const errorHex = /^#[0-9a-f]{6}$/i.test(String(seeds.error || "")) ? seeds.error : (currentTokens["--md-error"] || "#ffb4ab");
+    const errorAuto = seeds.error ? "" : "checked";
+    const alertDurNum = Number(seeds.alertEnterDuration);
+    const shapeAlertDefault = parseInt(String(currentTokens["--alert-enter-duration"] || ""), 10);
+    const alertDurationValue =
+      seeds.alertEnterDuration !== "" && seeds.alertEnterDuration != null && Number.isFinite(alertDurNum)
+        ? Math.max(0, Math.min(2000, Math.round(alertDurNum)))
+        : Number.isFinite(shapeAlertDefault)
+        ? shapeAlertDefault
+        : 480;
+    const alertDurationAuto = seeds.alertEnterDuration === "" || seeds.alertEnterDuration == null ? "checked" : "";
+
+    const EASING_LABELS = {
+      smooth: "easingSmooth",
+      decelerate: "easingDecelerate",
+      spring: "easingSpring",
+      sharp: "easingSharp",
+      linear: "easingLinear",
+    };
+    const alertEasingOptionsHtml = [
+      `<option value="" ${seeds.alertEnterEasing ? "" : "selected"}>${escapeHtml(t("themeEditor.easingAuto"))}</option>`,
+      ...Object.keys(ThemeEngine.ALERT_EASINGS || {}).map(
+        (k) =>
+          `<option value="${escapeAttr(k)}" ${seeds.alertEnterEasing === k ? "selected" : ""}>${escapeHtml(
+            t("themeEditor." + (EASING_LABELS[k] || k))
+          )}</option>`
+      ),
+    ].join("");
+
     const shapeOptions = [
       { value: "rounded", label: t("themeEditor.rounded") },
       { value: "angular", label: t("themeEditor.angular") },
@@ -210,12 +247,28 @@
       .map((o) => `<option value="${o.value}" ${seeds.shapeMode === o.value ? "selected" : ""}>${escapeHtml(o.label)}</option>`)
       .join("");
 
-    const threeDOptionsHtml = [
-      `<option value="" ${seeds.variant3d ? "" : "selected"}>${escapeHtml(t("themeEditor.threeDNone"))}</option>`,
-      ...(BuiltinThemes.THREE_D_STYLES || []).map(
-        (s) => `<option value="${escapeAttr(s.id)}" ${seeds.variant3d === s.id ? "selected" : ""}>${escapeHtml(s.name)}</option>`
-      ),
-    ].join("");
+    const threeDSelected = new Set(Array.isArray(seeds.threeDWidgets) ? seeds.threeDWidgets : []);
+    const threeDListHtml = (BuiltinThemes.THREE_D_STYLES || [])
+      .map((style) => ({
+        id: style.id,
+        name: style.name,
+        widgets: (window.WidgetCatalog && window.WidgetCatalog.widgetsForTheme(style.id)) || [],
+      }))
+      .filter((g) => g.widgets.length)
+      .map(
+        (g) => `
+        <div class="theme-editor__3d-group">
+          <div class="theme-editor__3d-group-title">${escapeHtml(g.name)}</div>
+          ${g.widgets
+            .map(
+              (w) => `<label class="theme-editor__3d-row"><input type="checkbox" data-3d-widget="${escapeAttr(w.type)}" ${
+                threeDSelected.has(w.type) ? "checked" : ""
+              }> <span>${escapeHtml(t("widgets." + w.type))}</span></label>`
+            )
+            .join("")}
+        </div>`
+      )
+      .join("");
 
     document.getElementById("titleLabel").textContent = theme ? t("themeEditor.editTitle") : t("themeEditor.createTitle");
     document.getElementById("saveBtn").textContent = t("themeEditor.save");
@@ -327,10 +380,31 @@
         </div>
       </div>
       <div class="theme-editor__section">
-        <div class="theme-editor__section-title">${t("themeEditor.threeD")}</div>
-        <div class="md-field"><label>${t("themeEditor.threeDStyle")}</label>
-          <select id="seedVariant3d">${threeDOptionsHtml}</select>
+        <div class="theme-editor__section-title">${t("themeEditor.statesAnims")}</div>
+        <div class="md-field">
+          <label>${t("themeEditor.errorColor")}</label>
+          <div class="theme-editor__color-row">
+            <input type="color" id="seedError" value="${errorHex}">
+            <label class="theme-editor__auto"><input type="checkbox" id="seedErrorAuto" ${errorAuto}> ${t("themeEditor.auto")}</label>
+          </div>
         </div>
+        <div class="theme-editor__glow">
+          <div class="theme-editor__glow-line">
+            <span class="theme-editor__glow-label">${t("themeEditor.alertDuration")}</span>
+            <label class="theme-editor__auto"><input type="checkbox" id="seedAlertDurationAuto" ${alertDurationAuto}> ${t("themeEditor.auto")}</label>
+          </div>
+          <div class="theme-editor__glow-controls">
+            <input type="range" id="seedAlertDuration" min="0" max="2000" step="10" value="${alertDurationValue}">
+            <span class="theme-editor__glow-value" id="seedAlertDurationValue">${alertDurationValue}ms</span>
+          </div>
+        </div>
+        <div class="md-field"><label>${t("themeEditor.alertEasing")}</label>
+          <select id="seedAlertEasing">${alertEasingOptionsHtml}</select>
+        </div>
+      </div>
+      <div class="theme-editor__section">
+        <div class="theme-editor__section-title">${t("themeEditor.threeD")}</div>
+        <div class="theme-editor__3d-list" id="seed3dList">${threeDListHtml}</div>
         <div class="md-field__hint">${t("themeEditor.threeDHint")}</div>
       </div>
       <div class="theme-editor__section">
@@ -380,6 +454,20 @@
     const blurAutoEl = document.getElementById("seedPanelBlurAuto");
     blurEl.addEventListener("input", () => { blurAutoEl.checked = false; blurValueEl.textContent = blurEl.value + "px"; });
 
+    document.getElementById("seedError").addEventListener("input", () => {
+      document.getElementById("seedErrorAuto").checked = false;
+    });
+    const alertDurEl = document.getElementById("seedAlertDuration");
+    const alertDurValueEl = document.getElementById("seedAlertDurationValue");
+    const alertDurAutoEl = document.getElementById("seedAlertDurationAuto");
+    alertDurEl.addEventListener("input", () => {
+      alertDurAutoEl.checked = false;
+      alertDurValueEl.textContent = alertDurEl.value + "ms";
+    });
+
+    const threeDListEl = document.getElementById("seed3dList");
+    if (threeDListEl) threeDListEl.addEventListener("change", sendDraft);
+
     document.getElementById("resetOverridesBtn").addEventListener("click", () => {
       document.getElementById("seedFontDisplay").value = "";
       document.getElementById("seedFontBody").value = "";
@@ -393,6 +481,9 @@
       document.getElementById("seedTextAuto").checked = true;
       document.getElementById("seedPanelOpacityAuto").checked = true;
       document.getElementById("seedPanelBlurAuto").checked = true;
+      document.getElementById("seedErrorAuto").checked = true;
+      document.getElementById("seedAlertDurationAuto").checked = true;
+      document.getElementById("seedAlertEasing").value = "";
       syncGlowValue();
       sendDraft();
     });

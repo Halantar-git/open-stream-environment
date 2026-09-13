@@ -15,7 +15,7 @@
  * along with this program.  If not, see <https://gnu.org>.
  */
 
-const { buildThemeTokens, FONT_PRESETS, SHAPE_MODES } = require("../shared/theme-engine");
+const { buildThemeTokens, FONT_PRESETS, SHAPE_MODES, ALERT_EASINGS, deriveRole } = require("../shared/theme-engine");
 
 describe("shared/theme-engine custom theme tokens", () => {
   const base = {
@@ -85,5 +85,43 @@ describe("shared/theme-engine custom theme tokens", () => {
     expect(tokens["--panel-border"]).toBe("2px dashed rgba(255, 255, 255, 0.12)");
     expect(tokens["--panel-bg"]).toMatch(/rgba\(\d+, \d+, \d+, 0\.6\)/);
     expect(tokens["--panel-blur"]).toBe("8px");
+  });
+
+  test("цвет ошибки переопределяет токены ошибки", () => {
+    expect(buildThemeTokens(base)["--md-error"]).toBe("#ffb4ab");
+
+    const role = deriveRole("#ff0000");
+    const tokens = buildThemeTokens({ ...base, error: "#ff0000" });
+    expect(tokens["--md-error"]).toBe(role.role);
+    expect(tokens["--md-on-error"]).toBe(role.onRole);
+    expect(tokens["--md-error-container"]).toBe(role.container);
+    expect(tokens["--md-on-error-container"]).toBe(role.onContainer);
+
+    // Пустая строка — дефолт сохраняется.
+    expect(buildThemeTokens({ ...base, error: "" })["--md-error"]).toBe("#ffb4ab");
+  });
+
+  test("анимация появления алертов переопределяется, неизвестные значения игнорируются", () => {
+    // Без переопределения берётся значение формы панели.
+    expect(buildThemeTokens(base)["--alert-enter-duration"]).toBe("480ms");
+    expect(buildThemeTokens({ ...base, shapeMode: "angular" })["--alert-enter-duration"]).toBe("350ms");
+
+    const tokens = buildThemeTokens({ ...base, alertEnterDuration: 700, alertEnterEasing: "spring" });
+    expect(tokens["--alert-enter-duration"]).toBe("700ms");
+    expect(tokens["--alert-enter-easing"]).toBe(ALERT_EASINGS.spring);
+
+    expect(buildThemeTokens({ ...base, alertEnterDuration: 99999 })["--alert-enter-duration"]).toBe("2000ms");
+    expect(buildThemeTokens({ ...base, alertEnterDuration: -50 })["--alert-enter-duration"]).toBe("0ms");
+
+    // Пустое/неизвестное — падаем на значение формы панели.
+    const fallback = buildThemeTokens({ ...base, alertEnterDuration: "", alertEnterEasing: "nope" });
+    expect(fallback["--alert-enter-duration"]).toBe("480ms");
+    expect(fallback["--alert-enter-easing"]).toBe("cubic-bezier(0.05, 0.7, 0.1, 1)");
+  });
+
+  test("ALERT_EASINGS содержит набор кривых", () => {
+    expect(Object.keys(ALERT_EASINGS)).toEqual(
+      expect.arrayContaining(["smooth", "decelerate", "spring", "sharp", "linear"])
+    );
   });
 });

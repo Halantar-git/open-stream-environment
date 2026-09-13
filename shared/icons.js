@@ -41,7 +41,7 @@
     widgetCustom: `<svg viewBox="0 0 24 24" ${stroke}><rect x="3" y="3" width="7.5" height="7.5" rx="1"/><rect x="13.5" y="3" width="7.5" height="4.5" rx="1"/><rect x="13.5" y="9" width="7.5" height="12" rx="1"/><rect x="3" y="12.5" width="7.5" height="8.5" rx="1"/></svg>`,
     widgetStat: `<svg viewBox="0 0 24 24" ${stroke}><path d="M4 19h16M8 19V9M13 19V5M18 19v-7"/></svg>`,
     widgetSocial: `<svg viewBox="0 0 24 24" ${stroke}><rect x="3" y="7" width="18" height="10" rx="5"/><circle cx="8" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg>`,
-    widgetParticipants: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="9" cy="8" r="3"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.5c2.8.3 4.8 2.3 4.8 4.5"/></svg>`,
+    widgetTimer: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="13" r="8"/><path d="M12 8v5l3 2M9 2h6M12 2v3"/></svg>`,
     widgetMic: `<svg viewBox="0 0 24 24" ${stroke}><path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 12h2"/></svg>`,
     widgetDeath: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 3a8 8 0 0 0-8 8c0 2.6 1.1 4.3 2.4 5.6V19a1 1 0 0 0 1 1h2.6v-2h4v2H16a1 1 0 0 0 1-1v-2.4C18.9 15.3 20 13.6 20 11a8 8 0 0 0-8-8z"/><circle cx="9" cy="10.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="10.5" r="1.3" fill="currentColor" stroke="none"/><path d="M9 14h6"/></svg>`,
     widgetSoundboard: `<svg viewBox="0 0 24 24" ${stroke}><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>`,

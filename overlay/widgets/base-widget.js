@@ -75,6 +75,11 @@
   const clamp = (v, min, max) => (v < min ? min : v > max ? max : v);
 
   class BaseWidget {
+    // Ambient-виджеты (дыхание голограммы, медленный фликер, лёгкое покачивание)
+    // не нуждаются в 30 FPS: 20 визуально неотличимы, а работы на треть меньше.
+    // Функциональные анимации (радар, прогресс цели, алерты) остаются на 30.
+    static AMBIENT_FPS = 20;
+
     constructor(config = {}, context = {}) {
       this.id = config.id != null ? String(config.id) : null;
       this.type = config.type || "custom";
@@ -120,6 +125,13 @@
       this._mounted = true;
 
       this._applyGeometry();
+
+      // Пауза рендера, когда страница/окно скрыты (HUD-окно в покое, свёрнутый
+      // OBS-источник): не крутим rAF и не рисуем вхолостую. Возврат к видимости
+      // возобновляет цикл — то же условие проверяется в _syncLoop().
+      if (this._isAnimated() && typeof document !== "undefined" && typeof document.addEventListener === "function") {
+        this.on(document, "visibilitychange", () => this._syncLoop());
+      }
 
       if (this.renderType === "3d-webgl") {
         this._initWebGL();
@@ -257,8 +269,13 @@
       return this.renderType === "3d-webgl" || this.renderType === "canvas";
     }
 
+    _isPageHidden() {
+      return typeof document !== "undefined" && document.hidden === true;
+    }
+
     _syncLoop() {
-      const shouldRun = this._isAnimated() && this._loopDesired && this.geometry.visible && !this._idle;
+      const shouldRun =
+        this._isAnimated() && this._loopDesired && this.geometry.visible && !this._idle && !this._isPageHidden();
       if (shouldRun) this._scheduleFrame();
       else this._cancelFrame();
     }

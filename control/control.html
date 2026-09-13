@@ -124,23 +124,61 @@
 
     <aside class="history-panel" id="historyPanel" hidden>
       <header class="history-panel__header">
-        <span class="history-panel__title" data-i18n="settings.history">История событий</span>
-        <input class="history-panel__search" id="eventsSearch" type="text" data-i18n-placeholder="events.searchPlaceholder" placeholder="Поиск по нику или сообщению" />
-        <button class="history-panel__btn" id="clearEventsBtn" data-i18n="events.clear">Очистить</button>
+        <span class="history-panel__title" data-i18n="nav.history">История</span>
         <button class="history-panel__close" id="historyCloseBtn" aria-label="Закрыть" data-i18n-title="common.close">×</button>
       </header>
-      <div class="history-panel__toolbar" id="eventsFilters">
-        <button class="history-filter is-active" data-filter="all" data-i18n="events.all">Все</button>
-        <button class="history-filter" data-filter="donation" data-i18n="events.donation">Донат</button>
-        <button class="history-filter" data-filter="subscription" data-i18n="events.subscription">Подписка</button>
-        <button class="history-filter" data-filter="follow" data-i18n="events.follow">Фоллоу</button>
-        <button class="history-filter" data-filter="cheer" data-i18n="events.cheer">Чир</button>
-        <span class="history-panel__meta" id="eventsMeta"></span>
-        <button class="history-panel__btn" id="refreshEventsBtn" data-i18n="settings.refresh">Обновить</button>
+      <div class="history-tabs" id="historyTabs">
+        <button class="history-tab is-active" data-tab="events" data-i18n="events.tab">События</button>
+        <button class="history-tab" data-tab="sessions" data-i18n="sessions.tab">Сессии</button>
+        <button class="history-tab" data-tab="chat" data-i18n="chat.tab">Чат</button>
       </div>
-      <div class="history-panel__body" id="eventsHistory"></div>
-      <div class="history-panel__footer">
-        <button class="history-panel__btn" id="loadMoreEventsBtn" hidden data-i18n="settings.showMore">Показать ещё</button>
+
+      <div class="history-tabpane" data-pane="events">
+        <div class="history-panel__toolbar" id="eventsFilters">
+          <button class="history-filter is-active" data-filter="all" data-i18n="events.all">Все</button>
+          <button class="history-filter" data-filter="donation" data-i18n="events.donation">Донат</button>
+          <button class="history-filter" data-filter="subscription" data-i18n="events.subscription">Подписка</button>
+          <button class="history-filter" data-filter="follow" data-i18n="events.follow">Фоллоу</button>
+          <button class="history-filter" data-filter="cheer" data-i18n="events.cheer">Чир</button>
+          <span class="history-panel__meta" id="eventsMeta"></span>
+          <button class="history-panel__btn" id="refreshEventsBtn" data-i18n="settings.refresh">Обновить</button>
+        </div>
+        <div class="history-panel__toolbar history-panel__toolbar--sub">
+          <input class="history-panel__search" id="eventsSearch" type="text" data-i18n-placeholder="events.searchPlaceholder" placeholder="Поиск по нику или сообщению" />
+          <select class="history-panel__select" id="eventsExportFormat" data-i18n-title="events.exportFormat">
+            <option value="csv">CSV</option>
+            <option value="json">JSON</option>
+          </select>
+          <button class="history-panel__btn" id="exportEventsBtn" data-i18n="events.export">Экспорт</button>
+          <button class="history-panel__btn" id="deleteEventsBtn" data-i18n="events.deleteFiltered">Удалить по фильтру</button>
+          <button class="history-panel__btn" id="clearEventsBtn" data-i18n="events.clear">Очистить</button>
+        </div>
+        <div class="history-panel__body" id="eventsHistory"></div>
+        <div class="history-panel__footer">
+          <button class="history-panel__btn" id="loadMoreEventsBtn" hidden data-i18n="settings.showMore">Показать ещё</button>
+        </div>
+      </div>
+
+      <div class="history-tabpane" data-pane="sessions" hidden>
+        <div class="history-panel__toolbar">
+          <span class="history-panel__meta" id="sessionsMeta"></span>
+          <button class="history-panel__btn" id="refreshSessionsBtn" data-i18n="settings.refresh">Обновить</button>
+          <button class="history-panel__btn" id="clearSessionsBtn" data-i18n="sessions.clear">Очистить</button>
+        </div>
+        <div class="history-panel__body" id="sessionsBody"></div>
+      </div>
+
+      <div class="history-tabpane" data-pane="chat" hidden>
+        <div class="history-panel__toolbar">
+          <input class="history-panel__search" id="chatSearch" type="text" data-i18n-placeholder="chat.searchPlaceholder" placeholder="Поиск по чату" />
+          <span class="history-panel__meta" id="chatMeta"></span>
+          <button class="history-panel__btn" id="refreshChatBtn" data-i18n="settings.refresh">Обновить</button>
+          <button class="history-panel__btn" id="clearChatBtn" data-i18n="chat.clear">Очистить</button>
+        </div>
+        <div class="history-panel__body" id="chatHistory"></div>
+        <div class="history-panel__footer">
+          <button class="history-panel__btn" id="loadMoreChatBtn" hidden data-i18n="settings.showMore">Показать ещё</button>
+        </div>
       </div>
     </aside>
 
@@ -221,6 +259,7 @@
           <input type="text" id="layoutPresetName" data-i18n-placeholder="presets.promptName" placeholder="Название пресета" autocomplete="off" />
           <button class="md-button md-button--tonal" id="saveLayoutPresetBtn" data-i18n="presets.save">Сохранить</button>
           <button class="md-button md-button--tonal" id="deleteLayoutPresetBtn" data-i18n="presets.delete" hidden>Удалить</button></button>
+          <span class="canvas-toolbar__perf" id="sceneBudget" data-i18n-title="editor.perfHint" hidden></span>
         </div>
       </div>
 
@@ -365,6 +404,44 @@
             <button class="md-button md-button--outlined" id="importConfigBtn"></button>
           </div>
           <div class="settings__hint" id="exportImportStatus" hidden></div>
+        </div>
+
+        <div class="settings__card md-card" id="settingsCardData">
+          <h2 data-i18n="data.title">Данные и хранилище</h2>
+          <p class="settings__desc" data-i18n="data.desc">Локальная база: раскладка, сессии и история событий/чата. Файлы лежат рядом с настройками приложения.</p>
+          <div class="data-stats" id="dataStats"></div>
+          <div class="properties__toggle-row"><label data-i18n="data.chatHistory">Хранить историю чата</label><div class="md-switch is-on" id="chatHistorySwitch" role="switch" aria-checked="true"><div class="md-switch__thumb"></div></div></div>
+          <div class="md-field">
+            <label data-i18n="data.historyLimit">Лимит истории событий</label>
+            <div class="settings__port-row">
+              <input type="number" id="historyLimitInput" min="0" max="1000000" step="1000" />
+              <button class="md-button md-button--tonal" id="saveHistoryLimitBtn" data-i18n="settings.savePort">Сохранить</button>
+            </div>
+            <span class="md-field__hint" data-i18n="data.historyLimitHint">Сколько последних событий хранить. 0 — без ограничения.</span>
+          </div>
+          <div class="md-field">
+            <label data-i18n="data.clearScope">Очистить данные</label>
+            <div class="settings__port-row">
+              <select id="dataClearScope">
+                <option value="events" data-i18n="data.scopeEvents">История событий</option>
+                <option value="sessions" data-i18n="data.scopeSessions">Сессии</option>
+                <option value="chat" data-i18n="data.scopeChat">История чата</option>
+                <option value="all" data-i18n="data.scopeAll">Всё (события, сессии, чат)</option>
+              </select>
+              <button class="md-button md-button--outlined" id="dataClearBtn" data-i18n="data.clearBtn">Очистить</button>
+            </div>
+          </div>
+          <div class="settings__actions">
+            <button class="md-button md-button--tonal" id="openDataFolderBtn" data-i18n="data.openFolder">Открыть папку данных</button>
+          </div>
+          <div class="md-field">
+            <label data-i18n="data.resetTitle">Полный сброс</label>
+            <div class="settings__port-row">
+              <button class="md-button md-button--outlined" id="resetDbBtn" data-i18n="data.resetBtn">Сбросить базу данных</button>
+            </div>
+            <span class="md-field__hint" data-i18n="data.resetHint">Удаляет раскладку, пресеты, сессии и историю; приложение перезапустится.</span>
+          </div>
+          <div class="settings__hint" id="dataStatus" hidden></div>
         </div>
 
         <div class="settings__card md-card" id="settingsCardTwitch">
@@ -699,8 +776,10 @@
   <div class="widget-tooltip" id="widgetTooltip" role="tooltip" hidden></div>
 
   <script src="../shared/events.js"></script>
+  <script src="../shared/mic-frame.js"></script>
   <script src="../shared/i18n.js"></script>
   <script src="../shared/icons.js"></script>
+  <script src="../shared/hangar-cycle.js"></script>
   <script src="../shared/widget-catalog.js"></script>
   <script src="../shared/theme-engine.js"></script>
   <script src="../shared/themes.js"></script>

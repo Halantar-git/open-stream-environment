@@ -25,6 +25,18 @@ const { EventEmitter } = require("events");
 const { AppState } = require("./state");
 const { getUserMediaDir, getLogsDir } = require("./storage-paths");
 const { EVENT_TYPES, ALERT_DURATIONS_MS } = require("../shared/events");
+const MicFrame = require("../shared/mic-frame");
+
+// Роль WebSocket-клиента берётся из query строки подключения (?role=overlay).
+// Нужна, чтобы высокочастотные микрокадры не рассылались панели управления,
+// чату, remote и редакторам — они их всё равно игнорируют.
+const MIC_FRAME_ROLES = new Set(["overlay"]);
+
+function roleFromUrl(url, fallback = "other") {
+  const query = String(url || "").split("?")[1] || "";
+  const role = new URLSearchParams(query).get("role");
+  return role ? String(role) : fallback;
+}
 const { createLogger, enableFileLogging } = require("./logger");
 const { mountOAuthRoutes, buildTwitchAuthorizeUrl, buildDonationAlertsAuthorizeUrl, buildYoutubeAuthorizeUrl } = require("./oauth");
 const { startTwitchChat, sendTwitchChatMessage } = require("./integrations/twitch-chat");
@@ -36,6 +48,7 @@ const { startDonationAlerts } = require("./integrations/donationalerts");
 const { startYoutube } = require("./integrations/youtube-live");
 const { startObsWebSocket } = require("./integrations/obs-websocket");
 const { createCliHandler } = require("./cli");
+const { createLongshotSync } = require("./longshot-sync");
 const I18n = require("../shared/i18n");
 
 const LOCALES = {
@@ -113,8 +126,10 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
   let donationAlertsCtrl = null;
   let youtubeCtrl = null;
   let obsCtrl = null;
+  let longshotSync = null;
   let currentSession = null;
   let autoSpinTimer = null;
+  let wheelHideTimer = null;
   let isSpinning = false;
   let hudEditMode = false;
   let pendingVideoTarget = null; // { sceneName, splash } — advance after the splash ends
@@ -131,6 +146,16 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
     const message = JSON.stringify({ type, payload });
     wss.clients.forEach((client) => {
       if (client.readyState === 1) client.send(message);
+    });
+  }
+
+  // Микрокадры — только оверлеям (включая HUD и превью темы, они грузят тот же
+  // overlay.html), а не всем клиентам.
+  function broadcastMicFrame(buffer) {
+    wss.clients.forEach((client) => {
+      if (client.readyState === 1 && MIC_FRAME_ROLES.has(client.role)) {
+        client.send(buffer, { binary: true });
+      }
     });
   }
 
@@ -168,10 +193,28 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
     autoSpinTimer = null;
   }
 
+  function clearWheelHide() {
+    clearTimeout(wheelHideTimer);
+    wheelHideTimer = null;
+  }
+
+  // Скрывает колесо, когда цикл розыгрыша закончился. Обычный режим: после
+  // показа победителя (столько же, сколько висит карточка результата). В режиме
+  // на выбывание следующий спин запускает scheduleAutoSpin и сам скрывать не даёт.
+  function scheduleWheelHide(delayMs) {
+    clearWheelHide();
+    wheelHideTimer = setTimeout(() => {
+      wheelHideTimer = null;
+      if (isSpinning) return; // только что запустили новый спин — не скрываем
+      broadcast(EVENT_TYPES.GIVEAWAY_WHEEL, { sectors: [] });
+    }, Math.max(0, Number(delayMs) || 0));
+  }
+
   function scheduleAutoSpin() {
     clearAutoSpin();
     autoSpinTimer = setTimeout(() => {
       autoSpinTimer = null;
+      clearWheelHide(); // следующий спин покажет колесо заново
       if (isSpinning) return; // предыдущий цикл ещё не завершён
       // Re-sync the wheel sectors right before the next spin so the already
       // eliminated participant disappears from the barrel without yanking the
@@ -357,7 +400,8 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
     });
   });
 
-  wss.on("connection", (socket) => {
+  wss.on("connection", (socket, req) => {
+    socket.role = roleFromUrl(req && req.url);
     socket.send(JSON.stringify({ type: EVENT_TYPES.LOCALES, payload: { lang: language, locales: LOCALES } }));
     socket.send(JSON.stringify({ type: EVENT_TYPES.STATE, payload: stateSnapshot() }));
     if (db) {
@@ -367,7 +411,15 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
       socket.send(JSON.stringify({ type: EVENT_TYPES.OVERLAY_MIC_CONFIG, payload: { config: db.getMicConfig() } }));
     }
 
-    socket.on("message", (raw) => {
+    socket.on("message", (raw, isBinary) => {
+      // Микрокадры идут бинарно и пересылаются без JSON как есть: серверу не
+      // нужно парсить FFT-данные, чтобы их просто транслировать в оверлей.
+      if (MicFrame.isFrame(raw)) {
+        broadcastMicFrame(raw);
+        return;
+      }
+      if (isBinary) return; // неизвестный бинарный фрейм — игнорируем
+
       let msg;
       try {
         msg = JSON.parse(raw.toString());
@@ -453,6 +505,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
       }
       case "WHEEL_START": {
         clearAutoSpin();
+        clearWheelHide();
         isSpinning = false;
         const giveaway = state.startGiveaway(payload && payload.command);
         broadcastGiveaway(giveaway);
@@ -466,6 +519,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
         break;
       }
       case "WHEEL_SPIN": {
+        clearWheelHide();
         if (isSpinning) break;
         broadcast(EVENT_TYPES.GIVEAWAY_WHEEL, { sectors: state.giveawaySnapshot().participants });
         const winner = state.pickRandomWinner();
@@ -476,11 +530,13 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
         break;
       }
       case "WHEEL_GENERATE": {
+        clearWheelHide();
         broadcast(EVENT_TYPES.GIVEAWAY_WHEEL, { sectors: state.giveawaySnapshot().participants });
         break;
       }
       case "WHEEL_RESET_PARTICIPANTS": {
         clearAutoSpin();
+        clearWheelHide();
         isSpinning = false;
         broadcastGiveaway(state.clearGiveawayParticipants());
         broadcast(EVENT_TYPES.GIVEAWAY_WHEEL, { sectors: [] });
@@ -575,17 +631,25 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
       case EVENT_TYPES.CMD_ADD_WIDGET: {
         const instance = state.addWidget(msg.payload && msg.payload.type);
         if (instance) broadcast(EVENT_TYPES.LAYOUT_UPDATE, { layout: state.layout });
+        syncLongshotActivity();
         break;
       }
       case EVENT_TYPES.CMD_UPDATE_WIDGET: {
         const { id, patch } = msg.payload || {};
         const updated = state.updateWidget(id, patch || {});
         if (updated) broadcast(EVENT_TYPES.LAYOUT_UPDATE, { layout: state.layout });
+        // Правка visible может включить или выключить опрос Longshot.
+        syncLongshotActivity();
+        break;
+      }
+      case EVENT_TYPES.CMD_REFRESH_LONGSHOT: {
+        if (longshotSync) longshotSync.refresh();
         break;
       }
       case EVENT_TYPES.CMD_REMOVE_WIDGET: {
         const { id } = msg.payload || {};
         if (state.removeWidget(id)) broadcast(EVENT_TYPES.LAYOUT_UPDATE, { layout: state.layout });
+        syncLongshotActivity();
         break;
       }
       case EVENT_TYPES.CMD_REORDER_WIDGET: {
@@ -596,6 +660,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
       case EVENT_TYPES.CMD_SAVE_LAYOUT: {
         const layout = (msg.payload && msg.payload.layout) || state.layout;
         if (state.saveLayout(layout)) broadcast(EVENT_TYPES.LAYOUT_UPDATE, { layout: state.layout });
+        syncLongshotActivity();
         break;
       }
       case EVENT_TYPES.CMD_TOGGLE_HUD_EDIT_MODE: {
@@ -675,6 +740,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
           // clients to refresh the theme grid, library and overlay gating.
           broadcast(EVENT_TYPES.THEME_UPDATE, state.snapshot().appearance);
         }
+        syncLongshotActivity();
         break;
       }
       case EVENT_TYPES.CMD_DELETE_LAYOUT_PRESET: {
@@ -841,6 +907,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
       }
       case EVENT_TYPES.CMD_START_GIVEAWAY: {
         clearAutoSpin();
+        clearWheelHide();
         isSpinning = false;
         const giveaway = state.startGiveaway(msg.payload && msg.payload.command);
         broadcastGiveaway(giveaway);
@@ -865,10 +932,12 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
         break;
       }
       case EVENT_TYPES.CMD_GENERATE_WHEEL: {
+        clearWheelHide();
         broadcast(EVENT_TYPES.GIVEAWAY_WHEEL, { sectors: state.giveawaySnapshot().participants });
         break;
       }
       case EVENT_TYPES.CMD_SPIN_WHEEL: {
+        clearWheelHide();
         if (isSpinning) break; // вращение уже запущено
         broadcast(EVENT_TYPES.GIVEAWAY_WHEEL, { sectors: state.giveawaySnapshot().participants });
         const winner = state.pickRandomWinner();
@@ -898,6 +967,10 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
         if (isElimination) {
           alert.durationMs = 3000;
           scheduleAutoSpin();
+        } else if (shouldHideWheelAfterSpin(giveaway)) {
+          // Цикл закончен (обычный режим или финальный победитель): прячем
+          // колесо после того, как покажется карточка результата.
+          scheduleWheelHide(ALERT_DURATIONS_MS.wheel_winner || 8000);
         }
         bus.emit("alert", alert);
         break;
@@ -913,6 +986,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
       }
       case EVENT_TYPES.CMD_CLEAR_GIVEAWAY_PARTICIPANTS: {
         clearAutoSpin();
+        clearWheelHide();
         isSpinning = false;
         broadcastGiveaway(state.clearGiveawayParticipants());
         broadcast(EVENT_TYPES.GIVEAWAY_WHEEL, { sectors: [] });
@@ -1123,6 +1197,12 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
     broadcast(EVENT_TYPES.THEME_UPDATE, snap.appearance);
   }
 
+  // Ленивый опрос Longshot: включаем только пока в раскладке есть видимый таймер
+  // Executive Hangar. Вызывается после правок раскладки.
+  function syncLongshotActivity() {
+    if (longshotSync) longshotSync.setActive(state.hasTimerWidget());
+  }
+
   bus.on("alert", (alert) => {
     const withDuration = { durationMs: ALERT_DURATIONS_MS[alert.kind] || 5000, ...alert };
     broadcast(EVENT_TYPES.ALERT, withDuration);
@@ -1233,6 +1313,18 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
     restartYoutube();
     restartObs();
 
+    // Executive Hangar: тянем публичный конфиг Longshot и рассылаем анкер.
+    // Опрос ленивый — только пока в раскладке есть видимый таймер
+    // (см. syncLongshotActivity), так что лишний виджет не создаёт фоновый
+    // запрос каждые 5 минут.
+    longshotSync = createLongshotSync({
+      onUpdate: (snapshot) => {
+        state.setLongshot(snapshot);
+        broadcast(EVENT_TYPES.LONGSHOT_UPDATE, { longshot: snapshot });
+      },
+    });
+    syncLongshotActivity();
+
     if (db) {
       currentSession = db.startSession(state.config.twitch.channel);
     }
@@ -1312,12 +1404,15 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
     restartTwitchEvents();
     restartDonationAlerts();
     restartYoutube();
+    // Импорт мог принести раскладку с таймером (или убрать его).
+    syncLongshotActivity();
     broadcast(EVENT_TYPES.STATE, stateSnapshot());
   }
 
   function stop() {
     serverLog.info("stopping server");
     clearAutoSpin();
+    clearWheelHide();
     if (currentSession) {
       if (db) db.endSession(currentSession.id);
       currentSession = null;
@@ -1327,6 +1422,8 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
     if (twitchEventsCtrl) twitchEventsCtrl.stop();
     if (donationAlertsCtrl) donationAlertsCtrl.stop();
     if (youtubeCtrl) youtubeCtrl.stop();
+    if (longshotSync) longshotSync.stop();
+    longshotSync = null;
     wss.close();
     server.close();
   }
@@ -1409,6 +1506,17 @@ function eventTypeForKind(kind) {
   return kind || "unknown";
 }
 
+/*
+  Скрывать ли колесо после показа победителя. Цикл закончен, если это обычный
+  режим или финальный победитель в режиме на выбывание. В остальных случаях
+  следующий спин запускается автоматически, и колесо должно остаться на экране.
+*/
+function shouldHideWheelAfterSpin(giveaway) {
+  const g = giveaway || {};
+  const isElimination = !!g.eliminationMode && !g.isFinalWinner;
+  return !isElimination;
+}
+
 function toStreamEvent(alert, isTest) {
   return {
     timestamp: Date.now(),
@@ -1424,7 +1532,7 @@ function toStreamEvent(alert, isTest) {
   };
 }
 
-module.exports = { createServer, buildTestAlert, eventTypeForKind, toStreamEvent };
+module.exports = { createServer, buildTestAlert, eventTypeForKind, toStreamEvent, roleFromUrl, shouldHideWheelAfterSpin };
 
 // `npm run server:only` runs the bus without Electron — handy for iterating
 // on overlay/editor visuals in a normal browser tab.

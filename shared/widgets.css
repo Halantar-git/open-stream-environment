@@ -451,6 +451,137 @@
   border-radius: var(--panel-radius);
 }
 
+/* ---------- Grim HEX timer (Executive Hangar cycle) ---------- */
+.exec-timer {
+  --gh-lit: #3dff8b; /* зажжённый свет / зелёная фаза (семантический, переопределяемый) */
+  --gh-red: var(--md-tertiary);
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: var(--panel-bg, var(--md-surface-container));
+  backdrop-filter: blur(var(--panel-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--panel-blur, 0px));
+  border: var(--panel-border, 1px solid var(--md-outline-variant));
+  border-radius: var(--panel-radius);
+  clip-path: var(--panel-clip, none);
+  box-shadow: var(--elev-2), var(--panel-glow, 0 0 0 rgba(0, 0, 0, 0));
+}
+.exec-timer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.exec-timer__title {
+  font-family: var(--font-body);
+  font-size: clamp(9px, 3.4cqw, 13px);
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--md-on-surface-variant);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.exec-timer__phase {
+  flex-shrink: 0;
+  font-family: var(--font-body);
+  font-size: clamp(8px, 2.6cqw, 10px);
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border: 1px solid currentColor;
+  color: var(--md-on-surface-variant);
+}
+.exec-timer__digits {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: clamp(22px, 15cqw, 64px);
+  line-height: 1;
+  letter-spacing: 1px;
+  color: var(--md-primary);
+  text-shadow: 0 0 14px color-mix(in srgb, var(--md-primary) 45%, transparent);
+}
+.exec-timer__lights {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.exec-timer__light {
+  width: clamp(10px, 4.5cqw, 18px);
+  aspect-ratio: 1;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid var(--md-outline-variant);
+  background: transparent;
+}
+.exec-timer__light[data-state="red"] {
+  border-color: var(--gh-red);
+  background: var(--gh-red);
+  box-shadow: 0 0 10px var(--gh-red);
+}
+.exec-timer__light[data-state="green"] {
+  border-color: var(--gh-lit);
+  background: var(--gh-lit);
+  box-shadow: 0 0 10px var(--gh-lit);
+}
+.exec-timer__light[data-state="off"] {
+  opacity: 0.7;
+}
+.exec-timer__cycle,
+.exec-timer__telemetry {
+  font-family: var(--font-body);
+  font-size: clamp(9px, 3cqw, 12px);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.exec-timer__cycle { color: var(--md-on-surface-variant); }
+.exec-timer__telemetry { color: var(--md-secondary); }
+.exec-timer__note {
+  font-family: var(--font-body);
+  font-size: clamp(8px, 2.6cqw, 11px);
+  letter-spacing: 0.4px;
+  color: var(--md-on-surface-variant);
+  opacity: 0.75;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.exec-timer__off {
+  font-family: var(--font-mono);
+  font-size: clamp(14px, 7cqw, 30px);
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--md-error);
+  opacity: 0.9;
+}
+/* Phase accents */
+.exec-timer[data-phase="red"] .exec-timer__phase { color: var(--gh-red); }
+.exec-timer[data-phase="green"] .exec-timer__phase { color: var(--gh-lit); }
+.exec-timer[data-phase="red"] .exec-timer__digits {
+  color: var(--gh-red);
+  text-shadow: 0 0 16px color-mix(in srgb, var(--gh-red) 50%, transparent);
+}
+.exec-timer[data-phase="green"] .exec-timer__digits {
+  color: var(--gh-lit);
+  text-shadow: 0 0 16px color-mix(in srgb, var(--gh-lit) 50%, transparent);
+}
+.exec-timer[data-phase="black"] .exec-timer__digits {
+  color: var(--md-on-surface-variant);
+  text-shadow: none;
+}
+
 /* ---------- HUD-style theme decoration ----------
    Toggled by JS via a `data-decoration` attribute on the overlay body or
    the editor's #canvas (values: none | brackets2 | brackets4) — driven by
@@ -466,6 +597,7 @@
 [data-decoration="brackets2"] .grimhex-holo-alert-surface,
 [data-decoration="brackets2"] .widget-stat,
 [data-decoration="brackets2"] .widget-social,
+[data-decoration="brackets2"] .exec-timer,
 [data-decoration="brackets4"] .widget-alert,
 [data-decoration="brackets4"] .widget-goal,
 [data-decoration="brackets4"] .widget-recent,
@@ -475,6 +607,7 @@
 [data-decoration="brackets4"] .grimhex-holo-alert-surface,
 [data-decoration="brackets4"] .widget-stat,
 [data-decoration="brackets4"] .widget-social,
+[data-decoration="brackets4"] .exec-timer,
 [data-decoration="brackets4"] .elite-surface {
   position: relative;
   background-image: repeating-linear-gradient(
@@ -496,6 +629,7 @@
 [data-decoration="brackets2"] .grimhex-holo-alert-surface::before,
 [data-decoration="brackets2"] .widget-stat::before,
 [data-decoration="brackets2"] .widget-social::before,
+[data-decoration="brackets2"] .exec-timer::before,
 [data-decoration="brackets2"] .widget-alert::after,
 [data-decoration="brackets2"] .widget-goal::after,
 [data-decoration="brackets2"] .widget-recent::after,
@@ -504,7 +638,8 @@
 [data-decoration="brackets2"] .grimhex-chat-surface::after,
 [data-decoration="brackets2"] .grimhex-holo-alert-surface::after,
 [data-decoration="brackets2"] .widget-stat::after,
-[data-decoration="brackets2"] .widget-social::after {
+[data-decoration="brackets2"] .widget-social::after,
+[data-decoration="brackets2"] .exec-timer::after {
   content: "";
   position: absolute;
   width: 16px;
@@ -520,7 +655,8 @@
 [data-decoration="brackets2"] .grimhex-chat-surface::before,
 [data-decoration="brackets2"] .grimhex-holo-alert-surface::before,
 [data-decoration="brackets2"] .widget-stat::before,
-[data-decoration="brackets2"] .widget-social::before {
+[data-decoration="brackets2"] .widget-social::before,
+[data-decoration="brackets2"] .exec-timer::before {
   top: -1px;
   left: -1px;
   border-top: 2px solid var(--md-primary);
@@ -534,7 +670,8 @@
 [data-decoration="brackets2"] .grimhex-chat-surface::after,
 [data-decoration="brackets2"] .grimhex-holo-alert-surface::after,
 [data-decoration="brackets2"] .widget-stat::after,
-[data-decoration="brackets2"] .widget-social::after {
+[data-decoration="brackets2"] .widget-social::after,
+[data-decoration="brackets2"] .exec-timer::after {
   bottom: -1px;
   right: -1px;
   border-bottom: 2px solid var(--md-primary);
@@ -553,6 +690,7 @@
 [data-decoration="brackets4"] .grimhex-holo-alert-surface::before,
 [data-decoration="brackets4"] .widget-stat::before,
 [data-decoration="brackets4"] .widget-social::before,
+[data-decoration="brackets4"] .exec-timer::before,
 [data-decoration="brackets4"] .elite-surface::before {
   content: "";
   position: absolute;

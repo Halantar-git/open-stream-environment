@@ -31,6 +31,10 @@
 
 import { el } from "./dom.js";
 
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
 export function initPropertiesPanel({
   state,
   t,
@@ -43,8 +47,8 @@ export function initPropertiesPanel({
   wireSwitch,
   escapeAttr,
   round1,
-  sendParticipantsConfig,
-  sendMicConfig,
+  sendMicCaptureConfig,
+  refreshMicDevices,
 }) {
   const propertiesSection = el("propertiesSection");
   const propertiesTitle = el("propertiesTitle");
@@ -143,10 +147,17 @@ export function initPropertiesPanel({
     }
   }
 
-  function render() {
+  let lastSig = null;
+
+  function invalidate() {
+    lastSig = null;
+  }
+
+  function render(force) {
     const raw = state.layout.find((w) => w.id === state.selectedId);
     if (!raw) {
       propertiesSection.hidden = true;
+      lastSig = null;
       return;
     }
     propertiesSection.hidden = false;
@@ -155,9 +166,19 @@ export function initPropertiesPanel({
     // shows its perspective slider). id/config/geometry stay the raw widget's,
     // so edits still target the right item.
     const type = resolveTypeForTheme
-      ? resolveTypeForTheme(raw.type, state.appearance.activeThemeId3d, state.appearance.enabled3d)
+      ? resolveTypeForTheme(raw.type, state.appearance.active3dWidgets || [])
       : raw.type;
     const inst = { ...raw, type };
+    // Полная перерисовка нужна только при смене виджета/набора полей (например,
+    // режима визуализатора). Иначе обновление значения (слайдер/цвет) не должно
+    // пересоздавать элемент под курсором и ломать перетаскивание.
+    const micMode =
+      type === "mic"
+        ? (raw.config && raw.config.visualizer_mode) || (state.micConfig && state.micConfig.visualizer_mode) || ""
+        : "";
+    const sig = `${raw.id}|${raw.type}|${type}|${micMode}|${(state.micDevices || []).length}`;
+    if (!force && sig === lastSig && propertiesEl.contains(document.activeElement)) return;
+    lastSig = sig;
     const def = WIDGET_TYPES[type] || {};
     propertiesTitle.textContent = t("widgets." + (def.type || type));
     const config = inst.config || {};
@@ -210,19 +231,105 @@ export function initPropertiesPanel({
           <div class="scene-socials-list" id="pSocialsList"></div>
           <button class="md-button md-button--text" id="pAddSocial" style="align-self:flex-start;margin-top:4px;">+ ${t("properties.addSocial")}</button>
         </div>`;
-    } else if (inst.type === "participants") {
+    } else if (inst.type === "grimhex-timer" || inst.type === "timer") {
+      // Источник всегда Longshot: заголовок фиксирован, редактируемых заметки и
+      // источника нет — только статус синхронизации и переключатели отображения.
+      const ls = state.longshot || null;
+      // Скрытый виджет не держит опрос Longshot — говорим об этом прямо,
+      // иначе подсказка «ещё нет данных» выглядела бы как поломка.
+      const lsStatus =
+        raw.visible === false
+          ? t("properties.timerRemoteHidden")
+          : !ls
+            ? t("properties.timerRemotePending")
+            : ls.ok
+              ? t("properties.timerRemoteOk")
+              : t("properties.timerRemoteError", { error: ls.error || "—" });
       extraHtml = `
-        <div class="properties__row">
-          <div class="md-field"><label>${t("properties.showNames")}</label><input type="number" id="pPwMaxNames" min="1" max="200" value="${state.participantsConfig.maxNames ?? 10}"></div>
-          <div class="md-field"><label>${t("properties.fontSize")}</label><input type="number" id="pPwFontSize" min="10" max="48" value="${state.participantsConfig.fontSize ?? 16}"></div>
-        </div>
-        <div class="md-field"><label>${t("properties.textColor")}</label><input type="color" id="pPwTextColor" value="${escapeAttr(state.participantsConfig.textColor || "#e8e1f0")}"></div>
-        <div class="md-field"><label>${t("properties.backgroundOpacity")}: <span id="pPwBgOpacityValue">${state.participantsConfig.backgroundOpacity ?? 82}%</span></label><input type="range" id="pPwBgOpacity" min="0" max="100" value="${state.participantsConfig.backgroundOpacity ?? 82}"></div>
-        <div class="properties__toggle-row"><label>${t("properties.marquee")}</label>${switchHtml("pPwMarquee", !!state.participantsConfig.marquee)}</div>`;
+        <div class="properties__hint">${escapeHtml(lsStatus)}</div>
+        <button class="md-button md-button--tonal" id="pTimerRefresh">${t("properties.timerRefresh")}</button>
+        <div class="properties__toggle-row"><label>${t("properties.timerShowLights")}</label>${switchHtml("pTimerShowLights", config.showLights !== false)}</div>
+        <div class="properties__toggle-row"><label>${t("properties.timerShowCycle")}</label>${switchHtml("pTimerShowCycle", config.showCycle !== false)}</div>
+        <div class="properties__toggle-row"><label>${t("properties.timerShowTelemetry")}</label>${switchHtml("pTimerShowTelemetry", config.showTelemetry !== false)}</div>`;
     } else if (inst.type === "mic") {
-      const mode = state.micConfig.visualizer_mode || "sine";
+      // Настройки отображения — на самом виджете (fallback на глобальные).
+      const micDef = (key, fallback) => {
+        const own = config[key];
+        if (own !== undefined && own !== null && own !== "") return own;
+        const g = state.micConfig[key];
+        if (g !== undefined && g !== null && g !== "") return g;
+        return fallback;
+      };
+      const mode = micDef("visualizer_mode", "sine");
       const themePrimary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#0060A8";
       const micColor = config.color || state.micConfig.color || themePrimary;
+      const deviceId = state.micConfig.deviceId || "";
+      const devices = Array.isArray(state.micDevices) ? state.micDevices : [];
+      const deviceOptions = [
+        `<option value="" ${deviceId ? "" : "selected"}>${t("mic.deviceDefault")}</option>`,
+        ...devices.map(
+          (d) => `<option value="${escapeAttr(d.deviceId)}" ${deviceId === d.deviceId ? "selected" : ""}>${escapeHtml(d.label)}</option>`
+        ),
+      ].join("");
+      const num = (key, fb) => {
+        const n = Number(micDef(key, fb));
+        return Number.isFinite(n) ? n : fb;
+      };
+
+      // Настройки зависят от типа отображения — показываем только релевантные.
+      let fields = "";
+      if (mode === "sine") {
+        fields += `<div class="md-field"><label>${t("mic.sensitivity")}: <span id="pMicSensitivityValue">${num("sensitivity", 1.5)}</span></label><input type="range" id="pMicSensitivity" min="0.2" max="6" step="0.1" value="${num("sensitivity", 1.5)}"></div>`;
+      }
+      if (mode === "sine" || mode === "ring") {
+        fields += `<div class="md-field"><label>${t("mic.lineWidth")}: <span id="pMicLineWidthValue">${num("lineWidth", 2)}</span></label><input type="range" id="pMicLineWidth" min="1" max="12" step="0.5" value="${num("lineWidth", 2)}"></div>`;
+      }
+      if (mode === "bars" || mode === "ring" || mode === "equalizer") {
+        fields += `<div class="md-field"><label>${t("mic.barCount")}: <span id="pMicBarCountValue">${num("barCount", 32)}</span></label><input type="range" id="pMicBarCount" min="10" max="64" step="1" value="${num("barCount", 32)}"></div>`;
+      }
+      if (mode === "bars" || mode === "equalizer") {
+        fields += `<div class="md-field"><label>${t("mic.barGap")}: <span id="pMicBarGapValue">${num("barGap", 2)}</span></label><input type="range" id="pMicBarGap" min="0" max="12" step="0.5" value="${num("barGap", 2)}"></div>`;
+      }
+      if (mode === "equalizer") {
+        fields += `<div class="md-field"><label>${t("mic.peakFall")}: <span id="pMicPeakFallValue">${num("peakFall", 2.5)}</span></label><input type="range" id="pMicPeakFall" min="0.5" max="10" step="0.1" value="${num("peakFall", 2.5)}"></div>
+          <p class="properties__hint" style="margin:0;">${t("mic.equalizerPalette")}</p>`;
+      }
+      if (mode !== "sine") {
+        const scale = micDef("freqScale", "log") === "linear" ? "linear" : "log";
+        fields += `<div class="md-field"><label>${t("mic.freqScale")}</label>
+          <select id="pMicFreqScale">
+            <option value="log" ${scale === "log" ? "selected" : ""}>${t("mic.freqScaleLog")}</option>
+            <option value="linear" ${scale === "linear" ? "selected" : ""}>${t("mic.freqScaleLinear")}</option>
+          </select></div>`;
+        fields += `<div class="md-field"><label>${t("mic.smoothing")}: <span id="pMicSmoothingValue">${Math.round(num("smoothing", 0.35) * 100)}%</span></label><input type="range" id="pMicSmoothing" min="0" max="1" step="0.05" value="${num("smoothing", 0.35)}"></div>`;
+      }
+      fields += `<div class="md-field"><label>${t("mic.gain")}: <span id="pMicGainValue">${num("gain", 1).toFixed(1)}×</span></label><input type="range" id="pMicGain" min="0.1" max="5" step="0.1" value="${num("gain", 1)}"></div>`;
+      fields += `<div class="md-field"><label>${t("mic.noiseGate")}: <span id="pMicNoiseGateValue">${Math.round(num("noiseGate", 0) * 100)}%</span></label><input type="range" id="pMicNoiseGate" min="0" max="0.5" step="0.01" value="${num("noiseGate", 0)}"></div>`;
+      if (mode !== "equalizer") {
+        fields += `<div class="md-field"><label>${t("mic.color")}</label>
+          <div class="properties__color-row">
+            <input type="color" id="pMicColor" value="${escapeAttr(micColor)}">
+            <button class="md-button md-button--text" id="pMicColorReset" title="${t("mic.colorAuto")}">${t("mic.colorAuto")}</button>
+          </div>
+        </div>`;
+      }
+      fields += `<div class="md-field"><label>${t("mic.opacity")}: <span id="pMicOpacityValue">${Math.round(num("opacity", 0.9) * 100)}%</span></label><input type="range" id="pMicOpacity" min="5" max="100" step="1" value="${Math.round(num("opacity", 0.9) * 100)}"></div>`;
+
+      const captureHtml = `
+        <p class="properties__hint" style="font-weight:600;margin:8px 0 0;">${t("mic.capture")}</p>
+        <div class="md-field"><label>${t("mic.device")}</label>
+          <div class="properties__row">
+            <select id="pMicDevice">${deviceOptions}</select>
+            <button class="md-button md-button--text" id="pMicDeviceRefresh" title="${t("mic.deviceRefresh")}">↻</button>
+          </div>
+        </div>
+        <div class="properties__toggle-row"><label>${t("mic.echoCancellation")}</label>${switchHtml("pMicEcho", state.micConfig.echoCancellation !== false)}</div>
+        <div class="properties__toggle-row"><label>${t("mic.noiseSuppression")}</label>${switchHtml("pMicNoise", state.micConfig.noiseSuppression !== false)}</div>
+        <div class="properties__toggle-row"><label>${t("mic.autoGainControl")}</label>${switchHtml("pMicAgc", state.micConfig.autoGainControl !== false)}</div>
+        <div class="md-field"><label>${t("mic.level")}: <span id="pMicLevelValue">0%</span></label>
+          <div class="properties__level"><div class="properties__level-fill" id="pMicLevelBar"></div></div>
+        </div>`;
+
       extraHtml = `
         <div class="md-field"><label>${t("mic.mode")}</label>
           <select id="pMicMode">
@@ -232,18 +339,8 @@ export function initPropertiesPanel({
             <option value="equalizer" ${mode === "equalizer" ? "selected" : ""}>${t("mic.modeEqualizer")}</option>
           </select>
         </div>
-        <div class="md-field"><label>${t("mic.sensitivity")}: <span id="pMicSensitivityValue">${state.micConfig.sensitivity ?? 1.5}</span></label><input type="range" id="pMicSensitivity" min="0.2" max="6" step="0.1" value="${state.micConfig.sensitivity ?? 1.5}"></div>
-        <div class="md-field"><label>${t("mic.lineWidth")}: <span id="pMicLineWidthValue">${state.micConfig.lineWidth ?? 2}</span></label><input type="range" id="pMicLineWidth" min="1" max="12" step="0.5" value="${state.micConfig.lineWidth ?? 2}"></div>
-        <div class="md-field"><label>${t("mic.barCount")}: <span id="pMicBarCountValue">${state.micConfig.barCount ?? 32}</span></label><input type="range" id="pMicBarCount" min="10" max="64" step="1" value="${state.micConfig.barCount ?? 32}"></div>
-        <div class="md-field"><label>${t("mic.barGap")}: <span id="pMicBarGapValue">${state.micConfig.barGap ?? 2}</span></label><input type="range" id="pMicBarGap" min="0" max="12" step="0.5" value="${state.micConfig.barGap ?? 2}"></div>
-        <div class="md-field"><label>${t("mic.peakFall")}: <span id="pMicPeakFallValue">${state.micConfig.peakFall ?? 2.5}</span></label><input type="range" id="pMicPeakFall" min="0.5" max="10" step="0.1" value="${state.micConfig.peakFall ?? 2.5}"></div>
-        <div class="md-field"><label>${t("mic.color")}</label>
-          <div class="properties__color-row">
-            <input type="color" id="pMicColor" value="${escapeAttr(micColor)}">
-            <button class="md-button md-button--text" id="pMicColorReset" title="${t("mic.colorAuto")}">${t("mic.colorAuto")}</button>
-          </div>
-        </div>
-        <div class="md-field"><label>${t("mic.opacity")}: <span id="pMicOpacityValue">${Math.round((state.micConfig.opacity ?? 0.9) * 100)}%</span></label><input type="range" id="pMicOpacity" min="5" max="100" step="1" value="${Math.round((state.micConfig.opacity ?? 0.9) * 100)}"></div>`;
+        ${fields}
+        ${captureHtml}`;
     } else if (inst.type === "death") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.deathLabel")}</label><input type="text" id="pDeathLabel" value="${escapeAttr(config.label || "")}"></div>
@@ -334,57 +431,50 @@ export function initPropertiesPanel({
       propertiesEl.querySelector("#pAddSocial").addEventListener("click", () => {
         send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { socials: [...(config.socials || []), { platform: "", text: "" }] } } });
       });
-    } else if (inst.type === "participants") {
-      propertiesEl.querySelector("#pPwMaxNames").addEventListener("change", (e) => sendParticipantsConfig({ maxNames: Number(e.target.value) || 10 }));
-      propertiesEl.querySelector("#pPwFontSize").addEventListener("change", (e) => sendParticipantsConfig({ fontSize: Number(e.target.value) || 16 }));
-      propertiesEl.querySelector("#pPwTextColor").addEventListener("input", (e) => sendParticipantsConfig({ textColor: e.target.value }));
-      propertiesEl.querySelector("#pPwBgOpacity").addEventListener("input", (e) => {
-        const v = Number(e.target.value);
-        const label = propertiesEl.querySelector("#pPwBgOpacityValue");
-        if (label) label.textContent = `${v}%`;
-        sendParticipantsConfig({ backgroundOpacity: v });
-      });
-      wireSwitch(propertiesEl.querySelector("#pPwMarquee"), (on) => sendParticipantsConfig({ marquee: on }));
+    } else if (inst.type === "grimhex-timer" || inst.type === "timer") {
+      const patchTimer = (configPatch) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: configPatch } });
+      wireSwitch(propertiesEl.querySelector("#pTimerShowLights"), (on) => patchTimer({ showLights: on }));
+      wireSwitch(propertiesEl.querySelector("#pTimerShowCycle"), (on) => patchTimer({ showCycle: on }));
+      wireSwitch(propertiesEl.querySelector("#pTimerShowTelemetry"), (on) => patchTimer({ showTelemetry: on }));
+      const refreshBtn = propertiesEl.querySelector("#pTimerRefresh");
+      if (refreshBtn) refreshBtn.addEventListener("click", () => send(EVENT_TYPES.CMD_REFRESH_LONGSHOT, {}));
     } else if (inst.type === "mic") {
-      propertiesEl.querySelector("#pMicSensitivity").addEventListener("input", (e) => {
-        const v = Number(e.target.value);
-        const label = propertiesEl.querySelector("#pMicSensitivityValue");
-        if (label) label.textContent = v.toFixed(1);
-        sendMicConfig({ sensitivity: v });
-      });
-      propertiesEl.querySelector("#pMicLineWidth").addEventListener("input", (e) => {
-        const v = Number(e.target.value);
-        const label = propertiesEl.querySelector("#pMicLineWidthValue");
-        if (label) label.textContent = v.toFixed(1);
-        sendMicConfig({ lineWidth: v });
-      });
-      propertiesEl.querySelector("#pMicColor").addEventListener("input", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { color: e.target.value } } }));
-      propertiesEl.querySelector("#pMicColorReset").addEventListener("click", () => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { color: "" } } }));
-      propertiesEl.querySelector("#pMicOpacity").addEventListener("input", (e) => {
-        const v = Number(e.target.value);
-        const label = propertiesEl.querySelector("#pMicOpacityValue");
-        if (label) label.textContent = `${v}%`;
-        sendMicConfig({ opacity: v / 100 });
-      });
-      propertiesEl.querySelector("#pMicMode").addEventListener("change", (e) => sendMicConfig({ visualizer_mode: e.target.value }));
-      propertiesEl.querySelector("#pMicBarCount").addEventListener("input", (e) => {
-        const v = Math.round(Number(e.target.value));
-        const label = propertiesEl.querySelector("#pMicBarCountValue");
-        if (label) label.textContent = String(v);
-        sendMicConfig({ barCount: v });
-      });
-      propertiesEl.querySelector("#pMicBarGap").addEventListener("input", (e) => {
-        const v = Number(e.target.value);
-        const label = propertiesEl.querySelector("#pMicBarGapValue");
-        if (label) label.textContent = v.toFixed(1);
-        sendMicConfig({ barGap: v });
-      });
-      propertiesEl.querySelector("#pMicPeakFall").addEventListener("input", (e) => {
-        const v = Number(e.target.value);
-        const label = propertiesEl.querySelector("#pMicPeakFallValue");
-        if (label) label.textContent = v.toFixed(1);
-        sendMicConfig({ peakFall: v });
-      });
+      // Настройки отображения пишем в конфиг виджета (per-widget).
+      const setMic = (key, value) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { [key]: value } } });
+      const onMicRange = (id, labelId, fmt, apply) => {
+        const input = propertiesEl.querySelector("#" + id);
+        if (!input) return;
+        input.addEventListener("input", (e) => {
+          const v = Number(e.target.value);
+          const label = propertiesEl.querySelector("#" + labelId);
+          if (label) label.textContent = fmt(v);
+          apply(v);
+        });
+      };
+      const modeEl = propertiesEl.querySelector("#pMicMode");
+      if (modeEl) modeEl.addEventListener("change", (e) => setMic("visualizer_mode", e.target.value));
+      onMicRange("pMicSensitivity", "pMicSensitivityValue", (v) => v.toFixed(1), (v) => setMic("sensitivity", v));
+      onMicRange("pMicLineWidth", "pMicLineWidthValue", (v) => v.toFixed(1), (v) => setMic("lineWidth", v));
+      onMicRange("pMicBarCount", "pMicBarCountValue", (v) => String(Math.round(v)), (v) => setMic("barCount", Math.round(v)));
+      onMicRange("pMicBarGap", "pMicBarGapValue", (v) => v.toFixed(1), (v) => setMic("barGap", v));
+      onMicRange("pMicPeakFall", "pMicPeakFallValue", (v) => v.toFixed(1), (v) => setMic("peakFall", v));
+      onMicRange("pMicSmoothing", "pMicSmoothingValue", (v) => `${Math.round(v * 100)}%`, (v) => setMic("smoothing", v));
+      onMicRange("pMicGain", "pMicGainValue", (v) => `${v.toFixed(1)}×`, (v) => setMic("gain", v));
+      onMicRange("pMicNoiseGate", "pMicNoiseGateValue", (v) => `${Math.round(v * 100)}%`, (v) => setMic("noiseGate", v));
+      onMicRange("pMicOpacity", "pMicOpacityValue", (v) => `${Math.round(v)}%`, (v) => setMic("opacity", v / 100));
+      const micScaleEl = propertiesEl.querySelector("#pMicFreqScale");
+      if (micScaleEl) micScaleEl.addEventListener("change", (e) => setMic("freqScale", e.target.value));
+      const micColorEl = propertiesEl.querySelector("#pMicColor");
+      if (micColorEl) micColorEl.addEventListener("input", (e) => setMic("color", e.target.value));
+      const micColorResetEl = propertiesEl.querySelector("#pMicColorReset");
+      if (micColorResetEl) micColorResetEl.addEventListener("click", () => setMic("color", ""));
+      const micDeviceEl = propertiesEl.querySelector("#pMicDevice");
+      if (micDeviceEl) micDeviceEl.addEventListener("change", (e) => sendMicCaptureConfig({ deviceId: e.target.value }));
+      const micDeviceRefreshEl = propertiesEl.querySelector("#pMicDeviceRefresh");
+      if (micDeviceRefreshEl && typeof refreshMicDevices === "function") micDeviceRefreshEl.addEventListener("click", () => refreshMicDevices());
+      wireSwitch(propertiesEl.querySelector("#pMicEcho"), (on) => sendMicCaptureConfig({ echoCancellation: on }));
+      wireSwitch(propertiesEl.querySelector("#pMicNoise"), (on) => sendMicCaptureConfig({ noiseSuppression: on }));
+      wireSwitch(propertiesEl.querySelector("#pMicAgc"), (on) => sendMicCaptureConfig({ autoGainControl: on }));
     } else if (inst.type === "death") {
       propertiesEl.querySelector("#pDeathLabel").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { label: e.target.value } } }));
       propertiesEl.querySelector("#pDeathColor").addEventListener("input", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { color: e.target.value } } }));
@@ -413,5 +503,5 @@ export function initPropertiesPanel({
     });
   }
 
-  return { render };
+  return { render, invalidate };
 }

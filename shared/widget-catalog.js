@@ -23,6 +23,15 @@
   control/control.js (library rail + resize clamping).
 */
 (function (root) {
+  // Общие настройки таймера Executive Hangar — используются 2D- и 3D-вариантом.
+  // Заголовок фиксирован, источник всегда Longshot — в панели остаются только
+  // переключатели отображения.
+  const EXEC_TIMER_DEFAULT_CONFIG = {
+    showLights: true,
+    showCycle: true,
+    showTelemetry: true,
+  };
+
   const WIDGET_TYPES = {
     alerts: {
       type: "alerts",
@@ -119,15 +128,29 @@
         ],
       },
     },
-    participants: {
-      type: "participants",
-      label: "Участники розыгрыша",
-      description: "Список зрителей на оверлее",
-      icon: "widgetParticipants",
-      defaultGeometry: { x: 70, y: 55, w: 26, h: 38 },
-      minW: 12,
-      minH: 8,
-      defaultConfig: {},
+    timer: {
+      type: "timer",
+      label: "Таймер Executive Hangar",
+      description: "Executive Hangar: фазы, огни и обратный отсчёт (темы Orbital и свои)",
+      icon: "widgetTimer",
+      themes: ["orbital", "custom"],
+      defaultGeometry: { x: 36, y: 8, w: 28, h: 18 },
+      minW: 16,
+      minH: 10,
+      defaultConfig: { ...EXEC_TIMER_DEFAULT_CONFIG },
+    },
+    "grimhex-timer": {
+      type: "grimhex-timer",
+      label: "Таймер Grim HEX",
+      description: "Executive Hangar: фазы, огни и обратный отсчёт (только для темы Grim HEX)",
+      icon: "widgetTimer",
+      dimension: "3d",
+      theme: "grimhex",
+      renderType: "2d",
+      defaultGeometry: { x: 36, y: 6, w: 28, h: 20 },
+      minW: 16,
+      minH: 10,
+      defaultConfig: { ...EXEC_TIMER_DEFAULT_CONFIG },
     },
     mic: {
       type: "mic",
@@ -565,6 +588,21 @@
     return Object.values(WIDGET_TYPES).filter((d) => d.dimension === "3d" && d.theme === themeId);
   }
 
+  // 2D widget ↔ theme binding. `def.themes` lists the theme ids a widget belongs
+  // to plus the special token "custom" for any user-created theme; a widget
+  // without `themes` is available everywhere (the default). `appearance` is the
+  // server snapshot shape `{ activeThemeId, themes: [{ id, builtin, ... }] }`.
+  function themeAllowsWidget(def, appearance) {
+    if (!def || !Array.isArray(def.themes) || !def.themes.length) return true;
+    const a = appearance || {};
+    const themeId = a.activeThemeId || "";
+    const list = Array.isArray(a.themes) ? a.themes : [];
+    const active = list.find((x) => x && x.id === themeId);
+    const isCustom = !!active && !active.builtin;
+    if (isCustom && def.themes.includes("custom")) return true;
+    return !!themeId && def.themes.includes(themeId);
+  }
+
   // A 3D widget "replaces" its 2D counterpart when the theme's 3D is active:
   // any "*-chat" replaces the 2D "chat", "*-goal" replaces "goal", and
   // "*-holo-alert" replaces "alerts". Sign/radar/shield/orb/cube widgets are
@@ -574,6 +612,7 @@
     if (widgetType.endsWith("-chat")) return "chat";
     if (widgetType.endsWith("-goal")) return "goal";
     if (widgetType.endsWith("-holo-alert")) return "alerts";
+    if (widgetType.endsWith("-timer")) return "timer";
     return null;
   }
 
@@ -584,11 +623,20 @@
   // another. Widgets without a role are strictly theme-bound (additive).
   function widgetRole(widgetType) {
     if (!widgetType) return null;
-    if (widgetType === "chat" || widgetType === "goal" || widgetType === "alerts") return widgetType;
+    if (widgetType === "chat" || widgetType === "goal" || widgetType === "alerts" || widgetType === "timer") return widgetType;
     const r3d = replacedBy3d(widgetType);
     if (r3d) return r3d;
     const def = WIDGET_TYPES[widgetType];
     return (def && def.role) || null;
+  }
+
+  // The type that stands in for a role among an explicit set of enabled 3D
+  // widget types. Returns null when the set has zero or several candidates
+  // (ambiguous) — callers then leave the widget as-is instead of remapping.
+  function counterpartTypeForRole(role, types) {
+    if (!role || !Array.isArray(types)) return null;
+    const matches = types.filter((t) => widgetRole(t) === role);
+    return matches.length === 1 ? matches[0] : null;
   }
 
   // The type a widget renders as under the active theme. Role widgets
@@ -596,9 +644,17 @@
   // 3D variant's enabled counterpart; everything else keeps its own type. Used
   // by both the editor preview and the properties panel so the UI mirrors the
   // overlay's transform().
-  function resolveTypeForTheme(widgetType, variantId, enabled3d) {
+  //
+  // `variantIdOrSet` accepts either a single 3D variant id (legacy built-in
+  // path, with `enabled3d` disabling individual фишки) or an explicit array of
+  // enabled 3D widget types (custom themes — arbitrary widget combinations).
+  function resolveTypeForTheme(widgetType, variantIdOrSet, enabled3d) {
     const role = widgetRole(widgetType);
     if (!role) return widgetType;
+    if (Array.isArray(variantIdOrSet)) {
+      return counterpartTypeForRole(role, variantIdOrSet) || widgetType;
+    }
+    const variantId = variantIdOrSet;
     if (!variantId) return widgetType; // 3D off
     const counterpart = widgetsForTheme(variantId).find((w) => widgetRole(w.type) === role);
     if (!counterpart) return widgetType;
@@ -606,7 +662,39 @@
     return counterpart.type;
   }
 
-  const api = { WIDGET_TYPES, CANVAS, widgetsForTheme, replacedBy3d, widgetRole, resolveTypeForTheme };
+  // Типы, которые держат собственный canvas-цикл (`requestAnimationFrame`,
+  // 20–30 FPS) и потому реально грузят GPU/CPU. Источник истины — виджеты,
+  // вызывающие `startRenderLoop()` или переопределяющие `_isAnimated()`,
+  // плюс микровизатор со своим rAF. Используется для диагностики «бюджета
+  // сцены» в редакторе: держать одновременно стоит 2–3 таких виджета.
+  const ANIMATED_TYPES = new Set([
+    "mic",
+    "grimhex",
+    "musain",
+    "grimhex-radar",
+    "grimhex-holo-alert",
+    "grimhex-goal",
+    "cobra",
+    "cobra-radar",
+    "cobra-shield",
+    "cobra-holo-alert",
+    "cobra-goal",
+    "elite-sign",
+    "nuclear",
+    "nuclear-goal",
+    "nuclear-holo-alert",
+    "teso-seal",
+    "md3-orb",
+    "md3-goal",
+    "pixel-cube",
+    "pixel-goal",
+  ]);
+
+  function isAnimatedWidget(type) {
+    return ANIMATED_TYPES.has(type);
+  }
+
+  const api = { WIDGET_TYPES, CANVAS, widgetsForTheme, themeAllowsWidget, replacedBy3d, widgetRole, counterpartTypeForRole, resolveTypeForTheme, isAnimatedWidget };
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;

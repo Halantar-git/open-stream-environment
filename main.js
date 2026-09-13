@@ -25,6 +25,7 @@ const { createDatabase } = require("./server/db");
 const { getDecryptFailures, clearDecryptFailures } = require("./server/secret-store");
 const { configureStorage, getUserMediaDir, getConfigDir } = require("./server/storage-paths");
 const { collectMediaForExport, importMedia } = require("./server/media");
+const { eventsToCsv } = require("./server/export-events");
 
 // electron-updater is a runtime dependency; guard the require so a dev run
 // without `npm install` (no electron-updater yet) doesn't crash the main process.
@@ -988,8 +989,61 @@ app.whenReady().then(() => {
 
   ipcMain.handle("db:get-sessions", () => db.getSessions());
   ipcMain.handle("db:get-chat", (_event, opts) => db.getChat(opts || {}));
+  ipcMain.handle("db:get-chat-page", (_event, opts) => db.getChatPage(opts || {}));
   ipcMain.handle("db:get-stream-events", (_event, opts) => serverHandle.getStreamEvents(opts || {}));
   ipcMain.handle("db:clear-stream-events", () => db.clearStreamEvents());
+  ipcMain.handle("db:remove-stream-events", (_event, filter) => db.removeStreamEvents(filter || {}));
+  ipcMain.handle("db:clear-sessions", () => db.clearSessions());
+  ipcMain.handle("db:clear-chat", () => db.clearChat());
+  ipcMain.handle("db:get-sessions-with-stats", () => db.getSessionsWithStats());
+  ipcMain.handle("db:get-storage-stats", () => db.getStorageStats());
+  ipcMain.handle("db:open-data-folder", () => shell.openPath(db.getStorageStats().dir));
+  ipcMain.handle("db:get-history-limit", () => db.getHistoryLimit());
+  ipcMain.handle("db:set-history-limit", (_event, value) => db.setHistoryLimit(value));
+  ipcMain.handle("db:get-chat-history-enabled", () => db.getChatHistoryEnabled());
+  ipcMain.handle("db:set-chat-history-enabled", (_event, on) => db.setChatHistoryEnabled(on));
+  ipcMain.handle("db:reset-all", async () => {
+    // Полный сброс БД: раскладка/пресеты/сессии/история возвращаются к дефолтам.
+    // Рабочая копия раскладки живёт в памяти сервера, поэтому без перезапуска
+    // она вернулась бы в базу при первой же мутации — перезапускаем приложение.
+    db.clearAll();
+    try {
+      await db.flush();
+    } catch (_) {
+      /* best-effort — перезапускаемся в любом случае */
+    }
+    if (serverHandle) serverHandle.stop();
+    try {
+      if (serverHandle && serverHandle.state) serverHandle.state.flushConfigSync();
+    } catch (_) {
+      /* не мешаем сбросу */
+    }
+    try {
+      db.flushSync();
+    } catch (_) {
+      /* не мешаем сбросу */
+    }
+    app.relaunch();
+    app.exit(0);
+    return { ok: true };
+  });
+  ipcMain.handle("db:export-stream-events", async (_event, opts = {}) => {
+    const format = opts.format === "json" ? "json" : "csv";
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+      title: "Экспорт истории событий",
+      defaultPath: `open-stream-environment-events.${format}`,
+      filters: format === "json" ? [{ name: "JSON", extensions: ["json"] }] : [{ name: "CSV", extensions: ["csv"] }],
+    });
+    if (canceled || !filePath) return { ok: false, canceled: true };
+    try {
+      const result = db.getStreamEvents({ ...(opts.filter || {}), limit: Number.MAX_SAFE_INTEGER, offset: 0 });
+      const items = (result && result.items) || [];
+      fs.writeFileSync(filePath, format === "json" ? JSON.stringify(items, null, 2) : eventsToCsv(items), "utf-8");
+      return { ok: true, filePath, count: items.length };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
   ipcMain.handle("trigger-event-replay", (_event, id) => serverHandle.replayEvent(id));
 
   ipcMain.handle("app:open-widget-editor", (_event, widgetId) => {
@@ -1178,7 +1232,19 @@ app.whenReady().then(() => {
 app.on("before-quit", () => {
   quitting = true;
   saveWindowState();
+  // stop() завершает сессию и сам пишет в БД, поэтому сбрасываем отложенные
+  // async-записи (config.json / local-db.json) ПОСЛЕ остановки сервера.
   if (serverHandle) serverHandle.stop();
+  try {
+    if (serverHandle && serverHandle.state) serverHandle.state.flushConfigSync();
+  } catch (_) {
+    /* не мешаем выходу */
+  }
+  try {
+    if (db && typeof db.flushSync === "function") db.flushSync();
+  } catch (_) {
+    /* не мешаем выходу */
+  }
   globalShortcut.unregisterAll();
   if (tray) {
     tray.destroy();

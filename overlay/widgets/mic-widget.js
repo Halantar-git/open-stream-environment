@@ -16,26 +16,40 @@
  */
 
 /*
-  Microphone visualizer widget — a 2D <canvas> wave (sine / bars / ring) driven
-  by Web Audio (getUserMedia) locally, or by the remote mic bridge
-  (MIC_AUDIO_DATA). Its rAF loop, microphone stream and AudioContext are fully
-  torn down in onUnmount().
+  Microphone visualizer widget — a 2D <canvas> wave (sine / bars / ring /
+  equalizer) driven by Web Audio (getUserMedia) locally, or by the remote mic
+  bridge (MIC_AUDIO_DATA). Its rAF loop, microphone stream and AudioContext are
+  fully torn down in onUnmount().
+
+  Display settings are read per widget (`config`) with the global mic config
+  (state.micConfig) as fallback; capture settings (device, denoise flags) are
+  global because the mic is opened once. Spectrum → bands uses the testable
+  overlay/mic-dsp.js helpers (log scale, bin averaging, gate, smoothing).
 */
 (function (root, factory) {
-  const BaseWidget =
-    typeof module !== "undefined" && module.exports
-      ? require("./base-widget")
-      : root.OSEWidgets && root.OSEWidgets.BaseWidget;
-  const MicWidget = factory(BaseWidget);
+  const isModule = typeof module !== "undefined" && module.exports;
+  const BaseWidget = isModule
+    ? require("./base-widget")
+    : root.OSEWidgets && root.OSEWidgets.BaseWidget;
+  const MicDSP = isModule ? require("../mic-dsp") : root.MicDSP;
+  const MicWidget = factory(BaseWidget, MicDSP || {});
 
-  if (typeof module !== "undefined" && module.exports) {
+  if (isModule) {
     module.exports = MicWidget;
   } else {
     root.OSEWidgets = root.OSEWidgets || {};
     root.OSEWidgets.MicWidget = MicWidget;
   }
-})(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
+})(typeof window !== "undefined" ? window : globalThis, function (BaseWidget, MicDSP) {
   "use strict";
+
+  const DSP = MicDSP || {};
+
+  // Визуализатор рисуется в собственном rAF-цикле (виджет 2D, штатный цикл
+  // BaseWidget для него не включается). Жёстко ограничиваем 30 FPS — это
+  // совпадает с частотой микрокадров с моста — и не рисуем, когда виджет
+  // скрыт (display:none), чтобы не тратить canvas-работу впустую.
+  const MIC_RENDER_FPS = 30;
 
   class MicWidget extends BaseWidget {
     onMount() {
@@ -58,6 +72,12 @@
       this.micError = null;
       this._eqBars = null;
       this._eqLast = null;
+      this._bands = null;
+      this._bandValues = null;
+      this._bandBins = 0;
+      this._bandCount = 0;
+      this._bandScale = "";
+      this._frameGate = DSP.createFrameGate ? DSP.createFrameGate(MIC_RENDER_FPS) : null;
 
       this._startAudio();
       this._loop();
@@ -71,6 +91,16 @@
     }
 
     render() {}
+
+    // Per-widget setting with the global mic config as fallback.
+    _setting(key, fallback) {
+      const own = this.config ? this.config[key] : undefined;
+      if (own !== undefined && own !== null && own !== "") return own;
+      const global = (this.context.state && this.context.state.micConfig) || {};
+      const g = global[key];
+      if (g !== undefined && g !== null && g !== "") return g;
+      return fallback;
+    }
 
     // ---- audio capture ----
 
@@ -87,7 +117,7 @@
         return;
       }
       navigator.mediaDevices
-        .getUserMedia({ audio: true })
+        .getUserMedia({ audio: this._captureConstraints() })
         .then((stream) => {
           if (!this.micCanvas || !this.micCanvas.isConnected) {
             stream.getTracks().forEach((tr) => tr.stop());
@@ -113,6 +143,17 @@
         });
     }
 
+    _captureConstraints() {
+      const cfg = (this.context.state && this.context.state.micConfig) || {};
+      const audio = {
+        echoCancellation: cfg.echoCancellation !== false,
+        noiseSuppression: cfg.noiseSuppression !== false,
+        autoGainControl: cfg.autoGainControl !== false,
+      };
+      if (cfg.deviceId) audio.deviceId = { exact: cfg.deviceId };
+      return audio;
+    }
+
     _stopVisualizer() {
       if (this.rafId) cancelAnimationFrame(this.rafId);
       this.rafId = null;
@@ -135,8 +176,11 @@
           this.rafId = null;
           return;
         }
-        this._draw(now);
         this.rafId = requestAnimationFrame(tick);
+        // Скрытый виджет или скрытая страница/окно — не рисуем.
+        if (this.geometry && this.geometry.visible === false) return;
+        if (typeof document !== "undefined" && document.hidden) return;
+        if (!this._frameGate || this._frameGate(now)) this._draw(now);
       };
       this.rafId = requestAnimationFrame(tick);
     }
@@ -144,7 +188,7 @@
     // ---- drawing ----
 
     _draw(now) {
-      const { readCssVar, state } = this.context;
+      const { readCssVar, state, t } = this.context;
       const canvas = this.micCanvas;
       const host = this.host;
       const cw = host.clientWidth || 320;
@@ -159,15 +203,22 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, cw, ch);
 
-      const cfg = state.micConfig || {};
-      const color = this.config.color || cfg.color || readCssVar("--md-primary") || "#0060A8";
-      const sensitivity = this._clamp(cfg.sensitivity, 0.2, 6, 1.5);
-      const lineWidth = this._clamp(cfg.lineWidth, 1, 12, 2);
-      const opacity = this._clamp(cfg.opacity, 0.05, 1, 0.9);
-      const mode = cfg.visualizer_mode || "sine";
+      const global = state.micConfig || {};
+      const mode = this._setting("visualizer_mode", "sine");
+      const color = this.config.color || global.color || readCssVar("--md-primary") || "#0060A8";
+      const sensitivity = this._clamp(this._setting("sensitivity", 1.5), 0.2, 6, 1.5);
+      const lineWidth = this._clamp(this._setting("lineWidth", 2), 1, 12, 2);
+      const opacity = this._clamp(this._setting("opacity", 0.9), 0.05, 1, 0.9);
+      const gain = this._clamp(this._setting("gain", 1), 0.1, 5, 1);
+      const gate = this._clamp(this._setting("noiseGate", 0), 0, 0.9, 0);
+      const freqScale = this._setting("freqScale", "log") === "linear" ? "linear" : "log";
+      const smoothing = this._clamp(this._setting("smoothing", 0.35), 0, 1, 0.35);
+      const bandCount = Math.round(this._clamp(this._setting("barCount", 32), 10, 64, 32));
+      const gap = Math.max(0, Number(this._setting("barGap", 2)) || 0);
+      const peakFall = this._clamp(this._setting("peakFall", 2.5), 0.5, 10, 2.5);
 
       const amp = (ch / 2) * 0.92 * sensitivity;
-      const t = (now - this.t0) / 1000;
+      const elapsed = (now - this.t0) / 1000;
       const dt = this._eqLast == null ? 0 : Math.min(0.1, (now - this._eqLast) / 1000);
       this._eqLast = now;
 
@@ -185,10 +236,32 @@
         this.dataArray = state.remoteMicData.wave;
         this.freqArray = state.remoteMicData.freq;
       }
+      level = DSP.applyGain(DSP.applyGate(level, gate), gain);
       this.level = level;
 
       if (mode !== "sine" && this.analyser && this.freqArray) {
         this.analyser.getByteFrequencyData(this.freqArray);
+      }
+
+      let bandValues = null;
+      if (mode !== "sine" && this.freqArray && this.freqArray.length) {
+        if (
+          !this._bands ||
+          this._bandBins !== this.freqArray.length ||
+          this._bandCount !== bandCount ||
+          this._bandScale !== freqScale
+        ) {
+          this._bands = DSP.buildBands(this.freqArray.length, bandCount, freqScale);
+          this._bandBins = this.freqArray.length;
+          this._bandCount = bandCount;
+          this._bandScale = freqScale;
+          this._bandValues = new Array(bandCount).fill(0);
+        }
+        const raw = DSP.bandsFromSpectrum(this.freqArray, this._bands).map((v) =>
+          DSP.applyGain(DSP.applyGate(v, gate), gain)
+        );
+        this._bandValues = DSP.smoothBands(this._bandValues, raw, dt, DSP.smoothingTimes(smoothing));
+        bandValues = this._bandValues;
       }
 
       ctx.lineWidth = lineWidth;
@@ -199,33 +272,36 @@
       ctx.lineCap = "round";
 
       if (!this.analyser && this.micError && !state.remoteMicData) {
-        const hint =
+        const locale = typeof t === "function" ? t : (key) => key;
+        const key =
           this.micError === "NotAllowedError" || this.micError === "insecure"
-            ? "🎤 нет доступа к микрофону"
-            : "🎤 микрофон недоступен";
-        ctx.font = `${Math.max(12, Math.round(ch * 0.18))}px system-ui, sans-serif`;
+            ? "mic.errNoAccess"
+            : this.micError === "unsupported"
+            ? "mic.errUnsupported"
+            : "mic.errUnavailable";
+        ctx.font = `${Math.max(12, Math.round(ch * 0.14))}px system-ui, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(hint, cw / 2, ch / 2);
+        ctx.fillText(locale(key), cw / 2, ch / 2);
         ctx.globalAlpha = 1;
         return;
       }
 
       if (mode === "bars") {
-        this._drawBars(ctx, cw, ch, cfg);
+        this._drawBars(ctx, cw, ch, bandValues, gap);
       } else if (mode === "ring") {
-        this._drawRing(ctx, cw, ch, cfg);
+        this._drawRing(ctx, cw, ch, bandValues);
       } else if (mode === "equalizer") {
-        this._drawEqualizer(ctx, cw, ch, cfg, dt);
+        this._drawEqualizer(ctx, cw, ch, bandValues, gap, peakFall, dt);
       } else {
-        this._drawSine(ctx, cw, ch, t, amp, level);
+        this._drawSine(ctx, cw, ch, elapsed, amp, level);
       }
 
       ctx.globalAlpha = 1;
     }
 
-    _drawSine(ctx, cw, ch, t, amp, level) {
-      const live = level > 0.02;
+    _drawSine(ctx, cw, ch, elapsed, amp, level) {
+      const live = level > 0.001;
       const POINTS = 240;
       const midY = ch / 2;
       ctx.beginPath();
@@ -237,7 +313,7 @@
           const v = (this.dataArray[idx] - 128) / 128;
           y = midY + v * amp;
         } else {
-          y = midY + Math.sin(x * 0.02 + t * 1.6) * (amp * 0.05) + Math.sin(x * 0.006 - t * 0.9) * (amp * 0.03);
+          y = midY + Math.sin(x * 0.02 + elapsed * 1.6) * (amp * 0.05) + Math.sin(x * 0.006 - elapsed * 0.9) * (amp * 0.03);
         }
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
@@ -245,29 +321,22 @@
       ctx.stroke();
     }
 
-    _drawBars(ctx, cw, ch, cfg) {
-      const freq = this.freqArray;
-      if (!freq || !freq.length) return;
-      const barCount = Math.round(this._clamp(cfg.barCount, 10, 64, 32));
-      const gap = Math.max(0, Number(cfg.barGap) || 0);
-      const usable = Math.max(8, Math.floor(freq.length * 0.8));
-      const slotW = cw / barCount;
+    _drawBars(ctx, cw, ch, bands, gap) {
+      if (!bands || !bands.length) return;
+      const n = bands.length;
+      const slotW = cw / n;
       const barW = Math.max(1, slotW - gap);
-      for (let i = 0; i < barCount; i++) {
-        const idx = Math.floor((i / (barCount - 1)) * (usable - 1));
-        const v = freq[idx] / 255;
-        const h = Math.max(1, v * ch * 0.96);
+      for (let i = 0; i < n; i++) {
+        const h = Math.max(1, bands[i] * ch * 0.96);
         const x = i * slotW + (slotW - barW) / 2;
         const y = (ch - h) / 2;
         ctx.fillRect(x, y, barW, h);
       }
     }
 
-    _drawEqualizer(ctx, cw, ch, cfg, dt) {
-      const freq = this.freqArray;
-      if (!freq || !freq.length) return;
-      const barCount = Math.round(this._clamp(cfg.barCount, 10, 64, 32));
-      const gap = Math.max(0, Number(cfg.barGap) || 0);
+    _drawEqualizer(ctx, cw, ch, bands, gap, peakFall, dt) {
+      if (!bands || !bands.length) return;
+      const barCount = bands.length;
 
       // Vertical LED segments: ~8px cells with 2px gaps, scaled to the host
       // height. The classic palette (green → yellow → red) matches the reference.
@@ -284,7 +353,6 @@
       // the host frame rate. `level` rises instantly to the live value and
       // decays smoothly; `peak` holds for a moment, then falls back down.
       const levelDecay = 10;
-      const peakFall = this._clamp(cfg.peakFall, 0.5, 10, 2.5);
       const holdSec = 0.54;
 
       if (!this._eqBars || this._eqBars.length !== barCount) {
@@ -292,14 +360,11 @@
         for (let i = 0; i < barCount; i++) this._eqBars.push({ level: 0, peak: 0, hold: 0 });
       }
 
-      const usable = Math.max(8, Math.floor(freq.length * 0.8));
       const slotW = cw / barCount;
       const barW = Math.max(1, slotW - gap);
 
       for (let i = 0; i < barCount; i++) {
-        const idx = Math.floor((i / (barCount - 1)) * (usable - 1));
-        const v = freq[idx] / 255;
-        const target = v * cellCount;
+        const target = bands[i] * cellCount;
         const bar = this._eqBars[i];
 
         if (target > bar.level) bar.level = target;
@@ -333,20 +398,16 @@
       return red;
     }
 
-    _drawRing(ctx, cw, ch, cfg) {
-      const freq = this.freqArray;
-      if (!freq || !freq.length) return;
-      const barCount = Math.round(this._clamp(cfg.barCount, 10, 64, 32));
+    _drawRing(ctx, cw, ch, bands) {
+      if (!bands || !bands.length) return;
+      const barCount = bands.length;
       const cx = cw / 2;
       const cy = ch / 2;
       const maxR = Math.min(cw, ch) / 2 - 2;
       const minR = maxR * 0.35;
-      const usable = Math.max(8, Math.floor(freq.length * 0.8));
       for (let i = 0; i < barCount; i++) {
-        const idx = Math.floor((i / (barCount - 1)) * (usable - 1));
-        const v = freq[idx] / 255;
         const angle = (i / barCount) * Math.PI * 2 - Math.PI / 2;
-        const r = minR + (maxR - minR) * v;
+        const r = minR + (maxR - minR) * bands[i];
         ctx.beginPath();
         ctx.moveTo(cx + Math.cos(angle) * minR, cy + Math.sin(angle) * minR);
         ctx.lineTo(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r);

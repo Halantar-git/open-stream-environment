@@ -36,6 +36,7 @@ export function initCanvasEditor({
   ICONS,
   WIDGET_TYPES,
   widgetsForTheme,
+  themeAllowsWidget,
   replacedBy3d,
   widgetRole,
   resolveTypeForTheme,
@@ -90,12 +91,11 @@ export function initCanvasEditor({
     return `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:transparent;color:#e8e1f0;font-family:sans-serif;}${cfg.css || ""}</style></head><body>${cfg.html || ""}<script>${cfg.js || ""}</script></body></html>`;
   }
 
-  function buildEqualizerPreview({ width, height, opacity }) {
-    const barCount = 24;
+  function buildEqualizerPreview({ width, height, opacity, barCount = 24, gap = 2 }) {
     const cellCount = 14;
     const cellGap = 2;
     const slotW = width / barCount;
-    const barW = Math.max(1, slotW - 2);
+    const barW = Math.max(1, slotW - gap);
     const cellH = Math.max(1, (height - (cellCount - 1) * cellGap) / cellCount);
     const green = "#2ecc40";
     const yellow = "#ffdc00";
@@ -124,14 +124,93 @@ export function initCanvasEditor({
     </div>`;
   }
 
+  // Per-widget mic setting with the global mic config as fallback.
+  function micCfg(config, key, fallback) {
+    const own = config[key];
+    if (own !== undefined && own !== null && own !== "") return own;
+    const g = state.micConfig[key];
+    if (g !== undefined && g !== null && g !== "") return g;
+    return fallback;
+  }
+
+  function buildBarsPreview({ width, height, opacity, color, barCount, gap }) {
+    const n = Math.max(2, Math.round(barCount));
+    const slotW = width / n;
+    const barW = Math.max(1, slotW - gap);
+    let rects = "";
+    for (let i = 0; i < n; i++) {
+      const v = Math.abs(Math.sin(i * 0.5) * 0.65 + Math.sin(i * 0.19) * 0.35);
+      const h = Math.max(1, v * height * 0.96);
+      const x = i * slotW + (slotW - barW) / 2;
+      const y = (height - h) / 2;
+      rects += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${escapeAttr(color)}"/>`;
+    }
+    return `<div class="widget-mic widget-mic--preview"><svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="width:100%;height:100%;opacity:${opacity}">${rects}</svg></div>`;
+  }
+
+  function buildRingPreview({ width, height, opacity, color, barCount, lineWidth }) {
+    const n = Math.max(2, Math.round(barCount));
+    const cx = width / 2;
+    const cy = height / 2;
+    const maxR = Math.min(width, height) / 2 - 2;
+    const minR = maxR * 0.35;
+    let lines = "";
+    for (let i = 0; i < n; i++) {
+      const v = Math.abs(Math.sin(i * 0.5) * 0.6 + Math.sin(i * 0.2) * 0.4);
+      const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+      const r = minR + (maxR - minR) * v;
+      lines += `<line x1="${(cx + Math.cos(angle) * minR).toFixed(1)}" y1="${(cy + Math.sin(angle) * minR).toFixed(1)}" x2="${(cx + Math.cos(angle) * r).toFixed(1)}" y2="${(cy + Math.sin(angle) * r).toFixed(1)}" stroke="${escapeAttr(color)}" stroke-width="${lineWidth}" stroke-linecap="round"/>`;
+    }
+    return `<div class="widget-mic widget-mic--preview"><svg viewBox="0 0 ${width} ${height}" style="width:100%;height:100%;opacity:${opacity}">${lines}</svg></div>`;
+  }
+
   // The type a widget renders as under the active theme — mirrors the overlay's
   // transform(). Role widgets (chat/goal/alerts) follow the active 3D variant's
   // counterpart; everything else keeps its own type. The editor box keeps the
   // stored x/y/w/h, so the preview only swaps the visuals, never the geometry.
   function effectiveType(inst) {
     return resolveTypeForTheme
-      ? resolveTypeForTheme(inst.type, state.appearance.activeThemeId3d, state.appearance.enabled3d)
+      ? resolveTypeForTheme(inst.type, state.appearance.active3dWidgets || [])
       : inst.type;
+  }
+
+  // Executive Hangar timer preview, shared by the 2D ("timer") and Grim HEX
+  // ("grimhex-timer") variants — the overlay renders the same markup for both.
+  // Источник всегда Longshot, поэтому превью идёт от `state.longshot`.
+  function buildExecTimerPreview(config) {
+    const HC = window.HangarCycle;
+    const src = HC ? HC.sourceFromSnapshot(state.longshot) : null;
+    if (!src || !src.ready) {
+      const label = src && !src.syncing ? t("timer.notOperational") : t("timer.syncing");
+      return `<div class="exec-timer" data-phase="off">
+        <div class="exec-timer__head"><span class="exec-timer__title">${escapeHtml(t("timer.defaultTitle"))}</span></div>
+        <div class="exec-timer__off">${escapeHtml(label)}</div>
+      </div>`;
+    }
+    const st = HC.stateAt(HC.elapsedSec(src.anchorMs, Date.now(), src.durations), src.durations);
+    const phaseKey = { red: "timer.phaseRed", green: "timer.phaseGreen", black: "timer.phaseBlack" }[st.phase];
+    const lights = st.lights.map((s) => `<span class="exec-timer__light" data-state="${s}"></span>`).join("");
+    const telemetry =
+      st.next.kind === "blackout"
+        ? t("timer.blackoutIn", { time: HC.formatDuration(st.next.inSec) })
+        : st.next.kind === "green"
+          ? t("timer.lightGreenIn", { light: st.next.light, time: HC.formatDuration(st.next.inSec) })
+          : t("timer.lightOffIn", { light: st.next.light, time: HC.formatDuration(st.next.inSec) });
+    // В блэкауте подпись строки цикла другая — как в оверлее.
+    const cycleLabel =
+      st.phase === "black"
+        ? t("timer.redPhaseStartsIn", { time: HC.formatDuration(st.cycleRemainingSec) })
+        : t("timer.cycleResetsIn", { time: HC.formatDuration(st.cycleRemainingSec) });
+    return `<div class="exec-timer" data-phase="${st.phase}">
+      <div class="exec-timer__head">
+        <span class="exec-timer__title">${escapeHtml(t("timer.defaultTitle"))}</span>
+        <span class="exec-timer__phase">${escapeHtml(t(phaseKey))}</span>
+      </div>
+      <div class="exec-timer__digits">${HC.formatDuration(st.phaseRemainingSec)}</div>
+      ${config.showLights !== false ? `<div class="exec-timer__lights">${lights}</div>` : ""}
+      ${config.showCycle !== false ? `<div class="exec-timer__cycle">${escapeHtml(cycleLabel)}</div>` : ""}
+      ${config.showTelemetry !== false ? `<div class="exec-timer__telemetry">${escapeHtml(telemetry)}</div>` : ""}
+    </div>`;
   }
 
   function buildPreviewHtml(inst) {
@@ -223,24 +302,22 @@ export function initCanvasEditor({
         const s = (config.socials || [])[0] || { platform: "TG", text: "t.me/your_channel" };
         return `<div class="widget-social"><div class="widget-social__content"><span class="widget-social__icon">${escapeHtml(s.platform)}</span><div class="widget-social__info"><span class="widget-social__platform">${escapeHtml(s.platform)}</span><span class="widget-social__handle">${escapeHtml(s.text)}</span></div></div></div>`;
       }
-      case "participants": {
-        const names = ["viewer_1", "viewer_2", "viewer_3", "viewer_4"].slice(0, Math.max(1, Number(state.participantsConfig.maxNames) || 10));
-        const chips = names.map((n) => `<span class="widget-participants__chip">${escapeHtml(n)}</span>`).join("");
-        const style = `--pw-font-size:${state.participantsConfig.fontSize ?? 16}px;--pw-text:${escapeAttr(state.participantsConfig.textColor || "#e8e1f0")};--pw-bg-opacity:${state.participantsConfig.backgroundOpacity ?? 82}%;`;
-        return `<div class="widget-participants" style="${style}">
-          <div class="widget-participants__title">${t("wheelScene.participantsTitle", { count: 4 })}</div>
-          <div class="widget-participants__list">${chips}</div>
-        </div>`;
-      }
+      case "timer":
+      case "grimhex-timer":
+        return buildExecTimerPreview(config);
       case "mic": {
         const themePrimary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#0060A8";
         const color = config.color || state.micConfig.color || themePrimary;
-        const opacity = state.micConfig.opacity ?? 0.9;
+        const opacity = Number(micCfg(config, "opacity", 0.9)) || 0.9;
+        const mode = micCfg(config, "visualizer_mode", "sine");
+        const barCount = Number(micCfg(config, "barCount", 32)) || 32;
+        const gap = Number(micCfg(config, "barGap", 2)) || 0;
+        const lineWidth = Number(micCfg(config, "lineWidth", 2)) || 2;
         const width = 400;
         const height = 80;
-        if (state.micConfig.visualizer_mode === "equalizer") {
-          return buildEqualizerPreview({ width, height, opacity });
-        }
+        if (mode === "equalizer") return buildEqualizerPreview({ width, height, opacity, barCount, gap });
+        if (mode === "bars") return buildBarsPreview({ width, height, opacity, color, barCount, gap });
+        if (mode === "ring") return buildRingPreview({ width, height, opacity, color, barCount, lineWidth });
         const pts = [];
         for (let x = 0; x <= width; x += 6) {
           const y = height / 2 + Math.sin(x * 0.045) * 22 + Math.sin(x * 0.012) * 9;
@@ -249,7 +326,7 @@ export function initCanvasEditor({
         const d = "M" + pts.join(" L");
         return `<div class="widget-mic widget-mic--preview">
           <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="width:100%;height:100%;opacity:${opacity}">
-            <path d="${d}" fill="none" stroke="${escapeAttr(color)}" stroke-width="${state.micConfig.lineWidth || 2}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+            <path d="${d}" fill="none" stroke="${escapeAttr(color)}" stroke-width="${lineWidth}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
           </svg>
         </div>`;
       }
@@ -767,15 +844,10 @@ export function initCanvasEditor({
     if (def.theme) return false; // 3D widgets (role or decorative) are never dedup'd
     const role = widgetRole(inst.type);
     if (!role) return false;
-    const variantId = state.appearance.activeThemeId3d;
-    if (!variantId) return false;
-    const counterpart = (widgetsForTheme ? widgetsForTheme(variantId) : []).find(
-      (w) => widgetRole(w.type) === role
-    );
-    if (!counterpart) return false;
-    if (state.appearance.enabled3d && state.appearance.enabled3d[counterpart.type] === false) {
-      return false;
-    }
+    // Only a unique same-role counterpart among the enabled 3D widgets can take
+    // over (an ambiguous custom set remaps nothing).
+    const active = state.appearance.active3dWidgets || [];
+    if (active.filter((t) => widgetRole(t) === role).length !== 1) return false;
     // Only mark as replaced when an explicit 3D widget of the same role is
     // placed in the layout (it takes over and hides this 2D widget).
     return state.layout.some((other) => {
@@ -793,21 +865,18 @@ export function initCanvasEditor({
   // theme); the layers list still shows them marked as inactive.
   function isThemeGated(inst) {
     const def = WIDGET_TYPES[inst.type] || {};
+    // 2D-привязка к теме (Orbital и свои темы).
+    if (!themeAllowsWidget(def, state.appearance)) return true;
     if (!def.theme) return false;
     const role = widgetRole(inst.type);
-    const variantId = state.appearance.activeThemeId3d;
+    const active = state.appearance.active3dWidgets || [];
+    if (active.includes(inst.type)) return false;
     if (role) {
-      // Role widget: inactive unless the active theme has an enabled counterpart.
-      if (!variantId) return true; // 3D off
-      const counterpart = (widgetsForTheme ? widgetsForTheme(variantId) : []).find(
-        (w) => widgetRole(w.type) === role
-      );
-      if (!counterpart) return true; // no counterpart in the active theme
-      if (state.appearance.enabled3d && state.appearance.enabled3d[counterpart.type] === false) return true;
-      return false;
+      // Not enabled itself: active only when a unique same-role counterpart
+      // will remap it. Zero or several candidates -> it will not be mounted.
+      return active.filter((t) => widgetRole(t) === role).length !== 1;
     }
-    // Additive widget (no role): inactive when its own theme isn't active.
-    return variantId !== def.theme;
+    return true;
   }
 
   // Human label shown in the canvas + layers. Follows the effective (theme-

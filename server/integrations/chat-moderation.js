@@ -115,16 +115,31 @@ function findDisallowedLink(message, whitelist) {
   return null;
 }
 
-function findBadWord(message, badWords) {
+// Нормализованные формы запрещённых слов считаем один раз при создании движка,
+// а не на каждое сообщение: делейтизация и «сжатие» слова — самая дорогая часть
+// проверки, а сами слова между сообщениями не меняются.
+function prepareBadWords(badWords) {
+  return (Array.isArray(badWords) ? badWords : [])
+    .map((w) => String(w).trim().toLowerCase())
+    .filter(Boolean)
+    .map((raw) => {
+      const deleet = deleetize(raw);
+      return { raw, deleet, compact: compactCyrillic(deleet) };
+    });
+}
+
+function matchBadWord(message, prepared) {
+  if (!prepared || !prepared.length) return null;
   const deleet = deleetize(message);
   const compact = compactCyrillic(deleet);
-  for (const word of badWords || []) {
-    const dw = deleetize(word);
-    if (!dw) continue;
-    const cw = compactCyrillic(dw);
-    if (cw && (compact.includes(cw) || deleet.includes(dw))) return word;
+  for (const word of prepared) {
+    if (word.compact && (compact.includes(word.compact) || deleet.includes(word.deleet))) return word.raw;
   }
   return null;
+}
+
+function findBadWord(message, badWords) {
+  return matchBadWord(message, prepareBadWords(badWords));
 }
 
 function defaultModerationConfig() {
@@ -160,14 +175,52 @@ function createModerationEngine(config = {}, store = createMemoryStore()) {
   const whitelist = (Array.isArray(cfg.whitelistDomains) ? cfg.whitelistDomains : [])
     .map((d) => extractHost(d))
     .filter((d) => d && d.includes("."));
-  const badWords = (Array.isArray(cfg.badWords) ? cfg.badWords : [])
-    .map((w) => String(w).trim().toLowerCase())
-    .filter(Boolean);
+  const badWords = prepareBadWords(cfg.badWords);
+
+  // Кэш чистой (зависящей только от текста) части вердикта: ссылка / мат / капс.
+  // Эмодзи и счётчик варнов сюда не входят — они зависят от пользователя и
+  // метаданных сообщения, а не от строки, поэтому кэшировать их по тексту
+  // нельзя. Ключ — само сообщение; конфиг зафиксирован на время жизни движка
+  // (он пересоздаётся при смене настроек), так что инвалидация не нужна.
+  // Эвикция FIFO: на хайпе часто повторяются одни и те же строки.
+  const STATIC_CACHE_MAX = 500;
+  const staticCache = new Map();
 
   function isPrivileged(level, badges) {
     if (level === "broadcaster" || level === "moderator") return true;
-    const set = new Set((badges || []).map((b) => String(b).toLowerCase()));
-    return set.has("vip");
+    if (!badges || !badges.length) return false;
+    for (const badge of badges) {
+      if (String(badge).toLowerCase() === "vip") return true;
+    }
+    return false;
+  }
+
+  function computeStaticVerdict(message) {
+    if (cfg.linkProtection) {
+      const domain = findDisallowedLink(message, whitelist);
+      if (domain) return { type: "link", reason: `ссылка на ${domain}` };
+    }
+    if (badWords.length) {
+      const word = matchBadWord(message, badWords);
+      if (word) return { type: "badword", reason: "запрещённое слово" };
+    }
+    if (typeof cfg.capsThreshold === "number" && cfg.capsThreshold > 0 && cfg.capsThreshold < 1) {
+      if (message.length > 10 && capsRatio(message) > cfg.capsThreshold) {
+        return { type: "caps", reason: "слишком много заглавных букв" };
+      }
+    }
+    return null;
+  }
+
+  function staticVerdict(message) {
+    const cached = staticCache.get(message);
+    if (cached !== undefined) return cached;
+    const verdict = computeStaticVerdict(message);
+    if (staticCache.size >= STATIC_CACHE_MAX) {
+      staticCache.delete(staticCache.keys().next().value);
+    }
+    staticCache.set(message, verdict);
+    return verdict;
   }
 
   function check(msg = {}) {
@@ -180,29 +233,10 @@ function createModerationEngine(config = {}, store = createMemoryStore()) {
     const key = String(msg.userId || msg.user || "").toLowerCase();
     if (!key || !message.trim()) return null;
 
-    let type = null;
-    let reason = "";
+    const text = staticVerdict(message);
+    let type = text ? text.type : null;
+    let reason = text ? text.reason : "";
 
-    if (cfg.linkProtection) {
-      const domain = findDisallowedLink(message, whitelist);
-      if (domain) {
-        type = "link";
-        reason = `ссылка на ${domain}`;
-      }
-    }
-    if (!type && badWords.length) {
-      const word = findBadWord(message, badWords);
-      if (word) {
-        type = "badword";
-        reason = "запрещённое слово";
-      }
-    }
-    if (!type && typeof cfg.capsThreshold === "number" && cfg.capsThreshold > 0 && cfg.capsThreshold < 1) {
-      if (message.length > 10 && capsRatio(message) > cfg.capsThreshold) {
-        type = "caps";
-        reason = "слишком много заглавных букв";
-      }
-    }
     if (!type && Number(cfg.maxEmotes) > 0) {
       const n = countEmotes(msg.emotes);
       if (n > Number(cfg.maxEmotes)) {
@@ -254,5 +288,7 @@ module.exports = {
   capsRatio,
   findDisallowedLink,
   findBadWord,
+  prepareBadWords,
+  matchBadWord,
   extractHost,
 };

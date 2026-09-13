@@ -120,7 +120,7 @@
       this._applyPerspective();
       this._nextFlickerAt = performance.now() + 2000 + Math.random() * 3000;
       this.bindEvents();
-      this.startRenderLoop(30); // strictly 30 FPS
+      this.startRenderLoop(BaseWidget.AMBIENT_FPS); // ambient: 20 FPS
     }
 
     onUnmount() {

@@ -32,8 +32,9 @@ import { initPropertiesPanel } from "./modules/properties-panel.js";
 import { initCanvasEditor } from "./modules/canvas-editor.js";
 
 const { EVENT_TYPES } = window.SharedEvents;
+  const MicFrame = window.MicFrame;
   const { ICONS } = window.SharedIcons;
-  const { WIDGET_TYPES, widgetsForTheme, replacedBy3d, widgetRole, resolveTypeForTheme } = window.WidgetCatalog;
+  const { WIDGET_TYPES, widgetsForTheme, themeAllowsWidget, replacedBy3d, widgetRole, resolveTypeForTheme, isAnimatedWidget } = window.WidgetCatalog;
   const t = (key, params) => (window.I18n ? window.I18n.t(key, params) : key);
 
   const params = new URLSearchParams(location.search);
@@ -52,8 +53,9 @@ const { EVENT_TYPES } = window.SharedEvents;
     return `ws://localhost:${info.port}/ws`;
   };
 
-  const wsClient = initWsClient({ url: `ws://localhost:${port}/ws`, t, onMessage: handleMessage, onStatusClick, resolveUrl: resolveWsUrl });
+  const wsClient = initWsClient({ url: `ws://localhost:${port}/ws`, role: "control", t, onMessage: handleMessage, onStatusClick, resolveUrl: resolveWsUrl });
   const send = wsClient.send;
+  const sendBinary = wsClient.sendBinary;
 
   // ---- state ----
   const state = createStateManager();
@@ -151,6 +153,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const layoutPresetName = document.getElementById("layoutPresetName");
   const saveLayoutPresetBtn = document.getElementById("saveLayoutPresetBtn");
   const deleteLayoutPresetBtn = document.getElementById("deleteLayoutPresetBtn");
+  const sceneBudgetEl = document.getElementById("sceneBudget");
   const themeGridEl = document.getElementById("themeGrid");
   const newThemeBtn = document.getElementById("newThemeBtn");
   const importThemeBtn = document.getElementById("importThemeBtn");
@@ -272,6 +275,29 @@ const { EVENT_TYPES } = window.SharedEvents;
   const eventsSearchInput = document.getElementById("eventsSearch");
   const clearEventsBtn = document.getElementById("clearEventsBtn");
   const eventsMetaEl = document.getElementById("eventsMeta");
+  const historyTabsEl = document.getElementById("historyTabs");
+  const sessionsBodyEl = document.getElementById("sessionsBody");
+  const sessionsMetaEl = document.getElementById("sessionsMeta");
+  const refreshSessionsBtn = document.getElementById("refreshSessionsBtn");
+  const clearSessionsBtn = document.getElementById("clearSessionsBtn");
+  const chatHistoryEl = document.getElementById("chatHistory");
+  const chatMetaEl = document.getElementById("chatMeta");
+  const chatSearchInput = document.getElementById("chatSearch");
+  const refreshChatBtn = document.getElementById("refreshChatBtn");
+  const clearChatBtn = document.getElementById("clearChatBtn");
+  const loadMoreChatBtn = document.getElementById("loadMoreChatBtn");
+  const eventsExportFormat = document.getElementById("eventsExportFormat");
+  const exportEventsBtn = document.getElementById("exportEventsBtn");
+  const deleteEventsBtn = document.getElementById("deleteEventsBtn");
+  const dataStatsEl = document.getElementById("dataStats");
+  const chatHistorySwitch = document.getElementById("chatHistorySwitch");
+  const historyLimitInput = document.getElementById("historyLimitInput");
+  const saveHistoryLimitBtn = document.getElementById("saveHistoryLimitBtn");
+  const dataClearScope = document.getElementById("dataClearScope");
+  const dataClearBtn = document.getElementById("dataClearBtn");
+  const openDataFolderBtn = document.getElementById("openDataFolderBtn");
+  const resetDbBtn = document.getElementById("resetDbBtn");
+  const dataStatusEl = document.getElementById("dataStatus");
   const wheelPanelEl = document.getElementById("wheelPanel");
   const wheelPanelBody = document.getElementById("wheelPanelBody");
   const participantsPanelEl = document.getElementById("participantsPanel");
@@ -448,10 +474,12 @@ const { EVENT_TYPES } = window.SharedEvents;
   function renderLibrary() {
     libraryListEl.innerHTML = "";
     Object.values(WIDGET_TYPES).forEach((def) => {
-      // A theme-bound widget (3D) is only offered while its own 3D theme is
-      // active and the widget itself isn't disabled (3D фишка).
-      if (def.theme && state.appearance.activeThemeId3d !== def.theme) return;
-      if (def.theme && state.appearance.enabled3d && state.appearance.enabled3d[def.type] === false) return;
+      // A theme-bound widget (3D) is only offered while it is in the active 3D
+      // widget set (a built-in variant minus disabled фишки, or a custom theme's
+      // own selection).
+      if (def.theme && !(state.appearance.active3dWidgets || []).includes(def.type)) return;
+      // 2D-привязка к теме (Orbital и свои темы).
+      if (!themeAllowsWidget(def, state.appearance)) return;
       const card = document.createElement("div");
       card.className = "library-card";
       card.draggable = true;
@@ -1755,6 +1783,175 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   renderStreamEvents(true);
 
+  // ---- history tabs: events / sessions / chat ----
+  let historyTab = "events";
+  let sessionsData = [];
+  let chatOffset = 0;
+  let chatTotal = 0;
+  let chatSearch = "";
+  let chatSearchTimer = null;
+  const CHAT_PAGE_SIZE = 50;
+
+  function setHistoryTab(tab) {
+    historyTab = tab;
+    if (historyTabsEl) {
+      historyTabsEl.querySelectorAll("[data-tab]").forEach((b) => b.classList.toggle("is-active", b.dataset.tab === tab));
+    }
+    document.querySelectorAll("#historyPanel .history-tabpane").forEach((pane) => {
+      pane.hidden = pane.dataset.pane !== tab;
+    });
+    refreshHistoryTab();
+  }
+
+  function refreshHistoryTab() {
+    if (historyTab === "sessions") renderSessions();
+    else if (historyTab === "chat") renderChat(true);
+    else renderStreamEvents(true);
+  }
+
+  const pad2 = (n) => String(n).padStart(2, "0");
+  function formatDuration(ms) {
+    if (ms === null || ms === undefined) return "—";
+    const total = Math.max(0, Math.round(ms / 1000));
+    return `${pad2(Math.floor(total / 3600))}:${pad2(Math.floor((total % 3600) / 60))}:${pad2(total % 60)}`;
+  }
+
+  function formatDateTime(ts) {
+    if (!ts) return "—";
+    const locale = window.I18n && window.I18n.getLang() === "ru" ? "ru-RU" : "en-US";
+    return new Date(ts).toLocaleString(locale, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  }
+
+  async function renderSessions() {
+    if (!sessionsBodyEl || !window.desktop?.db?.getSessionsWithStats) return;
+    sessionsBodyEl.innerHTML = '<div class="events-history__empty">' + t("events.loading") + "</div>";
+    try {
+      sessionsData = (await window.desktop.db.getSessionsWithStats()) || [];
+      if (sessionsMetaEl) sessionsMetaEl.textContent = t("sessions.totalCount", { count: sessionsData.length });
+      if (!sessionsData.length) {
+        sessionsBodyEl.innerHTML = '<div class="events-history__empty">' + t("sessions.empty") + "</div>";
+        return;
+      }
+      const head = `<tr><th>${t("sessions.started")}</th><th>${t("sessions.channel")}</th><th class="sessions-table__num">${t("sessions.duration")}</th><th class="sessions-table__num">${t("sessions.events")}</th><th class="sessions-table__num">${t("sessions.donations")}</th><th class="sessions-table__num">${t("sessions.chat")}</th></tr>`;
+      const rows = sessionsData
+        .map(
+          (s) =>
+            `<tr><td>${escapeHtml(formatDateTime(s.startedAt))}</td><td>${escapeHtml(s.channel || "—")}</td><td class="sessions-table__num">${formatDuration(s.durationMs)}</td><td class="sessions-table__num">${s.events}</td><td class="sessions-table__num">${s.donations}</td><td class="sessions-table__num">${s.chat}</td></tr>`
+        )
+        .join("");
+      sessionsBodyEl.innerHTML = `<table class="sessions-table"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
+    } catch {
+      sessionsBodyEl.innerHTML = '<div class="events-history__empty">' + t("events.loadError") + "</div>";
+    }
+  }
+
+  function renderChatRow(m) {
+    const testBadge = m.isTest ? '<span class="events-history__test">' + t("events.test") + "</span>" : "";
+    return `<div class="events-history__row"><span class="events-history__user">${escapeHtml(m.username || "")}</span><span class="events-history__message">${escapeHtml(m.message || "")}</span><span class="events-history__time">${formatEventTime(m.timestamp)}</span>${testBadge}</div>`;
+  }
+
+  async function renderChat(reset = true) {
+    if (!chatHistoryEl || !window.desktop?.db?.getChatPage) return;
+    const enabled = await window.desktop.db.getChatHistoryEnabled?.();
+    if (enabled === false) {
+      chatHistoryEl.innerHTML = '<div class="events-history__empty">' + t("chat.disabled") + "</div>";
+      if (chatMetaEl) chatMetaEl.textContent = "";
+      if (loadMoreChatBtn) loadMoreChatBtn.hidden = true;
+      return;
+    }
+    if (reset) {
+      chatOffset = 0;
+      chatTotal = 0;
+      chatHistoryEl.innerHTML = '<div class="events-history__empty">' + t("events.loading") + "</div>";
+      if (chatMetaEl) chatMetaEl.textContent = "";
+      if (loadMoreChatBtn) loadMoreChatBtn.hidden = true;
+    }
+    try {
+      const result = await window.desktop.db.getChatPage({ limit: CHAT_PAGE_SIZE, offset: chatOffset, search: chatSearch });
+      const items = (result && result.items) || [];
+      chatTotal = (result && result.total) || 0;
+      if (reset) {
+        chatHistoryEl.innerHTML = "";
+        if (chatMetaEl) chatMetaEl.textContent = t("chat.totalCount", { count: chatTotal });
+      }
+      if (!items.length && reset) {
+        chatHistoryEl.innerHTML = '<div class="events-history__empty">' + t("chat.empty") + "</div>";
+        return;
+      }
+      items.forEach((m) => chatHistoryEl.insertAdjacentHTML("beforeend", renderChatRow(m)));
+      chatOffset += items.length;
+      const hasMore = chatOffset < chatTotal;
+      if (loadMoreChatBtn) {
+        loadMoreChatBtn.hidden = !hasMore;
+        if (hasMore) loadMoreChatBtn.textContent = t("events.showMore", { current: chatOffset, total: chatTotal });
+      }
+    } catch {
+      if (reset) chatHistoryEl.innerHTML = '<div class="events-history__empty">' + t("events.loadError") + "</div>";
+    }
+  }
+
+  if (historyTabsEl) {
+    historyTabsEl.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-tab]");
+      if (btn) setHistoryTab(btn.dataset.tab);
+    });
+  }
+  if (refreshSessionsBtn) refreshSessionsBtn.addEventListener("click", () => renderSessions());
+  if (clearSessionsBtn) {
+    clearSessionsBtn.addEventListener("click", async () => {
+      if (!confirm(t("sessions.clearConfirm"))) return;
+      await window.desktop?.db?.clearSessions?.();
+      renderSessions();
+      renderDataStats();
+    });
+  }
+  if (refreshChatBtn) refreshChatBtn.addEventListener("click", () => renderChat(true));
+  if (loadMoreChatBtn) loadMoreChatBtn.addEventListener("click", () => renderChat(false));
+  if (clearChatBtn) {
+    clearChatBtn.addEventListener("click", async () => {
+      if (!confirm(t("chat.clearConfirm"))) return;
+      await window.desktop?.db?.clearChat?.();
+      renderChat(true);
+      renderDataStats();
+    });
+  }
+  if (chatSearchInput) {
+    chatSearchInput.addEventListener("input", () => {
+      clearTimeout(chatSearchTimer);
+      chatSearchTimer = setTimeout(() => {
+        chatSearch = chatSearchInput.value.trim();
+        renderChat(true);
+      }, 300);
+    });
+  }
+
+  // ---- events export / удаление по текущему фильтру ----
+  if (exportEventsBtn) {
+    exportEventsBtn.addEventListener("click", async () => {
+      const format = eventsExportFormat && eventsExportFormat.value === "json" ? "json" : "csv";
+      const res = await window.desktop?.db?.exportStreamEvents?.({
+        format,
+        filter: { type: eventsFilter === "all" ? undefined : eventsFilter, search: eventsSearch },
+      });
+      if (!res || res.canceled) return;
+      if (res.ok) showToast(t("events.exported", { count: res.count }), "");
+      else showToast(t("events.exportFailed", { error: res.error }), "");
+    });
+  }
+  if (deleteEventsBtn) {
+    deleteEventsBtn.addEventListener("click", async () => {
+      const scope = eventsFilter === "all" ? t("events.all") : EVENTS_TYPE_LABEL(eventsFilter);
+      if (!confirm(t("events.deleteFilteredConfirm", { scope }))) return;
+      const removed = await window.desktop?.db?.removeStreamEvents?.({
+        type: eventsFilter === "all" ? undefined : eventsFilter,
+        search: eventsSearch,
+      });
+      renderStreamEvents(true);
+      renderDataStats();
+      if (typeof removed === "number") showToast(t("events.deleted", { count: removed }), "");
+    });
+  }
+
   // ---- wheel settings panels ----
   function renderWheelPanel() {
     if (!wheelPanelBody) return;
@@ -2128,9 +2325,35 @@ const { EVENT_TYPES } = window.SharedEvents;
   }
 
   // ---- microphone visualizer widget settings ----
-  function sendMicConfig(patch) {
+  // Глобальные настройки захвата (устройство ввода, шумоподавление). Настройки
+  // отображения (режим, полосы и т.д.) хранятся на самом виджете.
+  function sendMicCaptureConfig(patch) {
     state.micConfig = { ...state.micConfig, ...patch };
     send(EVENT_TYPES.CMD_SET_MIC_CONFIG, { config: state.micConfig });
+    micBridge.restartIfRunning();
+  }
+
+  // Список устройств ввода — для выпадающего списка в панели свойств.
+  function refreshMicDevices() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+    navigator.mediaDevices
+      .enumerateDevices()
+      .then((devices) => {
+        state.micDevices = devices
+          .filter((d) => d.kind === "audioinput")
+          .map((d, i) => ({ deviceId: d.deviceId, label: d.label || t("mic.deviceFallback", { n: i + 1 }) }));
+        propertiesPanel.invalidate();
+        propertiesPanel.render();
+      })
+      .catch(() => {});
+  }
+
+  function updateMicLevelMeter(level) {
+    const pct = Math.round(Math.min(1, Math.max(0, Number(level) || 0)) * 100);
+    const bar = document.getElementById("pMicLevelBar");
+    if (bar) bar.style.width = `${pct}%`;
+    const val = document.getElementById("pMicLevelValue");
+    if (val) val.textContent = `${pct}%`;
   }
 
   // ---- properties panel (extracted module) ----
@@ -2146,9 +2369,14 @@ const { EVENT_TYPES } = window.SharedEvents;
     wireSwitch,
     escapeAttr,
     round1,
-    sendParticipantsConfig,
-    sendMicConfig,
+    sendMicCaptureConfig,
+    refreshMicDevices,
   });
+
+  if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+    navigator.mediaDevices.addEventListener("devicechange", refreshMicDevices);
+  }
+  refreshMicDevices();
 
   // ---- canvas editor (extracted module) ----
   const canvasEditor = initCanvasEditor({
@@ -2157,6 +2385,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     ICONS,
     WIDGET_TYPES,
     widgetsForTheme,
+    themeAllowsWidget,
     replacedBy3d,
     widgetRole,
     resolveTypeForTheme,
@@ -2334,6 +2563,99 @@ const { EVENT_TYPES } = window.SharedEvents;
       showExportImportStatus(t("settings.importFailed", { error: res.error }), true);
     }
   });
+
+  // ---- data & storage ----
+  function formatBytes(n) {
+    const b = Number(n) || 0;
+    if (b < 1024) return b + " B";
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + " KB";
+    return (b / (1024 * 1024)).toFixed(2) + " MB";
+  }
+
+  async function renderDataStats() {
+    if (!dataStatsEl || !window.desktop?.db?.getStorageStats) return;
+    try {
+      const stats = await window.desktop.db.getStorageStats();
+      if (!stats) return;
+      dataStatsEl.innerHTML = [
+        ["data.path", escapeHtml(stats.dir)],
+        ["data.database", formatBytes(stats.database && stats.database.bytes)],
+        ["data.events", `${stats.history.count} · ${formatBytes(stats.history.bytes)}`],
+        ["data.chat", `${stats.chat.count} · ${formatBytes(stats.chat.bytes)}`],
+        ["data.sessions", String(stats.sessions)],
+      ]
+        .map(([key, value]) => `<div class="data-stats__row"><span>${t(key)}</span><code>${value}</code></div>`)
+        .join("");
+      if (historyLimitInput && document.activeElement !== historyLimitInput) historyLimitInput.value = String(stats.history.limit);
+    } catch {
+      /* статистика не критична */
+    }
+  }
+
+  function showDataStatus(text, isError) {
+    if (!dataStatusEl) return;
+    dataStatusEl.hidden = false;
+    dataStatusEl.textContent = text;
+    dataStatusEl.style.color = isError ? "var(--md-error)" : "";
+  }
+
+  if (chatHistorySwitch) {
+    Promise.resolve(window.desktop?.db?.getChatHistoryEnabled?.()).then((on) => {
+      if (on !== undefined) setSwitchState(chatHistorySwitch, on !== false);
+    });
+    chatHistorySwitch.addEventListener("click", async () => {
+      const on = !chatHistorySwitch.classList.contains("is-on");
+      setSwitchState(chatHistorySwitch, on);
+      await window.desktop?.db?.setChatHistoryEnabled?.(on);
+      if (historyTab === "chat") renderChat(true);
+    });
+  }
+
+  if (saveHistoryLimitBtn) {
+    saveHistoryLimitBtn.addEventListener("click", async () => {
+      const raw = historyLimitInput.value.trim();
+      if (raw === "") return;
+      const value = Math.max(0, Math.floor(Number(raw) || 0));
+      const next = await window.desktop?.db?.setHistoryLimit?.(value);
+      if (typeof next === "number" && historyLimitInput) historyLimitInput.value = String(next);
+      showDataStatus(t("data.saved"), false);
+      renderDataStats();
+      if (historyTab === "events") renderStreamEvents(true);
+    });
+  }
+
+  if (dataClearBtn) {
+    dataClearBtn.addEventListener("click", async () => {
+      const scope = dataClearScope ? dataClearScope.value : "events";
+      const label = dataClearScope && dataClearScope.selectedOptions[0] ? dataClearScope.selectedOptions[0].textContent : scope;
+      if (!confirm(t("data.clearConfirm", { scope: label }))) return;
+      const api = window.desktop?.db;
+      if (scope === "sessions") await api?.clearSessions?.();
+      else if (scope === "chat") await api?.clearChat?.();
+      else if (scope === "all") {
+        await api?.clearStreamEvents?.();
+        await api?.clearSessions?.();
+        await api?.clearChat?.();
+      } else await api?.clearStreamEvents?.();
+      showDataStatus(t("data.cleared"), false);
+      renderDataStats();
+      refreshHistoryTab();
+    });
+  }
+
+  if (openDataFolderBtn) {
+    openDataFolderBtn.addEventListener("click", () => window.desktop?.db?.openDataFolder?.());
+  }
+
+  if (resetDbBtn) {
+    resetDbBtn.addEventListener("click", async () => {
+      if (!confirm(t("data.resetConfirm"))) return;
+      showDataStatus(t("data.resetting"), false);
+      await window.desktop?.db?.resetAll?.();
+    });
+  }
+
+  renderDataStats();
 
   // ---- layout presets ----
 
@@ -2652,7 +2974,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (!historyPanelEl || !toggleHistoryBtn) return;
     historyPanelEl.hidden = !open;
     toggleHistoryBtn.classList.toggle("is-active", open);
-    if (open) renderStreamEvents(true);
+    if (open) refreshHistoryTab();
   }
   if (toggleHistoryBtn) {
     toggleHistoryBtn.innerHTML = `${ICONS.widgetRecent} ${t("nav.history")}`;
@@ -2738,6 +3060,21 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (btn) btn.addEventListener("click", () => togglePanelById(panelId));
   });
 
+  // ---- local hotkeys for panels - не мешают вводу текста ----
+  document.addEventListener("keydown", (e) => {
+    const tag = document.activeElement && document.activeElement.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === "Escape") {
+      const open = panelRegistry.find((p) => panelIsOpen(p.id));
+      if (open) open.setOpen(false);
+      return;
+    }
+    if (panelIsOpen("historyPanel") && (e.key === "1" || e.key === "2" || e.key === "3")) {
+      setHistoryTab({ "1": "events", "2": "sessions", "3": "chat" }[e.key]);
+    }
+  });
+
   // ---- websocket ----
   function handleMessage(msg) {
     switch (msg.type) {
@@ -2762,6 +3099,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         canvasEditor.renderLayers();
         propertiesPanel.render();
         populateSettings();
+        renderSceneBudget();
         syncIntegrationSwitches();
         renderWheelPanels();
         if (!pollPanelEl.hidden) renderPollPanels();
@@ -2785,6 +3123,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         renderLibrary();
         canvasEditor.renderCanvas();
         canvasEditor.renderLayers();
+        renderSceneBudget();
         break;
       case EVENT_TYPES.THEME_DRAFT_PREVIEW:
         if (msg.payload && !msg.payload.clear && msg.payload.tokens) {
@@ -2876,6 +3215,10 @@ const { EVENT_TYPES } = window.SharedEvents;
         propertiesPanel.render();
         renderWheelPanel();
         break;
+      case EVENT_TYPES.LONGSHOT_UPDATE:
+        state.longshot = (msg.payload && msg.payload.longshot) || state.longshot;
+        propertiesPanel.render();
+        break;
       case EVENT_TYPES.WHEEL_CONFIG:
         state.wheelConfig = (msg.payload && msg.payload.config) || state.wheelConfig;
         renderWheelPanel();
@@ -2963,7 +3306,9 @@ const { EVENT_TYPES } = window.SharedEvents;
     renderLayoutPresets();
     wsClient.refreshStatusChips();
     updateEventsFilterButtons();
-    renderStreamEvents(true);
+    refreshHistoryTab();
+    renderDataStats();
+    renderSceneBudget();
     copyUrlBtn.textContent = t("editor.copyUrl");
     copySceneUrlBtn.textContent = t("scenes.copyUrl");
     exportConfigBtn.textContent = t("settings.export");
@@ -2981,6 +3326,32 @@ const { EVENT_TYPES } = window.SharedEvents;
     helpPanel.refresh();
     const boostyBtn = document.getElementById("openBoostyBtn");
     if (boostyBtn) boostyBtn.innerHTML = `${ICONS.heart} ${t("boosty.support")}`;
+  }
+
+  // Диагностика «бюджета сцены»: сколько анимированных 3D-виджетов (у каждого
+  // собственный canvas-цикл) сейчас видно и какую долю площади канваса они
+  // занимают. Помогает держаться ориентира «2–3 тяжёлых виджета».
+  function renderSceneBudget() {
+    if (!sceneBudgetEl || typeof isAnimatedWidget !== "function") return;
+    const active3d = (state.appearance && state.appearance.active3dWidgets) || [];
+    let count = 0;
+    let area = 0;
+    (state.layout || []).forEach((item) => {
+      if (!item || item.visible === false) return;
+      const type = resolveTypeForTheme ? resolveTypeForTheme(item.type, active3d) : item.type;
+      if (!isAnimatedWidget(type)) return;
+      count += 1;
+      area += ((Number(item.w) || 0) * (Number(item.h) || 0)) / 100; // % площади экрана
+    });
+    if (!count) {
+      sceneBudgetEl.hidden = true;
+      sceneBudgetEl.textContent = "";
+      return;
+    }
+    const areaPct = Math.round(area);
+    sceneBudgetEl.hidden = false;
+    sceneBudgetEl.textContent = t("editor.perfBudget", { count, area: areaPct });
+    sceneBudgetEl.classList.toggle("is-heavy", count > 3 || areaPct >= 80);
   }
 
   function handleLayoutUpdate(newLayout) {
@@ -3001,6 +3372,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     canvasEditor.renderCanvas();
     canvasEditor.renderLayers();
     propertiesPanel.render();
+    renderSceneBudget();
     syncMicBridge();
   }
 
@@ -3009,6 +3381,12 @@ const { EVENT_TYPES } = window.SharedEvents;
   // (getUserMedia is blocked / insecure context). Instead, this control panel
   // captures the mic (Electron grants media) and forwards downsampled levels
   // to the server, which broadcasts them to the overlay visualizer.
+  //
+  // Кадры уходят бинарно (см. shared/mic-frame.js): ~371 Б вместо ~1.4 КБ JSON,
+  // и сервер пересылает их без JSON.parse/stringify. Интервал — ~30 Гц (33 мс):
+  // это осознанный компромисс между плавностью и нагрузкой, понижать дальше
+  // нечего, а 40 Гц было бы даже чаще.
+  const MIC_FRAME_INTERVAL_MS = 33;
   const micBridge = {
     running: false,
     stream: null,
@@ -3019,6 +3397,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     freqArray: null,
     wave: null,
     freq: null,
+    frame: null,
 
     start() {
       if (this.running) return;
@@ -3029,7 +3408,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         this.running = false;
         return;
       }
-      navigator.mediaDevices.getUserMedia({ audio: true })
+      navigator.mediaDevices.getUserMedia({ audio: this._constraints() })
         .then((stream) => {
           if (!this.running) { stream.getTracks().forEach((tr) => tr.stop()); return; }
           const ctx = new Ctx();
@@ -3045,8 +3424,9 @@ const { EVENT_TYPES } = window.SharedEvents;
           this.dataArray = new Uint8Array(analyser.fftSize);
           this.freqArray = new Uint8Array(analyser.frequencyBinCount);
           this.wave = new Uint8Array(240);
-          this.freq = new Uint8Array(64);
-          if (!this.timer) this.timer = setInterval(() => this.tick(), 33);
+          this.freq = new Uint8Array(128);
+          this.frame = MicFrame ? new Uint8Array(MicFrame.FRAME_LEN) : null;
+          if (!this.timer) this.timer = setInterval(() => this.tick(), MIC_FRAME_INTERVAL_MS);
         })
         .catch((err) => {
           this.running = false;
@@ -3067,11 +3447,32 @@ const { EVENT_TYPES } = window.SharedEvents;
       const fl = f.length;
       const usable = Math.max(8, Math.floor(fl * 0.8));
       const fr = this.freq;
-      for (let i = 0; i < 64; i++) fr[i] = f[Math.floor((i / 64) * (usable - 1))];
+      const fn = fr.length;
+      for (let i = 0; i < fn; i++) fr[i] = f[Math.floor((i / fn) * (usable - 1))];
       let sum = 0;
       for (let i = 0; i < dl; i++) { const v = (d[i] - 128) / 128; sum += v * v; }
       const level = Math.sqrt(sum / dl);
-      send(EVENT_TYPES.MIC_AUDIO_DATA, { level, wave: Array.from(w), freq: Array.from(fr) });
+      if (MicFrame) sendBinary(MicFrame.encode(level, w, fr, this.frame));
+      else send(EVENT_TYPES.MIC_AUDIO_DATA, { level, wave: Array.from(w), freq: Array.from(fr) });
+      updateMicLevelMeter(level);
+    },
+
+    _constraints() {
+      const cfg = state.micConfig || {};
+      const audio = {
+        echoCancellation: cfg.echoCancellation !== false,
+        noiseSuppression: cfg.noiseSuppression !== false,
+        autoGainControl: cfg.autoGainControl !== false,
+      };
+      if (cfg.deviceId) audio.deviceId = { exact: cfg.deviceId };
+      return audio;
+    },
+
+    // Перезапуск с новым устройством/опциями захвата.
+    restartIfRunning() {
+      if (!this.running) return;
+      this.stop();
+      this.start();
     },
 
     stop() {

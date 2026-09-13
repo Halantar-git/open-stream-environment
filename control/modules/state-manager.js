@@ -48,7 +48,7 @@ export function createStateManager() {
     streamdeck: { icons: { start: "", brb: "", wheel: "", talk: "", end: "", pause: "" } },
     selectedId: null,
     pendingAdd: null,
-    appearance: { activeThemeId: "nebula", enable3d: false, activeThemeId3d: "", enabled3d: {}, tokens: {}, customCss: "", themes: [] },
+    appearance: { activeThemeId: "nebula", enable3d: false, activeThemeId3d: "", active3dWidgets: [], enabled3d: {}, tokens: {}, customCss: "", themes: [] },
     editorPrefs: { gridSize: 5, snapEnabled: true, aspectRatio: "16:9" },
     hudEditHotkey: "Control+Shift+H",
     hudDisplayId: null,
@@ -87,6 +87,9 @@ export function createStateManager() {
     wheelConfig: { musicVolume: 50, x: 960, y: 540 },
     wheelSpeedConfig: { speed: 3 },
     micConfig: { sensitivity: 1.5, lineWidth: 2, color: "", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2, peakFall: 2.5 },
+    micDevices: [],
+    // Последний снимок конфига Longshot (Executive Hangar), если получен.
+    longshot: null,
   };
 
   // Maps the server's `state` snapshot payload into this object.
@@ -129,6 +132,7 @@ export function createStateManager() {
     state.poll = payload.poll || state.poll;
     state.chatBot = payload.chatBot || state.chatBot;
     state.connectionStatus = payload.connectionStatus || state.connectionStatus;
+    state.longshot = payload.longshot || state.longshot;
   };
 
   return state;

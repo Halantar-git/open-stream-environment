@@ -246,6 +246,8 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .properties__test-grid { display: flex; flex-wrap: wrap; gap: 8px; }
 .properties__test-grid .md-button { flex: 1 1 auto; font-size: 12px; padding: 8px 10px; }
 .properties__hint { font-size: 11px; color: var(--md-on-surface-variant); line-height: 1.4; }
+.properties__level { height: 8px; border-radius: 4px; background: var(--md-surface-container-highest); border: 1px solid var(--md-outline-variant); overflow: hidden; }
+.properties__level-fill { height: 100%; width: 0%; background: var(--md-primary); transition: width 80ms linear; }
 .properties__delete { display: flex; justify-content: flex-end; margin-top: 2px; }
 .properties__delete .md-button { padding: 6px 10px; font-size: 12px; color: var(--md-error); }
 .properties__delete .md-button svg { width: 14px; height: 14px; }
@@ -295,6 +297,21 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--shape-sm);
   padding: 6px 8px;
+}
+.canvas-toolbar__perf {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--md-on-surface-variant);
+  background: var(--md-surface-container-highest);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 999px;
+  padding: 5px 10px;
+  white-space: nowrap;
+}
+.canvas-toolbar__perf.is-heavy {
+  color: var(--md-error);
+  border-color: var(--md-error);
 }
 #layoutPresetSelect {
   min-width: 100px;
@@ -541,6 +558,15 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   font-size: 12px;
 }
 .history-panel__search::placeholder { color: #6e7681; }
+.history-panel__select {
+  padding: 6px 8px;
+  border: 1px solid #30363d;
+  background: #0d1117;
+  color: #c9d1d9;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
 .history-panel__btn {
   font-family: var(--font-body);
   font-size: 12px;
@@ -654,6 +680,70 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   font-family: var(--font-body);
 }
 .events-history__replay:hover { background: #30363d; }
+
+/* ---------- History panel tabs / sessions / storage ---------- */
+.history-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px 0;
+  border-bottom: 1px solid #21262d;
+  background: #161b22;
+}
+.history-tab {
+  font-family: var(--font-body);
+  font-size: 12px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  background: transparent;
+  color: #8b949e;
+  border-radius: 6px 6px 0 0;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+.history-tab:hover { color: #c9d1d9; }
+.history-tab.is-active {
+  background: #0d1117;
+  border-color: #30363d;
+  color: #c9d1d9;
+  margin-bottom: -1px;
+}
+.history-tabpane {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.history-tabpane[hidden] { display: none; }
+
+.sessions-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.sessions-table th,
+.sessions-table td {
+  text-align: left;
+  padding: 5px 8px;
+  border-bottom: 1px solid #21262d;
+  white-space: nowrap;
+}
+.sessions-table th {
+  color: #8b949e;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.4px;
+}
+.sessions-table tr:hover td { background: #161b22; }
+.sessions-table__num { text-align: right; }
+
+.data-stats { display: flex; flex-direction: column; gap: 4px; margin: 8px 0 12px; font-size: 12.5px; }
+.data-stats__row { display: flex; justify-content: space-between; gap: 12px; }
+.data-stats__row span { opacity: 0.72; }
+.data-stats__row code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 60%;
+}
 
 /* ---------- Giveaway / Fortune Wheel ---------- */
 .giveaway-participants {
@@ -1762,6 +1852,17 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   color: var(--md-on-surface-variant);
 }
 .help-section p:last-child { margin-bottom: 0; }
+.help-section p.help-callout {
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 700;
+  color: var(--md-on-surface);
+  background: var(--md-primary-container);
+  border-left: 3px solid var(--md-primary);
+  border-radius: var(--shape-sm);
+}
 .help-section code {
   font-family: var(--font-mono);
   font-size: 12px;

@@ -48,6 +48,7 @@
     WHEEL_CONFIG: "wheel_config", // { config }
     WHEEL_SPEED_CONFIG: "wheel_speed_config", // { config }
     OVERLAY_MIC_CONFIG: "overlay_mic_config", // { config }
+    LONGSHOT_UPDATE: "longshot_update", // { longshot } — Executive Hangar anchor from timers.longshotrelay.com
     LOCALES: "locales", // { lang, locales: { ru, en } }
     TERMINAL_LOG: "terminal_log", // { timestamp, service, level, message, data }
     DEBUG_LOG: "debug_log", // { timestamp, service, level: "debug", message, data }
@@ -131,6 +132,7 @@
     CMD_APPLY_POLL_PRESET: "cmd_apply_poll_preset", // { id }
     CMD_DELETE_POLL_PRESET: "cmd_delete_poll_preset", // { id }
     CMD_SET_MIC_CONFIG: "cmd_set_mic_config", // { config }
+    CMD_REFRESH_LONGSHOT: "cmd_refresh_longshot", // {} — fetch the Longshot timers config now
     CMD_SET_LANGUAGE: "cmd_set_language", // { lang }
     CMD_SET_YOUTUBE_VIDEO_ID: "cmd_set_youtube_video_id", // { videoId }
     CMD_SET_INTEGRATION_ENABLED: "cmd_set_integration_enabled", // { service, enabled }

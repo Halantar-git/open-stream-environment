@@ -30,11 +30,14 @@ describe("server/db", () => {
     db = createDatabase(dbPath);
   });
 
-  afterEach(() => {
-    try {
-      fs.unlinkSync(dbPath);
-    } catch {
-      /* ignore */
+  afterEach(async () => {
+    await db.flush();
+    for (const file of [dbPath, dbPath.replace(/\.json$/i, ".jsonl"), dbPath.replace(/\.json$/i, ".chat.jsonl")]) {
+      try {
+        fs.unlinkSync(file);
+      } catch {
+        /* ignore */
+      }
     }
   });
 
@@ -104,5 +107,92 @@ describe("server/db", () => {
     expect(db.getWidgets()).toEqual([]);
     expect(db.getWheelConfig().musicVolume).toBe(50);
     expect(db.getStreamEvents({ limit: 10 }).total).toBe(0);
+  });
+
+  test("пишет и читает историю чата с пагинацией", () => {
+    db.appendChat({ user: "alice", message: "hi", sessionId: "s1", timestamp: 1 });
+    db.appendChat({ user: "bob", message: "yo", sessionId: "s1", timestamp: 2 });
+    db.appendChat({ user: "carol", message: "hey", timestamp: 3 });
+
+    expect(db.getChat().length).toBe(3);
+    expect(db.getChat({ sessionId: "s1" }).length).toBe(2);
+
+    const page = db.getChatPage({ limit: 2, offset: 0 });
+    expect(page.total).toBe(3);
+    expect(page.items.length).toBe(2);
+    expect(page.items[0].username).toBe("carol");
+  });
+
+  test("история чата отключается настройкой", () => {
+    expect(db.getChatHistoryEnabled()).toBe(true);
+    db.setChatHistoryEnabled(false);
+    expect(db.getChatHistoryEnabled()).toBe(false);
+    expect(db.appendChat({ user: "a", message: "hi" })).toBeNull();
+    expect(db.getChat().length).toBe(0);
+
+    db.setChatHistoryEnabled(true);
+    expect(db.appendChat({ user: "a", message: "hi" })).not.toBeNull();
+  });
+
+  test("clearChat и clearSessions чистят только свою область", () => {
+    db.appendStreamEvent({ type: "donation", username: "a", amount: 1 });
+    db.appendChat({ user: "a", message: "hi" });
+    db.startSession("test");
+
+    db.clearChat();
+    expect(db.getChat().length).toBe(0);
+    expect(db.getStreamEvents({ limit: 10 }).total).toBe(1);
+    expect(db.getSessions().length).toBe(1);
+
+    db.clearSessions();
+    expect(db.getSessions().length).toBe(0);
+    expect(db.getStreamEvents({ limit: 10 }).total).toBe(1);
+  });
+
+  test("getSessionsWithStats агрегирует события и чат по времени", () => {
+    const session = db.startSession("chan");
+    db.appendStreamEvent({ type: "donation", username: "a", amount: 5 });
+    db.appendStreamEvent({ type: "follow", username: "b" });
+    db.appendChat({ user: "a", message: "hi", sessionId: session.id });
+
+    const stats = db.getSessionsWithStats();
+    expect(stats).toHaveLength(1);
+    expect(stats[0].id).toBe(session.id);
+    expect(stats[0].channel).toBe("chan");
+    expect(stats[0].events).toBe(2);
+    expect(stats[0].donations).toBe(1);
+    expect(stats[0].chat).toBe(1);
+    expect(stats[0].durationMs).toBeGreaterThanOrEqual(0);
+  });
+
+  test("removeStreamEvents удаляет по фильтру", () => {
+    db.appendStreamEvent({ type: "donation", username: "a", amount: 1 });
+    db.appendStreamEvent({ type: "follow", username: "b" });
+    expect(db.removeStreamEvents({ type: "donation" })).toBe(1);
+    expect(db.getStreamEvents({ limit: 10 }).total).toBe(1);
+  });
+
+  test("лимит истории применяется и сохраняется", () => {
+    expect(db.setHistoryLimit(5)).toBe(5);
+    expect(db.getHistoryLimit()).toBe(5);
+    for (let i = 0; i < 10; i++) db.appendStreamEvent({ type: "follow", username: `u${i}` });
+    expect(db.getStreamEvents({ limit: 100 }).total).toBe(5);
+    expect(db.setHistoryLimit(0)).toBe(0);
+  });
+
+  test("getStorageStats возвращает пути, размеры и счётчики", () => {
+    db.startSession("x");
+    db.appendStreamEvent({ type: "follow", username: "a" });
+    db.appendChat({ user: "a", message: "hi" });
+
+    const stats = db.getStorageStats();
+    expect(stats.dir).toBe(path.dirname(dbPath));
+    expect(stats.database.path).toBe(dbPath);
+    expect(stats.history.path).toContain(".jsonl");
+    expect(stats.chat.path).toContain(".chat.jsonl");
+    expect(stats.sessions).toBe(1);
+    expect(stats.history.count).toBe(1);
+    expect(stats.chat.count).toBe(1);
+    expect(typeof stats.history.bytes).toBe("number");
   });
 });

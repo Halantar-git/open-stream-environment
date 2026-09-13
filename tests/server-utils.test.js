@@ -15,7 +15,7 @@
  * along with this program.  If not, see <https://gnu.org>.
  */
 
-const { buildTestAlert, eventTypeForKind, toStreamEvent } = require("../server/index");
+const { buildTestAlert, eventTypeForKind, toStreamEvent, roleFromUrl, shouldHideWheelAfterSpin } = require("../server/index");
 
 describe("server/index helpers", () => {
   test("buildTestAlert формирует корректные поля по kind", () => {
@@ -65,5 +65,26 @@ describe("server/index helpers", () => {
     expect(record.is_test).toBe(true);
     expect(record.amount).toBe(10);
     expect(record.type).toBe("donation");
+  });
+
+  test("roleFromUrl читает роль из query строки подключения", () => {
+    expect(roleFromUrl("/ws?role=overlay")).toBe("overlay");
+    expect(roleFromUrl("/ws?foo=1&role=chat")).toBe("chat");
+    expect(roleFromUrl("/ws?role=")).toBe("other");
+    expect(roleFromUrl("/ws")).toBe("other");
+    expect(roleFromUrl("")).toBe("other");
+    expect(roleFromUrl(undefined)).toBe("other");
+    expect(roleFromUrl("/ws", "scene")).toBe("scene");
+  });
+
+  test("shouldHideWheelAfterSpin: прячем только когда цикл закончен", () => {
+    // Обычный режим — прячем после любого победителя.
+    expect(shouldHideWheelAfterSpin({ eliminationMode: false, isFinalWinner: false })).toBe(true);
+    // На выбывание, но победитель финальный — цикл закончен.
+    expect(shouldHideWheelAfterSpin({ eliminationMode: true, isFinalWinner: true })).toBe(true);
+    // На выбывание, есть ещё участники — колесо должно остаться для следующего спина.
+    expect(shouldHideWheelAfterSpin({ eliminationMode: true, isFinalWinner: false })).toBe(false);
+    // Защита от пустого значения.
+    expect(shouldHideWheelAfterSpin(null)).toBe(true);
   });
 });

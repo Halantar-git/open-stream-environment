@@ -20,7 +20,11 @@ const path = require("path");
 const crypto = require("crypto");
 
 const { getDbPath } = require("./storage-paths");
-const { atomicWriteFileSync } = require("./atomic-write");
+const { atomicWriteFileSync, AsyncAtomicStore } = require("./atomic-write");
+const { createHistoryStore, DEFAULT_MAX_RECORDS } = require("./history-store");
+
+// Чат объёмнее событий, поэтому у него отдельный более скромный лимит.
+const CHAT_MAX_RECORDS = 10000;
 
 function defaultData() {
   return {
@@ -32,12 +36,13 @@ function defaultData() {
     poll_presets: [],
     // Сессии стрима.
     sessions: [],
-    // История чата / логов, привязанная к sessionId.
-    // Накопление отключено (см. appendChat) — массив оставлен для обратной
-    // совместимости и методов очистки истории.
+    // История чата хранится отдельно (local-db.chat.jsonl); массив оставлен
+    // пустым для обратной совместимости и методов очистки истории.
     chatMessages: [],
-    // История всех входящих событий (донаты, подписки, фоллоу).
-    stream_events: [],
+    // Писать ли историю чата (настройка в панели управления).
+    chat_history_enabled: true,
+    // Сколько последних стрим-событий хранить (0 — без лимита).
+    history_max_records: DEFAULT_MAX_RECORDS,
     // Настройки виджета списка участников розыгрыша (позиция и размер в пикселях).
     overlay_participants_config: {
       maxNames: 10,
@@ -67,6 +72,7 @@ function defaultData() {
       options: [], // [{ id, label }]
     },
     // Настройки виджета аудио-визуализатора (микрофон).
+    // Дефолты отображения; конкретный виджет может переопределять их в своём config.
     overlay_mic_config: {
       sensitivity: 1.5,
       lineWidth: 2,
@@ -76,6 +82,15 @@ function defaultData() {
       barCount: 32,
       barGap: 2,
       peakFall: 2.5, // скорость спада пика эквалайзера (ячеек/сек)
+      freqScale: "log", // "log" | "linear" — шкала частот
+      smoothing: 0.35, // 0..1 — сглаживание полос (attack/release)
+      gain: 1, // множитель сигнала
+      noiseGate: 0, // 0..0.5 — порог шумового гейта
+      // Захват (глобально): устройство и опции getUserMedia.
+      deviceId: "",
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
     },
     // Накопительные предупреждения автомодерации чата: userId -> количество варнов.
     moderation_warns: {},
@@ -115,19 +130,83 @@ function readJson(file) {
 }
 
 /*
-  Лёгкое синхронное JSON-хранилище вместо lowdb v1. Сохраняет прежний файл
+  Лёгкое JSON-хранилище вместо lowdb v1. Сохраняет прежний файл
   (config/local-db.json), прежнюю схему и прежний API, но без устаревшей
-  зависимости. Все чтения идут напрямую из `data`, запись — в `persist()`.
+  зависимости. Настройки читаются напрямую из `data`, а снапшот уходит в
+  persist() асинхронно (с коалесингом). История стрим-событий живёт отдельно
+  в append-only local-db.jsonl и не участвует в перезаписи снапшота.
 */
 function createDatabase(dbPath = getDbPath()) {
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
   let data = deepDefaults(defaultData(), readJson(dbPath));
 
-  function persist() {
-    atomicWriteFileSync(dbPath, JSON.stringify(data, null, 2));
+  // persist() вызывается на каждую мутацию, поэтому пишем асинхронно
+  // и с коалесингом — файл не блокирует event loop.
+  const store = new AsyncAtomicStore(dbPath, {
+    logger: (err) => console.warn("[db] persist failed:", (err && err.message) || err),
+  });
+
+  // История событий живёт в отдельном append-only JSONL рядом с local-db.json:
+  // каждое событие дописывается одной строкой, а не перезаписывает всю БД.
+  // Хранятся последние DEFAULT_MAX_RECORDS (20000) событий, файл периодически
+  // уплотняется (см. history-store.js).
+  const historyPath = dbPath.replace(/\.json$/i, "") + ".jsonl";
+  const history = createHistoryStore(historyPath, {
+    logger: (err) => console.warn("[history] write failed:", (err && err.message) || err),
+    maxRecords: data.history_max_records,
+  });
+
+  // История чата — отдельный append-only JSONL со своим лимитом.
+  const chatPath = dbPath.replace(/\.json$/i, "") + ".chat.jsonl";
+  const chat = createHistoryStore(chatPath, {
+    logger: (err) => console.warn("[chat] write failed:", (err && err.message) || err),
+    maxRecords: CHAT_MAX_RECORDS,
+  });
+
+  // Одноразовая миграция прежних stream_events из local-db.json в JSONL.
+  if (Array.isArray(data.stream_events)) {
+    const legacy = data.stream_events;
+    delete data.stream_events;
+    if (history.count() === 0) history.replaceAll(legacy);
+    else
+      legacy.forEach((e) => {
+        if (e && e.id && !history.getById(e.id)) history.append(e);
+      });
   }
-  persist(); // при первом запуске создаём файл с дефолтами
+
+  // Одноразовая миграция прежних chatMessages из local-db.json в JSONL.
+  if (Array.isArray(data.chatMessages) && data.chatMessages.length) {
+    const legacyChat = data.chatMessages;
+    if (chat.count() === 0) chat.replaceAll(legacyChat);
+    else
+      legacyChat.forEach((m) => {
+        if (m && m.id && !chat.getById(m.id)) chat.append(m);
+      });
+    data.chatMessages = [];
+  }
+
+  function persist() {
+    store.write(data);
+  }
+
+  // Финальный синхронный сброс последнего снапшота (при выходе).
+  function flushSync() {
+    const a = store.flushSync();
+    const b = history.flushSync();
+    const c = chat.flushSync();
+    return a || b || c;
+  }
+
+  // Ждёт, пока отложенные async-записи окажутся на диске.
+  async function flush() {
+    await store.flush();
+    await history.flush();
+    await chat.flush();
+  }
+
+  // При первом запуске создаём файл с дефолтами синхронно (как раньше).
+  atomicWriteFileSync(dbPath, JSON.stringify(data, null, 2));
 
   function get(pathStr) {
     return String(pathStr).split(".").reduce((acc, key) => (acc == null ? undefined : acc[key]), data);
@@ -201,14 +280,28 @@ function createDatabase(dbPath = getDbPath()) {
   // раньше на каждое сообщение выполнялась синхронная запись на диск,
   // что на активном чате заметно тормозило приложение. Сообщения по-прежнему
   // доставляются в оверлей и окно чата по WebSocket.
-  function appendChat() {
-    return null;
+  function appendChat(message) {
+    if (!message || get("chat_history_enabled") === false) return null;
+    const row = {
+      id: message.id || crypto.randomUUID(),
+      timestamp: message.timestamp || Date.now(),
+      username: message.user || message.username || "Аноним",
+      message: message.message || "",
+      isTest: !!message.isTest,
+      sessionId: message.sessionId || null,
+    };
+    chat.append(row);
+    return row;
   }
 
+  // Возвращает массив (обратная совместимость); для пагинации — getChatPage.
   function getChat(opts = {}) {
-    const all = get("chatMessages") || [];
-    if (opts.sessionId) return all.filter((m) => m.sessionId === opts.sessionId);
-    return all;
+    if (opts.sessionId) return chat.all().filter((m) => m.sessionId === opts.sessionId);
+    return chat.all();
+  }
+
+  function getChatPage(opts = {}) {
+    return chat.query(opts);
   }
 
   function appendStreamEvent(event) {
@@ -225,41 +318,16 @@ function createDatabase(dbPath = getDbPath()) {
       count: typeof event.count === "number" ? event.count : null,
       tier: event.tier || null,
     };
-    get("stream_events").push(row);
-    persist();
+    history.append(row);
     return row;
   }
 
   function getStreamEventById(id) {
-    return get("stream_events").find((e) => e.id === id) || null;
+    return history.getById(id);
   }
 
   function getStreamEvents(opts = {}) {
-    const limit = Math.max(1, Number(opts.limit) || 50);
-    const offset = Math.max(0, Number(opts.offset) || 0);
-    let all = get("stream_events") || [];
-
-    if (opts.type) {
-      all = all.filter((e) => e.type === opts.type);
-    }
-    if (opts.includeTest === false) {
-      all = all.filter((e) => !e.is_test);
-    }
-    if (opts.search) {
-      const q = String(opts.search).trim().toLowerCase();
-      if (q) {
-        all = all.filter((e) =>
-          String(e.username || "").toLowerCase().includes(q) ||
-          String(e.message || "").toLowerCase().includes(q)
-        );
-      }
-    }
-
-    const sorted = [...all].sort((a, b) => b.timestamp - a.timestamp);
-    return {
-      items: sorted.slice(offset, offset + limit),
-      total: sorted.length,
-    };
+    return history.query(opts);
   }
 
   function getSessions() {
@@ -355,6 +423,14 @@ function createDatabase(dbPath = getDbPath()) {
       barCount: Math.min(64, Math.max(10, Math.round(Number(raw.barCount) || 32))),
       barGap: typeof raw.barGap === "number" ? raw.barGap : 2,
       peakFall: Math.min(10, Math.max(0.5, Number(raw.peakFall) || 2.5)),
+      freqScale: raw.freqScale === "linear" ? "linear" : "log",
+      smoothing: Math.min(1, Math.max(0, typeof raw.smoothing === "number" ? raw.smoothing : 0.35)),
+      gain: Math.min(5, Math.max(0.1, typeof raw.gain === "number" ? raw.gain : 1)),
+      noiseGate: Math.min(0.5, Math.max(0, typeof raw.noiseGate === "number" ? raw.noiseGate : 0)),
+      deviceId: typeof raw.deviceId === "string" ? raw.deviceId : "",
+      echoCancellation: raw.echoCancellation !== false,
+      noiseSuppression: raw.noiseSuppression !== false,
+      autoGainControl: raw.autoGainControl !== false,
     };
   }
 
@@ -395,23 +471,109 @@ function createDatabase(dbPath = getDbPath()) {
   }
 
   function clearStreamEvents() {
-    set("stream_events", []);
+    history.clear();
+    return true;
+  }
+
+  function clearSessions() {
+    set("sessions", []);
     persist();
+    return true;
+  }
+
+  function clearChat() {
+    chat.clear();
     return true;
   }
 
   function clearHistory() {
     set("sessions", []);
     set("chatMessages", []);
-    set("stream_events", []);
+    history.clear();
+    chat.clear();
     persist();
     return true;
   }
 
   function clearAll() {
     data = deepDefaults(defaultData(), {});
+    history.clear();
+    chat.clear();
     persist();
     return true;
+  }
+
+  // Сессии с агрегатами по времени: сколько событий/донатов и сообщений чата
+  // пришлось на каждую сессию (по диапазону startedAt..endedAt).
+  function getSessionsWithStats() {
+    const events = history.all();
+    const messages = chat.all();
+    const inRange = (arr, from, to) =>
+      arr.filter((r) => {
+        const ts = r.timestamp || 0;
+        return ts >= from && ts <= to;
+      });
+    return getSessions()
+      .map((s) => {
+        const from = s.startedAt || 0;
+        const to = s.endedAt || Date.now();
+        const evs = inRange(events, from, to);
+        return {
+          id: s.id,
+          channel: s.channel || "",
+          startedAt: s.startedAt || null,
+          endedAt: s.endedAt || null,
+          durationMs: s.startedAt ? (s.endedAt || Date.now()) - s.startedAt : null,
+          events: evs.length,
+          donations: evs.filter((e) => e.type === "donation").length,
+          chat: inRange(messages, from, to).length,
+        };
+      })
+      .sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
+  }
+
+  function removeStreamEvents(filter) {
+    return history.removeBy(filter || {});
+  }
+
+  function getHistoryLimit() {
+    return history.maxRecords;
+  }
+
+  function setHistoryLimit(value) {
+    const next = history.setMaxRecords(value);
+    set("history_max_records", next);
+    persist();
+    return next;
+  }
+
+  function getChatHistoryEnabled() {
+    return get("chat_history_enabled") !== false;
+  }
+
+  function setChatHistoryEnabled(on) {
+    const next = !!on;
+    set("chat_history_enabled", next);
+    persist();
+    return next;
+  }
+
+  function fileSize(file) {
+    try {
+      return fs.statSync(file).size;
+    } catch {
+      return 0;
+    }
+  }
+
+  function getStorageStats() {
+    return {
+      dir: path.dirname(dbPath),
+      database: { path: dbPath, bytes: fileSize(dbPath) },
+      history: { path: historyPath, bytes: fileSize(historyPath), count: history.count(), limit: history.maxRecords },
+      chat: { path: chatPath, bytes: fileSize(chatPath), count: chat.count(), limit: chat.maxRecords },
+      sessions: getSessions().length,
+    };
   }
 
   return {
@@ -425,10 +587,13 @@ function createDatabase(dbPath = getDbPath()) {
     endSession,
     appendChat,
     getChat,
+    getChatPage,
     getSessions,
+    getSessionsWithStats,
     appendStreamEvent,
     getStreamEventById,
     getStreamEvents,
+    removeStreamEvents,
     getParticipantsConfig,
     saveParticipantsConfig,
     getWheelConfig,
@@ -444,8 +609,17 @@ function createDatabase(dbPath = getDbPath()) {
     getLanguage,
     saveLanguage,
     clearStreamEvents,
+    clearSessions,
+    clearChat,
     clearHistory,
     clearAll,
+    getHistoryLimit,
+    setHistoryLimit,
+    getChatHistoryEnabled,
+    setChatHistoryEnabled,
+    getStorageStats,
+    flush,
+    flushSync,
   };
 }
 

@@ -26,7 +26,7 @@
 
 import { el } from "./dom.js";
 
-export function initWsClient({ url, t, onMessage, onStatusClick, resolveUrl }) {
+export function initWsClient({ url, role, t, onMessage, onStatusClick, resolveUrl }) {
   let ws = null;
   let connectionStatus = {};
   let currentUrl = url;
@@ -96,8 +96,24 @@ export function initWsClient({ url, t, onMessage, onStatusClick, resolveUrl }) {
     if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type, payload }));
   }
 
+  // Бинарный кадр без JSON-обёртки (мост микрофона).
+  function sendBinary(buffer) {
+    if (ws && ws.readyState === 1) {
+      try {
+        ws.send(buffer);
+      } catch {
+        /* сокет мог закрыться между проверкой и отправкой */
+      }
+    }
+  }
+
+  function withRole(u) {
+    if (!role) return u;
+    return u + (u.includes("?") ? "&" : "?") + "role=" + encodeURIComponent(role);
+  }
+
   function connect() {
-    ws = new WebSocket(currentUrl);
+    ws = new WebSocket(withRole(currentUrl));
     ws.onopen = () => {
       failures = 0;
     };
@@ -133,5 +149,5 @@ export function initWsClient({ url, t, onMessage, onStatusClick, resolveUrl }) {
 
   connect();
 
-  return { send, setStatuses, updateStatus, refreshStatusChips, setUrl };
+  return { send, sendBinary, setStatuses, updateStatus, refreshStatusChips, setUrl };
 }

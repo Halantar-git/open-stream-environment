@@ -20,13 +20,13 @@ const path = require("path");
 const crypto = require("crypto");
 
 const { seal, open } = require("./secret-store");
-const { WIDGET_TYPES } = require("../shared/widget-catalog");
-const { BUILTIN_THEMES, THREE_D_STYLES } = require("../shared/themes");
-const { buildThemeTokens, SHAPE_MODES } = require("../shared/theme-engine");
+const { WIDGET_TYPES, widgetsForTheme, widgetRole } = require("../shared/widget-catalog");
+const { BUILTIN_THEMES } = require("../shared/themes");
+const { buildThemeTokens, SHAPE_MODES, ALERT_EASINGS } = require("../shared/theme-engine");
 const { defaultScenes } = require("../shared/scenes-catalog");
 const { defaultModerationConfig } = require("./integrations/chat-moderation");
 const { getConfigPath, getExamplePath } = require("./storage-paths");
-const { atomicWriteFileSync } = require("./atomic-write");
+const { atomicWriteFileSync, AsyncAtomicStore } = require("./atomic-write");
 
 function loadConfig() {
   const configPath = getConfigPath();
@@ -38,7 +38,30 @@ function loadConfig() {
 }
 
 function saveConfig(config) {
-  atomicWriteFileSync(getConfigPath(), JSON.stringify(encryptConfig(config), null, 2));
+  getConfigStore().write(encryptConfig(config));
+}
+
+// store создаётся лениво и пересоздаётся при смене пути (используется в тестах).
+let configStore = null;
+let configStorePath = null;
+
+function getConfigStore() {
+  const p = getConfigPath();
+  if (!configStore || configStorePath !== p) {
+    configStore = new AsyncAtomicStore(p, {
+      // ENOENT при смене каталога в тестах — не шум; остальное логируем.
+      logger: (err) => {
+        if (err && err.code !== "ENOENT") console.warn("[config] save failed:", err.message || err);
+      },
+    });
+    configStorePath = p;
+  }
+  return configStore;
+}
+
+// Финальный синхронный сброс конфига — для выхода из приложения.
+function flushConfigSync() {
+  return configStore ? configStore.flushSync() : false;
 }
 
 function encryptConfig(config) {
@@ -115,6 +138,30 @@ function fisherYates(arr) {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+}
+
+// All 3D widget types — used to validate a custom theme's explicit widget list.
+const THREE_D_WIDGET_TYPES = new Set(
+  Object.values(WIDGET_TYPES)
+    .filter((d) => d.dimension === "3d")
+    .map((d) => d.type)
+);
+
+// Normalizes the custom-theme 3D widget selection. Accepts the explicit
+// `threeDWidgets` array; migrates the older single `variant3d` style id by
+// expanding it to that style's widgets.
+function normalizeThreeDWidgets(seeds) {
+  const raw = Array.isArray(seeds && seeds.threeDWidgets)
+    ? seeds.threeDWidgets
+    : seeds && seeds.variant3d
+    ? widgetsForTheme(seeds.variant3d).map((d) => d.type)
+    : [];
+  const out = [];
+  raw.forEach((t) => {
+    const type = String(t || "").trim();
+    if (THREE_D_WIDGET_TYPES.has(type) && !out.includes(type)) out.push(type);
+  });
+  return out;
 }
 
 function defaultAppearance() {
@@ -335,6 +382,8 @@ class AppState {
       recentEvents: [],
       stats: { followerCount: null, subscriberCount: null },
       deathCount: 0,
+      // Последний снимок конфига Longshot (Executive Hangar); null — ещё не было.
+      longshot: null,
       activeScene: "main",
       sceneStartedAt: null,
       activeCameraAngle: null,
@@ -361,8 +410,15 @@ class AppState {
 
   _loadLayoutFromDb() {
     const widgets = this.db.getWidgets();
-    if (Array.isArray(widgets) && widgets.length) return widgets;
-    const legacy = Array.isArray(this.config.layout) ? this.config.layout : [];
+    // Виджеты, чей тип исчез из каталога (например, «Участники розыгрыша»
+    // переехали в сцену колеса), в раскладке больше не нужны — чистим при загрузке.
+    const clean = (list) => (Array.isArray(list) ? list.filter((w) => w && w.id != null && WIDGET_TYPES[w.type]) : []);
+    if (Array.isArray(widgets) && widgets.length) {
+      const filtered = clean(widgets);
+      if (filtered.length !== widgets.length) this.db.saveWidgets(filtered);
+      return filtered;
+    }
+    const legacy = clean(this.config.layout);
     if (legacy.length) this.db.saveWidgets(legacy);
     return legacy;
   }
@@ -455,6 +511,16 @@ class AppState {
     }
     this._persistLayout();
     return widget;
+  }
+
+  // Есть ли в раскладке видимый таймер Executive Hangar (роль "timer" — и 2D
+  // `timer`, и 3D `grimhex-timer`). Отсчёт всегда идёт от Longshot, поэтому пока
+  // такого виджета нет или он скрыт — внешний API не опрашивается вообще.
+  hasTimerWidget() {
+    return this._layout.some((w) => {
+      if (!w || w.visible === false) return false;
+      return widgetRole(w.type) === "timer";
+    });
   }
 
   removeWidget(id) {
@@ -796,6 +862,12 @@ class AppState {
   adjustDeathCount(delta) {
     this.runtime.deathCount = Math.max(0, (this.runtime.deathCount || 0) + (Number(delta) || 0));
     return { count: this.runtime.deathCount };
+  }
+
+  // Последний снимок конфига Longshot (Executive Hangar), полученный сервером.
+  setLongshot(snapshot) {
+    this.runtime.longshot = snapshot || null;
+    return this.runtime.longshot;
   }
 
   resetDeathCount() {
@@ -1175,8 +1247,8 @@ class AppState {
         builtin: false,
         tokens: custom.tokens,
         customCss: (custom.seeds && custom.seeds.customCss) || "",
-        // Своя тема может взять готовый набор 3D-виджетов (один из THREE_D_STYLES).
-        variant3d: (custom.seeds && custom.seeds.variant3d) || "",
+        // Своя тема хранит явный список включённых 3D-виджетов.
+        threeDWidgets: (custom.seeds && custom.seeds.threeDWidgets) || [],
       };
     }
     return null;
@@ -1192,9 +1264,22 @@ class AppState {
   resolvedTheme3d() {
     if (!this.config.appearance.enable3d) return null;
     const base = this.resolvedTheme();
-    const variantId = base && base.variant3d;
-    if (!variantId) return null;
-    return this.resolveTheme(variantId) || null;
+    if (!base || !base.builtin || !base.variant3d) return null;
+    return this.resolveTheme(base.variant3d) || null;
+  }
+
+  // The explicit list of enabled 3D widget types under the current theme.
+  // Built-in themes derive it from the active variant minus disabled фишки;
+  // custom themes use their own selection (any combination of widgets).
+  _active3dWidgets(theme2d, theme3d, isCustomBase, enabled3d) {
+    if (!this.config.appearance.enable3d) return [];
+    if (isCustomBase) {
+      return (theme2d.threeDWidgets || []).filter((t) => THREE_D_WIDGET_TYPES.has(t));
+    }
+    if (!theme3d) return [];
+    return widgetsForTheme(theme3d.id)
+      .filter((w) => enabled3d[w.type] !== false)
+      .map((w) => w.type);
   }
 
   listThemes() {
@@ -1220,8 +1305,8 @@ class AppState {
       builtin: false,
       category: "custom",
       dimension: "2d",
-      has3d: !!(t.seeds && t.seeds.variant3d),
-      variant3d: (t.seeds && t.seeds.variant3d) || null,
+      has3d: !!(t.seeds && Array.isArray(t.seeds.threeDWidgets) && t.seeds.threeDWidgets.length),
+      threeDWidgets: (t.seeds && t.seeds.threeDWidgets) || [],
       seeds: t.seeds,
       colors: [
         (t.seeds && t.seeds.primary) || "#888888",
@@ -1255,8 +1340,9 @@ class AppState {
     } else {
       this.config.appearance.activeThemeId = t.id;
       const requested = typeof enable3d === "boolean" ? enable3d : this._defaultEnable3d(t.id);
+      const has3d = t.builtin ? !!t.variant3d : Array.isArray(t.threeDWidgets) && t.threeDWidgets.length > 0;
       // 3D нельзя включить у темы без 3D-набора виджетов.
-      this.config.appearance.enable3d = requested && !!t.variant3d;
+      this.config.appearance.enable3d = requested && has3d;
     }
     saveConfig(this.config);
     return true;
@@ -1295,8 +1381,17 @@ class AppState {
       text: String(seeds.text || "").trim(),
       panelOpacity: seeds.panelOpacity === "" || seeds.panelOpacity == null ? "" : Math.max(0, Math.min(100, Number(seeds.panelOpacity) || 0)),
       panelBlur: String(seeds.panelBlur || "").trim(),
-      // Готовый набор 3D-виджетов для своей темы; пусто — без 3D.
-      variant3d: THREE_D_STYLES.some((s) => s.id === seeds.variant3d) ? seeds.variant3d : "",
+      // Цвет ошибки и анимация появления алертов (пусто — значение по форме/дефолт).
+      error: /^#[0-9a-f]{6}$/i.test(String(seeds.error || "").trim()) ? String(seeds.error).trim() : "",
+      alertEnterDuration:
+        seeds.alertEnterDuration === "" || seeds.alertEnterDuration == null
+          ? ""
+          : Math.max(0, Math.min(2000, Math.round(Number(seeds.alertEnterDuration) || 0))),
+      alertEnterEasing: Object.prototype.hasOwnProperty.call(ALERT_EASINGS, seeds.alertEnterEasing)
+        ? seeds.alertEnterEasing
+        : "",
+      // Явный список 3D-виджетов своей темы (можно смешивать стили).
+      threeDWidgets: normalizeThreeDWidgets(seeds),
       customCss: String(seeds.customCss || ""),
     };
     const tokens = buildThemeTokens(cleanSeeds);
@@ -1532,14 +1627,18 @@ class AppState {
   }
 
   snapshot() {
-    // The 3D variant, when enabled, overrides the base theme for the whole
-    // overlay: it supplies the global token set (so 2D widgets, scenes and the
-    // wheel follow the theme's HUD) and enables the 3D widgets via the derived
-    // `appearance.activeThemeId3d`. When 3D is off, the base theme drives tokens.
+    // A built-in 3D variant, when enabled, overrides the base theme for the
+    // whole overlay (its tokens win) and enables that variant's widgets. A
+    // custom base theme keeps its own palette and exposes an explicit list of
+    // enabled 3D widgets via `appearance.active3dWidgets`.
     const theme2d = this.resolvedTheme();
     const theme3d = this.resolvedTheme3d();
-    // A builtin 3D variant restyles the whole overlay (its tokens win). A custom
-    // base theme keeps its own palette — the 3D style only unlocks widgets.
+    const isCustomBase = !!(theme2d && !theme2d.builtin);
+    const enabled3d = this.config.appearance.enabled3d || {};
+    const active3dWidgets = this._active3dWidgets(theme2d, theme3d, isCustomBase, enabled3d);
+    const has3dSet = isCustomBase
+      ? Array.isArray(theme2d.threeDWidgets) && theme2d.threeDWidgets.length > 0
+      : !!(theme2d && theme2d.variant3d);
     const effective = theme3d && theme2d && theme2d.builtin ? theme3d : theme2d;
     return {
       layout: this._layout,
@@ -1563,6 +1662,7 @@ class AppState {
       donationVoice: this.config.donationVoice,
       streamdeck: this.config.streamdeck,
       connectionStatus: this.runtime.connectionStatus,
+      longshot: this.runtime.longshot,
       recentEvents: this.runtime.recentEvents,
       stats: this.runtime.stats,
       deathCount: this.runtime.deathCount,
@@ -1578,8 +1678,9 @@ class AppState {
       appearance: {
         activeThemeId: this.config.appearance.activeThemeId,
         activeThemeId3d: theme3d ? theme3d.id : "",
-        enable3d: !!theme3d,
-        enabled3d: this.config.appearance.enabled3d || {},
+        active3dWidgets,
+        enable3d: !!this.config.appearance.enable3d && has3dSet,
+        enabled3d,
         tokens: effective.tokens,
         customCss: (theme2d && theme2d.customCss) || "",
         themes: this.listThemes(),
@@ -1595,6 +1696,11 @@ class AppState {
       topDonation: this.config.topDonation,
     };
   }
+
+  // Синхронно сбрасывает отложенную запись config.json (вызывается при выходе).
+  flushConfigSync() {
+    return flushConfigSync();
+  }
 }
 
-module.exports = { AppState, saveConfig, fisherYates };
+module.exports = { AppState, saveConfig, fisherYates, flushConfigSync };

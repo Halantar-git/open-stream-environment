@@ -59,7 +59,8 @@ function makeElement(tag) {
 }
 
 function createDocument() {
-  const state = { gl: null };
+  const state = { gl: null, hidden: false };
+  const listeners = [];
   return {
     get gl() {
       return state.gl;
@@ -67,11 +68,29 @@ function createDocument() {
     set gl(v) {
       state.gl = v;
     },
+    get hidden() {
+      return state.hidden;
+    },
+    set hidden(v) {
+      state.hidden = !!v;
+    },
     createElement(tag) {
       const el = makeElement(tag);
       if (tag === "canvas") el.getContext = () => state.gl;
       return el;
     },
+    addEventListener(type, fn) {
+      listeners.push({ type, fn });
+    },
+    removeEventListener(type, fn) {
+      for (let i = listeners.length - 1; i >= 0; i--) {
+        if (listeners[i].fn === fn && listeners[i].type === type) listeners.splice(i, 1);
+      }
+    },
+    dispatch(type) {
+      listeners.filter((l) => l.type === type).forEach((l) => l.fn({ type }));
+    },
+    _listeners: listeners,
   };
 }
 
@@ -230,7 +249,8 @@ describe("BaseWidget", () => {
     expect(el.width).toBe(100);
     expect(el.height).toBe(60);
     expect(gl.viewport).toHaveBeenCalledWith(0, 0, 100, 60);
-    expect(w._listeners).toHaveLength(1); // window resize listener
+    // window resize + document visibilitychange (пауза рендера на скрытой странице)
+    expect(w._listeners).toHaveLength(2);
   });
 
   test("3D без WebGL корректно падает обратно в 2d", () => {
@@ -320,6 +340,11 @@ describe("BaseWidget", () => {
     expect(raf.pending()).toBe(0);
   });
 
+  test("AMBIENT_FPS — отдельный, более низкий кап для декоративных панелей", () => {
+    expect(BaseWidget.AMBIENT_FPS).toBe(20);
+    expect(BaseWidget.AMBIENT_FPS).toBeLessThan(30);
+  });
+
   test("setIdle(true) останавливает цикл, setIdle(false) возобновляет", () => {
     class Counter extends BaseWidget {
       constructor() {
@@ -364,6 +389,36 @@ describe("BaseWidget", () => {
     w.startRenderLoop(30);
 
     w.update({ visible: false });
+    expect(raf.pending()).toBe(0);
+  });
+
+  test("скрытие страницы останавливает рендер-цикл и возобновляет его", () => {
+    class Counter extends BaseWidget {
+      constructor() {
+        super({ id: "c", type: "counter", renderType: "3d-webgl" });
+        this.renders = 0;
+      }
+      render() {
+        this.renders++;
+      }
+    }
+    document.gl = createFakeGl();
+    const parent = document.createElement("div");
+    const w = new Counter();
+    w.mount(parent);
+    w.startRenderLoop(30);
+    expect(raf.pending()).toBe(1);
+
+    document.hidden = true;
+    document.dispatch("visibilitychange");
+    expect(raf.pending()).toBe(0);
+
+    document.hidden = false;
+    document.dispatch("visibilitychange");
+    expect(raf.pending()).toBe(1);
+
+    // hidden не влияет на 2D-виджеты (у них цикла нет)
+    w.unmount();
     expect(raf.pending()).toBe(0);
   });
 

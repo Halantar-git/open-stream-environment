@@ -3,6 +3,9 @@ release/
 backup/
 config/config.json
 config/local-db.json
+config/local-db.jsonl
+config/local-db.chat.jsonl
+config/.*.tmp
 config/media/
 *.log
 .DS_Store

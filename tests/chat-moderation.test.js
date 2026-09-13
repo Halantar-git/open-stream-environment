@@ -23,6 +23,8 @@ const {
   capsRatio,
   findDisallowedLink,
   findBadWord,
+  prepareBadWords,
+  matchBadWord,
 } = require("../server/integrations/chat-moderation");
 
 describe("chat-moderation helpers", () => {
@@ -55,6 +57,16 @@ describe("chat-moderation helpers", () => {
     expect(findBadWord("ты дypaк", ["дурак"])).toBe("дурак");
     expect(findBadWord("д у р а к", ["дурак"])).toBe("дурак");
     expect(findBadWord("всё ок", ["дурак"])).toBeNull();
+  });
+
+  test("prepareBadWords + matchBadWord эквивалентны findBadWord", () => {
+    const prepared = prepareBadWords(["дурак", "спам"]);
+    expect(prepared).toHaveLength(2);
+    expect(matchBadWord("ты дypaк", prepared)).toBe("дурак");
+    expect(matchBadWord("д у р а к", prepared)).toBe("дурак");
+    expect(matchBadWord("всё ок", prepared)).toBeNull();
+    expect(matchBadWord("что угодно", [])).toBeNull();
+    expect(matchBadWord("что угодно", null)).toBeNull();
   });
 });
 
@@ -118,5 +130,42 @@ describe("createModerationEngine", () => {
     expect(make().check({ ...u, message: "ты дурак" })).toMatchObject({ warn: 1 });
     expect(make().check({ ...u, message: "ты дурак" })).toMatchObject({ warn: 2 });
     expect(make().check({ ...u, message: "ты дурак" })).toMatchObject({ warn: 3, ban: true });
+  });
+
+  test("кэш текстовых вердиктов не мешает считать варны", () => {
+    const engine = createModerationEngine({
+      enabled: true,
+      linkProtection: false,
+      badWords: ["дурак"],
+      maxEmotes: 0,
+      maxWarns: 5,
+    });
+    const u = { user: "u", userId: "cache1", level: "everyone" };
+    expect(engine.check({ ...u, message: "ты дурак" })).toMatchObject({ warn: 1 });
+    expect(engine.check({ ...u, message: "ты дурак" })).toMatchObject({ warn: 2 });
+    expect(engine.check({ ...u, message: "ты дурак" })).toMatchObject({ warn: 3 });
+  });
+
+  test("кэш текста не влияет на проверку смайлов (они зависят от метаданных)", () => {
+    const engine = createModerationEngine({ enabled: true, linkProtection: false, capsThreshold: 1, maxEmotes: 2 });
+    const u = { user: "u", userId: "cache2", level: "everyone" };
+    // Один и тот же текст: со смайлами → флаг, без — чисто.
+    expect(engine.check({ ...u, message: "hi", emotes: { 25: ["0-1", "2-3", "4-5"] } })).toMatchObject({ type: "emotes" });
+    expect(engine.check({ ...u, message: "hi", emotes: {} })).toBeNull();
+  });
+
+  test("повторные сообщения дают тот же вердикт, а whitelist остаётся чистым", () => {
+    const engine = createModerationEngine({
+      enabled: true,
+      linkProtection: true,
+      whitelistDomains: ["twitch.tv"],
+      maxEmotes: 0,
+      capsThreshold: 0,
+    });
+    const u = { user: "u", userId: "cache3", level: "everyone" };
+    expect(engine.check({ ...u, message: "evil.com" })).toMatchObject({ type: "link" });
+    expect(engine.check({ ...u, message: "evil.com" })).toMatchObject({ type: "link" });
+    expect(engine.check({ ...u, message: "twitch.tv/good" })).toBeNull();
+    expect(engine.check({ ...u, message: "twitch.tv/good" })).toBeNull();
   });
 });

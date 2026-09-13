@@ -22,6 +22,8 @@ const ChatWidget = require("../overlay/widgets/chat-widget");
 const StatWidget = require("../overlay/widgets/stat-widget");
 const DeathWidget = require("../overlay/widgets/death-widget");
 const RecentWidget = require("../overlay/widgets/recent-widget");
+const TimerWidget = require("../overlay/widgets/timer-widget");
+const GrimHexTimerWidget = require("../overlay/widgets/grimhex-timer-widget");
 const AlertsWidget = require("../overlay/widgets/alerts-widget");
 
 // ---- minimal DOM mock ----
@@ -100,8 +102,6 @@ function makeContext(overrides = {}) {
       topDonation: { user: "", amount: 0, currency: "RUB" },
       deathCount: 0,
       soundboardConfig: { volume: 0.8, queueMode: false },
-      participantsState: { count: 0, participants: [] },
-      participantsConfig: { maxNames: 10, marquee: false, fontSize: 16, textColor: "#fff", backgroundOpacity: 82 },
       micConfig: {},
       remoteMicData: null,
     },
@@ -221,6 +221,77 @@ describe("overlay widgets", () => {
 
     expect(ctx.audio.playWinSound).toHaveBeenCalled();
     expect(w.host.children.length).toBe(1);
+    w.unmount();
+  });
+
+  // Общий снимок Longshot для тестов таймера (updateMessage включён нарочно:
+  // виджет обязан его игнорировать).
+  const longshotAt = (anchorMs, extra = {}) => ({
+    ok: true,
+    operational: true,
+    anchorAt: new Date(anchorMs).toISOString(),
+    updateMessage: "Timer updated for Alpha 4.10 LIVE",
+    phases: { redSec: 7200, greenSec: 3600, blackSec: 300 },
+    lightIntervals: { redStepSec: 1440, greenStepSec: 720 },
+    ...extra,
+  });
+
+  test("GrimHexTimerWidget рендерит цикл Executive Hangar", () => {
+    // Без снимка Longshot — «Синхронизация…».
+    const idle = makeContext({ theme: "grimhex" });
+    const { w: wIdle } = mountWidget(GrimHexTimerWidget, idle, { type: "grimhex-timer" });
+    expect(wIdle.host.dataset.phase).toBe("off");
+    expect(wIdle.host.innerHTML).toContain("timer.syncing");
+    wIdle.unmount();
+
+    // Есть анкер: фаза Red, пять индикаторов, фиксированный заголовок.
+    const ctx = makeContext({ theme: "grimhex", state: { longshot: longshotAt(Date.now() - 60_000) } });
+    const { w } = mountWidget(GrimHexTimerWidget, ctx, { type: "grimhex-timer" });
+    expect(w.host.dataset.phase).toBe("red");
+    expect(w.host.innerHTML).toContain("timer.defaultTitle");
+    expect((w.host.innerHTML.match(/class="exec-timer__light"/g) || []).length).toBe(5);
+    w.unmount();
+  });
+
+  test("TimerWidget (2D) рендерит тот же цикл", () => {
+    // У 2D-варианта нет жёсткого гейта — доступность решает каталог (themes).
+    const ctx = makeContext({ state: { longshot: longshotAt(Date.now() - 60_000) } });
+    const { w } = mountWidget(TimerWidget, ctx, { type: "timer" });
+    expect(w.host.dataset.phase).toBe("red");
+    expect(w.host.innerHTML).toContain("timer.defaultTitle");
+    expect((w.host.innerHTML.match(/class="exec-timer__light"/g) || []).length).toBe(5);
+    w.unmount();
+  });
+
+  test("TimerWidget берёт анкер из снимка Longshot без служебного сообщения", () => {
+    const ctx = makeContext({ state: { longshot: longshotAt(Date.now() - 60_000) } });
+    const { w } = mountWidget(TimerWidget, ctx, { type: "timer" });
+
+    expect(w.host.dataset.phase).toBe("red");
+    expect(w.host.innerHTML).not.toContain("Timer updated for Alpha 4.10 LIVE");
+    w.unmount();
+  });
+
+  test("TimerWidget игнорирует старые title/note из раскладки", () => {
+    const ctx = makeContext({ state: { longshot: longshotAt(Date.now() - 60_000) } });
+    const { w } = mountWidget(TimerWidget, ctx, {
+      type: "timer",
+      config: { title: "Старый заголовок", note: "Моя заметка" },
+    });
+
+    expect(w.host.innerHTML).not.toContain("Старый заголовок");
+    expect(w.host.innerHTML).not.toContain("Моя заметка");
+    w.unmount();
+  });
+
+  test("TimerWidget в блэкауте меняет подпись строки цикла", () => {
+    // 10800–11100 с — Black: сайт показывает «Red phase starts in …».
+    const ctx = makeContext({ state: { longshot: longshotAt(Date.now() - 10_900_000) } });
+    const { w } = mountWidget(TimerWidget, ctx, { type: "timer" });
+
+    expect(w.host.dataset.phase).toBe("black");
+    expect(w.host.innerHTML).toContain("timer.redPhaseStartsIn");
+    expect(w.host.innerHTML).not.toContain("timer.cycleResetsIn");
     w.unmount();
   });
 

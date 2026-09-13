@@ -127,6 +127,16 @@
 
   const SHAPE_MODES = ["rounded", "angular", "sharp", "soft", "pill", "brackets4", "hazard"];
 
+  // Пресеты кривой появления алертов. Хранится ключ, в токен идёт готовая
+  // cubic-bezier-строка — так UI не может вылить произвольный CSS в тему.
+  const ALERT_EASINGS = {
+    smooth: "cubic-bezier(0.05, 0.7, 0.1, 1)",
+    decelerate: "cubic-bezier(0, 0, 0.2, 1)",
+    spring: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+    sharp: "cubic-bezier(0.4, 0, 0.2, 1)",
+    linear: "linear",
+  };
+
   function shapeTokens(mode, primaryHex, surfaceContainerHex, outlineVariantHex) {
     const glass = hexToRgba(surfaceContainerHex, 0.82);
     const base = {
@@ -228,7 +238,8 @@
     return `0 0 ${blur}px ${spread}px #${hex}${alpha}`;
   }
 
-  // seeds: { primary, secondary, tertiary, surfaceSeed, shapeMode, fontPreset,
+  // seeds: { primary, secondary, tertiary, surfaceSeed, error?, shapeMode,
+  //          fontPreset, alertEnterDuration?, alertEnterEasing?,
   //          fontDisplay?, fontBody?, fontMono?, panelRadius?, panelBorderWidth?,
   //          panelBorderStyle?, panelBorderColor?, panelGlowColor?, panelGlowStrength?,
   //          background?, text?, panelOpacity?, panelBlur? }
@@ -237,6 +248,7 @@
     const primary = deriveRole(seeds.primary);
     const secondary = deriveRole(seeds.secondary);
     const tertiary = deriveRole(seeds.tertiary);
+    const error = seeds.error && String(seeds.error).trim() ? deriveRole(seeds.error) : null;
     const surf = deriveSurfaces(seeds.surfaceSeed || seeds.primary);
     const fonts = FONT_PRESETS[seeds.fontPreset] || FONT_PRESETS.nebula;
     const shape = shapeTokens(seeds.shapeMode, seeds.primary, surf.container, surf.outlineVariant);
@@ -254,10 +266,10 @@
       "--md-on-tertiary": tertiary.onRole,
       "--md-tertiary-container": tertiary.container,
       "--md-on-tertiary-container": tertiary.onContainer,
-      "--md-error": "#ffb4ab",
-      "--md-on-error": "#690005",
-      "--md-error-container": "#93000a",
-      "--md-on-error-container": "#ffdad6",
+      "--md-error": error ? error.role : "#ffb4ab",
+      "--md-on-error": error ? error.onRole : "#690005",
+      "--md-error-container": error ? error.container : "#93000a",
+      "--md-on-error-container": error ? error.onContainer : "#ffdad6",
       "--md-surface-dim": surf.dim,
       "--md-surface": surf.base,
       "--md-surface-bright": surf.bright,
@@ -283,6 +295,12 @@
     if (seeds.background && String(seeds.background).trim()) tokens["--md-surface"] = String(seeds.background).trim();
     if (seeds.text && String(seeds.text).trim()) tokens["--md-on-surface"] = String(seeds.text).trim();
     if (seeds.panelBlur && String(seeds.panelBlur).trim()) tokens["--panel-blur"] = String(seeds.panelBlur).trim();
+    const alertDuration = Number(seeds.alertEnterDuration);
+    if (seeds.alertEnterDuration !== "" && seeds.alertEnterDuration != null && Number.isFinite(alertDuration)) {
+      tokens["--alert-enter-duration"] = `${Math.max(0, Math.min(2000, Math.round(alertDuration)))}ms`;
+    }
+    const alertEasing = ALERT_EASINGS[seeds.alertEnterEasing];
+    if (alertEasing) tokens["--alert-enter-easing"] = alertEasing;
     const opacity = Number(seeds.panelOpacity);
     if (seeds.panelOpacity !== "" && seeds.panelOpacity != null && Number.isFinite(opacity)) {
       tokens["--panel-bg"] = hexToRgba(surf.container, Math.max(0, Math.min(100, opacity)) / 100);
@@ -294,7 +312,7 @@
     return tokens;
   }
 
-  const api = { hexToHsl, hslToHex, hexToRgba, deriveRole, deriveSurfaces, buildThemeTokens, FONT_PRESETS, SHAPE_MODES };
+  const api = { hexToHsl, hslToHex, hexToRgba, deriveRole, deriveSurfaces, buildThemeTokens, FONT_PRESETS, SHAPE_MODES, ALERT_EASINGS };
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;

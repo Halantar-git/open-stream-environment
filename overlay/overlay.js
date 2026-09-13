@@ -23,8 +23,8 @@
       (Twitch / YouTube / OBS data arrives here — the data layer is untouched);
     * hold the shared mutable `state` that widgets read;
     * own the WidgetManager, which reconciles the layout into BaseWidget instances;
-    * keep the overlay "chrome" that is not a widget: the giveaway wheel and the
-      alert/winner audio helpers.
+    * keep the overlay "chrome" that is not a widget: the alert/winner audio
+      helpers.
 
   Widgets live in ./widgets/*.js and communicate only through the EventBus.
 */
@@ -37,6 +37,7 @@
   const replacedBy3d = (window.WidgetCatalog && window.WidgetCatalog.replacedBy3d) || (() => null);
   const widgetsForTheme = (window.WidgetCatalog && window.WidgetCatalog.widgetsForTheme) || (() => []);
   const widgetRole = (window.WidgetCatalog && window.WidgetCatalog.widgetRole) || (() => null);
+  const themeAllowsWidget = (window.WidgetCatalog && window.WidgetCatalog.themeAllowsWidget) || (() => true);
   const t = (key, params) => (window.I18n ? window.I18n.t(key, params) : key);
   const renderEmotes =
     window.TwitchEmotes && window.TwitchEmotes.renderEmotes
@@ -56,10 +57,10 @@
     soundboardConfig: { volume: 0.8, queueMode: false },
     tts: { enabled: true, volume: 0.9, rate: 1, lang: "ru-RU", voice: "" },
     donationVoice: { donationAlerts: false, volume: 0.9 },
-    participantsState: { count: 0, participants: [] },
-    participantsConfig: { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82 },
     micConfig: { sensitivity: 1.5, lineWidth: 2, color: "", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2, peakFall: 2.5 },
     remoteMicData: null,
+    // Последний снимок конфига Longshot (Executive Hangar), если он получен.
+    longshot: null,
   };
 
   let ws;
@@ -67,19 +68,6 @@
   // Live connection status per service (from STATE / CONNECTION_STATUS frames),
   // used by shouldMount() to hide widgets whose data source is disabled.
   let connectionStatus = {};
-
-  // ---- wheel (overlay chrome, not a widget) ----
-  let wheelSectors = [];
-  let wheelRotation = 0;
-  let wheelSpinning = false;
-  let wheelVisible = false;
-  let wheelConfig = { musicVolume: 50, x: 960, y: 540 };
-  let wheelSpeedConfig = { speed: 3 };
-  let spinAudioEl = null;
-  let spinFallback = null;
-
-  // Длительность wheel-spin.mp3 (roulettevision) в мс — вращение подгоняется под неё.
-  const WHEEL_SPIN_MS = 5300;
 
   // ---- pure utils ----
   function formatMoney(n) {
@@ -256,230 +244,6 @@
     }
   }
 
-  // ---- wheel helpers ----
-  function shade(hex, amt) {
-    const h = String(hex || "").replace("#", "");
-    const full = h.length === 3 ? h.split("").map((x) => x + x).join("") : h;
-    const n = parseInt(full, 16);
-    if (Number.isNaN(n)) return "#888";
-    let r = (n >> 16) & 255;
-    let g = (n >> 8) & 255;
-    let b = n & 255;
-    const target = amt < 0 ? 0 : 255;
-    const p = Math.abs(amt);
-    r = Math.round((target - r) * p + r);
-    g = Math.round((target - g) * p + g);
-    b = Math.round((target - b) * p + b);
-    return `rgb(${r},${g},${b})`;
-  }
-
-  function themeSectorPairs() {
-    return [
-      ["--md-primary", "--md-on-primary"],
-      ["--md-secondary", "--md-on-secondary"],
-      ["--md-tertiary", "--md-on-tertiary"],
-      ["--md-error", "--md-on-error"],
-      ["--md-primary-container", "--md-on-primary-container"],
-      ["--md-secondary-container", "--md-on-secondary-container"],
-      ["--md-tertiary-container", "--md-on-tertiary-container"],
-    ].map(([bg, fg]) => ({ bg: readCssVar(bg) || "#888888", fg: readCssVar(fg) || "#14101c" }));
-  }
-
-  function truncate(s, max) {
-    const str = String(s || "");
-    return str.length > max ? str.slice(0, max - 1) + "…" : str;
-  }
-
-  function resizeWheel() {
-    const wheelEl = document.getElementById("wheel");
-    if (!wheelEl) return;
-    const base = 640;
-    const pad = 48;
-    const scale = Math.max(0.32, Math.min(1.15, (Math.min(window.innerWidth, window.innerHeight) - pad) / base));
-    wheelEl.style.setProperty("--wheel-scale", String(scale));
-  }
-
-  function applyWheelLayout() {
-    const wheelEl = document.getElementById("wheel");
-    if (!wheelEl) return;
-    wheelEl.style.left = (wheelConfig.x ?? 960) + "px";
-    wheelEl.style.top = (wheelConfig.y ?? 540) + "px";
-  }
-
-  function drawWheel() {
-    const wheelCanvas = document.getElementById("wheelCanvas");
-    if (!wheelCanvas) return;
-    const ctx = wheelCanvas.getContext("2d");
-    const w = wheelCanvas.width;
-    const h = wheelCanvas.height;
-    const cx = w / 2;
-    const cy = h / 2;
-    const r = Math.min(w, h) / 2 - 12;
-    ctx.clearRect(0, 0, w, h);
-
-    const n = wheelSectors.length;
-    if (!n) return;
-    const slice = (Math.PI * 2) / n;
-    const pairs = themeSectorPairs();
-
-    for (let i = 0; i < n; i++) {
-      const start = wheelRotation + i * slice;
-      const end = start + slice;
-      const pair = pairs[i % pairs.length];
-
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, r, start, end);
-      ctx.closePath();
-
-      const grad = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
-      grad.addColorStop(0, shade(pair.bg, 0.28));
-      grad.addColorStop(0.5, pair.bg);
-      grad.addColorStop(1, shade(pair.bg, -0.22));
-      ctx.fillStyle = grad;
-      ctx.fill();
-
-      ctx.strokeStyle = "rgba(0,0,0,0.28)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(start + slice / 2);
-      ctx.textAlign = "right";
-      ctx.fillStyle = pair.fg;
-      ctx.font = "600 15px Manrope, sans-serif";
-      ctx.fillText(truncate(wheelSectors[i], 18), r - 14, 6);
-      ctx.restore();
-    }
-  }
-
-  function spinWheel(winner) {
-    if (!wheelSectors.length || wheelSpinning) return;
-    const wheelEl = document.getElementById("wheel");
-    if (wheelEl) wheelEl.classList.add("is-spinning");
-    wheelSpinning = true;
-    startSpinAudio();
-
-    const n = wheelSectors.length;
-    let winnerIndex = wheelSectors.indexOf(winner || "");
-    if (winnerIndex < 0) winnerIndex = Math.floor(Math.random() * n);
-    const slice = (Math.PI * 2) / n;
-    const pointer = -Math.PI / 2;
-    const speed = Math.max(1, Math.min(5, Number(wheelSpeedConfig.speed) || 3));
-    let target = pointer - (winnerIndex * slice + slice / 2);
-    while (target <= wheelRotation) target += Math.PI * 2;
-    target += Math.PI * 2 * (2 + speed);
-
-    const startRotation = wheelRotation;
-    const startTime = performance.now();
-    const duration = WHEEL_SPIN_MS;
-
-    function frame(now) {
-      const progress = Math.min(1, (now - startTime) / duration);
-      const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
-      wheelRotation = startRotation + (target - startRotation) * eased;
-      drawWheel();
-      if (spinFallback) {
-        const spinFade = progress < 0.7 ? 1 : Math.max(0, 1 - (progress - 0.7) / 0.3);
-        setSpinVolume(((wheelConfig.musicVolume ?? 50) / 100) * spinFade);
-      }
-      if (progress < 1) {
-        requestAnimationFrame(frame);
-      } else {
-        wheelRotation = target;
-        drawWheel();
-        wheelSpinning = false;
-        stopSpinAudio();
-        if (wheelEl) wheelEl.classList.remove("is-spinning");
-        send(EVENT_TYPES.CMD_SET_GIVEAWAY_WINNER, { username: wheelSectors[winnerIndex] });
-      }
-    }
-    requestAnimationFrame(frame);
-  }
-
-  function showWheel(sectors) {
-    wheelSectors = Array.isArray(sectors) ? sectors : [];
-    wheelVisible = wheelSectors.length > 0;
-    const wheelEl = document.getElementById("wheel");
-    wheelEl.hidden = !wheelVisible;
-    bus.emit("wheel_visibility", { visible: wheelVisible });
-    if (!wheelVisible) return;
-    wheelRotation = 0;
-    wheelSpinning = false;
-    resizeWheel();
-    applyWheelLayout();
-    drawWheel();
-  }
-
-  function setSpinVolume(v) {
-    if (spinAudioEl) spinAudioEl.volume = v;
-    if (spinFallback && spinFallback.gain) spinFallback.gain.gain.value = v;
-  }
-
-  function startSpinAudio() {
-    const vol = Math.max(0, Math.min(1, (wheelConfig.musicVolume ?? 50) / 100));
-    if (!spinAudioEl) {
-      spinAudioEl = new Audio("/assets/audio/wheel-spin.mp3");
-    }
-    spinAudioEl.volume = vol;
-    spinAudioEl.currentTime = 0;
-    const p = spinAudioEl.play();
-    if (p && p.catch) {
-      p.catch(() => {
-        spinAudioEl = null;
-        startSpinFallback(vol);
-      });
-    }
-  }
-
-  function startSpinFallback(vol) {
-    stopSpinFallback();
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    const ctx = new Ctx();
-    if (ctx.state === "suspended") ctx.resume().catch(() => {});
-    const gain = ctx.createGain();
-    gain.gain.value = vol;
-    gain.connect(ctx.destination);
-
-    const timer = setInterval(() => {
-      const time = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      const g = ctx.createGain();
-      osc.type = "square";
-      osc.frequency.value = 170;
-      g.gain.setValueAtTime(0.14, time);
-      g.gain.exponentialRampToValueAtTime(0.0001, time + 0.04);
-      osc.connect(g).connect(gain);
-      osc.start(time);
-      osc.stop(time + 0.05);
-    }, 90);
-
-    spinFallback = { ctx, gain, timer };
-  }
-
-  function stopSpinFallback() {
-    if (spinFallback) {
-      clearInterval(spinFallback.timer);
-      if (spinFallback.ctx) spinFallback.ctx.close().catch(() => {});
-      spinFallback = null;
-    }
-  }
-
-  function stopSpinAudio() {
-    if (spinAudioEl) {
-      try {
-        spinAudioEl.pause();
-        spinAudioEl.currentTime = 0;
-      } catch (_) {
-        /* ignore */
-      }
-      spinAudioEl = null;
-    }
-    stopSpinFallback();
-  }
-
   // ---- shared widget context (theme is updated in applyTheme) ----
   const context = {
     bus,
@@ -496,7 +260,7 @@
     readCssVar,
     audio: { playWinSound, playEliminationAudio },
     theme: "nebula",
-    enabled3d: {},
+    threeDWidgets: [],
   };
 
   // Current layout, kept so a theme change can re-run syncLayout (and thus
@@ -530,14 +294,12 @@
     applyCustomCss(appearance.customCss || "");
     document.body.dataset.decoration = appearance.tokens["--panel-decoration"] || "none";
     document.body.dataset.theme = appearance.activeThemeId || "";
-    // `context.theme` gates the 3D (Grim HEX) widgets only. When the 3D
-    // theme is active the global tokens above are already the Grim HEX
-    // HUD token set (3D overrides the base 2D theme), so 2D and 3D widgets
-    // share one coherent look.
-    context.theme = appearance.activeThemeId3d || "";
+    // `context.threeDWidgets` gates the 3D widgets: the explicit set of enabled
+    // 3D widget types under the current theme (a built-in variant's widgets, or
+    // a custom theme's own selection). The manager hands each widget its own
+    // family via `widgetTheme`, so widgets from several families can coexist.
+    context.threeDWidgets = Array.isArray(appearance.active3dWidgets) ? appearance.active3dWidgets : [];
     context.activeThemeId = appearance.activeThemeId || "";
-    context.enabled3d = appearance.enabled3d || {};
-    if (wheelSectors.length) drawWheel();
   }
 
   function applyDraftTheme(draft) {
@@ -551,6 +313,9 @@
       customCss: draft.customCss || "",
       activeThemeId: draft.themeId || (lastAppearance && lastAppearance.activeThemeId) || "",
       activeThemeId3d: "",
+      active3dWidgets: Array.isArray(draft.threeDWidgets)
+        ? draft.threeDWidgets
+        : (lastAppearance && lastAppearance.active3dWidgets) || [],
     });
   }
 
@@ -562,10 +327,17 @@
     return (WIDGET_TYPES && WIDGET_TYPES[item && item.type]) || null;
   }
 
+  // The active set of 3D widget types, as sent by the server (see
+  // appearance.active3dWidgets). Built-in themes expose their variant's widgets
+  // minus disabled фишки; custom themes expose their own list.
+  function active3dSet() {
+    return Array.isArray(context.threeDWidgets) ? context.threeDWidgets : [];
+  }
+
   function resolveRenderType(item) {
     const def = widgetDef(item);
     const theme = def && def.theme ? def.theme : null;
-    if (theme && context.theme === theme) return def.renderType || "canvas";
+    if (theme && active3dSet().includes(item.type)) return def.renderType || "canvas";
     return "2d";
   }
 
@@ -574,20 +346,24 @@
   // enabled.
   function shouldMount(item) {
     const def = widgetDef(item);
-    const theme = def && def.theme ? def.theme : null;
+    // Тип убран из каталога (например, «Участники розыгрыша» переехали в сцену
+    // колеса) — в раскладке ему делать нечего, не монтируем.
+    if (!def) return false;
+    // 2D-привязка к теме (например, «Таймер Executive Hangar» — Orbital и свои темы).
+    if (!themeAllowsWidget(def, lastAppearance)) return false;
+    const theme = def.theme ? def.theme : null;
     const role = widgetRole(item.type);
 
     if (theme && !role) {
-      // Additive 3D widget with no role (defensive fallback): strictly bound
-      // to its own theme and to the per-widget 3D toggle (фишка).
-      if (context.theme !== theme) return false;
-      if (context.enabled3d && context.enabled3d[item.type] === false) return false;
+      // Additive 3D widget with no role: mounted only when its type is in the
+      // active 3D widget set.
+      if (!active3dSet().includes(item.type)) return false;
     } else if (theme && role) {
       // 3D role widget (chat/goal/alerts, or a decorative sign/radar/shield):
-      // remapped to the active theme by transform(), so it stays mountable even
-      // when its own theme is inactive. It hides only when there is nothing to
-      // remap to (3D off, or the active theme's counterpart is disabled/missing).
-      if (!active3dCounterpartType(role)) return false;
+      // mounted when its own type is enabled, or when a unique same-role
+      // counterpart will remap it via transform(). It hides only when neither
+      // applies (3D off, counterpart missing, or the role is ambiguous).
+      if (!active3dSet().includes(item.type) && !active3dCounterpartType(role)) return false;
     } else if (!theme && role) {
       // 2D base role widget: gives way to an explicit 3D widget of the same role.
       if (hasActive3dReplacement(role)) return false;
@@ -615,11 +391,10 @@
   // The 3D widget type that replaces a given role under the active theme, or
   // null when there is none (3D off, or the counterpart фишка is disabled).
   function active3dCounterpartType(role) {
-    if (!role || !context.theme) return null;
-    const target = widgetsForTheme(context.theme).find((w) => widgetRole(w.type) === role);
-    if (!target) return null;
-    if (context.enabled3d && context.enabled3d[target.type] === false) return null;
-    return target.type;
+    const set = active3dSet();
+    if (!role || !set.length) return null;
+    const matches = set.filter((t) => widgetRole(t) === role);
+    return matches.length === 1 ? matches[0] : null;
   }
 
   // Swap a role widget (a 2D base, an explicitly placed 3D variant, or a
@@ -648,7 +423,7 @@
     const theme = def && def.theme ? def.theme : null;
     if (!theme) return false;
     if (widgetRole(item.type)) return false; // role widgets are remapped, not hidden
-    return context.theme !== theme;
+    return !active3dSet().includes(item.type);
   }
 
   // ---- widget manager ----
@@ -657,6 +432,13 @@
     resolveRenderType,
     shouldMount,
     transform,
+    // Each widget gets its own family id so its hard internal theme gate
+    // (`this.theme !== "cobra-mk2"`, etc.) passes even when a custom theme
+    // mixes widgets from several 3D families.
+    widgetTheme: (item) => {
+      const def = widgetDef(item);
+      return def && def.theme ? def.theme : "";
+    },
     context,
   });
 
@@ -666,7 +448,8 @@
   manager.register("recent", OW.RecentWidget);
   manager.register("stat", OW.StatWidget);
   manager.register("social", OW.SocialWidget);
-  manager.register("participants", OW.ParticipantsWidget);
+  manager.register("timer", OW.TimerWidget);
+  manager.register("grimhex-timer", OW.GrimHexTimerWidget);
   manager.register("mic", OW.MicWidget);
   manager.register("death", OW.DeathWidget);
   manager.register("soundboard", OW.SoundboardWidget);
@@ -714,13 +497,8 @@
         state.soundboardConfig = p.soundboard || state.soundboardConfig;
         state.tts = p.tts || state.tts;
         state.donationVoice = p.donationVoice || state.donationVoice;
-        if (p.giveaway) {
-          state.participantsState = {
-            count: p.giveaway.count || 0,
-            participants: Array.isArray(p.giveaway.participants) ? p.giveaway.participants : [],
-          };
-        }
         connectionStatus = p.connectionStatus || connectionStatus;
+        state.longshot = p.longshot || state.longshot;
         currentLayout = p.layout || [];
         lastAppearance = p.appearance || lastAppearance;
         applyTheme(p.appearance);
@@ -783,29 +561,9 @@
         state.goal = msg.payload || state.goal;
         bus.emit(EVENT_TYPES.GOAL_UPDATE, msg.payload);
         break;
-      case EVENT_TYPES.GIVEAWAY_WHEEL:
-        showWheel((msg.payload && msg.payload.sectors) || []);
-        break;
-      case EVENT_TYPES.GIVEAWAY_SPIN:
-        spinWheel((msg.payload && msg.payload.winner) || null);
-        break;
-      case EVENT_TYPES.GIVEAWAY_PARTICIPANTS:
-        state.participantsState = {
-          count: (msg.payload && msg.payload.count) || 0,
-          participants: Array.isArray(msg.payload && msg.payload.participants) ? msg.payload.participants : [],
-        };
-        bus.emit(EVENT_TYPES.GIVEAWAY_PARTICIPANTS, msg.payload);
-        break;
-      case EVENT_TYPES.OVERLAY_PARTICIPANTS_CONFIG:
-        state.participantsConfig = (msg.payload && msg.payload.config) || state.participantsConfig;
-        bus.emit(EVENT_TYPES.OVERLAY_PARTICIPANTS_CONFIG, msg.payload);
-        break;
-      case EVENT_TYPES.WHEEL_CONFIG:
-        wheelConfig = (msg.payload && msg.payload.config) || wheelConfig;
-        applyWheelLayout();
-        break;
-      case EVENT_TYPES.WHEEL_SPEED_CONFIG:
-        wheelSpeedConfig = (msg.payload && msg.payload.config) || wheelSpeedConfig;
+      case EVENT_TYPES.LONGSHOT_UPDATE:
+        state.longshot = (msg.payload && msg.payload.longshot) || state.longshot;
+        bus.emit(EVENT_TYPES.LONGSHOT_UPDATE, state.longshot);
         break;
       case EVENT_TYPES.OVERLAY_MIC_CONFIG:
         state.micConfig = (msg.payload && msg.payload.config) || state.micConfig;
@@ -832,8 +590,16 @@
 
   function connect() {
     const proto = location.protocol === "https:" ? "wss" : "ws";
-    ws = new WebSocket(`${proto}://${location.host}/ws`);
+    ws = new WebSocket(`${proto}://${location.host}/ws?role=overlay`);
+    // Микрокадры приходят бинарно — принимаем их как ArrayBuffer, чтобы не
+    // создавать Blob на каждый кадр.
+    ws.binaryType = "arraybuffer";
     ws.onmessage = (ev) => {
+      if (typeof ev.data !== "string") {
+        const frame = window.MicFrame && window.MicFrame.decode(ev.data);
+        if (frame) state.remoteMicData = frame;
+        return;
+      }
       try {
         handleMessage(JSON.parse(ev.data));
       } catch (_) {
@@ -863,6 +629,5 @@
     OW.HudEditor.init({ canvas, manager, send, EVENT_TYPES, getLayout: () => currentLayout, shouldGhost });
   }
 
-  window.addEventListener("resize", resizeWheel);
   connect();
 })();

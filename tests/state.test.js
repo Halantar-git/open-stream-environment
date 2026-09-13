@@ -403,6 +403,33 @@ describe("AppState config + runtime", () => {
     expect(snap.streamdeck.icons.scene).toBe("media/x.png");
   });
 
+  test("hasTimerWidget завязан на наличие видимого таймера", () => {
+    expect(state.hasTimerWidget()).toBe(false);
+
+    const w = state.addWidget("timer");
+    expect(state.hasTimerWidget()).toBe(true); // источник всегда Longshot
+
+    // Скрытый виджет опрос не держит (см. подсказку в панели свойств).
+    state.updateWidget(w.id, { visible: false });
+    expect(state.hasTimerWidget()).toBe(false);
+
+    state.updateWidget(w.id, { visible: true });
+    expect(state.hasTimerWidget()).toBe(true);
+
+    state.removeWidget(w.id);
+    expect(state.hasTimerWidget()).toBe(false);
+
+    // Другие виджеты таймером не считаются.
+    const chat = state.addWidget("chat");
+    expect(state.hasTimerWidget()).toBe(false);
+  });
+
+  test("hasTimerWidget учитывает 3D-вариант grimhex-timer", () => {
+    expect(state.hasTimerWidget()).toBe(false);
+    state.addWidget("grimhex-timer");
+    expect(state.hasTimerWidget()).toBe(true);
+  });
+
   test("saveCustomTheme сохраняет гранулярные переопределения и генерирует токены", () => {
     const theme = state.saveCustomTheme({
       name: "Моя",
@@ -431,44 +458,72 @@ describe("AppState config + runtime", () => {
     expect(theme.tokens["--panel-glow"]).toMatch(/^0 0 /);
   });
 
-  test("своя тема может использовать 3D-виджеты выбранного стиля", () => {
+  test("своя тема использует выбранные 3D-виджеты (можно смешивать стили)", () => {
     const seeds = {
       primary: "#ff3300", secondary: "#00cc88", tertiary: "#3366ff", surfaceSeed: "#201018",
-      shapeMode: "rounded", fontPreset: "nebula", variant3d: "cobra-mk2",
+      shapeMode: "rounded", fontPreset: "nebula",
+      threeDWidgets: ["teso-chat", "cobra-radar", "md3-orb"],
     };
     const theme = state.saveCustomTheme({ name: "Своя 3D", seeds });
 
-    expect(theme.seeds.variant3d).toBe("cobra-mk2");
+    expect(theme.seeds.threeDWidgets).toEqual(["teso-chat", "cobra-radar", "md3-orb"]);
     const entry = state.listThemes().find((t) => t.id === theme.id);
     expect(entry.has3d).toBe(true);
-    expect(entry.variant3d).toBe("cobra-mk2");
+    expect(entry.threeDWidgets).toEqual(["teso-chat", "cobra-radar", "md3-orb"]);
 
     state.setActiveTheme(theme.id, true);
     const snap = state.snapshot();
     expect(snap.appearance.activeThemeId).toBe(theme.id);
     expect(snap.appearance.enable3d).toBe(true);
-    expect(snap.appearance.activeThemeId3d).toBe("cobra-mk2");
+    expect(snap.appearance.active3dWidgets).toEqual(["teso-chat", "cobra-radar", "md3-orb"]);
+    expect(snap.appearance.activeThemeId3d).toBe("");
     // Палитра остаётся кастомной и не подменяется токенами 3D-варианта.
     expect(snap.appearance.tokens).toEqual(buildThemeTokens(seeds));
-    expect(state.resolvedTheme3d().id).toBe("cobra-mk2");
+    expect(state.resolvedTheme3d()).toBeNull();
   });
 
-  test("неизвестный 3D-стиль сбрасывается, тема без 3D не включает enable3d", () => {
+  test("список 3D-виджетов санитизируется, тема без 3D не включает enable3d", () => {
     const base = { primary: "#123456", secondary: "#654321", tertiary: "#abcdef", surfaceSeed: "#101010" };
-    const bad = state.saveCustomTheme({ name: "Плохая", seeds: { ...base, variant3d: "nope" } });
-    expect(bad.seeds.variant3d).toBe("");
+    const bad = state.saveCustomTheme({
+      name: "Плохая",
+      seeds: { ...base, threeDWidgets: ["nope", "teso-chat", "teso-chat", "  "] },
+    });
+    expect(bad.seeds.threeDWidgets).toEqual(["teso-chat"]);
 
-    state.setActiveTheme(bad.id, true);
+    const none = state.saveCustomTheme({ name: "Без 3D", seeds: { ...base } });
+    expect(none.seeds.threeDWidgets).toEqual([]);
+    state.setActiveTheme(none.id, true);
     const snap = state.snapshot();
     expect(snap.appearance.enable3d).toBe(false);
-    expect(snap.appearance.activeThemeId3d).toBe("");
-    expect(state.resolvedTheme3d()).toBeNull();
+    expect(snap.appearance.active3dWidgets).toEqual([]);
   });
 
   test("каждый 3D-стиль указывает на существующую встроенную тему", () => {
     THREE_D_STYLES.forEach((s) => {
       expect(BUILTIN_THEMES[s.id]).toBeTruthy();
     });
+  });
+
+  test("saveCustomTheme санитизирует цвет ошибки и анимацию алертов", () => {
+    const theme = state.saveCustomTheme({
+      name: "Сан",
+      seeds: {
+        primary: "#111111", secondary: "#222222", tertiary: "#333333",
+        error: "#ff0000", alertEnterDuration: 5000, alertEnterEasing: "spring",
+      },
+    });
+    expect(theme.seeds.error).toBe("#ff0000");
+    expect(theme.seeds.alertEnterDuration).toBe(2000); // clamp до 2000 мс
+    expect(theme.seeds.alertEnterEasing).toBe("spring");
+    expect(theme.tokens["--md-error"]).not.toBe("#ffb4ab");
+    expect(theme.tokens["--alert-enter-duration"]).toBe("2000ms");
+
+    const bad = state.saveCustomTheme({
+      name: "Плохо",
+      seeds: { primary: "#111111", secondary: "#222222", tertiary: "#333333", error: "red", alertEnterEasing: "nope" },
+    });
+    expect(bad.seeds.error).toBe("");
+    expect(bad.seeds.alertEnterEasing).toBe("");
   });
 
   test("duplicateCustomTheme создаёт копию с новым id и именем", () => {

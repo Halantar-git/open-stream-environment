@@ -252,7 +252,7 @@
   }
 
   function connect() {
-    ws = new WebSocket(`ws://localhost:${port}/ws`);
+    ws = new WebSocket(`ws://localhost:${port}/ws?role=chat`);
     ws.onmessage = (ev) => {
       try {
         handleMessage(JSON.parse(ev.data));
