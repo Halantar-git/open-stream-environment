@@ -128,8 +128,15 @@ describe("CI: файлы workflow", () => {
   });
 
   test("релиз собирается только после зелёных тестов и для обеих платформ", () => {
-    expect(release).toContain("dist:win");
-    expect(release).toContain("dist:linux");
+    /*
+      Цель сборки передаётся electron-builder флагом, а не именем npm-скрипта:
+      npm считает `--publish` своим ключом и не отдаёт его скрипту — тогда до
+      сборщика доезжает «--win always», и релиз падает на «Unknown target».
+      Проверяем то, что от этого не зависит: обе платформы, публикация и порядок
+      «сначала линт и тесты».
+    */
+    expect(release).toContain("--win");
+    expect(release).toContain("--linux");
     expect(release.indexOf("npm run lint")).toBeLessThan(release.indexOf("--publish always"));
     expect(release.indexOf("npm test")).toBeLessThan(release.indexOf("--publish always"));
   });

@@ -52,9 +52,9 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            script: dist:win
+            target: --win
           - os: ubuntu-latest
-            script: dist:linux
+            target: --linux
 
     steps:
       - name: Checkout repository
@@ -76,7 +76,14 @@ jobs:
       - name: Test
         run: npm test
 
+      # Публикацию отдаём electron-builder напрямую, а не через npm-скрипт.
+      #
+      # `npm run dist:win -- --publish always` не работает: npm считает
+      # `--publish` своим ключом и не передаёт его скрипту, поэтому до сборщика
+      # доезжает «electron-builder --win always», и он падает с «Unknown target:
+      # always». Цель здесь задаётся флагом, а не именем скрипта; локальные
+      # `npm run dist:win` / `dist:linux` остаются для сборки без публикации.
       - name: Build and publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run ${{ matrix.script }} -- --publish always
+        run: npx electron-builder ${{ matrix.target }} --publish always
