@@ -30,7 +30,9 @@
     * каждый «npm run <скрипт>» из workflow существует в package.json: опечатка
       вроде `distt:win` иначе всплыла бы только в день релиза;
     * релизный workflow запускается по тегу, отказывается собирать версию,
-      не совпадающую с package.json, и умеет загружать артефакты (GH_TOKEN).
+      не совпадающую с package.json, и умеет загружать артефакты (GH_TOKEN);
+    * релиз собирает ровно один workflow: два сборщика на один тег — это гонка
+      за один и тот же черновик, а не двойная страховка.
 */
 
 const fs = require("fs");
@@ -127,17 +129,37 @@ describe("CI: файлы workflow", () => {
     expect(release).toContain("--publish always");
   });
 
-  test("релиз собирается только после зелёных тестов и для обеих платформ", () => {
+  test("релиз собирается только после зелёных тестов и для всех платформ поставки", () => {
     /*
       Цель сборки передаётся electron-builder флагом, а не именем npm-скрипта:
       npm считает `--publish` своим ключом и не отдаёт его скрипту — тогда до
       сборщика доезжает «--win always», и релиз падает на «Unknown target».
-      Проверяем то, что от этого не зависит: обе платформы, публикация и порядок
+      Проверяем то, что от этого не зависит: все платформы, публикация и порядок
       «сначала линт и тесты».
     */
     expect(release).toContain("--win");
     expect(release).toContain("--linux");
+    expect(release).toContain("--mac");
     expect(release.indexOf("npm run lint")).toBeLessThan(release.indexOf("--publish always"));
     expect(release.indexOf("npm test")).toBeLessThan(release.indexOf("--publish always"));
+  });
+
+  test("по тегу публикует ровно один workflow", () => {
+    /*
+      Такой дубль уже жил в репозитории: по тегу запускались «Build and Release»
+      и «Release», оба собирали установщики и оба заливали их в один черновик.
+      Сборка шла наперегонки, а красным становился тот, кто дошёл вторым, — и по
+      логу невозможно было понять, что дело в дубле, а не в сборке. Видно это
+      только глазами, поэтому проверяем здесь.
+    */
+    const files = fs.readdirSync(WORKFLOWS_DIR).filter((name) => /\.ya?ml$/.test(name));
+    const publishers = files.filter((name) => {
+      const source = workflow(name);
+      const onTagPush = /tags:/.test(source);
+      const buildsInstallers = /electron-builder/.test(source);
+      return onTagPush && buildsInstallers;
+    });
+
+    expect(publishers).toEqual(["release.yml"]);
   });
 });

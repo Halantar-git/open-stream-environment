@@ -9,8 +9,14 @@ name: Release
 # обязана совпадать с тегом — проверяется первым шагом, иначе сборка остановится
 # до того, как что-то уедет в релиз.
 #
-# macOS отдельной целью не собирается: неподписанное приложение Gatekeeper
-# блокирует, а для подписи нужны сертификаты и секреты репозитория.
+# Собираются те же платформы, что и раньше: Windows (NSIS), Linux (AppImage и deb)
+# и macOS (dmg и zip для arm64). macOS не подписывается — сертификата нет, поэтому
+# Gatekeeper попросит подтвердить запуск; шаг оставлен, чтобы набор установщиков и
+# файлы автообновления (latest.yml / latest-linux.yml / latest-mac.yml) не менялись.
+#
+# Второго workflow, который собирает релиз, быть не должно: два сборщика льют
+# ассеты в один черновик наперегонки, и падает тот, кто дошёл вторым. Что такой
+# дубль не вернётся, проверяет tests/ci-config.test.js.
 
 on:
   push:
@@ -55,6 +61,8 @@ jobs:
             target: --win
           - os: ubuntu-latest
             target: --linux
+          - os: macos-latest
+            target: --mac
 
     steps:
       - name: Checkout repository
@@ -86,4 +94,7 @@ jobs:
       - name: Build and publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Сборки без сертификатов: на macOS electron-builder не должен искать
+          # подпись (её нет), иначе шаг падает на поиске identity.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
         run: npx electron-builder ${{ matrix.target }} --publish always
