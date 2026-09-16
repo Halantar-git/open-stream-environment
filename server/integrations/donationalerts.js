@@ -41,6 +41,9 @@ const CENTRIFUGO_WS = "wss://centrifugo.donationalerts.com/connection/websocket"
 const OAUTH_URL = "https://www.donationalerts.com/oauth/token";
 const USER_URL = "https://www.donationalerts.com/api/v1/user/oauth";
 const SUBSCRIBE_URL = "https://www.donationalerts.com/api/v1/centrifuge/subscribe";
+// Список донатов (scope oauth-donation-index). Нужен, чтобы подтянуть то, что
+// пришло пока приложение было выключено: Centrifugo отдаёт только живые события.
+const DONATIONS_URL = "https://www.donationalerts.com/api/v1/alerts/donations";
 
 const RECONNECT_DELAY_MS = 5000;
 const AUTH_ERROR_RECONNECT_MS = 15000;
@@ -52,6 +55,23 @@ const PONG_TIMEOUT_MS = 10000;
 //   "http"   — не отправлять subscribe в сокет: HTTP /centrifuge/subscribe уже
 //              регистрирует подписку на стороне DA, только ставим connected.
 const SUBSCRIBE_MODE = "method";
+
+/*
+  Стоит ли переподключаться после такой ошибки.
+
+  invalid_client — сервис не узнал пару client_id/client_secret. Это не сетевой
+  сбой и не протухший токен: повторы ничего не изменят, а будут только
+  стучаться в сервис каждые 15 секунд и засорять журнал. Самый частый путь к
+  этой ошибке — приложение в кабинете DonationAlerts пересоздали: ключи новые,
+  а в настройках остались старые. Интеграция поднимется заново сама, когда
+  ключи поправят и нажмут «Подключить DonationAlerts» (restartDonationAlerts).
+
+  Вынесено отдельной функцией, а не условием внутри catch: это правило, которое
+  должно быть видно и проверяться тестом, а не теряться в обработчике.
+*/
+function isUnrecoverableAuthError(message) {
+  return /invalid_client/i.test(String(message || ""));
+}
 
 function donationAlertFromPayload(payload) {
   // Озвучка от сервиса (готовый аудиофайл доната). Точное имя поля DonationAlerts
@@ -70,8 +90,66 @@ function donationAlertFromPayload(payload) {
     amount: Number(payload && payload.amount) || 0,
     currency: (payload && payload.currency) || "RUB",
     message: (payload && payload.message) || "",
+    // id доната на стороне DonationAlerts: по нему отличаем уже показанный донат
+    // от пропущенного (см. db.knownSourceIds).
+    ...(payload && payload.id != null ? { sourceId: String(payload.id) } : {}),
     ...(voiceUrl ? { voiceUrl } : {}),
   };
+}
+
+/*
+  Разбор ответа /api/v1/alerts/donations в наш формат.
+
+  Даты приходят строкой "YYYY-MM-DD HH.MM.SS" без часового пояса (так в apidoc):
+  трактуем как UTC — это влияет только на показ времени и на фильтр «новее
+  запуска», а пропуски определяются по id донатов, а не по времени.
+*/
+function parseDonationDate(value) {
+  const text = String(value || "");
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2})[.:](\d{2})[.:](\d{2})/);
+  if (!match) return 0;
+  const [, year, month, day, hour, minute, second] = match;
+  return Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
+}
+
+function normalizeDonationRow(row) {
+  if (!row || typeof row !== "object") return null;
+  return {
+    sourceId: row.id != null ? String(row.id) : null,
+    kind: "donation",
+    user: String(row.username || "Аноним"),
+    amount: Number(row.amount) || 0,
+    currency: String(row.currency || "RUB"),
+    message: String(row.message || ""),
+    createdAt: parseDonationDate(row.created_at),
+    shown: Number(row.is_shown) === 1 || !!row.shown_at,
+  };
+}
+
+/*
+  Последние донаты через REST.
+
+  Токен передаётся геттером: интеграция сама обновляет его при необходимости, а
+  здесь важно только получить актуальный. Ошибки возвращаются объектом, а не
+  исключением: вызывающий код показывает понятное сообщение (в том числе «нужно
+  переподключить DonationAlerts» при 401/403 — токен выдан без scope
+  oauth-donation-index).
+*/
+async function fetchRecentDonations({ getAccessToken, limit = 30, page = 1, fetchImpl } = {}) {
+  const token = typeof getAccessToken === "function" ? await getAccessToken() : getAccessToken;
+  if (!token) return { ok: false, error: "not_authorized", donations: [] };
+  const doFetch = fetchImpl || globalThis.fetch;
+  const url = `${DONATIONS_URL}?page=${Math.max(1, Math.floor(Number(page) || 1))}`;
+  try {
+    const res = await doFetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (res.status === 401 || res.status === 403) return { ok: false, error: "insufficient_scope", status: res.status, donations: [] };
+    if (!res.ok) return { ok: false, error: `http_${res.status}`, status: res.status, donations: [] };
+    const body = await res.json();
+    const rows = Array.isArray(body && body.data) ? body.data : [];
+    return { ok: true, donations: rows.map(normalizeDonationRow).filter(Boolean).slice(0, Math.max(1, Number(limit) || 30)) };
+  } catch (err) {
+    return { ok: false, error: String((err && err.message) || err), donations: [] };
+  }
 }
 
 /*
@@ -121,8 +199,17 @@ function startDonationAlerts({ bus, state }) {
   let subscribeMode = SUBSCRIBE_MODE;
 
   const logger = createLogger(bus, "donationalerts");
-  // Высокочастотные отладочные события (ping/pong) не засоряют терминал,
-  // а уходят в панель «Отладка» отдельным потоком debug_log.
+  /*
+    Что видно в журнале «DA», а что — только в «Отладке».
+
+    Журнал сервиса отвечает на вопрос «почему донаты не приходят», поэтому в
+    него идёт только то, что человек может поправить или чему обрадуется:
+    смена состояния, события сервиса, ошибки и повторы. Шаги протокола (какой
+    кадр ушёл, что ответил Centrifugo) — это уже разбор для поддержки: их видно
+    в панели «Отладка» и в файле журнала, но они не вытесняют из панели
+    историю донатов. Иначе при живом подключении экран заполняется служебными
+    строками, среди которых теряется то, за чем в него смотрят.
+  */
   const debug = (message, data) => logger.debug(message, data);
 
   function setStatus(status) {
@@ -161,6 +248,16 @@ function startDonationAlerts({ bus, state }) {
     logger,
     label: "donationalerts",
     getConfig: () => state.config.donationAlerts,
+    /*
+      Параметры обновления токена.
+
+      `scope` здесь намеренно НЕ отправляется, хотя в apidoc DonationAlerts он
+      помечен обязательным. По RFC 6749 §6 отсутствие `scope` означает «тот же
+      набор прав, что был выдан изначально», а присланный scope не имеет права
+      быть шире выданного. Наш список прав со временем растёт (так появился
+      oauth-donation-index), и если слать его при обновлении, у тех, кто
+      авторизовался раньше, обновление начнёт падать на invalid_scope.
+    */
     buildParams: (da) => ({
       grant_type: "refresh_token",
       client_id: da.clientId,
@@ -185,7 +282,7 @@ function startDonationAlerts({ bus, state }) {
     const userId = user.id;
     const rawToken = user.socket_connection_token;
 
-    logger.info("user/oauth parsed", {
+    debug("user/oauth parsed", {
       userId,
       tokenType: typeof rawToken,
       tokenIsNullish: rawToken === undefined || rawToken === null,
@@ -241,7 +338,7 @@ function startDonationAlerts({ bus, state }) {
     connectToken = token;
     connectFormat = "params";
 
-    logger.info("opening Centrifugo socket", {
+    debug("opening Centrifugo socket", {
       userId,
       connectRequestId,
       tokenPresent: !!token,
@@ -292,7 +389,7 @@ function startDonationAlerts({ bus, state }) {
       ? { action: "connect", params: { token: connectToken }, id: connectRequestId }
       : { params: { token: connectToken }, id: connectRequestId };
 
-    logger.info("sending connect frame", {
+    debug("sending connect frame", {
       id: connectRequestId,
       format: connectFormat,
       tokenLength: String(connectToken).length,
@@ -314,7 +411,7 @@ function startDonationAlerts({ bus, state }) {
     if (msg.id === connectRequestId && msg.result) {
       const client = msg.result.client || (msg.result.body && msg.result.body.client);
       if (client) {
-        logger.success("centrifugo connected", { client });
+        debug("centrifugo connected", { client });
         subscribe(client, userId);
         return;
       }
@@ -331,7 +428,7 @@ function startDonationAlerts({ bus, state }) {
       if (msg.id === connectRequestId && connectFormat === "params" && isBadRequest) {
         connectFormat = "action";
         connectRequestId = nextCommandId++;
-        logger.info("retrying connect with action format", { id: connectRequestId });
+        debug("retrying connect with action format", { id: connectRequestId });
         sendConnectFrame();
       } else if (typeof msg.id === "number" && msg.id !== connectRequestId && isBadRequest && subscribeMode === "method") {
         // Subscribe: если HTTP /centrifuge/subscribe уже регистрирует подписку,
@@ -349,7 +446,9 @@ function startDonationAlerts({ bus, state }) {
     const channel = (msg.push && msg.push.channel) || (msg.result && msg.result.channel) || "";
 
     if (channel.startsWith("$alerts:donation")) {
-      logger.info("raw donation frame", payload);
+      // Кадр целиком — только в «Отладку»: сюда приходят и служебные кадры
+      // подписки, и они выглядели в журнале как «донат» без доната.
+      debug("raw donation frame", payload);
       const alert = alertFromPayload(payload);
       logger.success("alert received", alert);
       bus.emit("alert", alert);
@@ -368,7 +467,7 @@ function startDonationAlerts({ bus, state }) {
   async function subscribe(client, userId) {
     try {
       const channels = [`$alerts:donation_${userId}`, `$goals:goal_${userId}`];
-      logger.info("subscribing to channels", { channels });
+      debug("subscribing to channels", { channels });
 
       let accessToken = await ensureAccessToken();
       if (stopped) return;
@@ -458,6 +557,14 @@ function startDonationAlerts({ bus, state }) {
       if (stopped) return;
       logger.error("connect failed", { message: err.message });
       setStatus("error");
+
+      // Отклонённые ключи приложения: повторять бессмысленно, ждём правки
+      // Client ID/Secret и нового «Подключить DonationAlerts» (см. выше).
+      if (isUnrecoverableAuthError(err.message)) {
+        logger.error("donation alerts rejected the app credentials — check Client ID/Secret in Settings");
+        return;
+      }
+
       const authError = /401|refresh_token|unauthorized|invalid_grant|socket_connection_token|connectionToken/i.test(err.message);
       scheduleReconnect(authError ? AUTH_ERROR_RECONNECT_MS : RECONNECT_DELAY_MS);
     }
@@ -475,6 +582,14 @@ function startDonationAlerts({ bus, state }) {
         ws = null;
       }
     },
+    /*
+      Актуальный access token под конкретный запрос.
+
+      Сокет отдаёт только живые донаты, а список уже прошедших — только REST
+      (scope oauth-donation-index). Токен нужен именно на момент запроса: к этому
+      времени он мог протухнуть, поэтому ensureAccessToken, а не поле конфига.
+    */
+    getAccessToken: () => ensureAccessToken(),
   };
 }
 
@@ -499,4 +614,14 @@ function extractPayload(msg) {
   return d.data || d;
 }
 
-module.exports = { startDonationAlerts, extractPayload, donationAlertFromPayload, alertFromPayload };
+module.exports = {
+  startDonationAlerts,
+  extractPayload,
+  donationAlertFromPayload,
+  alertFromPayload,
+  fetchRecentDonations,
+  normalizeDonationRow,
+  parseDonationDate,
+  isUnrecoverableAuthError,
+  DONATIONS_URL,
+};

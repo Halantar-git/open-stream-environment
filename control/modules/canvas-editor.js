@@ -35,7 +35,6 @@ export function initCanvasEditor({
   t,
   ICONS,
   WIDGET_TYPES,
-  widgetsForTheme,
   themeAllowsWidget,
   replacedBy3d,
   widgetRole,
@@ -295,6 +294,12 @@ export function initCanvasEditor({
             ? { icon: ICONS.sub, label: config.label || t("preview.latestSubscriber"), value: "nova_viewer" }
             : metric === "topDonation"
             ? { icon: ICONS.donation, label: config.label || t("preview.topDonation"), value: state.topDonation.amount > 0 ? `${state.topDonation.user} (${formatMoney(state.topDonation.amount)} ${currencySymbol(state.topDonation.currency)})` : t("scene.notYet") }
+            // Счёт стрима показывает живые данные, как и остальные метрики с сервера:
+            // выбранная метрика на канвасе должна совпадать с эфиром, а не с примером.
+            : metric === "sessionDonations"
+            ? { icon: ICONS.donation, label: config.label || t("preview.sessionDonations"), value: state.sessionDonations ? formatMoney(state.sessionDonations.count) : "—" }
+            : metric === "sessionAmount"
+            ? { icon: ICONS.donation, label: config.label || t("preview.sessionAmount"), value: state.sessionDonations ? `${formatMoney(state.sessionDonations.amount)} ${currencySymbol(state.sessionDonations.currency)}`.trim() : "—" }
             : { icon: ICONS.follow, label: config.label || t("preview.followers"), value: state.stats.followerCount != null ? formatMoney(state.stats.followerCount) : "—" };
         return `<div class="widget-stat"><div class="widget-stat__icon">${sample.icon}</div><div class="widget-stat__info"><span class="widget-stat__label">${escapeHtml(sample.label)}</span><span class="widget-stat__value">${escapeHtml(sample.value)}</span></div></div>`;
       }

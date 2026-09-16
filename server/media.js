@@ -25,7 +25,7 @@ const MAX_EXPORT_FILE_BYTES = 50 * 1024 * 1024; // 50 MB на файл — кр�
 
 function listMediaFiles() {
   const dir = getUserMediaDir();
-  let names = [];
+  let names;
   try {
     names = fs.readdirSync(dir).filter((name) => {
       try {

@@ -31,7 +31,7 @@ const TOKEN_URL = "https://id.twitch.tv/oauth2/token";
 const CLIPS_URL = "https://api.twitch.tv/helix/clips";
 const MARKERS_URL = "https://api.twitch.tv/helix/streams/markers";
 
-function makeRefresher({ bus, state, logger }) {
+function makeRefresher({ state, logger }) {
   return createTokenRefresher({
     tokenUrl: TOKEN_URL,
     logger,

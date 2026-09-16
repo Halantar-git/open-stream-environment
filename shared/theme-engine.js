@@ -18,9 +18,9 @@
 /*
   Small HSL-based color engine for custom themes. Not the real Material
   Color Utilities (HCT) algorithm — just enough hue/saturation/lightness
-  math to turn 3-4 seed colors into a full, readable dark-theme token set
-  with sane on-color contrast. Isomorphic (server + browser), same
-  export pattern as the other shared/ modules.
+  math to turn 3-4 seed colors into a full, readable token set with sane
+  on-color contrast, in either the dark or the light scheme. Isomorphic
+  (server + browser), same export pattern as the other shared/ modules.
 */
 (function (root) {
   function hexToRgb(hex) {
@@ -79,12 +79,71 @@
     return `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}, ${alpha})`;
   }
 
-  // A "role" is a primary/secondary/tertiary accent: a light readable tone
-  // for use on dark surfaces, a dark tone to put text on top of it, and a
-  // mid container tone with its own readable on-color — mirrors M3's
-  // tone relationships (~T80 / ~T20 / ~T30 / ~T90) without the full HCT math.
-  function deriveRole(seedHex) {
+  // WCAG relative luminance / contrast ratio — used to keep derived accents and
+  // automatic on-surface text readable on the effective background.
+  function srgbLuminance(hex) {
+    const { r, g, b } = hexToRgb(hex);
+    const ch = (v) => {
+      const s = v / 255;
+      return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
+  }
+
+  function contrastRatio(hexA, hexB) {
+    const a = srgbLuminance(hexA);
+    const b = srgbLuminance(hexB);
+    const hi = Math.max(a, b);
+    const lo = Math.min(a, b);
+    return (hi + 0.05) / (lo + 0.05);
+  }
+
+  // HSL lightness is not perceived brightness: a yellow at L40 is far brighter
+  // than a blue at L40, so a fixed-lightness role can come out unreadable on
+  // the surface (the light scheme makes this easy to hit). Walk the lightness
+  // in both directions until `target` is met, keeping hue and saturation, and
+  // return the colour untouched when it already passes.
+  function readableOn(hex, bgHex, target) {
+    if (contrastRatio(hex, bgHex) >= target) return hex;
+    const { h, s, l } = hexToHsl(hex);
+    const darkBg = srgbLuminance(bgHex) < 0.35;
+    let best = hex;
+    let bestRatio = contrastRatio(hex, bgHex);
+    for (let step = 1; step <= 100; step += 1) {
+      const candidates = darkBg ? [l + step, l - step] : [l - step, l + step];
+      for (const next of candidates) {
+        if (next < 0 || next > 100) continue;
+        const candidate = hslToHex(h, s, next);
+        const ratio = contrastRatio(candidate, bgHex);
+        if (ratio > bestRatio) {
+          bestRatio = ratio;
+          best = candidate;
+        }
+        if (ratio >= target) return candidate;
+      }
+    }
+    return best;
+  }
+
+  // A "role" is a primary/secondary/tertiary accent: a readable tone for use on
+  // the scheme's surfaces, a dark tone to put text on top of it, and a mid
+  // container tone with its own readable on-color — mirrors M3's tone
+  // relationships (dark: ~T80/T20/T30/T90, light: ~T40/T99/T88/T18) without the
+  // full HCT math.
+  function deriveRole(seedHex, scheme) {
     const { h, s } = hexToHsl(seedHex);
+    if (scheme === "light") {
+      // HSL saturation lies about pastels (a pale lavender reads as 100%), and
+      // at L40 that would give a garish accent — cap it well below the dark
+      // formula, the way M3's light tones behave.
+      const roleSat = Math.min(60, s * 0.35 + 12);
+      return {
+        role: hslToHex(h, roleSat, 40),
+        onRole: hslToHex(h, Math.min(60, s * 0.6), 99),
+        container: hslToHex(h, Math.min(70, s * 0.7 + 10), 88),
+        onContainer: hslToHex(h, Math.min(40, s * 0.3), 18),
+      };
+    }
     return {
       role: hslToHex(h, Math.min(90, s * 0.9 + 10), 78),
       onRole: hslToHex(h, Math.min(60, s * 0.6), 15),
@@ -93,9 +152,26 @@
     };
   }
 
-  function deriveSurfaces(seedHex) {
+  function deriveSurfaces(seedHex, scheme) {
     const { h } = hexToHsl(seedHex);
-    const sat = 12; // surfaces stay near-neutral so widget text stays legible
+    // surfaces stay near-neutral so widget text stays legible
+    const sat = scheme === "light" ? 10 : 12;
+    if (scheme === "light") {
+      return {
+        dim: hslToHex(h, sat, 87),
+        base: hslToHex(h, sat, 98),
+        bright: hslToHex(h, sat, 100),
+        containerLowest: hslToHex(h, sat, 100),
+        containerLow: hslToHex(h, sat, 96),
+        container: hslToHex(h, sat, 93),
+        containerHigh: hslToHex(h, sat, 90),
+        containerHighest: hslToHex(h, sat, 87),
+        onSurface: hslToHex(h, 8, 12),
+        onSurfaceVariant: hslToHex(h, 8, 32),
+        outline: hslToHex(h, 10, 46),
+        outlineVariant: hslToHex(h, 10, 70),
+      };
+    }
     return {
       dim: hslToHex(h, sat, 5),
       base: hslToHex(h, sat, 7),
@@ -127,6 +203,11 @@
 
   const SHAPE_MODES = ["rounded", "angular", "sharp", "soft", "pill", "brackets4", "hazard"];
 
+  // Dark is the app's own scheme and the default for themes saved before the
+  // scheme existed; light derives the same token set from a bright surface
+  // scale so a theme can be legible over bright game footage.
+  const SCHEMES = ["dark", "light"];
+
   // Пресеты кривой появления алертов. Хранится ключ, в токен идёт готовая
   // cubic-bezier-строка — так UI не может вылить произвольный CSS в тему.
   const ALERT_EASINGS = {
@@ -137,16 +218,17 @@
     linear: "linear",
   };
 
-  function shapeTokens(mode, primaryHex, surfaceContainerHex, outlineVariantHex) {
+  function shapeTokens(mode, primaryHex, surfaceContainerHex, outlineVariantHex, scheme) {
+    const light = scheme === "light";
     const glass = hexToRgba(surfaceContainerHex, 0.82);
     const base = {
       "--panel-radius": "24px",
       "--panel-clip": "none",
       "--panel-decoration": "none",
-      "--panel-glow": "0 24px 48px rgba(0,0,0,0.45)",
+      "--panel-glow": light ? "0 12px 32px rgba(0,0,0,0.18)" : "0 24px 48px rgba(0,0,0,0.45)",
       "--panel-bg": glass,
       "--panel-blur": "20px",
-      "--panel-border": "1px solid rgba(255, 255, 255, 0.12)",
+      "--panel-border": light ? "1px solid rgba(0, 0, 0, 0.10)" : "1px solid rgba(255, 255, 255, 0.12)",
       "--alert-enter-easing": "cubic-bezier(0.05, 0.7, 0.1, 1)",
       "--alert-enter-duration": "480ms",
     };
@@ -239,19 +321,42 @@
   }
 
   // seeds: { primary, secondary, tertiary, surfaceSeed, error?, shapeMode,
-  //          fontPreset, alertEnterDuration?, alertEnterEasing?,
-  //          fontDisplay?, fontBody?, fontMono?, panelRadius?, panelBorderWidth?,
-  //          panelBorderStyle?, panelBorderColor?, panelGlowColor?, panelGlowStrength?,
+  //          mode?: "dark" | "light", fontPreset, alertEnterDuration?,
+  //          alertEnterEasing?, fontDisplay?, fontBody?, fontMono?,
+  //          panelRadius?, panelBorderWidth?, panelBorderStyle?,
+  //          panelBorderColor?, panelGlowColor?, panelGlowStrength?,
   //          background?, text?, panelOpacity?, panelBlur? }
   // Optional granular fields override the preset/derived token only when set.
   function buildThemeTokens(seeds) {
-    const primary = deriveRole(seeds.primary);
-    const secondary = deriveRole(seeds.secondary);
-    const tertiary = deriveRole(seeds.tertiary);
-    const error = seeds.error && String(seeds.error).trim() ? deriveRole(seeds.error) : null;
-    const surf = deriveSurfaces(seeds.surfaceSeed || seeds.primary);
+    const scheme = SCHEMES.includes(seeds.mode) ? seeds.mode : "dark";
+    const light = scheme === "light";
+    const primary = deriveRole(seeds.primary, scheme);
+    const secondary = deriveRole(seeds.secondary, scheme);
+    const tertiary = deriveRole(seeds.tertiary, scheme);
+    const error = seeds.error && String(seeds.error).trim() ? deriveRole(seeds.error, scheme) : null;
+    const surf = deriveSurfaces(seeds.surfaceSeed || seeds.primary, scheme);
     const fonts = FONT_PRESETS[seeds.fontPreset] || FONT_PRESETS.nebula;
-    const shape = shapeTokens(seeds.shapeMode, seeds.primary, surf.container, surf.outlineVariant);
+    const shape = shapeTokens(seeds.shapeMode, seeds.primary, surf.container, surf.outlineVariant, scheme);
+
+    // Readability guard: accents and automatic on-surface text are measured
+    // against the effective background (the `background` seed when set), so a
+    // theme never renders invisible text — e.g. a light background left under
+    // the dark scheme, or a bright seed whose derived tone is too light for a
+    // light surface. Explicit overrides (background/text) are respected as-is;
+    // the editor flags those with its contrast check instead.
+    const surfaceHex = seeds.background && String(seeds.background).trim() ? String(seeds.background).trim() : surf.base;
+    const onSurfaceHex = seeds.text && String(seeds.text).trim() ? String(seeds.text).trim() : readableOn(surf.onSurface, surfaceHex, 4.5);
+    const onSurfaceVariantHex = readableOn(surf.onSurfaceVariant, surfaceHex, 4.5);
+    primary.role = readableOn(primary.role, surfaceHex, 4.5);
+    primary.onRole = readableOn(primary.onRole, primary.role, 4.5);
+    secondary.role = readableOn(secondary.role, surfaceHex, 4.5);
+    secondary.onRole = readableOn(secondary.onRole, secondary.role, 4.5);
+    tertiary.role = readableOn(tertiary.role, surfaceHex, 4.5);
+    tertiary.onRole = readableOn(tertiary.onRole, tertiary.role, 4.5);
+    if (error) {
+      error.role = readableOn(error.role, surfaceHex, 4.5);
+      error.onRole = readableOn(error.onRole, error.role, 4.5);
+    }
 
     const tokens = {
       "--md-primary": primary.role,
@@ -266,10 +371,10 @@
       "--md-on-tertiary": tertiary.onRole,
       "--md-tertiary-container": tertiary.container,
       "--md-on-tertiary-container": tertiary.onContainer,
-      "--md-error": error ? error.role : "#ffb4ab",
-      "--md-on-error": error ? error.onRole : "#690005",
-      "--md-error-container": error ? error.container : "#93000a",
-      "--md-on-error-container": error ? error.onContainer : "#ffdad6",
+      "--md-error": error ? error.role : light ? "#ba1a1a" : "#ffb4ab",
+      "--md-on-error": error ? error.onRole : light ? "#ffffff" : "#690005",
+      "--md-error-container": error ? error.container : light ? "#ffdad6" : "#93000a",
+      "--md-on-error-container": error ? error.onContainer : light ? "#410002" : "#ffdad6",
       "--md-surface-dim": surf.dim,
       "--md-surface": surf.base,
       "--md-surface-bright": surf.bright,
@@ -278,8 +383,8 @@
       "--md-surface-container": surf.container,
       "--md-surface-container-high": surf.containerHigh,
       "--md-surface-container-highest": surf.containerHighest,
-      "--md-on-surface": surf.onSurface,
-      "--md-on-surface-variant": surf.onSurfaceVariant,
+      "--md-on-surface": onSurfaceHex,
+      "--md-on-surface-variant": onSurfaceVariantHex,
       "--md-outline": surf.outline,
       "--md-outline-variant": surf.outlineVariant,
       ...fonts,
@@ -312,7 +417,19 @@
     return tokens;
   }
 
-  const api = { hexToHsl, hslToHex, hexToRgba, deriveRole, deriveSurfaces, buildThemeTokens, FONT_PRESETS, SHAPE_MODES, ALERT_EASINGS };
+  const api = {
+    hexToHsl,
+    hslToHex,
+    hexToRgba,
+    deriveRole,
+    deriveSurfaces,
+    buildThemeTokens,
+    contrastRatio,
+    FONT_PRESETS,
+    SHAPE_MODES,
+    SCHEMES,
+    ALERT_EASINGS,
+  };
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;

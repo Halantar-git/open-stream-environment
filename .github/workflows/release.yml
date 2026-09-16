@@ -1,0 +1,82 @@
+name: Release
+
+# Релиз делает то, что раньше приходилось делать руками: собирает установщики под
+# Windows и Linux, прогоняет тесты и заливает артефакты в GitHub Release — оттуда
+# их берёт встроенное автообновление (electron-updater читает latest.yml из
+# ассетов релиза).
+#
+# Запуск: тег вида v3.2.0 (или вручную из вкладки Actions). Версия в package.json
+# обязана совпадать с тегом — проверяется первым шагом, иначе сборка остановится
+# до того, как что-то уедет в релиз.
+#
+# macOS отдельной целью не собирается: неподписанное приложение Gatekeeper
+# блокирует, а для подписи нужны сертификаты и секреты репозитория.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+# Нужен для загрузки артефактов в релиз средствами GITHUB_TOKEN.
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    name: Verify version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Tag must match package.json
+        id: version
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Тег $GITHUB_REF_NAME не совпадает с версией в package.json ($version)"
+            exit 1
+          fi
+          echo "Версия: $version"
+
+  build:
+    name: Build (${{ matrix.os }})
+    needs: verify
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            script: dist:win
+          - os: ubuntu-latest
+            script: dist:linux
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.12.0"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Тесты перед сборкой: релиз не должен собираться из красного коммита.
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build and publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run ${{ matrix.script }} -- --publish always

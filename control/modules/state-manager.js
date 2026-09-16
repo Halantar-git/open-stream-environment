@@ -83,6 +83,7 @@ export function createStateManager() {
       },
     },
     connectionStatus: {},
+    sessionDonations: null, // счёт донатов текущего стрима (для превью «Счётчика»)
     participantsConfig: { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82, x: 24, y: 340, w: 340, h: 400 },
     wheelConfig: { musicVolume: 50, x: 960, y: 540 },
     wheelSpeedConfig: { speed: 3 },
@@ -132,6 +133,7 @@ export function createStateManager() {
     state.poll = payload.poll || state.poll;
     state.chatBot = payload.chatBot || state.chatBot;
     state.connectionStatus = payload.connectionStatus || state.connectionStatus;
+    state.sessionDonations = payload.sessionDonations || state.sessionDonations;
     state.longshot = payload.longshot || state.longshot;
   };
 

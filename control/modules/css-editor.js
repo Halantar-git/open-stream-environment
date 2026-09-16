@@ -138,7 +138,7 @@ export function initCssEditor({ container, initialValue = "", tokens = [], selec
     closeMenu();
 
     // Use the native insertion path so Ctrl+Z keeps a coherent undo history.
-    let inserted = false;
+    let inserted;
     try {
       inserted = document.execCommand("insertText", false, c.text);
     } catch (_) {

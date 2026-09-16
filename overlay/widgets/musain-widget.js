@@ -46,8 +46,6 @@
 
   // viewBox 1774x887, with the sign's SVG transform applied per path:
   //   translate(tx,ty) translate(0,tz) scale(0.1,-0.1)
-  const SVG_W = 1774;
-  const SVG_H = 887;
 
   // Tight bounds of the neon tubes within the viewBox (sampled from the exact
   // reference paths), used to fill the widget instead of the padded viewBox.

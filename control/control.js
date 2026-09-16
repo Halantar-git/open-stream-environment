@@ -26,6 +26,7 @@
 import { initLoggerPanel } from "./modules/logger-panel.js";
 import { initHelpPanel } from "./modules/help-panel.js";
 import { initDebugPanel } from "./modules/debug-panel.js";
+import { initDonationAlertsPanel } from "./modules/donationalerts-panel.js";
 import { initWsClient } from "./modules/ws-client.js";
 import { createStateManager } from "./modules/state-manager.js";
 import { initPropertiesPanel } from "./modules/properties-panel.js";
@@ -290,12 +291,18 @@ const { EVENT_TYPES } = window.SharedEvents;
   const exportEventsBtn = document.getElementById("exportEventsBtn");
   const deleteEventsBtn = document.getElementById("deleteEventsBtn");
   const dataStatsEl = document.getElementById("dataStats");
+  const dataBackupsEl = document.getElementById("dataBackups");
+  const accessRemoteUrlEl = document.getElementById("accessRemoteUrl");
+  const copyAccessUrlBtn = document.getElementById("copyAccessUrlBtn");
+  const rotateAccessCodeBtn = document.getElementById("rotateAccessCodeBtn");
+  const accessStatusEl = document.getElementById("accessStatus");
   const chatHistorySwitch = document.getElementById("chatHistorySwitch");
   const historyLimitInput = document.getElementById("historyLimitInput");
   const saveHistoryLimitBtn = document.getElementById("saveHistoryLimitBtn");
   const dataClearScope = document.getElementById("dataClearScope");
   const dataClearBtn = document.getElementById("dataClearBtn");
   const openDataFolderBtn = document.getElementById("openDataFolderBtn");
+  const supportBundleBtn = document.getElementById("supportBundleBtn");
   const resetDbBtn = document.getElementById("resetDbBtn");
   const dataStatusEl = document.getElementById("dataStatus");
   const wheelPanelEl = document.getElementById("wheelPanel");
@@ -804,7 +811,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     const dataJson = JSON.stringify(cmd.requestData || {});
     data.value = dataJson === "{}" ? "" : dataJson;
     data.addEventListener("change", () => {
-      let parsed = {};
+      let parsed;
       try { parsed = JSON.parse(data.value || "{}"); } catch { parsed = {}; }
       updateObsCommand(cmd.id, { requestData: parsed });
     });
@@ -1736,7 +1743,7 @@ const { EVENT_TYPES } = window.SharedEvents;
       const hasMore = eventsOffset < eventsTotal;
       loadMoreEventsBtn.hidden = !hasMore;
       if (hasMore) loadMoreEventsBtn.textContent = t("events.showMore", { current: eventsOffset, total: eventsTotal });
-    } catch (err) {
+    } catch {
       if (reset) {
         eventsHistoryEl.innerHTML = '<div class="events-history__empty">' + t("events.loadError") + '</div>';
         eventsMetaEl.textContent = "";
@@ -2590,6 +2597,105 @@ const { EVENT_TYPES } = window.SharedEvents;
     } catch {
       /* статистика не критична */
     }
+    renderDataBackups();
+  }
+
+  // ---- резервные копии настроек и базы ----
+
+  // Список слотов .bak.0… от главного процесса: показываем имя файла, время и
+  // размер, а битые слоты вообще нельзя нажать — увидеть это лучше до отката,
+  // а не после.
+  async function renderDataBackups() {
+    if (!dataBackupsEl || !window.desktop?.backups?.list) return;
+    let data;
+    try {
+      data = await window.desktop.backups.list();
+    } catch {
+      return;
+    }
+    if (!data) return;
+
+    const rows = [];
+    [
+      ["config", data.config],
+      ["database", data.database],
+    ].forEach(([target, slots]) => {
+      (slots || []).forEach((slot) => {
+        const when = new Date(slot.mtime);
+        const info = [when.toLocaleString(), formatBytes(slot.bytes), slot.valid ? null : t("data.backupBroken")]
+          .filter(Boolean)
+          .join(" · ");
+        rows.push(
+          `<div class="data-backups__row" data-target="${target}" data-slot="${slot.slot}">` +
+            `<div class="data-backups__meta">` +
+            `<span class="data-backups__name">${escapeHtml(slot.name)}</span>` +
+            `<span class="data-backups__info">${escapeHtml(info)}</span>` +
+            `</div>` +
+            `<button class="md-button md-button--outlined"${slot.valid ? "" : " disabled"}>${t("data.backupRestore")}</button>` +
+            `</div>`
+        );
+      });
+    });
+
+    dataBackupsEl.innerHTML = rows.length ? rows.join("") : `<div class="data-backups__empty">${t("data.backupsEmpty")}</div>`;
+    dataBackupsEl.querySelectorAll(".data-backups__row").forEach((row) => {
+      const btn = row.querySelector("button");
+      if (!btn || btn.disabled) return;
+      btn.addEventListener("click", () => restoreBackup(row.dataset.target, Number(row.dataset.slot), btn));
+    });
+  }
+
+  async function restoreBackup(target, slot, btn) {
+    const name = btn.closest(".data-backups__row")?.querySelector(".data-backups__name")?.textContent || "";
+    if (!confirm(t("data.backupConfirm", { file: name }))) return;
+    btn.disabled = true;
+    const res = await window.desktop?.backups?.restore?.(target, slot);
+    btn.disabled = false;
+    if (res && res.ok) {
+      // Панель получит свежий STATE от сервера и перерисует раскладку/настройки.
+      showDataStatus(t("data.backupRestored"), false);
+      renderDataStats();
+    } else {
+      showDataStatus(t("data.backupRestoreFailed", { error: (res && res.error) || "—" }), true);
+    }
+  }
+
+  // ---- доступ из сети ----
+
+  function showAccessStatus(text, isError) {
+    if (!accessStatusEl) return;
+    accessStatusEl.hidden = false;
+    accessStatusEl.textContent = text;
+    accessStatusEl.style.color = isError ? "var(--md-error)" : "";
+  }
+
+  // Адрес пульта приходит в снапшоте состояния (уже с кодом доступа): панель
+  // только показывает и копирует его.
+  function renderAccessUrl(url) {
+    if (!accessRemoteUrlEl) return;
+    accessRemoteUrlEl.textContent = url || "—";
+  }
+
+  if (copyAccessUrlBtn) {
+    copyAccessUrlBtn.addEventListener("click", async () => {
+      const url = accessRemoteUrlEl ? accessRemoteUrlEl.textContent : "";
+      if (!url || url === "—") return;
+      const ok = await copyText(url);
+      showAccessStatus(ok ? t("access.copied") : t("access.failed", { error: "clipboard" }), !ok);
+    });
+  }
+
+  if (rotateAccessCodeBtn) {
+    rotateAccessCodeBtn.addEventListener("click", async () => {
+      if (!confirm(t("access.hint"))) return;
+      const res = await window.desktop?.rotateAccessCode?.();
+      if (res && res.ok) {
+        renderAccessUrl(res.remoteUrl);
+        showAccessStatus(t("access.rotated"), false);
+      } else {
+        showAccessStatus(t("access.failed", { error: (res && res.error) || "—" }), true);
+      }
+    });
   }
 
   function showDataStatus(text, isError) {
@@ -2645,6 +2751,17 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   if (openDataFolderBtn) {
     openDataFolderBtn.addEventListener("click", () => window.desktop?.db?.openDataFolder?.());
+  }
+
+  // Отчёт для поддержки собирается в главном процессе (там есть лог, пути и
+  // телеметрия записи) и сохраняется выбранным файлом — панель только просит.
+  if (supportBundleBtn) {
+    supportBundleBtn.addEventListener("click", async () => {
+      const res = await window.desktop?.saveSupportBundle?.();
+      if (!res || res.canceled) return;
+      if (res.ok) showDataStatus(t("data.supportSaved", { path: res.path }), false);
+      else showDataStatus(t("data.supportFailed", { error: res.error }), true);
+    });
   }
 
   if (resetDbBtn) {
@@ -2964,6 +3081,21 @@ const { EVENT_TYPES } = window.SharedEvents;
   });
 
   const loggerPanel = initLoggerPanel({ t, ICONS, send, EVENT_TYPES, state });
+  const daPanel = initDonationAlertsPanel({
+    t,
+    ICONS,
+    send,
+    EVENT_TYPES,
+    state,
+    showToast,
+    // Подписи и цвета статусов берём из ws-client: он владеет их словарём,
+    // иначе панель и чипы в шапке говорили бы об одном разными словами.
+    statusText: wsClient.statusText,
+    statusClass: wsClient.statusClass,
+    // Форматирование и экранирование — то же, что у остальной панели, чтобы
+    // суммы и время в списке донатов выглядели как в «Истории».
+    utils: { escapeHtml, escapeAttr, formatMoney, currencySymbol, formatEventTime },
+  });
   const helpPanel = initHelpPanel({ t, ICONS });
   const debugPanel = initDebugPanel({ t, ICONS, send, EVENT_TYPES });
 
@@ -3022,6 +3154,261 @@ const { EVENT_TYPES } = window.SharedEvents;
     });
   }
 
+  // ---- alert queue panel ----
+  /*
+    Очередь алертов живёт на сервере (см. server/alert-queue.js) и присылается
+    целиком: снимок приходит в STATE (поле alertQueue) и в ALERT_QUEUE_UPDATE
+    после каждого изменения. Клиент не ведёт своей модели очереди — он помнит
+    только последний снимок и полностью перерисовывается из него, поэтому
+    панель не может разойтись с сервером.
+  */
+  const queuePanelEl = document.getElementById("queuePanel");
+  const toggleQueueBtn = document.getElementById("toggleQueueBtn");
+  const queueCloseBtn = document.getElementById("queueCloseBtn");
+  const queueNowCardEl = document.getElementById("queueNowCard");
+  const queuePendingEl = document.getElementById("queuePending");
+  const queueStatsEl = document.getElementById("queueStats");
+  const queueListEl = document.getElementById("queueList");
+  const queueEmptyEl = document.getElementById("queueEmpty");
+  const queuePauseStateEl = document.getElementById("queuePauseState");
+  const queueSkipBtn = document.getElementById("queueSkipBtn");
+  const queueClearBtn = document.getElementById("queueClearBtn");
+  const queuePauseBtn = document.getElementById("queuePauseBtn");
+  const queuePause5Btn = document.getElementById("queuePause5Btn");
+  const queuePause15Btn = document.getElementById("queuePause15Btn");
+  const queuePause30Btn = document.getElementById("queuePause30Btn");
+  const queueResumeBtn = document.getElementById("queueResumeBtn");
+  const queueMinAmountInput = document.getElementById("queueMinAmount");
+  const queueEnabledInput = document.getElementById("queueEnabled");
+  const queueMergeSameUserInput = document.getElementById("queueMergeSameUser");
+  const queueMergeWindowInput = document.getElementById("queueMergeWindow");
+  const queueRecoverBtn = document.getElementById("queueRecoverBtn");
+  const queueRecoverStatusEl = document.getElementById("queueRecoverStatus");
+
+  let queueSnapshot = null; // последний снимок с сервера — единственный источник отрисовки
+  // Подтягивание пропущенных донатов отвечает не сразу (запрос к DonationAlerts),
+  // поэтому кнопка блокируется на время ожидания и разблокируется по таймауту.
+  const QUEUE_RECOVER_TIMEOUT_MS = 30000;
+  let queueRecoverTimer = null;
+  let queueRecoverPending = false;
+  let queueRecoverStatus = "";
+  let queueRecoverOk = false;
+
+  const QUEUE_PAUSE_PRESETS = [[queuePause5Btn, 5], [queuePause15Btn, 15], [queuePause30Btn, 30]];
+
+  function queueAmountText(item) {
+    if (!item || typeof item.amount !== "number") return "";
+    return `${formatMoney(item.amount)} ${currencySymbol(item.currency)}`.trim();
+  }
+
+  function queueBadgesHtml(item, blockClass) {
+    const badges = [];
+    if (item.recovered === true) {
+      badges.push(`<span class="queue-badge queue-badge--recovered">${escapeHtml(t("queue.recovered"))}</span>`);
+    }
+    if (Number(item.count) > 1) badges.push(`<span class="queue-badge">×${Number(item.count)}</span>`);
+    return badges.length ? `<div class="${blockClass}">${badges.join("")}</div>` : "";
+  }
+
+  function queueNowCardHtml(item) {
+    if (!item) return `<div class="queue-card__empty">${escapeHtml(t("queue.nothingPlaying"))}</div>`;
+    const amount = queueAmountText(item);
+    return `
+      <div class="queue-card__top">
+        <span class="queue-card__user">${escapeHtml(item.user || "—")}</span>
+        ${amount ? `<span class="queue-card__amount">${escapeHtml(amount)}</span>` : ""}
+      </div>
+      ${item.message ? `<div class="queue-card__message">${escapeHtml(item.message)}</div>` : ""}
+      ${queueBadgesHtml(item, "queue-card__badges")}`;
+  }
+
+  function queueItemHtml(item, index) {
+    const id = escapeAttr(item.id);
+    const amount = queueAmountText(item);
+    return `
+      <div class="queue-item">
+        <div class="queue-item__main">
+          <div class="queue-item__top">
+            <span class="queue-item__user">${escapeHtml(item.user || "—")}</span>
+            ${amount ? `<span class="queue-item__amount">${escapeHtml(amount)}</span>` : ""}
+          </div>
+          ${item.message ? `<div class="queue-item__message">${escapeHtml(item.message)}</div>` : ""}
+          ${queueBadgesHtml(item, "queue-item__badges")}
+        </div>
+        <div class="queue-item__actions">
+          <button class="queue-btn queue-btn--small" data-queue-action="play-now" data-queue-id="${id}">${escapeHtml(t("queue.playNow"))}</button>
+          <button class="queue-btn queue-btn--small" data-queue-action="up" data-queue-id="${id}" ${index === 0 ? "disabled" : ""}>${escapeHtml(t("queue.up"))}</button>
+          <button class="queue-btn queue-btn--small queue-btn--danger" data-queue-action="remove" data-queue-id="${id}">${escapeHtml(t("queue.remove"))}</button>
+        </div>
+      </div>`;
+  }
+
+  // Пауза со сроком приходит меткой времени — показываем её в локальном времени
+  // пользователя, а не как «через N минут».
+  function queuePauseText(snapshot) {
+    if (!snapshot.paused) return "";
+    if (!snapshot.pausedUntil) return t("queue.paused");
+    return t("queue.pausedUntil", { time: formatEventTime(snapshot.pausedUntil) });
+  }
+
+  function queueRecoverStatusText(recover) {
+    const count = typeof recover.count === "number" ? recover.count : 0;
+    if (recover.ok === false && recover.error === "insufficient_scope") return t("queue.recoverScope");
+    if (recover.ok === false && recover.error === "not_authorized") return t("queue.recoverNoAuth");
+    if (recover.ok === true && count > 0) return t("queue.recoverDone", { count });
+    if (recover.ok === true && count === 0) return t("queue.recoverNone");
+    return t("queue.recoverFailed", { error: recover.error || "unknown" });
+  }
+
+  function renderQueuePanel() {
+    if (!queuePanelEl) return;
+    const snapshot = queueSnapshot || { now: null, items: [], paused: false, pausedUntil: null, rules: {}, stats: {}, pending: 0 };
+    const items = Array.isArray(snapshot.items) ? snapshot.items : [];
+    const stats = snapshot.stats || {};
+    const rules = snapshot.rules || {};
+
+    if (queueNowCardEl) queueNowCardEl.innerHTML = queueNowCardHtml(snapshot.now);
+    if (queueSkipBtn) queueSkipBtn.disabled = !snapshot.now;
+    if (queueClearBtn) queueClearBtn.disabled = items.length === 0;
+
+    if (queuePauseStateEl) {
+      queuePauseStateEl.textContent = queuePauseText(snapshot);
+      queuePauseStateEl.classList.toggle("is-paused", !!snapshot.paused);
+    }
+    QUEUE_PAUSE_PRESETS.forEach(([btn, minutes]) => {
+      if (btn) btn.textContent = t("queue.pauseFor", { count: minutes });
+    });
+    if (queueResumeBtn) queueResumeBtn.disabled = !snapshot.paused;
+
+    // Поля правил не перебиваем, пока пользователь в них печатает: сервер
+    // присылает снимок после каждого изменения очереди, в том числе чужого.
+    if (queueMinAmountInput && document.activeElement !== queueMinAmountInput) {
+      queueMinAmountInput.value = String(Number(rules.minAmount) || 0);
+    }
+    if (queueMergeSameUserInput) queueMergeSameUserInput.checked = rules.mergeSameUser !== false;
+    if (queueEnabledInput) queueEnabledInput.checked = snapshot.enabled !== false;
+    if (queueMergeWindowInput && document.activeElement !== queueMergeWindowInput) {
+      const mergeWindow = Number(rules.mergeWindowSec);
+      queueMergeWindowInput.value = String(Number.isFinite(mergeWindow) ? mergeWindow : 0);
+    }
+
+    if (queuePendingEl) {
+      // Выключенная очередь пуста по определению — вместо «Ожидают: 0» говорим
+      // прямо, что она не используется.
+      queuePendingEl.textContent =
+        snapshot.enabled === false ? t("queue.disabled") : t("queue.pending", { count: items.length });
+    }
+    if (queueStatsEl) {
+      const filtered = Number(stats.filtered) || 0;
+      const line = t("queue.stats", {
+        received: Number(stats.received) || 0,
+        played: Number(stats.played) || 0,
+        skipped: Number(stats.skipped) || 0,
+        merged: Number(stats.merged) || 0,
+        filtered,
+      });
+      queueStatsEl.innerHTML =
+        `<div class="queue-stats__line">${escapeHtml(line)}</div>` +
+        (filtered > 0 ? `<div class="queue-stats__note">${escapeHtml(t("queue.kindsFiltered", { count: filtered }))}</div>` : "");
+    }
+
+    if (queueListEl) {
+      queueListEl.innerHTML = items.map((item, index) => queueItemHtml(item, index)).join("");
+      queueListEl.hidden = items.length === 0;
+      queueListEl.querySelectorAll("[data-queue-action]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.dataset.queueId;
+          const action = btn.dataset.queueAction;
+          if (action === "play-now") send(EVENT_TYPES.CMD_ALERT_QUEUE_PLAY_NOW, { id });
+          else if (action === "up") send(EVENT_TYPES.CMD_ALERT_QUEUE_UP, { id });
+          else if (action === "remove") send(EVENT_TYPES.CMD_ALERT_QUEUE_REMOVE, { id });
+        });
+      });
+    }
+    if (queueEmptyEl) queueEmptyEl.hidden = items.length > 0;
+
+    if (queueRecoverBtn) {
+      queueRecoverBtn.disabled = queueRecoverPending;
+      queueRecoverBtn.textContent = queueRecoverPending ? t("queue.recovering") : t("queue.recover");
+    }
+    if (queueRecoverStatusEl) {
+      queueRecoverStatusEl.hidden = !queueRecoverStatus;
+      queueRecoverStatusEl.textContent = queueRecoverStatus;
+      queueRecoverStatusEl.classList.toggle("is-error", !!queueRecoverStatus && !queueRecoverOk);
+    }
+  }
+
+  function applyQueuePayload(queue, recover) {
+    if (queue) queueSnapshot = queue;
+    if (recover) {
+      if (queueRecoverTimer) { clearTimeout(queueRecoverTimer); queueRecoverTimer = null; }
+      queueRecoverPending = false;
+      queueRecoverOk = recover.ok === true;
+      queueRecoverStatus = queueRecoverStatusText(recover);
+    }
+    if (queuePanelEl && !queuePanelEl.hidden) renderQueuePanel();
+  }
+
+  function setQueueOpen(open) {
+    if (!queuePanelEl || !toggleQueueBtn) return;
+    queuePanelEl.hidden = !open;
+    toggleQueueBtn.classList.toggle("is-active", open);
+    if (open) renderQueuePanel();
+  }
+  if (toggleQueueBtn) {
+    toggleQueueBtn.innerHTML = `${ICONS.layers} ${t("nav.queue")}`;
+  }
+  if (queueCloseBtn) queueCloseBtn.addEventListener("click", () => setQueueOpen(false));
+
+  if (queueSkipBtn) queueSkipBtn.addEventListener("click", () => send(EVENT_TYPES.CMD_ALERT_QUEUE_SKIP, {}));
+  if (queueClearBtn) queueClearBtn.addEventListener("click", () => send(EVENT_TYPES.CMD_ALERT_QUEUE_CLEAR, {}));
+  if (queuePauseBtn) queuePauseBtn.addEventListener("click", () => send(EVENT_TYPES.CMD_ALERT_QUEUE_PAUSE, {}));
+  QUEUE_PAUSE_PRESETS.forEach(([btn, minutes]) => {
+    if (btn) btn.addEventListener("click", () => send(EVENT_TYPES.CMD_ALERT_QUEUE_PAUSE, { minutes }));
+  });
+  if (queueResumeBtn) queueResumeBtn.addEventListener("click", () => send(EVENT_TYPES.CMD_ALERT_QUEUE_RESUME, {}));
+
+  if (queueEnabledInput) {
+    queueEnabledInput.addEventListener("change", () => {
+      send(EVENT_TYPES.CMD_ALERT_QUEUE_CONFIG, { enabled: queueEnabledInput.checked });
+    });
+  }
+  if (queueMinAmountInput) {
+    queueMinAmountInput.addEventListener("change", () => {
+      const value = Math.max(0, Math.round(Number(queueMinAmountInput.value) || 0));
+      queueMinAmountInput.value = String(value);
+      send(EVENT_TYPES.CMD_ALERT_QUEUE_CONFIG, { minAmount: value });
+    });
+  }
+  if (queueMergeSameUserInput) {
+    queueMergeSameUserInput.addEventListener("change", () => {
+      send(EVENT_TYPES.CMD_ALERT_QUEUE_CONFIG, { mergeSameUser: queueMergeSameUserInput.checked });
+    });
+  }
+  if (queueMergeWindowInput) {
+    queueMergeWindowInput.addEventListener("change", () => {
+      const value = clamp(Math.round(Number(queueMergeWindowInput.value) || 0), 0, 600);
+      queueMergeWindowInput.value = String(value);
+      send(EVENT_TYPES.CMD_ALERT_QUEUE_CONFIG, { mergeWindowSec: value });
+    });
+  }
+
+  if (queueRecoverBtn) {
+    queueRecoverBtn.addEventListener("click", () => {
+      if (queueRecoverPending) return;
+      queueRecoverPending = true;
+      queueRecoverStatus = "";
+      if (queueRecoverTimer) clearTimeout(queueRecoverTimer);
+      queueRecoverTimer = setTimeout(() => {
+        queueRecoverTimer = null;
+        queueRecoverPending = false;
+        renderQueuePanel();
+      }, QUEUE_RECOVER_TIMEOUT_MS);
+      renderQueuePanel();
+      send(EVENT_TYPES.CMD_RECOVER_DONATIONS, {});
+    });
+  }
+
   // ---- panel manager: keep only one panel open at a time ----
   const panelRegistry = [
     { id: "terminalPanel", setOpen: loggerPanel.setOpen },
@@ -3030,6 +3417,8 @@ const { EVENT_TYPES } = window.SharedEvents;
     { id: "historyPanel", setOpen: setHistoryOpen },
     { id: "wheelPanel", setOpen: setWheelOpen },
     { id: "pollPanel", setOpen: setPollOpen },
+    { id: "queuePanel", setOpen: setQueueOpen },
+    { id: "daPanel", setOpen: daPanel.setOpen },
   ];
 
   function panelIsOpen(id) {
@@ -3055,6 +3444,8 @@ const { EVENT_TYPES } = window.SharedEvents;
     ["toggleHistoryBtn", "historyPanel"],
     ["toggleWheelBtn", "wheelPanel"],
     ["togglePollBtn", "pollPanel"],
+    ["toggleQueueBtn", "queuePanel"],
+    ["toggleDaBtn", "daPanel"],
   ].forEach(([btnId, panelId]) => {
     const btn = document.getElementById(btnId);
     if (btn) btn.addEventListener("click", () => togglePanelById(panelId));
@@ -3080,12 +3471,15 @@ const { EVENT_TYPES } = window.SharedEvents;
     switch (msg.type) {
       case EVENT_TYPES.STATE:
         state.applySnapshot(msg.payload);
+        applyQueuePayload(msg.payload.alertQueue, null);
+        daPanel.applySnapshot(msg.payload);
         if (msg.payload.port && Number(msg.payload.port) !== Number(port)) {
           setAppPort(msg.payload.port);
         }
         if (msg.payload.remoteUrl) {
           remoteUrlText.textContent = msg.payload.remoteUrl;
           remoteUrlHint.hidden = false;
+          renderAccessUrl(msg.payload.remoteUrl);
         }
         wsClient.setStatuses(msg.payload.connectionStatus);
         gridSizeSelect.value = String(state.editorPrefs.gridSize || 0);
@@ -3112,6 +3506,26 @@ const { EVENT_TYPES } = window.SharedEvents;
       case EVENT_TYPES.LAYOUT_PRESETS_UPDATE:
         state.layoutPresets = (msg.payload && msg.payload.presets) || [];
         renderLayoutPresets();
+        break;
+      case EVENT_TYPES.SESSION_STATS:
+        // Счёт донатов текущего стрима складывает сервер в момент прихода доната
+        // (см. state.addDonationToSession), поэтому панель только показывает его.
+        state.sessionDonations = msg.payload;
+        daPanel.applySessionStats(msg.payload);
+        // Канвас держит превью «Счётчика» — как и на STAT_UPDATE, перерисовываем.
+        canvasEditor.renderCanvas();
+        break;
+      case EVENT_TYPES.ALERT:
+        // Список донатов в панели DonationAlerts читается из базы, а запись в неё
+        // уже сделана сервером — поэтому здесь только просьба перечитать его.
+        // Панель сама стягивает серию (и тестовые алерты в список не берёт).
+        if (msg.payload && msg.payload.kind === "donation" && !msg.payload.isTest) daPanel.refreshDonations();
+        break;
+      case EVENT_TYPES.ALERT_QUEUE_UPDATE:
+        applyQueuePayload(msg.payload && msg.payload.queue, (msg.payload && msg.payload.recover) || null);
+        // Ответ на «подтянуть пропущенные» показывают обе панели: кнопка есть и в
+        // очереди, и в DonationAlerts, а событие одно на всех.
+        if (msg.payload && msg.payload.recover) daPanel.showRecoverResult(msg.payload.recover);
         break;
       case EVENT_TYPES.TWITCH_ACTION_RESULT:
         showTwitchActionResult(msg.payload || {});
@@ -3248,6 +3662,7 @@ const { EVENT_TYPES } = window.SharedEvents;
       case EVENT_TYPES.CONNECTION_STATUS:
         state.connectionStatus[msg.payload.service] = msg.payload.status;
         wsClient.updateStatus(msg.payload.service, msg.payload.status);
+        if (msg.payload.service === "donationAlerts") daPanel.applyStatus(msg.payload.status);
         canvasEditor.renderCanvas();
         canvasEditor.renderLayers();
         break;
@@ -3256,6 +3671,10 @@ const { EVENT_TYPES } = window.SharedEvents;
         break;
       case EVENT_TYPES.TERMINAL_LOG:
         loggerPanel.append(msg.payload);
+        // У той же записи есть второй адресат: панель DonationAlerts копит
+        // только «свои» строки, чтобы после сбоя было видно, что происходило
+        // с сервисом, — в общем терминале они тонут среди остальных сервисов.
+        daPanel.appendLog(msg.payload);
         break;
       case EVENT_TYPES.DEBUG_LOG:
         debugPanel.appendDebug(msg.payload);
@@ -3321,6 +3740,10 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (wheelBtn) wheelBtn.innerHTML = `${ICONS.sceneWheel} ${t("nav.wheel")}`;
     const pollBtn = document.getElementById("togglePollBtn");
     if (pollBtn) pollBtn.innerHTML = `${ICONS.scenePoll} ${t("nav.poll")}`;
+    const queueBtn = document.getElementById("toggleQueueBtn");
+    if (queueBtn) queueBtn.innerHTML = `${ICONS.layers} ${t("nav.queue")}`;
+    renderQueuePanel();
+    daPanel.refreshLabel();
     loggerPanel.refreshLabel();
     debugPanel.refresh();
     helpPanel.refresh();

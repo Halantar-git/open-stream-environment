@@ -100,6 +100,7 @@ function makeContext(overrides = {}) {
       recentEvents: [],
       stats: { followerCount: 10, subscriberCount: 5 },
       topDonation: { user: "", amount: 0, currency: "RUB" },
+      sessionDonations: null,
       deathCount: 0,
       soundboardConfig: { volume: 0.8, queueMode: false },
       micConfig: {},
@@ -191,6 +192,32 @@ describe("overlay widgets", () => {
     ctx.bus.emit(EVENT_TYPES.STAT_UPDATE, ctx.state.stats);
 
     expect(w.host.innerHTML).toContain("42");
+  });
+
+  test("StatWidget показывает счёт донатов стрима и обновляется по session_stats", () => {
+    const ctx = makeContext();
+    const { w } = mountWidget(StatWidget, ctx, { type: "stat", config: { metric: "sessionDonations" } });
+
+    // Пока счёт не пришёл (ни снимком, ни событием) — прочерк, а не выдуманный ноль.
+    expect(w.host.innerHTML).toContain("—");
+
+    ctx.state.sessionDonations = { count: 7, amount: 1500, currency: "RUB" };
+    ctx.bus.emit(EVENT_TYPES.SESSION_STATS, ctx.state.sessionDonations);
+    expect(w.host.innerHTML).toContain("7");
+
+    // Ноль — осмысленное значение для счётчика, который только начался.
+    ctx.state.sessionDonations = { count: 0, amount: 0, currency: "RUB" };
+    ctx.bus.emit(EVENT_TYPES.SESSION_STATS, ctx.state.sessionDonations);
+    expect(w.host.innerHTML).toContain(">0<");
+  });
+
+  test("StatWidget показывает сумму донатов стрима с валютой", () => {
+    const ctx = makeContext();
+    ctx.state.sessionDonations = { count: 3, amount: 1500, currency: "RUB" };
+    const { w } = mountWidget(StatWidget, ctx, { type: "stat", config: { metric: "sessionAmount" } });
+
+    expect(w.host.innerHTML).toContain("1500");
+    expect(w.host.innerHTML).toContain("RUB");
   });
 
   test("DeathWidget рендерит счётчик и обновляется по death_count_update", () => {

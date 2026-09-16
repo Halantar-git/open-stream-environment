@@ -46,10 +46,10 @@ function makeElement(tag) {
       child.parentNode = null;
       return child;
     },
-    addEventListener(type, fn, options) {
-      listeners.push({ type, fn, options });
+    addEventListener(type, fn, _options) {
+      listeners.push({ type, fn, options: _options });
     },
-    removeEventListener(type, fn, options) {
+    removeEventListener(type, fn, _options) {
       for (let i = listeners.length - 1; i >= 0; i--) {
         if (listeners[i].fn === fn && listeners[i].type === type) listeners.splice(i, 1);
       }

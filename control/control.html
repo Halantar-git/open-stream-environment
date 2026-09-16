@@ -67,6 +67,8 @@
         <button class="md-button md-button--tonal topbar__poll-btn" id="togglePollBtn" data-i18n-title="nav.poll"></button>
         <button class="md-button md-button--tonal topbar__terminal-btn" id="toggleTerminalBtn" data-i18n-title="editor.terminal"></button>
         <button class="md-button md-button--tonal topbar__history-btn" id="toggleHistoryBtn" data-i18n-title="settings.history"></button>
+        <button class="md-button md-button--tonal topbar__da-btn" id="toggleDaBtn" data-i18n-title="da.title"></button>
+        <button class="md-button md-button--tonal topbar__queue-btn" id="toggleQueueBtn" data-i18n-title="nav.queue"></button>
         <button class="md-button md-button--tonal topbar__help-btn" id="toggleHelpBtn" data-i18n-title="help.title"></button>
         <div class="topbar__lang" id="languageSwitcher" role="group" data-i18n-title="settings.language">
           <button class="md-button md-button--tonal topbar__lang-btn" data-lang="ru" type="button">RU</button>
@@ -214,6 +216,130 @@
       <div class="participants-panel__body" id="pollOptionsPanelBody"></div>
     </aside>
 
+    <aside class="queue-panel" id="queuePanel" hidden>
+      <header class="queue-panel__header">
+        <span class="queue-panel__title" data-i18n="queue.title">Очередь алертов</span>
+        <button class="queue-panel__close" id="queueCloseBtn" aria-label="Закрыть" data-i18n-title="common.close">×</button>
+      </header>
+      <div class="queue-panel__body">
+        <section class="queue-block">
+          <div class="queue-block__title" data-i18n="queue.now">В эфире</div>
+          <div class="queue-card" id="queueNowCard"></div>
+          <div class="queue-row">
+            <button class="queue-btn" id="queueSkipBtn" data-i18n="queue.skip">Пропустить</button>
+            <button class="queue-btn queue-btn--danger" id="queueClearBtn" data-i18n="queue.clear">Очистить очередь</button>
+          </div>
+        </section>
+
+        <section class="queue-block">
+          <div class="queue-pause" id="queuePauseState"></div>
+          <div class="queue-row">
+            <button class="queue-btn" id="queuePauseBtn" data-i18n="queue.pause">Пауза</button>
+            <button class="queue-btn" id="queuePause5Btn"></button>
+            <button class="queue-btn" id="queuePause15Btn"></button>
+            <button class="queue-btn" id="queuePause30Btn"></button>
+            <button class="queue-btn" id="queueResumeBtn" data-i18n="queue.resume">Продолжить</button>
+          </div>
+          <div class="queue-hint" data-i18n="queue.pauseHint">Донаты продолжают приходить, но алерты ждут. Срок истечёт сам.</div>
+        </section>
+
+        <section class="queue-block">
+          <div class="queue-block__title" data-i18n="queue.rules">Правила</div>
+          <label class="queue-toggle">
+            <input type="checkbox" id="queueEnabled" />
+            <span data-i18n="queue.enabled">Использовать очередь алертов</span>
+          </label>
+          <div class="queue-hint" data-i18n="queue.enabledHint">Выключение возвращает прежнее поведение: алерты уходят в эфир сразу, без правил, объединения и паузы. Ожидающие при выключении сбрасываются.</div>
+          <div class="queue-field">
+            <label class="queue-field__label" for="queueMinAmount" data-i18n="queue.minAmount">Не показывать донаты меньше</label>
+            <input class="queue-input" type="number" id="queueMinAmount" min="0" step="1" />
+          </div>
+          <div class="queue-hint" data-i18n="queue.minAmountHint">0 — показывать все донаты, независимо от суммы.</div>
+          <label class="queue-toggle">
+            <input type="checkbox" id="queueMergeSameUser" />
+            <span data-i18n="queue.mergeSameUser">Объединять донаты одного зрителя</span>
+          </label>
+          <div class="queue-field">
+            <label class="queue-field__label" for="queueMergeWindow" data-i18n="queue.mergeWindow">Окно объединения, сек</label>
+            <input class="queue-input" type="number" id="queueMergeWindow" min="0" max="600" step="1" />
+          </div>
+          <div class="queue-hint" data-i18n="queue.mergeWindowHint">Подряд идущие донаты одного ника в пределах окна складываются в один алерт с общей суммой и счётчиком.</div>
+        </section>
+
+        <section class="queue-block">
+          <button class="queue-btn queue-btn--wide" id="queueRecoverBtn" data-i18n="queue.recover">Подтянуть пропущенные</button>
+          <div class="queue-hint" data-i18n="queue.recoverHint">Спросит у DonationAlerts донаты, пришедшие пока приложение было выключено, и покажет те, которых нет в истории.</div>
+          <div class="queue-status" id="queueRecoverStatus" hidden></div>
+        </section>
+
+        <section class="queue-block">
+          <div class="queue-block__title" id="queuePending"></div>
+          <div class="queue-stats" id="queueStats"></div>
+          <div class="queue-list" id="queueList"></div>
+          <div class="queue-empty" id="queueEmpty" data-i18n="queue.empty" hidden>Очередь пуста</div>
+        </section>
+      </div>
+    </aside>
+
+    <aside class="da-panel" id="daPanel" hidden>
+      <header class="da-panel__header">
+        <span class="da-panel__title" data-i18n="da.title">DonationAlerts</span>
+        <span class="da-panel__chip" id="daStatusChip"><span class="da-panel__chip-dot"></span><span id="daStatusChipLabel"></span></span>
+        <button class="da-panel__close" id="daCloseBtn" aria-label="Закрыть" data-i18n-title="common.close">×</button>
+      </header>
+      <div class="da-panel__body">
+        <section class="da-block">
+          <div class="da-block__title" data-i18n="da.connection">Соединение</div>
+          <label class="da-toggle">
+            <input type="checkbox" id="daEnabledSwitch" />
+            <span data-i18n="settings.donationAlerts">DonationAlerts</span>
+          </label>
+          <div class="da-facts" id="daFacts"></div>
+        </section>
+
+        <section class="da-block">
+          <div class="da-block__title" data-i18n="da.actions">Действия</div>
+          <div class="da-row">
+            <button class="da-btn" id="daReconnectBtn" data-i18n="da.reconnect">Переподключить</button>
+            <button class="da-btn" id="daTestDonationBtn" data-i18n="da.testDonation">Тестовый донат</button>
+          </div>
+          <button class="da-btn da-btn--wide" id="daRecoverBtn" data-i18n="queue.recover">Подтянуть пропущенные</button>
+          <div class="da-status" id="daRecoverStatus" hidden></div>
+          <label class="da-toggle">
+            <input type="checkbox" id="daPanelVoiceSwitch" />
+            <span data-i18n="settings.daVoiceEnabled">Озвучка от DonationAlerts (голос сервиса)</span>
+          </label>
+          <button class="da-btn da-btn--wide" id="daConsoleBtn" data-i18n="da.openConsole">Кабинет приложения</button>
+        </section>
+
+        <section class="da-block">
+          <div class="da-block__head">
+            <div class="da-block__title" data-i18n="da.donations">Последние донаты</div>
+            <button class="da-btn da-btn--small" id="daSessionResetBtn" data-i18n="session.reset">Сбросить счёт</button>
+            <button class="da-btn da-btn--small" id="daDonationsRefreshBtn" data-i18n="settings.refresh">Обновить</button>
+          </div>
+          <label class="da-toggle">
+            <input type="checkbox" id="daDonationsSessionOnly" />
+            <span data-i18n="da.donationsSessionOnly">Только этот стрим</span>
+          </label>
+          <div class="da-hint" id="daSessionStats"></div>
+          <div class="da-donations" id="daDonations"></div>
+          <div class="da-empty" id="daDonationsEmpty" hidden></div>
+          <div class="da-hint" id="daDonationsMeta"></div>
+        </section>
+
+        <section class="da-block da-block--grow">
+          <div class="da-block__head">
+            <div class="da-block__title" data-i18n="da.log">Журнал DonationAlerts</div>
+            <input class="da-input" id="daLogSearch" type="text" data-i18n-placeholder="da.logSearchPlaceholder" placeholder="Поиск по журналу…" autocomplete="off" spellcheck="false" />
+            <button class="da-btn da-btn--small" id="daLogClearBtn" data-i18n="da.logClear">Очистить</button>
+          </div>
+          <div class="da-log" id="daLog"></div>
+          <div class="da-empty" id="daLogEmpty" data-i18n="da.logEmpty" hidden>Пока ничего не происходило</div>
+        </section>
+      </div>
+    </aside>
+
     <section class="view" id="view-editor">
       <aside class="library" id="library">
         <div class="library__title" data-i18n="editor.widgets">Виджеты</div>
@@ -258,7 +384,7 @@
           </label>
           <input type="text" id="layoutPresetName" data-i18n-placeholder="presets.promptName" placeholder="Название пресета" autocomplete="off" />
           <button class="md-button md-button--tonal" id="saveLayoutPresetBtn" data-i18n="presets.save">Сохранить</button>
-          <button class="md-button md-button--tonal" id="deleteLayoutPresetBtn" data-i18n="presets.delete" hidden>Удалить</button></button>
+          <button class="md-button md-button--tonal" id="deleteLayoutPresetBtn" data-i18n="presets.delete" hidden>Удалить</button>
           <span class="canvas-toolbar__perf" id="sceneBudget" data-i18n-title="editor.perfHint" hidden></span>
         </div>
       </div>
@@ -406,6 +532,20 @@
           <div class="settings__hint" id="exportImportStatus" hidden></div>
         </div>
 
+        <div class="settings__card md-card" id="settingsCardAccess">
+          <h2 data-i18n="access.title">Доступ из сети</h2>
+          <p class="settings__desc" data-i18n="access.desc">Панель, оверлей в OBS и HUD работают с этого компьютера без кода доступа. Всё, что подключается из локальной сети — Web Remote на телефоне, сторонние скрипты, — обязано предъявить код: без него порт молчит.</p>
+          <div class="data-stats">
+            <div class="data-stats__row"><span data-i18n="access.url">Адрес пульта</span><code id="accessRemoteUrl">—</code></div>
+          </div>
+          <div class="settings__actions">
+            <button class="md-button md-button--tonal" id="copyAccessUrlBtn" data-i18n="access.copy">Скопировать адрес</button>
+            <button class="md-button md-button--outlined" id="rotateAccessCodeBtn" data-i18n="access.rotate">Новый код доступа</button>
+          </div>
+          <span class="md-field__hint" data-i18n="access.hint">Код входит в адрес пульта и передаётся по сети в открытом виде — если адрес ушёл не туда (скриншот, чат, гость), нажмите «Новый код»: подключённые из сети устройства отключатся, а адрес на телефоне нужно будет открыть заново.</span>
+          <div class="settings__hint" id="accessStatus" hidden></div>
+        </div>
+
         <div class="settings__card md-card" id="settingsCardData">
           <h2 data-i18n="data.title">Данные и хранилище</h2>
           <p class="settings__desc" data-i18n="data.desc">Локальная база: раскладка, сессии и история событий/чата. Файлы лежат рядом с настройками приложения.</p>
@@ -441,6 +581,19 @@
             </div>
             <span class="md-field__hint" data-i18n="data.resetHint">Удаляет раскладку, пресеты, сессии и историю; приложение перезапустится.</span>
           </div>
+          <div class="md-field">
+            <label data-i18n="data.backupsTitle">Резервные копии</label>
+            <div class="data-stats" id="dataBackups"></div>
+            <span class="md-field__hint" data-i18n="data.backupsHint">Свежая копия — .bak.0, они появляются после первых изменений. Откат вернёт настройки, раскладку, пресеты и сессии, но не историю событий и чата.</span>
+          </div>
+          <div class="md-field">
+            <label data-i18n="data.supportTitle">Отчёт для поддержки</label>
+            <div class="settings__port-row">
+              <button class="md-button md-button--outlined" id="supportBundleBtn" data-i18n="data.supportBtn">Сохранить отчёт</button>
+            </div>
+            <span class="md-field__hint" data-i18n="data.supportHint">Окружение, состояние, телеметрия записи, хвост лога и сводка настроек без секретов — файл можно отправлять как есть.</span>
+            <span class="md-field__hint" data-i18n="data.healthHint">Живое состояние отдаётся по GET /healthz на порту приложения, полный отчёт — по GET /support-bundle (только с этой машины).</span>
+          </div>
           <div class="settings__hint" id="dataStatus" hidden></div>
         </div>
 
@@ -464,6 +617,7 @@
           <div class="md-field">
             <label data-i18n="settings.clientSecret">Client Secret</label>
             <input type="password" id="twitchClientSecret" placeholder="••••••••" />
+            <span class="md-field__hint" data-i18n="settings.clientSecretHint">Оставьте пустым, чтобы не менять сохранённый секрет — поле никогда не заполняется им само.</span>
           </div>
           <div class="settings__hint">
             <span data-i18n="settings.redirectUri">Redirect URI для приложения:</span>
@@ -550,6 +704,7 @@
           <div class="md-field">
             <label data-i18n="settings.clientSecret">Client Secret</label>
             <input type="password" id="daClientSecret" placeholder="••••••••" />
+            <span class="md-field__hint" data-i18n="settings.clientSecretHint">Оставьте пустым, чтобы не менять сохранённый секрет — поле никогда не заполняется им само.</span>
           </div>
           <div class="settings__hint">
             <span data-i18n="settings.redirectUri">Redirect URI для приложения:</span>
@@ -604,6 +759,7 @@
           <div class="md-field">
             <label data-i18n="settings.clientSecret">Client Secret</label>
             <input type="password" id="youtubeClientSecret" placeholder="••••••••" />
+            <span class="md-field__hint" data-i18n="settings.clientSecretHint">Оставьте пустым, чтобы не менять сохранённый секрет — поле никогда не заполняется им само.</span>
           </div>
           <div class="md-field">
             <label data-i18n="settings.youtubeVideoId">Video ID (фоллбек)</label>

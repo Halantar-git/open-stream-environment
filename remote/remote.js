@@ -50,9 +50,24 @@
     CMD_CREATE_CLIP: "cmd_create_clip",
     CMD_CREATE_STREAM_MARKER: "cmd_create_stream_marker",
     TWITCH_ACTION_RESULT: "twitch_action_result",
+    ALERT_QUEUE_UPDATE: "alert_queue_update",
+    CMD_ALERT_QUEUE_PAUSE: "cmd_alert_queue_pause",
+    CMD_ALERT_QUEUE_RESUME: "cmd_alert_queue_resume",
+    CMD_ALERT_QUEUE_SKIP: "cmd_alert_queue_skip",
+    CMD_ALERT_QUEUE_CLEAR: "cmd_alert_queue_clear",
+    CMD_RESET_SESSION_STATS: "cmd_reset_session_stats",
+    SESSION_STATS: "session_stats",
   };
 
-  const wsUrl = (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws?role=remote";
+  // Пульт открывают с телефона, то есть из локальной сети: сервер требует код
+  // доступа, и он уже лежит в адресе страницы (?token=…) — тот же код уходит в
+  // строку подключения к шине. Без него сервер откажет в WebSocket.
+  const accessCode = new URLSearchParams(location.search).get("token") || "";
+  const wsUrl =
+    (location.protocol === "https:" ? "wss://" : "ws://") +
+    location.host +
+    "/ws?role=remote" +
+    (accessCode ? `&token=${encodeURIComponent(accessCode)}` : "");
 
   const t = (key, params) => (window.I18n ? window.I18n.t(key, params) : key);
 
@@ -95,6 +110,13 @@
   const wheelParticipantName = document.getElementById("wheelParticipantName");
   const wheelAddParticipant = document.getElementById("wheelAddParticipant");
   const wheelClearParticipants = document.getElementById("wheelClearParticipants");
+  const queueNow = document.getElementById("queueNow");
+  const queuePending = document.getElementById("queuePending");
+  const queuePauseState = document.getElementById("queuePauseState");
+  const queueSession = document.getElementById("queueSession");
+  const queueSkipBtn = document.getElementById("queueSkipBtn");
+  const queuePauseBtn = document.getElementById("queuePauseBtn");
+  const queueClearBtn = document.getElementById("queueClearBtn");
 
   let ws = null;
   let reconnectTimer = null;
@@ -113,6 +135,8 @@
   let wheelConfig = { musicVolume: 50 };
   let wheelSpeedConfig = { speed: 3 };
   let giveaway = { command: "!go", eliminationMode: false, participants: [], count: 0 };
+  let alertQueue = null; // последний снимок очереди алертов (см. EVENT_TYPES.ALERT_QUEUE_UPDATE)
+  let sessionStats = null; // счёт донатов текущего стрима (см. EVENT_TYPES.SESSION_STATS)
   let currentChannel = "";
   const pendingSends = new Map(); // clientId -> { el, text, at, confirmed }
   const ECHO_MATCH_MS = 20000;
@@ -122,7 +146,10 @@
     isConnected = connected;
     statusDot.classList.toggle("is-connected", connected);
     if (hasLocales) {
-      statusText.textContent = connected ? t("remote.connected") : t("remote.reconnecting");
+      // Без кода доступа сервер откажет в подключении: писать «переподключение»
+      // бесконечно — значит прятать от пользователя причину.
+      if (!connected && !accessCode) statusText.textContent = t("remote.noCode");
+      else statusText.textContent = connected ? t("remote.connected") : t("remote.reconnecting");
     }
   }
 
@@ -388,6 +415,155 @@
     alertGrid.appendChild(chatBtn);
   }
 
+  /*
+    Очередь алертов.
+
+    Снимок ({ now, items, paused, pausedUntil, pending, … }) приходит и при
+    подключении (поле alertQueue в STATE), и отдельным событием на каждое
+    изменение, поэтому рисуем из одного места — иначе подписи и кнопки разъедутся.
+  */
+  function queueIsPaused() {
+    const q = alertQueue;
+    if (!q || !q.paused) return false;
+    const until = Number(q.pausedUntil) || 0;
+    // Пауза со сроком истекает сама (та же проверка в server/alert-queue.js):
+    // без неё подпись «пауза до 12:30» висела бы на экране после 12:30.
+    return !(until > 0 && until <= Date.now());
+  }
+
+  function formatQueueClock(ts) {
+    const date = new Date(ts);
+    return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  }
+
+  function alertNowSummary(item) {
+    const parts = [];
+    const amount = Number(item.amount);
+    if (Number.isFinite(amount) && amount > 0) {
+      parts.push(escapeHtml(`${amount}${item.currency ? ` ${item.currency}` : ""}`));
+    }
+    const message = String(item.message || "").trim();
+    if (message) parts.push(escapeHtml(message.length > 80 ? `${message.slice(0, 79)}…` : message));
+    const count = Number(item.count) || 0;
+    if (count > 1) parts.push(`×${count}`);
+    return parts.join(" · ");
+  }
+
+  function renderQueue() {
+    if (!queueNow || !hasLocales) return;
+    const q = alertQueue || { now: null, pending: 0, paused: false, pausedUntil: null };
+    const now = q.now;
+
+    if (now) {
+      const summary = alertNowSummary(now);
+      queueNow.innerHTML =
+        `<span class="queue-panel__now-label">${escapeHtml(t("queue.now"))}</span>` +
+        `<span class="queue-panel__now-user">${escapeHtml(now.user || "")}</span>` +
+        (summary ? `<span class="queue-panel__now-detail">${summary}</span>` : "");
+    } else {
+      queueNow.innerHTML = `<span class="queue-panel__now-empty">${escapeHtml(t("queue.nothingPlaying"))}</span>`;
+    }
+
+    const pending = Number(q.pending) || 0;
+    if (queuePending) {
+      queuePending.textContent = pending > 0 ? t("queue.pending", { count: pending }) : t("queue.empty");
+    }
+
+    const paused = queueIsPaused();
+    const pausedUntil = paused ? Number(q.pausedUntil) || 0 : 0;
+    if (queuePauseState) {
+      queuePauseState.hidden = !paused;
+      queuePauseState.textContent = paused
+        ? pausedUntil > 0
+          ? t("queue.pausedUntil", { time: formatQueueClock(pausedUntil) })
+          : t("queue.paused")
+        : "";
+      queuePauseState.classList.toggle("is-timed", pausedUntil > 0);
+    }
+
+    if (queuePauseBtn) {
+      queuePauseBtn.textContent = t(paused ? "queue.resume" : "queue.pause");
+      queuePauseBtn.classList.toggle("is-active", paused);
+    }
+
+    renderSessionStats();
+
+    // Пропускать нечего, когда ничего не играет; очищать — когда очередь пуста.
+    // До первого снимка кнопки не гасим: пустой блок не должен выглядеть сломанным.
+    if (queueSkipBtn) queueSkipBtn.disabled = !!alertQueue && !now;
+    if (queueClearBtn) queueClearBtn.disabled = !!alertQueue && pending === 0;
+  }
+
+  /*
+    Счёт донатов текущего стрима.
+
+    Считает его сервер (state.addDonationToSession) и присылает готовым: при
+    подключении — в снимке состояния, дальше — событием session_stats. Пульту
+    он нужен без разворачивания телефона: «сколько уже собралось» — вопрос,
+    который стример задаёт себе в эфире.
+  */
+  function renderSessionStats() {
+    if (!queueSession) return;
+    const count = Number(sessionStats && sessionStats.count) || 0;
+    const amount = Number(sessionStats && sessionStats.amount) || 0;
+    // На пульте строка появляется с первым донатом: постоянно висящий «0» на
+    // телефоне стримера, который вообще не собирает донаты, — это шум.
+    if (!sessionStats || (count === 0 && amount === 0)) {
+      queueSession.hidden = true;
+      return;
+    }
+    // Формат суммы — как в строке «в эфире» выше (alertNowSummary): число и код
+    // валюты. Пульт намеренно не тянет за собой таблицу символов.
+    const text = `${amount}${sessionStats.currency ? ` ${sessionStats.currency}` : ""}`;
+    queueSession.hidden = false;
+    queueSession.innerHTML =
+      `<span class="queue-panel__session-count">${escapeHtml(t("session.count", { count }))}</span>` +
+      `<span class="queue-panel__session-amount">${escapeHtml(t("session.amount", { amount: text }))}</span>` +
+      `<button class="queue-panel__session-reset" type="button" data-session-reset>${escapeHtml(t("session.reset"))}</button>`;
+  }
+
+  function wireQueue() {
+    if (queueSkipBtn) {
+      queueSkipBtn.addEventListener("click", () => {
+        vibrate();
+        sendCommand(EVENT_TYPES.CMD_ALERT_QUEUE_SKIP, {});
+      });
+    }
+
+    if (queuePauseBtn) {
+      queuePauseBtn.addEventListener("click", () => {
+        vibrate();
+        // С телефона стример хочет остановить алерты прямо сейчас, поэтому
+        // пауза ставится без срока — до нажатия «Продолжить».
+        sendCommand(queueIsPaused() ? EVENT_TYPES.CMD_ALERT_QUEUE_RESUME : EVENT_TYPES.CMD_ALERT_QUEUE_PAUSE, {});
+      });
+    }
+
+    if (queueClearBtn) {
+      queueClearBtn.addEventListener("click", () => {
+        vibrate();
+        if (confirm(t("queue.clear"))) sendCommand(EVENT_TYPES.CMD_ALERT_QUEUE_CLEAR, {});
+      });
+    }
+
+    // Кнопка сброса живёт внутри строки счёта, которая перерисовывается целиком,
+    // — поэтому слушаем не кнопку, а стабильного родителя.
+    if (queueSession) {
+      queueSession.addEventListener("click", (event) => {
+        const btn = event.target.closest("[data-session-reset]");
+        if (!btn) return;
+        vibrate();
+        if (confirm(t("session.resetConfirm"))) sendCommand(EVENT_TYPES.CMD_RESET_SESSION_STATS, {});
+      });
+    }
+
+    // Подпись «пауза до 12:30» должна пропасть и без события от сервера —
+    // если телефон уснул и всё пропустил. Перерисовываем, только пока она видна.
+    setInterval(() => {
+      if (queuePauseState && !queuePauseState.hidden) renderQueue();
+    }, 20000);
+  }
+
   function themeCategoryLabel(category) {
     switch (category) {
       case "custom": return t("settings.themeCategoryCustom");
@@ -632,6 +808,16 @@
           renderFilters();
         }
         if (typeof p.deathCount === "number") deathValue.textContent = String(p.deathCount);
+        if (p.alertQueue) {
+          alertQueue = p.alertQueue;
+          renderQueue();
+        }
+        // Счёт стрима приходит в том же снимке: иначе только что открытый
+        // на телефоне пульт показывал бы пустую строку до первого доната.
+        if (p.sessionDonations) {
+          sessionStats = p.sessionDonations;
+          renderQueue();
+        }
         if (typeof p.activeScene === "string") {
           activeScene = p.activeScene;
           renderScenes();
@@ -654,6 +840,20 @@
         activeThemeId = p.activeThemeId || null;
         enable3d = !!p.enable3d;
         renderThemes();
+        break;
+      }
+      case EVENT_TYPES.SESSION_STATS: {
+        // Счёт стрима приходит готовым от сервера — пульт его только показывает.
+        sessionStats = msg.payload || null;
+        renderQueue();
+        break;
+      }
+      case EVENT_TYPES.ALERT_QUEUE_UPDATE: {
+        const queue = msg.payload && msg.payload.queue;
+        if (queue) {
+          alertQueue = queue;
+          renderQueue();
+        }
         break;
       }
       case EVENT_TYPES.DEATH_COUNT_UPDATE: {
@@ -736,6 +936,7 @@
         renderWheelSettings();
         renderParticipants();
         renderAlerts();
+        renderQueue();
         renderThemes();
         renderObsCommands();
         renderCameras();
@@ -839,5 +1040,7 @@
   renderWheelSettings();
   wireParticipants();
   renderParticipants();
+  wireQueue();
+  renderQueue();
   connect();
 })();

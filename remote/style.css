@@ -361,6 +361,137 @@ body {
   border-radius: var(--shape-md);
 }
 
+/* Alert queue: what is on air, how many alerts wait, and the pause state. */
+.queue-panel {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 0.8vw, 16px);
+  padding: clamp(12px, 1vw, 18px);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-lg);
+  background: var(--md-surface-container);
+}
+
+.queue-panel__now {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: clamp(48px, 3.6vw, 64px);
+}
+
+.queue-panel__now-label {
+  font-size: clamp(11px, 0.65vw, 13px);
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--md-on-surface-variant);
+}
+
+.queue-panel__now-user {
+  font-size: clamp(15px, 1vw, 20px);
+  font-weight: 700;
+  color: var(--md-primary);
+  overflow-wrap: anywhere;
+}
+
+.queue-panel__now-detail,
+.queue-panel__now-empty {
+  font-size: clamp(13px, 0.8vw, 16px);
+  color: var(--md-on-surface);
+  overflow-wrap: anywhere;
+}
+
+.queue-panel__now-empty {
+  color: var(--md-on-surface-variant);
+}
+
+.queue-panel__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.queue-panel__pending {
+  font-size: clamp(12px, 0.7vw, 15px);
+  font-weight: 600;
+  color: var(--md-on-surface-variant);
+}
+
+.queue-panel__pause {
+  padding: 4px 10px;
+  border: 1px solid var(--md-primary);
+  border-radius: var(--shape-sm);
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  font-size: clamp(11px, 0.65vw, 14px);
+  font-weight: 700;
+}
+
+.queue-panel__pause[hidden] {
+  display: none;
+}
+
+/* Пауза без срока (до «Продолжить») читается иначе, чем пауза до часа. */
+.queue-panel__pause:not(.is-timed) {
+  border-style: dashed;
+}
+
+/* Счёт донатов текущего стрима: одна строка, чтобы читалась на телефоне с одного взгляда. */
+.queue-panel__session {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: clamp(8px, 0.6vw, 12px);
+  border-top: 1px solid var(--md-outline-variant);
+}
+.queue-panel__session[hidden] {
+  display: none;
+}
+.queue-panel__session-count {
+  font-size: clamp(12px, 0.7vw, 15px);
+  font-weight: 600;
+  color: var(--md-on-surface-variant);
+}
+.queue-panel__session-amount {
+  font-size: clamp(13px, 0.75vw, 16px);
+  font-weight: 700;
+  color: var(--md-primary);
+}
+/* Сброс счёта — редкое действие, поэтому маленькая кнопка в конце строки:
+   если места на телефоне не хватает, она переносится на свою строку. */
+.queue-panel__session-reset {
+  margin-left: auto;
+  padding: 4px 10px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-sm);
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  font-family: inherit;
+  font-size: clamp(11px, 0.65vw, 14px);
+  cursor: pointer;
+}
+.queue-panel__session-reset:active {
+  background: var(--md-surface-container-highest);
+}
+
+/* Пропуск и пауза — в одну строку, очистка во всю ширину: она необратима. */
+.action-grid--queue {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.action-grid--queue .action-btn:last-child {
+  grid-column: 1 / -1;
+}
+
+.queue-panel .action-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .remote-settings {
   display: flex;
   flex-direction: column;

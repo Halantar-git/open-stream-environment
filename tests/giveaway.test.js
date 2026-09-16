@@ -15,7 +15,16 @@
  * along with this program.  If not, see <https://gnu.org>.
  */
 
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+
+const { configureStorage } = require("../server/storage-paths");
 const { AppState, fisherYates } = require("../server/state");
+
+function tmpDir() {
+  return fs.mkdtempSync(path.join(os.tmpdir(), "ose-giveaway-"));
+}
 
 function makeConfig() {
   return {
@@ -56,6 +65,10 @@ describe("giveaway (Колесо Фортуны)", () => {
   let state;
 
   beforeEach(() => {
+    // Хранилище уводим в temp: состояние пишет файлы в каталог данных, а писать
+    // в рабочий config/ из тестов нельзя — иначе прогон тестов затирает
+    // настройки разработчика.
+    configureStorage({ configDir: tmpDir() });
     state = new AppState(null, makeConfig());
   });
 

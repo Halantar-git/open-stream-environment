@@ -33,7 +33,6 @@ function makeCtx2D() {
 function makeEl(tag) {
   const isCanvas = tag === "canvas";
   const ctx2d = isCanvas ? makeCtx2D() : null;
-  const listeners = [];
   const el = {
     tagName: (tag || "div").toUpperCase(),
     className: "",

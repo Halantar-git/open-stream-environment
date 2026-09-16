@@ -1,5 +1,13 @@
 {
   "port": 8710,
+  "remote_token": "",
+  "alert_queue": {
+    "enabled": true,
+    "min_amount": 0,
+    "merge_same_user": true,
+    "merge_window_sec": 20,
+    "pause_until": 0
+  },
   "notificationSound": true,
   "notificationVolume": 0.8,
   "twitch": {

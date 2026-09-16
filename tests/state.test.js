@@ -420,7 +420,7 @@ describe("AppState config + runtime", () => {
     expect(state.hasTimerWidget()).toBe(false);
 
     // Другие виджеты таймером не считаются.
-    const chat = state.addWidget("chat");
+    state.addWidget("chat");
     expect(state.hasTimerWidget()).toBe(false);
   });
 
@@ -456,6 +456,20 @@ describe("AppState config + runtime", () => {
     expect(theme.tokens["--panel-radius"]).toBe("10px");
     expect(theme.tokens["--panel-border"]).toBe("2px solid #ff0000");
     expect(theme.tokens["--panel-glow"]).toMatch(/^0 0 /);
+  });
+
+  test("saveCustomTheme сохраняет схему темы, неизвестная — тёмная", () => {
+    const base = { primary: "#111111", secondary: "#222222", tertiary: "#333333", surfaceSeed: "#444444" };
+
+    const light = state.saveCustomTheme({ name: "Светлая", seeds: { ...base, mode: "light" } });
+    expect(light.seeds.mode).toBe("light");
+    expect(light.tokens["--md-surface"]).toBe(buildThemeTokens({ ...base, mode: "light" })["--md-surface"]);
+
+    const fallback = state.saveCustomTheme({ name: "Странная", seeds: { ...base, mode: "neon" } });
+    expect(fallback.seeds.mode).toBe("dark");
+
+    const plain = state.saveCustomTheme({ name: "Обычная", seeds: { ...base } });
+    expect(plain.seeds.mode).toBe("dark");
   });
 
   test("своя тема использует выбранные 3D-виджеты (можно смешивать стили)", () => {
@@ -535,5 +549,119 @@ describe("AppState config + runtime", () => {
     expect(copy.name).toBe("Оригинал (копия)");
     expect(copy.tokens).toEqual(theme.tokens);
     expect(state.findCustomTheme(copy.id)).toBeTruthy();
+  });
+
+  describe("счёт донатов текущего стрима", () => {
+    test("пустой счёт на старте и он же в снимке состояния", () => {
+      expect(state.sessionDonations()).toEqual({ count: 0, amount: 0, currency: "" });
+      expect(state.snapshot().sessionDonations).toEqual({ count: 0, amount: 0, currency: "" });
+    });
+
+    test("донаты складываются, валюта — от последнего", () => {
+      state.addDonationToSession(500, "RUB");
+      state.addDonationToSession(300, "RUB");
+
+      expect(state.sessionDonations()).toEqual({ count: 2, amount: 800, currency: "RUB" });
+
+      state.addDonationToSession(10, "USD");
+      expect(state.sessionDonations()).toEqual({ count: 3, amount: 810, currency: "USD" });
+    });
+
+    test("нулевые и мусорные суммы в счёт не идут", () => {
+      // Донат на ноль — это не донат; иначе счётчик расходился бы с историей.
+      state.addDonationToSession(0, "RUB");
+      state.addDonationToSession(-5, "RUB");
+      state.addDonationToSession(undefined, "RUB");
+      state.addDonationToSession("abc", "RUB");
+
+      expect(state.sessionDonations().count).toBe(0);
+    });
+
+    test("новый стрим обнуляет счёт, не трогая цель сбора", () => {
+      state.addDonationToSession(700, "RUB");
+      state.addToGoal(700);
+
+      state.resetSessionDonations();
+
+      expect(state.sessionDonations()).toEqual({ count: 0, amount: 0, currency: "" });
+      // Цель сбора — накопительная, еë сессия не касается.
+      expect(state.snapshot().goal.current).toBe(700);
+    });
+  });
+
+  describe("запись конфига на диск", () => {
+    test("конфиг, переданный снаружи, не сохраняется на диск", () => {
+      /*
+        Конструктор создаёт код доступа из сети. Для конфига с диска он сразу
+        ложится в config.json — иначе после перезапуска менялся бы адрес пульта.
+        А вот конфиг, переданный снаружи (тест, импорт настроек), писать на диск
+        не имеет права: именно так прогон тестов затирал рабочий config.json.
+      */
+      const created = new AppState(null, makeConfig());
+
+      expect(created.remoteToken()).toBeTruthy();
+      expect(fs.existsSync(path.join(tmp, "config.json"))).toBe(false);
+    });
+  });
+
+  describe("ключи приложения (Client ID/Secret)", () => {
+    /*
+      Секрет не сохраняется пустым.
+
+      Причина не в аккуратности, а в том, как устроен интерфейс: панель никогда
+      не отдаёт сохранённый секрет обратно в поле, поэтому при каждом открытии
+      секрет пустой, а кнопка «Подключить» отправляет то, что в нём есть. Раньше
+      одно нажатие стирало рабочие ключи — и сервис отвечал invalid_client на
+      обмен токена, что по интерфейсу невозможно было понять.
+    */
+    test("пустой секрет не стирает сохранённый, а новый — заменяет", () => {
+      const cases = [
+        [state.saveTwitchApp.bind(state), "twitch"],
+        [state.saveDonationAlertsApp.bind(state), "donationAlerts"],
+        [state.saveYoutubeApp.bind(state), "youtube"],
+      ];
+
+      cases.forEach(([save, key]) => {
+        save({ clientId: "app-id", clientSecret: "original-secret" });
+        expect(state.config[key]).toMatchObject({ clientId: "app-id", clientSecret: "original-secret" });
+
+        save({ clientId: "app-id", clientSecret: "" });
+        save({ clientId: "app-id", clientSecret: "   " });
+        save({ clientId: "app-id" });
+        expect(state.config[key].clientSecret).toBe("original-secret");
+
+        // А новый секрет заменяет старый (и обрезается от пробелов).
+        save({ clientId: "app-id", clientSecret: "  rotated  " });
+        expect(state.config[key].clientSecret).toBe("rotated");
+      });
+    });
+
+    test("Client ID сохраняется как есть, но без лишних пробелов", () => {
+      state.saveDonationAlertsApp({ clientId: "  my-id  ", clientSecret: "secret" });
+      expect(state.config.donationAlerts.clientId).toBe("my-id");
+
+      // Асимметрия с секретом осознанная: поле Client ID панель заполняет
+      // сохранённым значением, поэтому пустое поле — это осознанная очистка.
+      state.saveDonationAlertsApp({ clientId: "", clientSecret: "secret" });
+      expect(state.config.donationAlerts.clientId).toBe("");
+    });
+
+    test("панель видит, что секрет не заполнен, но не видит сам секрет", () => {
+      state.saveDonationAlertsApp({ clientId: "id", clientSecret: "super-secret-value" });
+      expect(state.snapshot().donationAlertsAuth.hasClientSecret).toBe(true);
+
+      // Ровно тот случай, из-за которого сервис отвечает invalid_client: пустое
+      // значение (в том числе потому, что сохранённый секрет не удалось
+      // расшифровать — secret-store отдаёт пустую строку).
+      state.config.donationAlerts.clientSecret = "";
+      expect(state.snapshot().donationAlertsAuth.hasClientSecret).toBe(false);
+
+      state.config.donationAlerts.clientSecret = "   ";
+      expect(state.snapshot().donationAlertsAuth.hasClientSecret).toBe(false);
+
+      // В снимке нет самого секрета — только флаг.
+      state.config.donationAlerts.clientSecret = "super-secret-value";
+      expect(JSON.stringify(state.snapshot().donationAlertsAuth)).not.toContain("super-secret-value");
+    });
   });
 });

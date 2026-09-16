@@ -103,7 +103,7 @@
     stat: {
       type: "stat",
       label: "Счётчик",
-      description: "Фолловеры, подписчики или топ донат — плашкой",
+      description: "Фолловеры, подписчики, топ донат или донаты за стрим — плашкой",
       icon: "widgetStat",
       services: ["twitchEvents", "donationAlerts", "youtube"],
       defaultGeometry: { x: 3, y: 4, w: 18, h: 8 },

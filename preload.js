@@ -27,6 +27,9 @@ contextBridge.exposeInMainWorld("desktop", {
   connectYoutube: (creds) => ipcRenderer.invoke("oauth:connect-youtube", creds),
   exportConfig: () => ipcRenderer.invoke("app:export-config"),
   importConfig: () => ipcRenderer.invoke("app:import-config"),
+  // Отчёт для поддержки: окружение, состояние, телеметрия записи, хвост лога и
+  // сводка настроек без секретов (server/support-bundle.js).
+  saveSupportBundle: () => ipcRenderer.invoke("app:support-bundle"),
   exportTheme: (theme) => ipcRenderer.invoke("app:export-theme", theme),
   importTheme: () => ipcRenderer.invoke("app:import-theme"),
   openChatWindow: () => ipcRenderer.invoke("app:open-chat-window"),
@@ -34,8 +37,6 @@ contextBridge.exposeInMainWorld("desktop", {
   openWidgetEditor: (widgetId) => ipcRenderer.invoke("app:open-widget-editor", widgetId),
   openThemePreview: () => ipcRenderer.invoke("app:open-theme-preview"),
   openThemeSamples: () => ipcRenderer.invoke("app:open-theme-samples"),
-  openCssEditor: (init) => ipcRenderer.invoke("app:open-css-editor", init),
-  onCssEditorUpdated: (cb) => ipcRenderer.on("css-editor:updated", (_event, css) => cb(css)),
   openThemeEditor: (init) => ipcRenderer.invoke("app:open-theme-editor", init),
   getThemeEditorInit: () => ipcRenderer.invoke("theme-editor:get-init"),
   onThemeEditorInit: (cb) => ipcRenderer.on("theme-editor:init", (_event, data) => cb(data)),
@@ -66,4 +67,11 @@ contextBridge.exposeInMainWorld("desktop", {
     resetAll: () => ipcRenderer.invoke("db:reset-all"),
     exportStreamEvents: (opts) => ipcRenderer.invoke("db:export-stream-events", opts),
   },
+  // Резервные копии настроек/базы: список и откат к выбранной.
+  backups: {
+    list: () => ipcRenderer.invoke("backup:list"),
+    restore: (target, slot) => ipcRenderer.invoke("backup:restore", target, slot),
+  },
+  // Доступ из локальной сети: новый код для пульта и сторонних скриптов.
+  rotateAccessCode: () => ipcRenderer.invoke("access:rotate-token"),
 });

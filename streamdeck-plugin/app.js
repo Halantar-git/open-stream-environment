@@ -50,8 +50,6 @@ const OSE_HTTP_BASE = OSE_URL
   .replace(/^ws:\/\//i, "http://")
   .replace(/\/ws\/?$/, "");
 
-const ACTION_UUID = "com.openstreamenvironment.streamdeck.scene";
-
 const SCENES = [
   ["start", "Start"],
   ["brb", "BRB"],

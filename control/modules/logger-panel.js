@@ -112,15 +112,20 @@ export function initLoggerPanel({ t, ICONS, send, EVENT_TYPES, state }) {
     message.className = "terminal-line__message";
     message.textContent = entry.message || "";
 
-    line.append(time, service, level, message);
+    // Сообщение и данные — один flex-элемент: иначе длинный JSON сжимает
+    // соседний span почти до нуля, и строка ломается по одной букве.
+    const text = document.createElement("span");
+    text.className = "terminal-line__text";
+    text.appendChild(message);
+    line.append(time, service, level, text);
 
     const dataStr = serializeData(entry.data);
     if (dataStr) {
       const data = document.createElement("span");
       data.className = "terminal-line__data";
       data.textContent = dataStr;
-      line.appendChild(document.createTextNode(" "));
-      line.appendChild(data);
+      text.appendChild(document.createTextNode(" "));
+      text.appendChild(data);
     }
 
     if (!lineMatches(line)) {

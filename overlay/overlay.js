@@ -34,8 +34,6 @@
   const { EVENT_TYPES } = window.SharedEvents;
   const { ICONS } = window.SharedIcons;
   const { WIDGET_TYPES } = window.WidgetCatalog || {};
-  const replacedBy3d = (window.WidgetCatalog && window.WidgetCatalog.replacedBy3d) || (() => null);
-  const widgetsForTheme = (window.WidgetCatalog && window.WidgetCatalog.widgetsForTheme) || (() => []);
   const widgetRole = (window.WidgetCatalog && window.WidgetCatalog.widgetRole) || (() => null);
   const themeAllowsWidget = (window.WidgetCatalog && window.WidgetCatalog.themeAllowsWidget) || (() => true);
   const t = (key, params) => (window.I18n ? window.I18n.t(key, params) : key);
@@ -53,6 +51,8 @@
     recentEvents: [],
     stats: { followerCount: null, subscriberCount: null },
     topDonation: { user: "", amount: 0, currency: "RUB" },
+    // Счёт донатов текущего стрима (пусто — ещё не пришёл ни в снимке, ни событием).
+    sessionDonations: null,
     deathCount: 0,
     soundboardConfig: { volume: 0.8, queueMode: false },
     tts: { enabled: true, volume: 0.9, rate: 1, lang: "ru-RU", voice: "" },
@@ -493,6 +493,9 @@
         state.recentEvents = p.recentEvents || [];
         state.stats = p.stats || state.stats;
         state.topDonation = p.topDonation || state.topDonation;
+        // Счёт донатов стрима приходит и в снимке: иначе виджет показывал бы
+        // прочерк до первого доната после загрузки страницы.
+        if (p.sessionDonations) state.sessionDonations = p.sessionDonations;
         state.deathCount = p.deathCount || 0;
         state.soundboardConfig = p.soundboard || state.soundboardConfig;
         state.tts = p.tts || state.tts;
@@ -535,6 +538,10 @@
       case EVENT_TYPES.TOP_DONATION_UPDATE:
         state.topDonation = msg.payload || state.topDonation;
         bus.emit(EVENT_TYPES.TOP_DONATION_UPDATE, msg.payload);
+        break;
+      case EVENT_TYPES.SESSION_STATS:
+        state.sessionDonations = msg.payload || state.sessionDonations;
+        bus.emit(EVENT_TYPES.SESSION_STATS, msg.payload);
         break;
       case EVENT_TYPES.ALERT:
         bus.emit(EVENT_TYPES.ALERT, msg.payload);

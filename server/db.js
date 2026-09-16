@@ -20,7 +20,8 @@ const path = require("path");
 const crypto = require("crypto");
 
 const { getDbPath } = require("./storage-paths");
-const { atomicWriteFileSync, AsyncAtomicStore } = require("./atomic-write");
+const { atomicWriteFileSync, AsyncAtomicStore, writeStatsIntervalMs, backupPath, DEFAULT_BACKUP_SLOTS } = require("./atomic-write");
+const { recoverJsonFile, tryReadJson, describeBackups } = require("./data-integrity");
 const { createHistoryStore, DEFAULT_MAX_RECORDS } = require("./history-store");
 
 // Чат объёмнее событий, поэтому у него отдельный более скромный лимит.
@@ -120,15 +121,6 @@ function deepDefaults(defaults, data) {
   return out;
 }
 
-function readJson(file) {
-  try {
-    const parsed = JSON.parse(fs.readFileSync(file, "utf-8"));
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
 /*
   Лёгкое JSON-хранилище вместо lowdb v1. Сохраняет прежний файл
   (config/local-db.json), прежнюю схему и прежний API, но без устаревшей
@@ -139,12 +131,20 @@ function readJson(file) {
 function createDatabase(dbPath = getDbPath()) {
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
-  let data = deepDefaults(defaultData(), readJson(dbPath));
+  // Повреждённый файл не затираем дефолтами и не игнорируем молча: он уходит в
+  // карантин, а состояние поднимается из последнего удачного бэкапа
+  // (см. data-integrity.js). Раньше ошибка чтения просто отдавала `{}`, и
+  // следующая же мутация записывала пустую БД поверх целых данных.
+  const recovered = recoverJsonFile(dbPath, { label: "local-db.json" });
+  let data = deepDefaults(defaultData(), recovered.value || {});
 
   // persist() вызывается на каждую мутацию, поэтому пишем асинхронно
   // и с коалесингом — файл не блокирует event loop.
   const store = new AsyncAtomicStore(dbPath, {
     logger: (err) => console.warn("[db] persist failed:", (err && err.message) || err),
+    label: "local-db.json",
+    // Телеметрия: строка в лог раз в интервал — и только если что-то писали.
+    reportEveryMs: writeStatsIntervalMs(),
   });
 
   // История событий живёт в отдельном append-only JSONL рядом с local-db.json:
@@ -317,9 +317,22 @@ function createDatabase(dbPath = getDbPath()) {
       is_test: !!event.is_test,
       count: typeof event.count === "number" ? event.count : null,
       tier: event.tier || null,
+      // id события на стороне сервиса (например донат в DonationAlerts): по нему
+      // "пропущенные" донаты не добавляются второй раз.
+      source_id: event.source_id != null ? String(event.source_id) : null,
     };
     history.append(row);
     return row;
+  }
+
+  /*
+    Идентификаторы событий сервиса, о которых уже знаем. Нужны при подтягивании
+    донатов, пришедших пока приложение было выключено: сравнить список
+    DonationAlerts с историей и добавить только новое.
+  */
+  function knownSourceIds(limit = 2000) {
+    const page = history.query({ limit: Math.max(1, Math.floor(Number(limit) || 2000)) });
+    return new Set(page.items.map((item) => item.source_id).filter(Boolean));
   }
 
   function getStreamEventById(id) {
@@ -566,14 +579,54 @@ function createDatabase(dbPath = getDbPath()) {
     }
   }
 
+  // Ошибки для отчёта о состоянии: наружу уходит текст, а не объект Error.
+  function errorMessage(err) {
+    if (!err) return null;
+    return String((err && err.message) || err);
+  }
+
   function getStorageStats() {
     return {
       dir: path.dirname(dbPath),
-      database: { path: dbPath, bytes: fileSize(dbPath) },
-      history: { path: historyPath, bytes: fileSize(historyPath), count: history.count(), limit: history.maxRecords },
-      chat: { path: chatPath, bytes: fileSize(chatPath), count: chat.count(), limit: chat.maxRecords },
+      database: { path: dbPath, bytes: fileSize(dbPath), lastError: errorMessage(store.lastError) },
+      history: {
+        path: historyPath,
+        bytes: fileSize(historyPath),
+        count: history.count(),
+        limit: history.maxRecords,
+        lastError: errorMessage(history.lastError),
+      },
+      chat: {
+        path: chatPath,
+        bytes: fileSize(chatPath),
+        count: chat.count(),
+        limit: chat.maxRecords,
+        lastError: errorMessage(chat.lastError),
+      },
       sessions: getSessions().length,
     };
+  }
+
+  // Телеметрия записи (счётчики и время) для /healthz и отчёта для поддержки.
+  function getWriteStats() {
+    return { database: store.getStats() };
+  }
+
+  // Ручное восстановление: список бэкапов и откат к одному из них.
+  // Раскладка, пресеты и сессии лежат в снапшоте БД, а история событий/чата —
+  // в отдельных append-only JSONL, поэтому откат БД историю не трогает.
+  function listBackups() {
+    return describeBackups(dbPath, DEFAULT_BACKUP_SLOTS);
+  }
+
+  function restoreFromBackup(slot) {
+    const attempt = tryReadJson(backupPath(dbPath, slot));
+    if (!attempt.ok) {
+      return { ok: false, error: (attempt.error && attempt.error.message) || "резервная копия недоступна" };
+    }
+    data = deepDefaults(defaultData(), attempt.value);
+    persist();
+    return { ok: true, slot: Number(slot) };
   }
 
   return {
@@ -593,6 +646,7 @@ function createDatabase(dbPath = getDbPath()) {
     appendStreamEvent,
     getStreamEventById,
     getStreamEvents,
+    knownSourceIds,
     removeStreamEvents,
     getParticipantsConfig,
     saveParticipantsConfig,
@@ -618,6 +672,9 @@ function createDatabase(dbPath = getDbPath()) {
     getChatHistoryEnabled,
     setChatHistoryEnabled,
     getStorageStats,
+    getWriteStats,
+    listBackups,
+    restoreFromBackup,
     flush,
     flushSync,
   };

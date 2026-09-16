@@ -15,7 +15,7 @@
  * along with this program.  If not, see <https://gnu.org>.
  */
 
-const { buildTestAlert, eventTypeForKind, toStreamEvent, roleFromUrl, shouldHideWheelAfterSpin } = require("../server/index");
+const { buildTestAlert, eventTypeForKind, toStreamEvent, roleFromUrl, shouldHideWheelAfterSpin, isAllowedWsOrigin } = require("../server/index");
 
 describe("server/index helpers", () => {
   test("buildTestAlert формирует корректные поля по kind", () => {
@@ -86,5 +86,37 @@ describe("server/index helpers", () => {
     expect(shouldHideWheelAfterSpin({ eliminationMode: true, isFinalWinner: false })).toBe(false);
     // Защита от пустого значения.
     expect(shouldHideWheelAfterSpin(null)).toBe(true);
+  });
+
+  describe("isAllowedWsOrigin", () => {
+    const withOrigin = (origin) => ({ headers: { origin } });
+
+    test("клиент без Origin (Stream Deck, тесты) допускается", () => {
+      expect(isAllowedWsOrigin({ headers: {} }, 8710)).toBe(true);
+      expect(isAllowedWsOrigin(undefined, 8710)).toBe(true);
+    });
+
+    test("окна Electron из file:// допускаются", () => {
+      expect(isAllowedWsOrigin(withOrigin("file://"), 8710)).toBe(true);
+      expect(isAllowedWsOrigin(withOrigin("null"), 8710)).toBe(true);
+    });
+
+    test("локальные и LAN-источники допускаются", () => {
+      expect(isAllowedWsOrigin(withOrigin("http://localhost:8710"), 8710)).toBe(true);
+      expect(isAllowedWsOrigin(withOrigin("http://127.0.0.1:8710"), 8710)).toBe(true);
+      expect(isAllowedWsOrigin(withOrigin("http://[::1]:8710"), 8710)).toBe(true);
+      expect(isAllowedWsOrigin(withOrigin("http://192.168.1.50:8710"), 8710)).toBe(true);
+      expect(isAllowedWsOrigin(withOrigin("http://10.0.0.7:8710"), 8710)).toBe(true);
+      expect(isAllowedWsOrigin(withOrigin("http://mypc.local:8710"), 8710)).toBe(true);
+      expect(isAllowedWsOrigin(withOrigin("http://DESKTOP-ABC:8710"), 8710)).toBe(true);
+    });
+
+    test("сторонние сайты и подмена порта/схемы отклоняются", () => {
+      expect(isAllowedWsOrigin(withOrigin("https://evil.com"), 8710)).toBe(false);
+      expect(isAllowedWsOrigin(withOrigin("http://evil.com:8710"), 8710)).toBe(false);
+      expect(isAllowedWsOrigin(withOrigin("http://localhost:8711"), 8710)).toBe(false);
+      expect(isAllowedWsOrigin(withOrigin("ftp://localhost:8710"), 8710)).toBe(false);
+      expect(isAllowedWsOrigin(withOrigin("not a url"), 8710)).toBe(false);
+    });
   });
 });

@@ -27,22 +27,48 @@
   />
   <title>Редактор темы</title>
   <link rel="stylesheet" href="../shared/theme.css" />
+  <!-- CSS editor chrome (`.csswin-*`) and the editor itself (`.css-editor*`). -->
+  <link rel="stylesheet" href="../csseditor/css-editor.css" />
   <link rel="stylesheet" href="theme-editor.css" />
+  <script src="../shared/css-editor-core.js"></script>
 </head>
 <body>
+  <!-- Same top bar shape as the control panel: brand, tab pills, actions. -->
   <header class="tw-header">
-    <span class="tw-header__title" id="titleLabel">Редактор темы</span>
-    <span class="tw-header__status" id="statusLabel"></span>
-    <button class="md-button md-button--filled" id="saveBtn">Сохранить</button>
-    <button class="md-button md-button--text" id="cancelBtn">Отмена</button>
+    <div class="tw-header__brand">
+      <span class="tw-header__mark"></span>
+      <span class="tw-header__title" id="titleLabel">Редактор темы</span>
+    </div>
+    <nav class="te-tabs" id="tabs" role="tablist"></nav>
+    <div class="tw-header__actions">
+      <span class="md-chip tw-status" id="statusLabel"><span class="md-chip__dot"></span><span id="statusText"></span></span>
+      <button class="md-button md-button--tonal te-icon-btn" id="undoBtn" type="button">↶</button>
+      <button class="md-button md-button--tonal te-icon-btn" id="redoBtn" type="button">↷</button>
+      <button class="md-button md-button--tonal te-icon-btn" id="exportBtn" type="button">⤓</button>
+      <button class="md-button md-button--filled" id="saveBtn">Сохранить</button>
+      <button class="md-button md-button--text" id="cancelBtn">Отмена</button>
+    </div>
   </header>
-  <main class="tw-body" id="form"></main>
+  <main class="tw-body">
+    <section class="tw-form" id="form"></section>
+    <!-- The custom-CSS editor replaces the form column instead of opening its
+         own window; the rail with the draft preview, contrast check and token
+         list stays in view. -->
+    <section class="te-css" id="cssPanel" aria-label="CSS" hidden></section>
+    <aside class="tw-rail" id="rail"></aside>
+  </main>
+  <div class="te-toast" id="toast" hidden></div>
 
   <script src="../shared/events.js"></script>
   <script src="../shared/i18n.js"></script>
   <script src="../shared/widget-catalog.js"></script>
   <script src="../shared/theme-engine.js"></script>
   <script src="../shared/themes.js"></script>
+  <script type="module">
+    import { initCssEditor } from "../control/modules/css-editor.js";
+    window.TeCssEditor = { initCssEditor };
+    window.dispatchEvent(new Event("te-css-editor-ready"));
+  </script>
   <script src="theme-editor.js"></script>
 </body>
 </html>

@@ -17,8 +17,9 @@
 
 /*
   Pure, browser-independent logic for the lightweight CSS editor. Split out of
-  control/modules/css-editor.js so it can be unit-tested from Node and reused
-  from both the control panel and the standalone CSS editor window.
+  control/modules/css-editor.js so it can be unit-tested from Node and reused by
+  both consumers: the control panel and the CSS panel inside the theme editor
+  window.
 
   Isomorphic, same export pattern as the other shared/ modules: `module.exports`
   on Node, `window.CssEditorCore` in the browser.

@@ -15,6 +15,16 @@
  * along with this program.  If not, see <https://gnu.org>.
  */
 
+/*
+  Ставим раньше всего остального, ещё до require("electron"): фильтр глушит
+  единственное чужое предупреждение (punycode, DEP0040 — см.
+  server/deprecation-filter.js) и должен успеть до того, как его породит
+  внутренний код Electron. Идемпотентен — server/index.js ставит его же для
+  режима `npm run server:only`.
+*/
+const { installDeprecationFilter } = require("./server/deprecation-filter");
+installDeprecationFilter();
+
 const path = require("path");
 const fs = require("fs");
 const { app, BrowserWindow, ipcMain, shell, dialog, globalShortcut, screen, session, clipboard, Tray, Menu, nativeImage, Notification } = require("electron");
@@ -22,8 +32,10 @@ const { app, BrowserWindow, ipcMain, shell, dialog, globalShortcut, screen, sess
 const { createServer } = require("./server");
 const { buildTwitchAuthorizeUrl, buildDonationAlertsAuthorizeUrl, buildYoutubeAuthorizeUrl } = require("./server/oauth");
 const { createDatabase } = require("./server/db");
-const { getDecryptFailures, clearDecryptFailures } = require("./server/secret-store");
-const { configureStorage, getUserMediaDir, getConfigDir } = require("./server/storage-paths");
+const { getSecretIssues, clearSecretIssues, SECRET_ISSUE } = require("./server/secret-store");
+const { getRecoveryEvents, clearRecoveryEvents } = require("./server/data-integrity");
+const { installCrashHandlers } = require("./server/crash-guard");
+const { configureStorage, getUserMediaDir, getConfigDir, getLogsDir } = require("./server/storage-paths");
 const { collectMediaForExport, importMedia } = require("./server/media");
 const { eventsToCsv } = require("./server/export-events");
 
@@ -43,6 +55,48 @@ const SPLASH_MIN_MS = 3500; // matches the progress-bar animation duration in sp
 // notifications (`new Notification()`) resolve correctly.
 app.setAppUserModelId("com.openstreamenvironment.app");
 
+// Страховка от фатальных ошибок главного процесса: отчёт на диск, финальный
+// сброс состояния, диалог вместо молча исчезнувшего окна (см. crash-guard.js).
+// Обработчики живут до конца процесса — снимать их некому.
+installCrashHandlers({
+  appName: app.getName(),
+  version: app.getVersion(),
+  getLogsDir,
+  // Состояние сбрасываем синхронно: после непойманной ошибки ждать нельзя.
+  flush: () => {
+    try {
+      if (serverHandle && serverHandle.state) serverHandle.state.flushConfigSync();
+    } catch (_) {
+      /* конфиг мог ещё не подняться */
+    }
+    try {
+      if (db && typeof db.flushSync === "function") db.flushSync();
+    } catch (_) {
+      /* БД могла ещё не подняться */
+    }
+  },
+  onFatal: ({ kind, error, reportPath }) => {
+    let isRu = false;
+    try {
+      isRu = !!(db && db.getLanguage() === "ru");
+    } catch (_) {
+      /* db ещё не создана — покажем по-английски */
+    }
+    const title = "Open Stream Environment";
+    const message = isRu ? `Критическая ошибка приложения (${kind})` : `The application hit a fatal error (${kind})`;
+    const reason = (error && (error.stack || error.message)) || String(error || "");
+    const report = reportPath
+      ? isRu
+        ? `\n\nОтчёт сохранён: ${reportPath}`
+        : `\n\nA crash report was saved to: ${reportPath}`
+      : "";
+    dialog.showErrorBox(title, `${message}\n\n${reason}${report}`);
+  },
+  // Окна закрывать нельзя (в редакторе темы спрашивается подтверждение),
+  // поэтому выходим принудительно — состояние уже сброшено.
+  exit: (code) => app.exit(code),
+});
+
 let mainWindow;
 let splashWindow;
 let chatWindow = null;
@@ -50,9 +104,6 @@ let hudWindow = null;
 let chatHudWindow = null;
 let themePreviewWindow = null;
 let themeSamplesWindow = null;
-let cssEditorWindow = null;
-let cssEditorInit = { css: "", tokens: [], strings: {} };
-let cssEditorParent = null;
 let themeEditorWindow = null;
 let themeEditorInit = { theme: null };
 const widgetEditorWindows = new Map(); // widgetId -> BrowserWindow
@@ -356,33 +407,6 @@ function openThemeSamplesWindow(port) {
   themeSamplesWindow = win;
 }
 
-function openCssEditorWindow(init) {
-  cssEditorInit = init || { css: "", tokens: [], strings: {} };
-  if (cssEditorWindow) {
-    cssEditorWindow.focus();
-    cssEditorWindow.webContents.send("css-editor:init", cssEditorInit);
-    return;
-  }
-  const win = new BrowserWindow({
-    width: 900,
-    height: 680,
-    minWidth: 640,
-    minHeight: 480,
-    backgroundColor: "#0e0b17",
-    webPreferences: {
-      preload: path.join(__dirname, "csseditor", "preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-  win.loadFile(path.join(__dirname, "csseditor", "css-editor.html"));
-  win.on("closed", () => {
-    cssEditorWindow = null;
-    cssEditorInit = { css: "", tokens: [], strings: {} };
-  });
-  cssEditorWindow = win;
-}
-
 function openThemeEditorWindow(port, init) {
   themeEditorInit = init || { theme: null };
   if (themeEditorWindow) {
@@ -391,11 +415,16 @@ function openThemeEditorWindow(port, init) {
     return;
   }
   const win = new BrowserWindow({
-    width: 720,
-    height: 820,
-    minWidth: 620,
+    // Restore size — the window opens maximized, like the main panel window;
+    // this is what it falls back to when un-maximized.
+    width: 1320,
+    height: 900,
+    minWidth: 1040,
     minHeight: 640,
+    // Фон окна — как в панели управления, до первой отрисовки.
     backgroundColor: "#0e0b17",
+    // Разворачиваем до показа, чтобы не мигало маленькое окно (как createWindow).
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -404,6 +433,14 @@ function openThemeEditorWindow(port, init) {
   });
   win.loadFile(path.join(__dirname, "themeeditor", "theme-editor.html"), {
     query: { port: String(port) },
+  });
+  win.once("ready-to-show", () => {
+    win.maximize(); // open maximized instead of fullscreen
+    win.show();
+  });
+  // Страховка: при show: false неудачная загрузка оставила бы окно невидимым.
+  win.webContents.on("did-fail-load", () => {
+    if (!win.isVisible()) win.show();
   });
   win.on("closed", () => {
     themeEditorWindow = null;
@@ -856,23 +893,72 @@ app.whenReady().then(() => {
 
   db = createDatabase();
 
-  serverHandle = createServer({ db, onSetHudHotkey: registerHudHotkey, onSetChatHudHotkey: registerChatHudHotkey });
+  serverHandle = createServer({
+    db,
+    appName: app.getName(),
+    version: app.getVersion(),
+    onSetHudHotkey: registerHudHotkey,
+    onSetChatHudHotkey: registerChatHudHotkey,
+  });
 
-  // Если при загрузке конфига не удалось расшифровать какие-то сохранённые
-  // секреты (сменился ключ DPAPI/Keychain или конфиг перенесён с другой
-  // машины) — просим пользователя ввести их заново в настройках.
-  const decryptFailures = getDecryptFailures();
-  clearDecryptFailures();
-  if (decryptFailures.length) {
+  // Если при загрузке конфига не удалось прочитать какие-то сохранённые секреты
+  // (сменился ключ DPAPI/Keychain, конфиг перенесён с другой машины или
+  // системное хранилище недоступно) — просим пользователя ввести их заново:
+  // иначе ключ выглядит заполненным, а сервис отвечает невнятным invalid_client.
+  const secretIssues = getSecretIssues();
+  clearSecretIssues();
+  if (secretIssues.length) {
     const isRu = db && db.getLanguage() === "ru";
+    const describe = (issue) => {
+      if (issue.reason === SECRET_ISSUE.LOCKED) {
+        return isRu
+          ? "системное хранилище секретов недоступно, значение прочитать нельзя"
+          : "the system secret storage is unavailable, the value cannot be read";
+      }
+      return isRu
+        ? "не удалось расшифровать: значение зашифровано другим ключом"
+        : "decryption failed: the value was encrypted with a different key";
+    };
+    const lines = secretIssues.map((issue) => `• ${issue.label} — ${describe(issue)}`);
     const message = isRu
-      ? `Не удалось расшифровать сохранённые секреты:\n${decryptFailures.join("\n")}\n\nПожалуйста, введите их заново в разделе «Настройки».`
-      : `Could not decrypt the following saved secrets:\n${decryptFailures.join("\n")}\n\nPlease re-enter them in Settings.`;
+      ? `Не удалось прочитать сохранённые секреты:\n${lines.join("\n")}\n\nВведите их заново в разделе «Настройки».`
+      : `Could not read the following saved secrets:\n${lines.join("\n")}\n\nRe-enter them in Settings.`;
     dialog.showMessageBox({
       type: "warning",
       title: "Open Stream Environment",
       message: isRu ? "Нужно ввести ключи заново" : "Secrets need to be re-entered",
       detail: message,
+      buttons: ["OK"],
+    });
+  }
+
+  // Если файл состояния был повреждён, оставшийся карантинный файл и бэкап — не
+  // служебные детали, а то, что пользователь должен знать: он сам решает,
+  // смириться с потерей или доставать данные из карантина.
+  const recoveryEvents = getRecoveryEvents();
+  clearRecoveryEvents();
+  if (recoveryEvents.length) {
+    const isRu = db && db.getLanguage() === "ru";
+    const detail = recoveryEvents
+      .map((event) => {
+        const file = path.basename(event.file || "");
+        const quarantined = path.basename(event.quarantinePath || "");
+        if (event.kind === "restored-from-backup") {
+          const backup = path.basename(event.backupPath || "");
+          return isRu
+            ? `• ${file} был повреждён (${event.reason}); испорченная версия отложена как «${quarantined}», данные восстановлены из «${backup}».`
+            : `• ${file} was damaged (${event.reason}); the damaged copy was kept as "${quarantined}" and data was restored from "${backup}".`;
+        }
+        return isRu
+          ? `• ${file} был повреждён (${event.reason}); пригодного бэкапа нет — файл отложен как «${quarantined}», приложение запустилось со значениями по умолчанию.`
+          : `• ${file} was damaged (${event.reason}); no usable backup was found — the file was kept as "${quarantined}" and the app started with default values.`;
+      })
+      .join("\n");
+    dialog.showMessageBox({
+      type: "warning",
+      title: "Open Stream Environment",
+      message: isRu ? "Файлы настроек были повреждены" : "Settings files were damaged",
+      detail: isRu ? `${detail}\n\nКарантинные файлы лежат рядом с рабочими (каталог данных).` : `${detail}\n\nThe quarantined files are stored next to the live ones (data directory).`,
       buttons: ["OK"],
     });
   }
@@ -917,7 +1003,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle("app:get-displays", () => {
     const primaryId = screen.getPrimaryDisplay().id;
-    return screen.getAllDisplays().map((d, i) => ({
+    return screen.getAllDisplays().map((d) => ({
       id: String(d.id),
       label: d.label || "",
       primary: d.id === primaryId,
@@ -925,11 +1011,54 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle("app:open-external", (_event, url) => {
-    shell.openExternal(url);
+    // Only ever hand http(s) to the OS shell: shell.openExternal also launches
+    // file:// and custom protocol handlers, turning a renderer-side link into
+    // local code/application execution.
+    let parsed;
+    try {
+      parsed = new URL(String(url || ""));
+    } catch {
+      return { ok: false, error: "invalid-url" };
+    }
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      return { ok: false, error: "unsupported-protocol" };
+    }
+    shell.openExternal(parsed.toString());
+    return { ok: true };
   });
 
   ipcMain.handle("app:copy-to-clipboard", (_event, text) => {
     clipboard.writeText(String(text ?? ""));
+  });
+
+  // Отчёт для поддержки: тот же текст, что отдаёт GET /support-bundle, но
+  // пользователь сам выбирает, куда его положить. Секреты в отчёт не попадают
+  // (см. server/support-bundle.js) — его можно отправлять как есть.
+  ipcMain.handle("app:support-bundle", async () => {
+    const isRu = db && db.getLanguage() === "ru";
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    const name = `ose-support-${stamp}.txt`;
+    let defaultPath = name;
+    try {
+      defaultPath = path.join(app.getPath("desktop"), name);
+    } catch (_) {
+      /* в редких окружениях desktop недоступен — оставим имя файла */
+    }
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+      title: isRu ? "Сохранить отчёт для поддержки" : "Save the support report",
+      defaultPath,
+      filters: [{ name: "Text", extensions: ["txt"] }],
+    });
+    if (canceled || !filePath) return { ok: false, canceled: true };
+    try {
+      if (!serverHandle || typeof serverHandle.supportBundleText !== "function") {
+        return { ok: false, error: "not-ready" };
+      }
+      fs.writeFileSync(filePath, serverHandle.supportBundleText(), "utf8");
+      return { ok: true, path: filePath };
+    } catch (err) {
+      return { ok: false, error: String((err && err.message) || err) };
+    }
   });
 
   ipcMain.handle("app:quit-and-install", () => {
@@ -997,6 +1126,16 @@ app.whenReady().then(() => {
   ipcMain.handle("db:clear-chat", () => db.clearChat());
   ipcMain.handle("db:get-sessions-with-stats", () => db.getSessionsWithStats());
   ipcMain.handle("db:get-storage-stats", () => db.getStorageStats());
+  // Список резервных копий и откат к одной из них (слоты .bak.0…2 ведёт
+  // AsyncAtomicStore, описание и проверка — в server/data-integrity.js).
+  ipcMain.handle("backup:list", () => (serverHandle ? serverHandle.listBackups() : { config: [], database: [] }));
+  ipcMain.handle("backup:restore", (_event, target, slot) =>
+    serverHandle ? serverHandle.restoreBackup(target, slot) : { ok: false, error: "not-ready" }
+  );
+
+  // Код доступа для клиентов из сети: новый код отключает уже подключённые
+  // устройства и меняет адрес пульта (см. state.rotateRemoteToken).
+  ipcMain.handle("access:rotate-token", () => (serverHandle ? serverHandle.rotateRemoteToken() : { ok: false, error: "not-ready" }));
   ipcMain.handle("db:open-data-folder", () => shell.openPath(db.getStorageStats().dir));
   ipcMain.handle("db:get-history-limit", () => db.getHistoryLimit());
   ipcMain.handle("db:set-history-limit", (_event, value) => db.setHistoryLimit(value));
@@ -1063,24 +1202,6 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle("theme-editor:get-init", () => themeEditorInit);
-
-  ipcMain.handle("app:open-css-editor", (event, init) => {
-    cssEditorParent = BrowserWindow.fromWebContents(event.sender);
-    openCssEditorWindow(init);
-  });
-
-  ipcMain.handle("css-editor:get-init", () => cssEditorInit);
-
-  ipcMain.on("css-editor:update", (_event, css) => {
-    const target = cssEditorParent && !cssEditorParent.isDestroyed() ? cssEditorParent : mainWindow;
-    if (target && !target.isDestroyed()) {
-      target.webContents.send("css-editor:updated", css);
-    }
-  });
-
-  ipcMain.on("css-editor:close", () => {
-    if (cssEditorWindow) cssEditorWindow.close();
-  });
 
   ipcMain.on("app:close-current-window", (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);

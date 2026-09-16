@@ -268,4 +268,24 @@ describe("history store", () => {
     expect(history.query({ sessionId: "s1" }).items.map((e) => e.id)).toEqual(["m3", "m1"]);
     expect(history.all().length).toBe(3);
   });
+
+  test("query фильтрует по нижней границе времени (донаты текущего стрима)", async () => {
+    const file = tmpFile();
+    const history = createHistoryStore(file);
+    history.append({ id: "old-1", timestamp: 1000, type: "donation" });
+    history.append({ id: "old-2", timestamp: 2000, type: "donation" });
+    history.append({ id: "new-1", timestamp: 3000, type: "donation" });
+    history.append({ id: "new-2", timestamp: 4000, type: "donation" });
+    await history.flush();
+
+    const page = history.query({ type: "donation", since: 2500 });
+    expect(page.items.map((e) => e.id)).toEqual(["new-2", "new-1"]);
+    // total — это уже число записей под фильтром, а не всей истории.
+    expect(page.total).toBe(2);
+
+    // Граница включительна, а ноль/мусор означают «ограничения нет».
+    expect(history.query({ since: 3000 }).items.map((e) => e.id)).toEqual(["new-2", "new-1"]);
+    expect(history.query({ since: 0 }).total).toBe(4);
+    expect(history.query({ since: "abc" }).total).toBe(4);
+  });
 });

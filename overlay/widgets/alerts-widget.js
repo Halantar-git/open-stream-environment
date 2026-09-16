@@ -18,6 +18,12 @@
 /*
   Alerts widget — queued popup cards (follow / sub / donation / wheel winner).
   Hold + exit timers are auto-tracked via later(), so unmount() clears them.
+
+  Расписание алертов держит сервер (server/alert-queue.js) и присылает их по
+  одному, поэтому собственный буфер здесь — только страховка: обычно drain()
+  срабатывает на первом же алерте. Он нужен, если сервер отдаст больше одного
+  сразу — так бывает, когда очередь повторно отправляет текущий алерт
+  перезагруженной странице OBS и следом приходит следующий.
 */
 (function (root, factory) {
   const BaseWidget =

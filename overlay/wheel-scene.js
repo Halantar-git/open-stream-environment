@@ -297,7 +297,7 @@
     }
     el.hidden = false;
 
-    let listHtml = "";
+    let listHtml;
     if (participantsConfig.marquee) {
       const text = all.join(" • ");
       listHtml = `<div class="widget-participants__marquee"><span>${escapeHtml(text)}</span><span>${escapeHtml(text)}</span></div>`;
@@ -390,7 +390,7 @@
     const el = document.getElementById("wheel-result");
     if (!el) return;
 
-    let text = "";
+    let text;
     if (alert.isElimination) {
       text = t("alert.eliminated", { name: escapeHtml(alert.user || "") });
       playEliminationAudio();

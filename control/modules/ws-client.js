@@ -149,5 +149,5 @@ export function initWsClient({ url, role, t, onMessage, onStatusClick, resolveUr
 
   connect();
 
-  return { send, sendBinary, setStatuses, updateStatus, refreshStatusChips, setUrl };
+  return { send, sendBinary, setStatuses, updateStatus, refreshStatusChips, setUrl, statusText: STATUS_TEXT, statusClass };
 }

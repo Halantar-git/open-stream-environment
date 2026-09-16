@@ -5,11 +5,18 @@ config/config.json
 config/local-db.json
 config/local-db.jsonl
 config/local-db.chat.jsonl
+config/window-state.json
+config/*.bak.*
+config/*.corrupt-*
+config/logs/
 config/.*.tmp
 config/media/
 *.log
 .DS_Store
 Thumbs.db
+# Артефакт Windows: перенаправление в nul (… > nul) создаёт в каталоге файл с
+# таким именем, а git add . потом пытается его закоммитить.
+nul
 repomix-output.xml
 _discord-post.txt
 discord-update.txt

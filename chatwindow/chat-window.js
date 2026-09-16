@@ -176,7 +176,11 @@
       .slice(0, 3)
       .map((b) => `<span class="chat-row__badge" data-role="${escapeAttr(String(b))}">${escapeHtml(String(b).slice(0, 1).toUpperCase())}</span>`)
       .join("");
-    row.innerHTML = `${badges}<span class="chat-row__user" style="color:${escapeAttr(msg.color || "#c9c1d6")}">${escapeHtml(msg.user)}</span><span class="chat-row__colon">:</span><span class="chat-row__text">${TwitchEmotes.renderEmotes(msg.message, msg.emotes)}</span><span class="chat-row__time">${formatTime(new Date())}</span>`;
+    const emoteHtml =
+      window.TwitchEmotes && window.TwitchEmotes.renderEmotes
+        ? window.TwitchEmotes.renderEmotes(msg.message, msg.emotes)
+        : escapeHtml(msg.message || "");
+    row.innerHTML = `${badges}<span class="chat-row__user" style="color:${escapeAttr(msg.color || "#c9c1d6")}">${escapeHtml(msg.user)}</span><span class="chat-row__colon">:</span><span class="chat-row__text">${emoteHtml}</span><span class="chat-row__time">${formatTime(new Date())}</span>`;
     chatListEl.appendChild(row);
     while (chatListEl.children.length > MAX_ROWS) chatListEl.removeChild(chatListEl.firstChild);
 

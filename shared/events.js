@@ -27,6 +27,8 @@
     LAYOUT_UPDATE: "layout_update", // full layout array, sent after any add/update/remove/reorder
     LAYOUT_PRESETS_UPDATE: "layout_presets_update", // { presets: [{ id, name, widgetCount, createdAt, updatedAt }] }
     ALERT: "alert", // { kind: 'follow'|'sub'|'gift_sub'|'cheer'|'donation', ... }
+    ALERT_QUEUE_UPDATE: "alert_queue_update", // { queue: { now, items, paused, pausedUntil, rules, stats } }
+    SESSION_STATS: "session_stats", // { count, amount, currency } — счёт донатов текущего стрима
     CHAT_MESSAGE: "chat_message",
     CHAT_SENT: "chat_sent", // { clientId, ok, messageId, error? } — server -> client confirmation of an outgoing chat message
     RECENT_EVENT: "recent_event",
@@ -91,6 +93,18 @@
     CMD_DELETE_LAYOUT_PRESET: "cmd_delete_layout_preset", // { id }
     CMD_SET_GOAL: "cmd_set_goal", // { title?, current?, target?, currency? }
     CMD_TEST_ALERT: "cmd_test_alert", // { kind }
+    // Очередь алертов (см. server/alert-queue.js): панель и пульт могут
+    // вмешаться в то, что играет и что ждёт.
+    CMD_ALERT_QUEUE_PAUSE: "cmd_alert_queue_pause", // { minutes? } — без минут: до снятия вручную
+    CMD_ALERT_QUEUE_RESUME: "cmd_alert_queue_resume", // {}
+    CMD_ALERT_QUEUE_SKIP: "cmd_alert_queue_skip", // {} — закончить текущий и перейти к следующему
+    CMD_ALERT_QUEUE_REMOVE: "cmd_alert_queue_remove", // { id }
+    CMD_ALERT_QUEUE_UP: "cmd_alert_queue_up", // { id } — поднять наверх
+    CMD_ALERT_QUEUE_PLAY_NOW: "cmd_alert_queue_play_now", // { id }
+    CMD_ALERT_QUEUE_CLEAR: "cmd_alert_queue_clear", // {} — убрать ожидающих
+    CMD_ALERT_QUEUE_CONFIG: "cmd_alert_queue_config", // { minAmount?, mergeSameUser?, mergeWindowSec? }
+    CMD_RECOVER_DONATIONS: "cmd_recover_donations", // { limit? } — подтянуть с DonationAlerts пропущенные донаты
+    CMD_RESET_SESSION_STATS: "cmd_reset_session_stats", // {} — обнулить счёт донатов текущего стрима
     CMD_TEST_CHAT: "cmd_test_chat", // { message? }
     CMD_SEND_CHAT: "cmd_send_chat", // { message, clientId } — send a message to Twitch chat
     CMD_TEST_POLL: "cmd_test_poll", // {} — simulate chat votes
@@ -136,6 +150,7 @@
     CMD_SET_LANGUAGE: "cmd_set_language", // { lang }
     CMD_SET_YOUTUBE_VIDEO_ID: "cmd_set_youtube_video_id", // { videoId }
     CMD_SET_INTEGRATION_ENABLED: "cmd_set_integration_enabled", // { service, enabled }
+    CMD_RESTART_INTEGRATION: "cmd_restart_integration", // { service } — переподключить сервис, не трогая настройки
     CMD_SET_NOTIFICATION_SOUND: "cmd_set_notification_sound", // { enabled }
     CMD_SET_NOTIFICATION_VOLUME: "cmd_set_notification_volume", // { volume: 0..1 }
     CMD_SET_NOTIFICATION_REPEATS: "cmd_set_notification_repeats", // { repeats }

@@ -307,7 +307,7 @@
       ctx.beginPath();
       for (let i = 0; i <= POINTS; i++) {
         const x = (i / POINTS) * cw;
-        let y = midY;
+        let y;
         if (live && this.dataArray && this.dataArray.length) {
           const idx = Math.floor((i / POINTS) * (this.dataArray.length - 1));
           const v = (this.dataArray[idx] - 128) / 128;

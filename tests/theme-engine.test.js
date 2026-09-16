@@ -15,7 +15,17 @@
  * along with this program.  If not, see <https://gnu.org>.
  */
 
-const { buildThemeTokens, FONT_PRESETS, SHAPE_MODES, ALERT_EASINGS, deriveRole } = require("../shared/theme-engine");
+const {
+  buildThemeTokens,
+  contrastRatio,
+  hexToHsl,
+  deriveSurfaces,
+  FONT_PRESETS,
+  SHAPE_MODES,
+  SCHEMES,
+  ALERT_EASINGS,
+  deriveRole,
+} = require("../shared/theme-engine");
 
 describe("shared/theme-engine custom theme tokens", () => {
   const base = {
@@ -123,5 +133,73 @@ describe("shared/theme-engine custom theme tokens", () => {
     expect(Object.keys(ALERT_EASINGS)).toEqual(
       expect.arrayContaining(["smooth", "decelerate", "spring", "sharp", "linear"])
     );
+  });
+});
+
+describe("shared/theme-engine colour schemes", () => {
+  const base = {
+    primary: "#c6b8ff",
+    secondary: "#7ee0d6",
+    tertiary: "#ffb0d8",
+    surfaceSeed: "#8878c8",
+    shapeMode: "rounded",
+    fontPreset: "nebula",
+  };
+
+  test("без mode (или с неизвестным) схема остаётся тёмной", () => {
+    const dark = buildThemeTokens({ ...base, mode: "dark" });
+    expect(buildThemeTokens(base)).toEqual(dark);
+    expect(buildThemeTokens({ ...base, mode: "nope" })).toEqual(dark);
+    expect(SCHEMES).toEqual(["dark", "light"]);
+  });
+
+  test("светлая схема разворачивает поверхности, текст и акценты", () => {
+    const dark = buildThemeTokens(base);
+    const light = buildThemeTokens({ ...base, mode: "light" });
+
+    expect(hexToHsl(light["--md-surface"]).l).toBeGreaterThan(90);
+    expect(hexToHsl(light["--md-on-surface"]).l).toBeLessThan(30);
+    expect(hexToHsl(dark["--md-surface"]).l).toBeLessThan(20);
+    expect(hexToHsl(dark["--md-on-surface"]).l).toBeGreaterThan(80);
+
+    // Акцент на светлой схеме темнее, а текст на нём — почти белый.
+    expect(hexToHsl(light["--md-primary"]).l).toBeLessThan(hexToHsl(dark["--md-primary"]).l);
+    expect(hexToHsl(light["--md-on-primary"]).l).toBeGreaterThan(90);
+  });
+
+  test("светлая схема читается: текст, второстепенный текст и акцент на фоне", () => {
+    const light = buildThemeTokens({ ...base, mode: "light" });
+    const surface = light["--md-surface"];
+    expect(contrastRatio(light["--md-on-surface"], surface)).toBeGreaterThan(7);
+    expect(contrastRatio(light["--md-on-surface-variant"], surface)).toBeGreaterThan(4.5);
+    expect(contrastRatio(light["--md-primary"], surface)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  test("светлый фон в тёмной схеме не оставляет невидимый текст", () => {
+    // Пользователь вручную поставил светлый фон, текст и акцент оставил «Авто».
+    const tokens = buildThemeTokens({ ...base, background: "#f4f4f4" });
+    expect(tokens["--md-surface"]).toBe("#f4f4f4");
+    expect(contrastRatio(tokens["--md-on-surface"], "#f4f4f4")).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(tokens["--md-on-surface-variant"], "#f4f4f4")).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(tokens["--md-primary"], "#f4f4f4")).toBeGreaterThanOrEqual(4.5);
+  });
+
+  test("явные переопределения фона и текста не подменяются", () => {
+    const tokens = buildThemeTokens({ ...base, background: "#101010", text: "#fafafa" });
+    expect(tokens["--md-surface"]).toBe("#101010");
+    expect(tokens["--md-on-surface"]).toBe("#fafafa");
+
+    // Тёмная схема с тёмным фоном не меняется: производный on-surface тот же.
+    expect(buildThemeTokens(base)["--md-on-surface"]).toBe(deriveSurfaces(base.surfaceSeed, "dark").onSurface);
+    expect(buildThemeTokens(base)["--md-on-surface-variant"]).toBe(deriveSurfaces(base.surfaceSeed, "dark").onSurfaceVariant);
+  });
+
+  test("дефолтный цвет ошибки, тень и рамка зависят от схемы", () => {
+    expect(buildThemeTokens(base)["--md-error"]).toBe("#ffb4ab");
+    expect(buildThemeTokens({ ...base, mode: "light" })["--md-error"]).toBe("#ba1a1a");
+
+    expect(buildThemeTokens(base)["--panel-glow"]).toBe("0 24px 48px rgba(0,0,0,0.45)");
+    expect(buildThemeTokens({ ...base, mode: "light" })["--panel-glow"]).toBe("0 12px 32px rgba(0,0,0,0.18)");
+    expect(buildThemeTokens({ ...base, mode: "light" })["--panel-border"]).toBe("1px solid rgba(0, 0, 0, 0.10)");
   });
 });

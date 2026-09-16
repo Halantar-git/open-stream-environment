@@ -16,7 +16,11 @@
  */
 
 /*
-  Stat pill widget — followers / subscribers / latest / top donation.
+  Stat pill widget — followers / subscribers / latest / top donation / session.
+
+  «Донаты за стрим» тут не потому, что виджет про донаты, а потому что это
+  счётчик с сервера: HUD-окно и оверлей рисуют одну и ту же композицию,
+  поэтому новая метрика автоматически доступна и там, и там.
 */
 (function (root, factory) {
   const BaseWidget =
@@ -44,6 +48,7 @@
       this.subscribe(EVENT_TYPES.STAT_UPDATE, () => this.render());
       this.subscribe(EVENT_TYPES.TOP_DONATION_UPDATE, () => this.render());
       this.subscribe(EVENT_TYPES.RECENT_EVENT, () => this.render());
+      this.subscribe(EVENT_TYPES.SESSION_STATS, () => this.render());
       this.subscribe(EVENT_TYPES.LOCALES, () => this.render());
     }
 
@@ -70,6 +75,24 @@
       if (metric === "latestSubscriber") {
         const e = state.recentEvents.find((ev) => ev.kind === "sub" || ev.kind === "gift_sub");
         return { icon: ICONS.sub, label: this.config.label || t("preview.latestSubscriber"), value: e ? e.user : t("scene.notYet") };
+      }
+      if (metric === "sessionDonations") {
+        const session = state.sessionDonations;
+        return {
+          icon: ICONS.donation,
+          // Ноль — это ноль: у счётчика, который только начался, есть осмысленное
+          // значение. Прочерк — только пока снимок вообще не пришёл.
+          value: session ? formatMoney(session.count) : "—",
+        };
+      }
+      if (metric === "sessionAmount") {
+        const session = state.sessionDonations;
+        const symbol = session && session.currency ? currencySymbol(session.currency) : "";
+        return {
+          icon: ICONS.donation,
+          label: this.config.label || t("preview.sessionAmount"),
+          value: session ? `${formatMoney(session.amount)}${symbol ? ` ${symbol}` : ""}` : "—",
+        };
       }
       if (metric === "topDonation") {
         return {

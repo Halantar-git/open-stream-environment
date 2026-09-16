@@ -113,13 +113,19 @@ export function initDebugPanel({ t, ICONS, send, EVENT_TYPES }) {
     message.className = "debug-panel__line__message";
     message.textContent = entry.message || "";
 
-    line.append(time, service, message);
+    // См. logger-panel: сообщение и данные держим в одном flex-элементе,
+    // чтобы длинный JSON не сжимал сообщение до одной буквы в строке.
+    const text = document.createElement("span");
+    text.className = "debug-panel__line__text";
+    text.appendChild(message);
+    line.append(time, service, text);
 
     if (entry.data != null && entry.data !== "") {
       const data = document.createElement("span");
       data.className = "debug-panel__line__data";
       data.textContent = typeof entry.data === "string" ? entry.data : JSON.stringify(entry.data);
-      line.appendChild(data);
+      text.appendChild(document.createTextNode(" "));
+      text.appendChild(data);
     }
 
     logEl.appendChild(line);

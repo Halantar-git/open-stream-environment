@@ -16,25 +16,87 @@
  */
 
 const fs = require("fs");
-const path = require("path");
 const crypto = require("crypto");
 
-const { seal, open } = require("./secret-store");
+const { seal, open, isSealed, isSecretUnreadable } = require("./secret-store");
 const { WIDGET_TYPES, widgetsForTheme, widgetRole } = require("../shared/widget-catalog");
 const { BUILTIN_THEMES } = require("../shared/themes");
-const { buildThemeTokens, SHAPE_MODES, ALERT_EASINGS } = require("../shared/theme-engine");
+const { buildThemeTokens, SHAPE_MODES, SCHEMES, ALERT_EASINGS } = require("../shared/theme-engine");
 const { defaultScenes } = require("../shared/scenes-catalog");
 const { defaultModerationConfig } = require("./integrations/chat-moderation");
 const { getConfigPath, getExamplePath } = require("./storage-paths");
-const { atomicWriteFileSync, AsyncAtomicStore } = require("./atomic-write");
+const { atomicWriteFileSync, AsyncAtomicStore, writeStatsIntervalMs, backupPath, DEFAULT_BACKUP_SLOTS } = require("./atomic-write");
+const { recoverJsonFile, tryReadJson, describeBackups } = require("./data-integrity");
+const { createLogger } = require("./logger");
 
+// Свой логер для состояния: строки о конфиге должны попадать в файл журнала
+// рядом с остальными, иначе «настройки сбросились» разбирать не по чему.
+const configLog = createLogger(null, "config");
+
+/*
+  Загрузка config.json.
+
+  Раньше файл парсился без обработки ошибок: обрыв записи, правка руками или
+  неудачное копирование файла в каталог данных — и приложение просто не
+  запускалось, а пользователь видел только ошибку в консоли. Теперь битый файл
+  сначала уходит в карантин (`config.json.corrupt-<метка>`), потом конфиг
+  поднимается из последнего удачного бэкапа, а если и его нет — из шаблона
+  поставки. Любой из этих случаев виден в логе и в диалоге при старте.
+*/
 function loadConfig() {
   const configPath = getConfigPath();
-  if (!fs.existsSync(configPath)) {
-    const example = fs.readFileSync(getExamplePath(), "utf-8");
-    atomicWriteFileSync(configPath, example);
+  const config = readConfig(configPath);
+  logLoadedConfig(configPath, config);
+  return config;
+}
+
+function readConfig(configPath) {
+  const recovered = recoverJsonFile(configPath, { label: "config.json" });
+
+  if (recovered.source === "file") return decryptConfig(recovered.value);
+
+  if (recovered.source === "backup") {
+    // Восстановленное состояние сразу делаем рабочим файлом, чтобы дальше
+    // приложение жило обычным порядком и сохраняло поверх валидного конфига.
+    atomicWriteFileSync(configPath, JSON.stringify(recovered.value, null, 2));
+    return decryptConfig(recovered.value);
   }
-  return decryptConfig(JSON.parse(fs.readFileSync(configPath, "utf-8")));
+
+  // Файла нет (первый запуск) или восстанавливать нечего — берём шаблон поставки.
+  const example = fs.readFileSync(getExamplePath(), "utf-8");
+  atomicWriteFileSync(configPath, example);
+  return decryptConfig(JSON.parse(example));
+}
+
+/*
+  Что приложение на самом деле прочитало с диска.
+
+  Без этой строки «настройки сбрасываются при перезапуске» неотличимо от
+  «приложение берёт не тот файл» или «в каталоге данных лежит канал от другого
+  профиля»: панель показывает одно, журнал молчит, и остаётся только гадать.
+  Печатаем факты о файле и о том, что в нём заполнено, — без самих секретов:
+  про секрет сообщается только его состояние (пусто / зашифрован / открытый текст).
+*/
+function describeSecretState(value) {
+  const text = typeof value === "string" ? value : "";
+  if (!text) return "empty";
+  if (isSealed(text)) return `encrypted (${text.length} chars)`;
+  return `plain (${text.length} chars)`;
+}
+
+function logLoadedConfig(configPath, config) {
+  const twitch = config.twitch || {};
+  const donationAlerts = config.donationAlerts || {};
+  configLog.info("config loaded", {
+    file: configPath,
+    sections: Object.keys(config).length,
+    twitchChannel: twitch.channel || "(not set)",
+    donationAlertsClientId: donationAlerts.clientId || "(not set)",
+    donationAlertsClientSecret: describeSecretState(donationAlerts.clientSecret),
+    // Код доступа из сети здесь важен: если он пуст, каждый запуск выдает новый
+    // адрес пульта — по этой строке сразу видно, что конфиг не сохраняется.
+    remoteToken: config.remote_token ? "set" : "missing",
+  });
 }
 
 function saveConfig(config) {
@@ -53,6 +115,8 @@ function getConfigStore() {
       logger: (err) => {
         if (err && err.code !== "ENOENT") console.warn("[config] save failed:", err.message || err);
       },
+      label: "config.json",
+      reportEveryMs: writeStatsIntervalMs(),
     });
     configStorePath = p;
   }
@@ -64,6 +128,26 @@ function flushConfigSync() {
   return configStore ? configStore.flushSync() : false;
 }
 
+/*
+  Человекочитаемые имена секретов в конфиге.
+
+  Ими же подписываются сообщения «секрет не удалось прочитать» в диалоге при
+  старте и в панели сервиса: пользователь должен видеть, какой именно ключ надо
+  вставить заново, а не «секрет №3».
+*/
+const SECRET_LABELS = {
+  twitchClientSecret: "Twitch Client Secret",
+  twitchAccessToken: "Twitch User Access Token",
+  twitchRefreshToken: "Twitch Refresh Token",
+  donationAlertsClientSecret: "DonationAlerts Client Secret",
+  donationAlertsAccessToken: "DonationAlerts Access Token",
+  donationAlertsRefreshToken: "DonationAlerts Refresh Token",
+  youtubeClientSecret: "YouTube Client Secret",
+  youtubeAccessToken: "YouTube Access Token",
+  youtubeRefreshToken: "YouTube Refresh Token",
+  obsPassword: "OBS Password",
+};
+
 function encryptConfig(config) {
   const twitch = config.twitch || {};
   const donationAlerts = config.donationAlerts || {};
@@ -73,25 +157,25 @@ function encryptConfig(config) {
     ...config,
     twitch: {
       ...twitch,
-      clientSecret: seal(twitch.clientSecret),
-      userAccessToken: seal(twitch.userAccessToken),
-      refreshToken: seal(twitch.refreshToken),
+      clientSecret: seal(twitch.clientSecret, SECRET_LABELS.twitchClientSecret),
+      userAccessToken: seal(twitch.userAccessToken, SECRET_LABELS.twitchAccessToken),
+      refreshToken: seal(twitch.refreshToken, SECRET_LABELS.twitchRefreshToken),
     },
     donationAlerts: {
       ...donationAlerts,
-      clientSecret: seal(donationAlerts.clientSecret),
-      accessToken: seal(donationAlerts.accessToken),
-      refreshToken: seal(donationAlerts.refreshToken),
+      clientSecret: seal(donationAlerts.clientSecret, SECRET_LABELS.donationAlertsClientSecret),
+      accessToken: seal(donationAlerts.accessToken, SECRET_LABELS.donationAlertsAccessToken),
+      refreshToken: seal(donationAlerts.refreshToken, SECRET_LABELS.donationAlertsRefreshToken),
     },
     youtube: {
       ...youtube,
-      clientSecret: seal(youtube.clientSecret),
-      accessToken: seal(youtube.accessToken),
-      refreshToken: seal(youtube.refreshToken),
+      clientSecret: seal(youtube.clientSecret, SECRET_LABELS.youtubeClientSecret),
+      accessToken: seal(youtube.accessToken, SECRET_LABELS.youtubeAccessToken),
+      refreshToken: seal(youtube.refreshToken, SECRET_LABELS.youtubeRefreshToken),
     },
     obs: {
       ...obs,
-      password: seal(obs.password),
+      password: seal(obs.password, SECRET_LABELS.obsPassword),
     },
   };
 }
@@ -105,27 +189,48 @@ function decryptConfig(config) {
     ...config,
     twitch: {
       ...twitch,
-      clientSecret: open(twitch.clientSecret, "Twitch Client Secret"),
-      userAccessToken: open(twitch.userAccessToken, "Twitch User Access Token"),
-      refreshToken: open(twitch.refreshToken, "Twitch Refresh Token"),
+      clientSecret: open(twitch.clientSecret, SECRET_LABELS.twitchClientSecret),
+      userAccessToken: open(twitch.userAccessToken, SECRET_LABELS.twitchAccessToken),
+      refreshToken: open(twitch.refreshToken, SECRET_LABELS.twitchRefreshToken),
     },
     donationAlerts: {
       ...donationAlerts,
-      clientSecret: open(donationAlerts.clientSecret, "DonationAlerts Client Secret"),
-      accessToken: open(donationAlerts.accessToken, "DonationAlerts Access Token"),
-      refreshToken: open(donationAlerts.refreshToken, "DonationAlerts Refresh Token"),
+      clientSecret: open(donationAlerts.clientSecret, SECRET_LABELS.donationAlertsClientSecret),
+      accessToken: open(donationAlerts.accessToken, SECRET_LABELS.donationAlertsAccessToken),
+      refreshToken: open(donationAlerts.refreshToken, SECRET_LABELS.donationAlertsRefreshToken),
     },
     youtube: {
       ...youtube,
-      clientSecret: open(youtube.clientSecret, "YouTube Client Secret"),
-      accessToken: open(youtube.accessToken, "YouTube Access Token"),
-      refreshToken: open(youtube.refreshToken, "YouTube Refresh Token"),
+      clientSecret: open(youtube.clientSecret, SECRET_LABELS.youtubeClientSecret),
+      accessToken: open(youtube.accessToken, SECRET_LABELS.youtubeAccessToken),
+      refreshToken: open(youtube.refreshToken, SECRET_LABELS.youtubeRefreshToken),
     },
     obs: {
       ...obs,
-      password: open(obs.password, "OBS Password"),
+      password: open(obs.password, SECRET_LABELS.obsPassword),
     },
   };
+}
+
+// Код доступа из сети: 32 hex-символа (16 байт) из CSPRNG.
+function generateRemoteToken() {
+  return crypto.randomBytes(16).toString("hex");
+}
+
+// Принимаем только свой формат: чужой (например, из правленого руками конфига)
+// считаем отсутствующим и выдаём новый.
+function normalizeRemoteToken(value) {
+  const token = typeof value === "string" ? value.trim() : "";
+  return /^[A-Za-z0-9_-]{16,64}$/.test(token) ? token : "";
+}
+
+// Сравнение кодов без утечки по времени: длину проверяем отдельно, потому что
+// timingSafeEqual требует одинаковой длины буферов.
+function tokensMatch(expected, given) {
+  const a = Buffer.from(String(expected || ""), "utf8");
+  const b = Buffer.from(String(given || ""), "utf8");
+  if (!a.length || a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
 }
 
 function clamp(n, min, max) {
@@ -247,6 +352,14 @@ const EDITOR_ASPECT_RATIOS = ["16:9", "16:10", "21:9", "32:9", "4:3", "1:1", "9:
 class AppState {
   constructor(db, config) {
     this.db = db || null;
+    /*
+      Конфиг, переданный снаружи, живёт только в памяти: это не тот конфиг,
+      который лежит на диске (тесты и импорт настроек передают свой). Писать его
+      в рабочий config.json нельзя — переданный набор (например фикстура теста)
+      затрёт настоящие настройки пользователя. Ниже это важно ровно в одном
+      месте — при создании кода доступа.
+    */
+    const fromDisk = !config;
     this.config = config || loadConfig();
     if (!this.config.appearance) this.config.appearance = defaultAppearance();
     if (!Array.isArray(this.config.appearance.customThemes)) this.config.appearance.customThemes = [];
@@ -271,6 +384,22 @@ class AppState {
       ? Math.min(1, Math.max(0, this.config.notificationVolume))
       : 0.8;
     this.config.notificationRepeats = Math.min(5, Math.max(1, Math.round(Number(this.config.notificationRepeats) || 1)));
+    // Код доступа из сети создаётся один раз и живёт в конфиге: иначе после
+    // каждого перезапуска адрес пульта на телефоне перестал бы работать.
+    // Сброс синхронный: обычная запись асинхронная, и падение процесса сразу
+    // после старта оставило бы на диске пустой код — новый адрес на телефоне.
+    const remoteToken = normalizeRemoteToken(this.config.remote_token);
+    if (remoteToken) {
+      this.config.remote_token = remoteToken;
+    } else {
+      this.config.remote_token = generateRemoteToken();
+      // Сброс нужен только для конфига с диска: тогда новый код сразу ложится в
+      // config.json, и адрес пульта не меняется после перезапуска.
+      if (fromDisk) {
+        saveConfig(this.config);
+        flushConfigSync();
+      }
+    }
     const ch = this.config.chatHud || {};
     this.config.chatHud = {
       width: typeof ch.width === "number" ? ch.width : 360,
@@ -359,6 +488,36 @@ class AppState {
     this.config.twitchRewards = Array.isArray(this.config.twitchRewards)
       ? this.config.twitchRewards.map(normalizeTwitchReward).filter(Boolean)
       : [];
+    // Цель сбора и последний крупный донат — разделы, которых в конфиге может
+    // не быть: его правят руками, он приходит из старой версии или из урезанного
+    // экспорта. Без нормализации первый же донат ронял обработчик алерта:
+    // addToGoal обращался к this.config.goal.current, когда goal ещё не было.
+    const goal = this.config.goal || {};
+    this.config.goal = {
+      title: typeof goal.title === "string" ? goal.title.slice(0, 80) : "",
+      current: Math.max(0, Number(goal.current) || 0),
+      target: Math.max(0, Number(goal.target) || 0),
+      currency: typeof goal.currency === "string" && goal.currency.trim() ? goal.currency.trim().slice(0, 8) : "RUB",
+    };
+    const topDonation = this.config.topDonation || {};
+    this.config.topDonation = {
+      user: typeof topDonation.user === "string" ? topDonation.user : "",
+      amount: Math.max(0, Number(topDonation.amount) || 0),
+      currency: typeof topDonation.currency === "string" && topDonation.currency.trim() ? topDonation.currency.trim().slice(0, 8) : "RUB",
+    };
+    // Настройки очереди алертов (см. server/alert-queue.js). Живут в конфиге,
+    // чтобы правила объединения и минимальная сумма не терялись при перезапуске,
+    // а срок паузы — чтобы пауза, поставленная на 30 минут, не снималась
+    // перезапуском приложения.
+    const alertQueue = this.config.alert_queue || {};
+    const mergeWindow = Number(alertQueue.merge_window_sec);
+    this.config.alert_queue = {
+      enabled: alertQueue.enabled !== false,
+      min_amount: Math.max(0, Number(alertQueue.min_amount) || 0),
+      merge_same_user: alertQueue.merge_same_user !== false,
+      merge_window_sec: Number.isFinite(mergeWindow) ? clamp(Math.round(mergeWindow), 0, 600) : 20,
+      pause_until: Math.max(0, Number(alertQueue.pause_until) || 0),
+    };
     if (this.config.twitch.enabled === undefined) this.config.twitch.enabled = true;
     if (this.config.donationAlerts.enabled === undefined) this.config.donationAlerts.enabled = true;
     if (this.config.youtube.enabled === undefined) this.config.youtube.enabled = true;
@@ -372,6 +531,7 @@ class AppState {
 
     this.runtime = {
       startedAt: Date.now(),
+      reconnects: {},
       connectionStatus: {
         twitchChat: "disconnected",
         twitchEvents: this.config.twitch.userAccessToken ? "connecting" : "not_configured",
@@ -381,6 +541,13 @@ class AppState {
       },
       recentEvents: [],
       stats: { followerCount: null, subscriberCount: null },
+      /*
+        Доход текущего стрима.
+
+        Считается на приходе доната, а не разбором истории: история растёт, а
+        счётчик — это одно сложение (см. addDonationToSession).
+      */
+      session: { donations: 0, amount: 0, currency: "" },
       deathCount: 0,
       // Последний снимок конфига Longshot (Executive Hangar); null — ещё не было.
       longshot: null,
@@ -730,6 +897,31 @@ class AppState {
     this.config.goal.current = Math.max(0, (this.config.goal.current || 0) + (Number(amount) || 0));
     saveConfig(this.config);
     return this.config.goal;
+  }
+
+  // ---- Очередь алертов ----
+
+  alertQueueConfig() {
+    return { ...this.config.alert_queue };
+  }
+
+  /*
+    Правила очереди. Используются и панелью (минимальная сумма, объединение),
+    и постановкой паузы: срок паузы хранится здесь, чтобы перезапуск приложения
+    её не снимал.
+  */
+  setAlertQueueConfig(patch = {}) {
+    const next = { ...this.config.alert_queue };
+    if (patch.enabled !== undefined) next.enabled = !!patch.enabled;
+    if (patch.minAmount !== undefined) next.min_amount = Math.max(0, Number(patch.minAmount) || 0);
+    if (patch.mergeSameUser !== undefined) next.merge_same_user = !!patch.mergeSameUser;
+    if (patch.mergeWindowSec !== undefined) {
+      next.merge_window_sec = clamp(Math.round(Number(patch.mergeWindowSec) || 0), 0, 600);
+    }
+    if (patch.pauseUntil !== undefined) next.pause_until = Math.max(0, Number(patch.pauseUntil) || 0);
+    this.config.alert_queue = next;
+    saveConfig(this.config);
+    return { ...next };
   }
 
   setAppConfig({ twitchChannel, port }) {
@@ -1131,7 +1323,26 @@ class AppState {
   }
 
   setConnectionStatus(service, status) {
-    this.runtime.connectionStatus[service] = status;
+    const key = String(service);
+    const next = String(status);
+    const prev = this.runtime.connectionStatus[key];
+    // Переход «не connecting → connecting» — это попытка подключиться (в том
+    // числе переподключение после обрыва). Считаем их, чтобы шторм обрывов был
+    // виден числом (/healthz и отчёт для поддержки), а не только строками в логе.
+    if (next === "connecting" && prev !== "connecting") {
+      this.runtime.reconnects[key] = (this.runtime.reconnects[key] || 0) + 1;
+    }
+    this.runtime.connectionStatus[key] = next;
+  }
+
+  // Счётчики рантайма наружу: сколько живёт процесс и сколько раз интеграции
+  // переподключались. В снапшот для панели не уходит — там это лишний шум.
+  runtimeStats() {
+    return {
+      startedAt: this.runtime.startedAt,
+      uptimeSec: Math.max(0, Math.round((Date.now() - this.runtime.startedAt) / 1000)),
+      reconnects: { ...this.runtime.reconnects },
+    };
   }
 
   setStats(snapshot) {
@@ -1150,9 +1361,54 @@ class AppState {
     return this.runtime.stats;
   }
 
+  /*
+    Доход текущего стрима.
+
+    Донаты считаются в момент прихода (см. index.js:bus.on("alert")), а не
+    разбором истории при отрисовке: история растёт, а счётчик — это одно
+    сложение, поэтому панель может спрашивать его сколько угодно раз.
+
+    Валюта — как у последнего доната. Как и в цели сбора, касса не пересчитывает
+    валюты между собой: зрители платят в одной валюте, а курсы здесь были бы
+    выдумкой.
+  */
+  addDonationToSession(amount, currency) {
+    const value = Number(amount) || 0;
+    if (value <= 0) return this.sessionDonations();
+    this.runtime.session.donations += 1;
+    this.runtime.session.amount += value;
+    if (currency) this.runtime.session.currency = String(currency);
+    return this.sessionDonations();
+  }
+
+  sessionDonations() {
+    return {
+      count: this.runtime.session.donations,
+      amount: this.runtime.session.amount,
+      currency: this.runtime.session.currency,
+    };
+  }
+
+  // Новый стрим — новый счёт.
+  resetSessionDonations() {
+    this.runtime.session = { donations: 0, amount: 0, currency: "" };
+    return this.sessionDonations();
+  }
+
+  /*
+    Ключи приложения (Client ID/Secret) для OAuth.
+
+    Секрет сохраняется только непустым. Причина не в аккуратности, а в том, как
+    устроен интерфейс: панель НИКОГДА не отдаёт сохранённый секрет обратно в поле
+    (это секрет), поэтому поле при каждом открытии пустое, а кнопка «Подключить»
+    отправляет ровно то, что в нём есть. Без этой проверки одно нажатие кнопки
+    стирало рабочие ключи, и сервис отвечал invalid_client на обмен токена —
+    ровно та ошибка, которую в такой ситуации невозможно объяснить по интерфейсу.
+  */
   saveTwitchApp({ clientId, clientSecret }) {
     if (clientId !== undefined) this.config.twitch.clientId = String(clientId).trim();
-    if (clientSecret !== undefined) this.config.twitch.clientSecret = String(clientSecret).trim();
+    const twitchSecret = typeof clientSecret === "string" ? clientSecret.trim() : "";
+    if (twitchSecret) this.config.twitch.clientSecret = twitchSecret;
     saveConfig(this.config);
   }
 
@@ -1166,7 +1422,8 @@ class AppState {
 
   saveDonationAlertsApp({ clientId, clientSecret }) {
     if (clientId !== undefined) this.config.donationAlerts.clientId = String(clientId).trim();
-    if (clientSecret !== undefined) this.config.donationAlerts.clientSecret = String(clientSecret).trim();
+    const daSecret = typeof clientSecret === "string" ? clientSecret.trim() : "";
+    if (daSecret) this.config.donationAlerts.clientSecret = daSecret;
     saveConfig(this.config);
   }
 
@@ -1180,7 +1437,8 @@ class AppState {
 
   saveYoutubeApp({ clientId, clientSecret }) {
     if (clientId !== undefined) this.config.youtube.clientId = String(clientId).trim();
-    if (clientSecret !== undefined) this.config.youtube.clientSecret = String(clientSecret).trim();
+    const youtubeSecret = typeof clientSecret === "string" ? clientSecret.trim() : "";
+    if (youtubeSecret) this.config.youtube.clientSecret = youtubeSecret;
     saveConfig(this.config);
   }
 
@@ -1366,6 +1624,9 @@ class AppState {
       secondary: seeds.secondary || "#7ee0d6",
       tertiary: seeds.tertiary || "#ffb0d8",
       surfaceSeed: seeds.surfaceSeed || seeds.primary || "#8878c8",
+      // Тёмная схема — как в приложении; светлая выводит ту же палитру из
+      // светлой шкалы поверхностей.
+      mode: SCHEMES.includes(seeds.mode) ? seeds.mode : "dark",
       shapeMode: SHAPE_MODES.includes(seeds.shapeMode) ? seeds.shapeMode : "rounded",
       fontPreset: seeds.fontPreset === "orbital" ? "orbital" : "nebula",
       fontDisplay: String(seeds.fontDisplay || "").trim(),
@@ -1613,6 +1874,11 @@ class AppState {
       hud_display_id: this.config.hud_display_id,
       chat_hud_hotkey: this.config.chat_hud_hotkey,
       chat_hud_display_id: this.config.chat_hud_display_id,
+      // Код доступа не переносится вместе с чужим конфигом: остаётся свой.
+      remote_token: this.config.remote_token,
+      // Правила очереди переносим, а срок паузы — нет: чужая пауза не должна
+      // заглушить алерты на чужом импорте.
+      alert_queue: { ...(newConfig.alert_queue || this.config.alert_queue), pause_until: 0 },
     };
 
     this._migrateAppearance();
@@ -1624,6 +1890,64 @@ class AppState {
       this.config.layout = this._layout;
     }
     saveConfig(this.config);
+  }
+
+  // ---- Восстановление из резервных копий ----
+
+  listConfigBackups() {
+    return describeBackups(getConfigPath(), DEFAULT_BACKUP_SLOTS);
+  }
+
+  /*
+    Откат настроек к бэкапу. В бэкапе секреты лежат зашифрованными (как и в самом
+    config.json), поэтому значение проходит через decryptConfig — без этого
+    зашифрованная строка сохранилась бы как обычное значение и на следующей
+    записи зашифровалась бы второй раз.
+
+    Возвращаем только разобранный конфиг: применяет его вызывающий код
+    (replaceConfig + перезапуск интеграций), чтобы не получилось «новые
+    настройки при старых подключениях».
+  */
+  restoreConfigFromBackup(slot) {
+    const attempt = tryReadJson(backupPath(getConfigPath(), slot));
+    if (!attempt.ok) {
+      return { ok: false, error: (attempt.error && attempt.error.message) || "резервная копия недоступна" };
+    }
+    return { ok: true, slot: Number(slot), config: decryptConfig(attempt.value) };
+  }
+
+  // Перечитать раскладку из БД: нужно после отката БД к бэкапу, иначе в памяти
+  // останется старая раскладка и следующее сохранение затрёт восстановленную.
+  reloadFromDb() {
+    if (!this.db) return this._layout;
+    this._layout = this._loadLayoutFromDb();
+    return this._layout;
+  }
+
+  // ---- Доступ из сети ----
+
+  remoteToken() {
+    return this.config.remote_token || "";
+  }
+
+  // Проверка предъявленного кода (query или заголовок).
+  checkRemoteToken(given) {
+    return tokensMatch(this.remoteToken(), given);
+  }
+
+  /*
+    Новый код доступа. Нужен, если адрес пульта ушёл не туда (показали в чате,
+    на скриншоте, отдали гостю): старый перестаёт работать, и подключённые из
+    сети устройства отваливаются при следующем переподключении.
+
+    Сброс на диск синхронный: старая копия не должна пережить падение процесса —
+    иначе отозванный код снова начнёт пускать в порт.
+  */
+  rotateRemoteToken() {
+    this.config.remote_token = generateRemoteToken();
+    saveConfig(this.config);
+    flushConfigSync();
+    return this.config.remote_token;
   }
 
   snapshot() {
@@ -1651,6 +1975,38 @@ class AppState {
       twitchChannel: this.config.twitch.channel,
       twitchClientId: this.config.twitch.clientId,
       donationAlertsClientId: this.config.donationAlerts.clientId,
+      /*
+        Состояние подключения DonationAlerts без секретов.
+
+        Панель по нему показывает, есть ли токен, можно ли его обновить и до
+        какого срока он действителен: без этого «донаты не приходят» приходится
+        диагностировать по логам, а самый частый ответ — «сервис подключён,
+        но токен просрочен и обновлять его нечем».
+
+        expiresAt = 0 означает «срок неизвестен» (DonationAlerts не всегда его
+        отдаёт) — в этом случае токен обновляется по refresh_token при обращении.
+      */
+      donationAlertsAuth: {
+        connected: !!this.config.donationAlerts.accessToken,
+        refreshable: !!this.config.donationAlerts.refreshToken,
+        userId: this.config.donationAlerts.userId || "",
+        expiresAt: Number(this.config.donationAlerts.expiresAt) || 0,
+        /*
+          Ключи приложения — только факты о секрете, без самого секрета.
+
+          Без заполненного Client Secret обмен кода на токен заведомо провалится,
+          и сервис ответит невнятным invalid_client: по ответу невозможно понять,
+          что дело в пустом поле. Панель должна видеть это сама, не доводя до
+          неудачной попытки.
+
+          Пустой секрет и секрет, который не удалось прочитать (недоступно
+          системное хранилище, конфиг перенесён с другой машины — см.
+          server/secret-store.js), для сервиса равнозначны, а для пользователя
+          нет: во втором случае ключ надо вставить заново, а не просто заполнить.
+        */
+        hasClientSecret: !!String(this.config.donationAlerts.clientSecret || "").trim(),
+        clientSecretUnreadable: isSecretUnreadable(SECRET_LABELS.donationAlertsClientSecret),
+      },
       youtubeClientId: this.config.youtube.clientId,
       youtubeVideoId: this.config.youtube.videoId,
       twitchEnabled: this.config.twitch.enabled,
@@ -1665,6 +2021,8 @@ class AppState {
       longshot: this.runtime.longshot,
       recentEvents: this.runtime.recentEvents,
       stats: this.runtime.stats,
+      // Счёт текущего стрима (см. addDonationToSession).
+      sessionDonations: this.sessionDonations(),
       deathCount: this.runtime.deathCount,
       activeScene: this.runtime.activeScene,
       sceneStartedAt: this.runtime.sceneStartedAt,

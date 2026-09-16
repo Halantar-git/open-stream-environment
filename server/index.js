@@ -22,10 +22,34 @@ const express = require("express");
 const { WebSocketServer } = require("ws");
 const { EventEmitter } = require("events");
 
+/*
+  Ставим первым делом: фильтр глушит единственное чужое предупреждение
+  (punycode, DEP0040 — см. server/deprecation-filter.js) и должен успеть до
+  того, как его породит код Electron. В Electron-режиме его уже поставил main.js,
+  поэтому вызов идемпотентен; здесь он нужен для `npm run server:only`.
+*/
+const { installDeprecationFilter } = require("./deprecation-filter");
+installDeprecationFilter();
+
 const { AppState } = require("./state");
-const { getUserMediaDir, getLogsDir } = require("./storage-paths");
+const { getUserMediaDir, getLogsDir, getConfigDir } = require("./storage-paths");
 const { EVENT_TYPES, ALERT_DURATIONS_MS } = require("../shared/events");
 const MicFrame = require("../shared/mic-frame");
+const { buildHealthReport } = require("./health");
+const { createLongRunMonitor } = require("./longrun-monitor");
+const { createAuditLog, summarizePayload } = require("./audit-log");
+const { isLoopbackRequest, checkUpgrade, createCommandLimiter } = require("./access-control");
+const { buildSupportBundle, renderSupportBundle } = require("./support-bundle");
+const { getRecoveryEvents } = require("./data-integrity");
+
+// Версия нужна в отчётах (/healthz и отчёт для поддержки). В Electron её
+// передаёт main.js из app.getVersion(); в режиме server:only берём из package.json.
+let pkgVersion = null;
+try {
+  pkgVersion = require("../package.json").version || null;
+} catch (_) {
+  /* package.json рядом нет — версию просто не покажем */
+}
 
 // Роль WebSocket-клиента берётся из query строки подключения (?role=overlay).
 // Нужна, чтобы высокочастотные микрокадры не рассылались панели управления,
@@ -37,18 +61,21 @@ function roleFromUrl(url, fallback = "other") {
   const role = new URLSearchParams(query).get("role");
   return role ? String(role) : fallback;
 }
+const { createAlertQueue } = require("./alert-queue");
 const { createLogger, enableFileLogging } = require("./logger");
+const { installCrashHandlers } = require("./crash-guard");
 const { mountOAuthRoutes, buildTwitchAuthorizeUrl, buildDonationAlertsAuthorizeUrl, buildYoutubeAuthorizeUrl } = require("./oauth");
 const { startTwitchChat, sendTwitchChatMessage } = require("./integrations/twitch-chat");
 const { startChatBot } = require("./integrations/chat-bot");
 const { startTwitchEvents } = require("./integrations/twitch-eventsub");
 const { triggerRewardActions } = require("./integrations/twitch-eventsub");
 const { createTwitchClip, createStreamMarker } = require("./integrations/twitch-helix");
-const { startDonationAlerts } = require("./integrations/donationalerts");
+const { startDonationAlerts, fetchRecentDonations } = require("./integrations/donationalerts");
 const { startYoutube } = require("./integrations/youtube-live");
 const { startObsWebSocket } = require("./integrations/obs-websocket");
 const { createCliHandler } = require("./cli");
 const { createLongshotSync } = require("./longshot-sync");
+const { createEventLoopMonitor } = require("./perf-monitor");
 const I18n = require("../shared/i18n");
 
 const LOCALES = {
@@ -106,12 +133,136 @@ function getLocalIp() {
   return "127.0.0.1";
 }
 
-function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
+// Mic frames are ~371 bytes and JSON commands are small, so a 256 KB cap is
+// generous. The ws default (~100 MB) would let one client exhaust memory.
+const WS_MAX_PAYLOAD = 256 * 1024;
+
+function isLoopbackOrPrivateHost(host) {
+  const h = String(host || "").replace(/^\[|\]$/g, "");
+  if (h === "localhost" || h === "::1") return true;
+  if (/^127\./.test(h)) return true;
+  if (/\.local$/i.test(h)) return true;
+  // Single-label names (NetBIOS/computer name), e.g. DESKTOP-ABC:8710.
+  if (!h.includes(".") && !h.includes(":")) return true;
+  return isPrivateIPv4(h);
+}
+
+// Browsers exempt WebSockets from the same-origin policy, so without this a
+// page the streamer happens to have open could drive the local bus. Allow only
+// same-machine/LAN origins; requests with no Origin header come from
+// non-browser clients (Stream Deck plugin, tests) and stay allowed.
+function isAllowedWsOrigin(req, port) {
+  const origin = req && req.headers && req.headers.origin;
+  if (!origin) return true;
+  // Electron windows are loaded from file:// (opaque origin).
+  if (origin === "file://" || origin === "null") return true;
+  let parsed;
+  try {
+    parsed = new URL(origin);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+  if (parsed.port !== String(port)) return false;
+  return isLoopbackOrPrivateHost(parsed.hostname);
+}
+
+function createServer({ db, onSetHudHotkey, onSetChatHudHotkey, appName, version } = {}) {
   enableFileLogging(getLogsDir());
+  const serverLog = createLogger(bus, "server");
+  /*
+    Отдельный логер для DonationAlerts.
+
+    Те же строки уходят и в общий терминал (там они подписаны сервисом), но
+    панель DonationAlerts копит только их — поэтому действия из неё самой
+    (переподключение, подтягивание пропущенных) видно рядом с ответами сервиса,
+    а не в общем потоке.
+  */
+  const donationsLog = createLogger(bus, "donationalerts");
+  // Телеметрия: пик лага event loop за интервал — чтобы «почему отстал чат»
+  // можно было подтвердить строкой в логе, а не догадками. Молчит, пока лаг
+  // ниже порога (см. perf-monitor.js).
+  const perfMonitor = createEventLoopMonitor();
   const state = new AppState(db);
   const app = express();
+  // No upside to advertising the framework on a local overlay server.
+  app.disable("x-powered-by");
   const server = http.createServer(app);
-  const wss = new WebSocketServer({ server, path: "/ws" });
+  const wss = new WebSocketServer({ noServer: true, maxPayload: WS_MAX_PAYLOAD });
+
+  /*
+    Доступ: панель, оверлей в OBS, HUD и редакторы живут на этой же машине и
+    ничего не спрашивают. Всё, что приходит из локальной сети (телефон, чужие
+    скрипты), обязано предъявить код доступа: порт слушает все интерфейсы, и без
+    такого разделения любой в той же Wi-Fi-сети мог бы переключать сцены.
+    Правила и сравнение живут в access-control.js — там же их тесты.
+  */
+
+  // Отказы считаем отдельно от журнала команд: по этому числу видно,
+  // стучится ли кто-то в порт без кода.
+  const accessCounters = { deniedUpgrade: 0, deniedHttp: 0, rateLimited: 0 };
+
+  /*
+    Журнал команд: кольцевой буфер на 200 записей и запись в файловый лог —
+    только для действий из сети и срабатываний ограничителя, чтобы лог не
+    утонул в командах панели (см. audit-log.js).
+  */
+  const audit = createAuditLog({
+    limit: 200,
+    onEntry: (entry) => {
+      if (!entry.external && !entry.limited) return;
+      serverLog.warn(entry.limited ? "command rate limited" : "command from network", {
+        type: entry.type,
+        role: entry.role,
+        details: entry.details,
+      });
+    },
+  });
+
+  // Ограничитель частоты на клиента: защита от самодеятельных скриптов и
+  // зациклившегося пульта. Нормальный темп команд панели — единицы в секунду,
+  // поэтому лимит с запасом, но не бесконечный.
+  const commandLimiter = createCommandLimiter({ windowMs: 1000, max: 60 });
+
+  function allowCommand(socket) {
+    if (commandLimiter.allow(socket)) return true;
+    accessCounters.rateLimited += 1;
+    const now = Date.now();
+    if (!socket._oseRateWarnedAt || now - socket._oseRateWarnedAt >= 5000) {
+      socket._oseRateWarnedAt = now;
+      serverLog.warn("command rate limit reached", { role: socket.role || "other", limit: commandLimiter.max });
+    }
+    return false;
+  }
+
+  server.on("upgrade", (req, socket, head) => {
+    const pathname = String(req.url || "").split("?")[0] || "/";
+    if (pathname !== "/ws") {
+      socket.write("HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n");
+      socket.destroy();
+      return;
+    }
+    // Источник (защита от чужой страницы в браузере) и код (защита от чужого
+    // устройства в сети) проверяются вместе — решение принимает access-control.
+    const decision = checkUpgrade(req, {
+      port: state.config.port || 8710,
+      isAllowedOrigin: isAllowedWsOrigin,
+      matchesToken: (given) => state.checkRemoteToken(given),
+    });
+    if (!decision.ok) {
+      accessCounters.deniedUpgrade += 1;
+      serverLog.warn("rejected websocket upgrade", {
+        reason: decision.reason,
+        origin: (req.headers && req.headers.origin) || null,
+        role: roleFromUrl(req.url, "other"),
+        path: pathname,
+      });
+      socket.write("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n");
+      socket.destroy();
+      return;
+    }
+    wss.handleUpgrade(req, socket, head, (ws) => wss.emit("connection", ws, req));
+  });
 
   app.use(express.static(path.join(__dirname, "..", "overlay"), { redirect: false }));
   app.use("/overlay", express.static(path.join(__dirname, "..", "overlay")));
@@ -119,6 +270,148 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
   app.use("/assets", express.static(path.join(__dirname, "..", "assets")));
   app.use("/media", express.static(getUserMediaDir()));
   app.use("/remote", express.static(path.join(__dirname, "..", "remote")));
+
+  /*
+    Диагностика.
+
+    /healthz — короткий JSON о том, что происходит: жив ли сервер, сколько
+    клиентов подключено, статусы интеграций, размеры хранилища, телеметрия
+    записи, лаг event loop и список проблем. Путей и секретов в нём нет, поэтому
+    отдаём всем, кто достучался до порта — на это удобно смотреть мониторингом
+    и отвечать на вопрос «сервер точно работает?».
+
+    /support-bundle — полный отчёт для поддержки: хвост лога, список файлов
+    данных, сводка настроек без секретов (см. support-bundle.js). Он содержит
+    пути и много деталей, поэтому отдаётся ТОЛЬКО локальным запросам: из
+    локальной сети его не скачать.
+  */
+  const startedAt = Date.now();
+
+  // След по времени — для «стрим шёл 6 часов, память выросла на 400 МБ» и
+  // «чат переподключался 30 раз». Раз в 10 минут снимается образец, в лог
+  // попадает только то, что заслуживает внимания (см. longrun-monitor.js).
+  const longRun = createLongRunMonitor({
+    log: (line) => serverLog.info(line),
+    sample: () => ({
+      wsClients: wss.clients.size,
+      reconnects: state.runtimeStats().reconnects,
+      lagMaxMs: perfMonitor.snapshot().max,
+    }),
+  });
+
+  function healthReport() {
+    const byRole = {};
+    wss.clients.forEach((client) => {
+      const role = client.role || "other";
+      byRole[role] = (byRole[role] || 0) + 1;
+    });
+    const snapshot = state.snapshot();
+    return buildHealthReport({
+      appName: appName || "Open Stream Environment",
+      version: version || pkgVersion,
+      port: currentPort(),
+      listening: !!server.listening,
+      uptimeSec: (Date.now() - startedAt) / 1000,
+      wsClients: wss.clients.size,
+      wsByRole: byRole,
+      integrations: snapshot.connectionStatus,
+      session: currentSession
+        ? { id: currentSession.id, channel: currentSession.channel, startedAt: currentSession.startedAt }
+        : null,
+      storage: db ? db.getStorageStats() : null,
+      writes: db && typeof db.getWriteStats === "function" ? db.getWriteStats() : null,
+      perf: perfMonitor.snapshot(),
+      longrun: longRun.snapshot(),
+      security: {
+        tokenRequired: true,
+        deniedUpgrade: accessCounters.deniedUpgrade,
+        deniedHttp: accessCounters.deniedHttp,
+        rateLimited: accessCounters.rateLimited,
+        audit: audit.counters(),
+      },
+    });
+  }
+
+  app.get("/healthz", (_req, res) => {
+    res.set("Cache-Control", "no-store");
+    res.json(healthReport());
+  });
+
+  // Один и тот же текст отдаётся и по HTTP, и в диалог сохранения в Electron:
+  // собираем в одном месте, чтобы отчёты не разъехались.
+  function supportBundleText() {
+    const bundle = buildSupportBundle({
+      appName: appName || "Open Stream Environment",
+      version: version || pkgVersion,
+      configDir: getConfigDir(),
+      logsDir: getLogsDir(),
+      remoteUrl,
+      config: state.config,
+      layout: state.layout,
+      health: healthReport(),
+      writes: db && typeof db.getWriteStats === "function" ? db.getWriteStats() : null,
+      recoveryEvents: getRecoveryEvents(),
+      audit: audit.recent(50),
+    });
+    return renderSupportBundle(bundle);
+  }
+
+  /*
+    Ручное восстановление из резервных копий (кнопка в «Настройки → Данные»).
+
+    config — меняет настройки и переподключает интеграции (иначе получились бы
+    новые настройки при старых подключениях).
+    database — возвращает раскладку/пресеты/сессии из снапшота; историю событий
+    и чата это не трогает, она живёт в отдельных append-only файлах.
+  */
+  function listBackups() {
+    return {
+      config: state.listConfigBackups(),
+      database: db ? db.listBackups() : [],
+    };
+  }
+
+  function restoreBackup(target, slot) {
+    const index = Number(slot);
+    if (!Number.isInteger(index) || index < 0) return { ok: false, error: "неверный номер копии" };
+
+    if (target === "config") {
+      const result = state.restoreConfigFromBackup(index);
+      if (!result.ok) return result;
+      serverLog.warn("config restored from backup", { slot: index });
+      importConfig(result.config);
+      return { ok: true, slot: index, target };
+    }
+
+    if (target === "database") {
+      if (!db) return { ok: false, error: "база недоступна" };
+      const result = db.restoreFromBackup(index);
+      if (!result.ok) return result;
+      state.reloadFromDb();
+      serverLog.warn("database restored from backup", { slot: index });
+      broadcastTheme();
+      broadcast(EVENT_TYPES.STATE, stateSnapshot());
+      return { ok: true, slot: index, target };
+    }
+
+    return { ok: false, error: "неизвестная цель восстановления" };
+  }
+
+  app.get("/support-bundle", (req, res) => {
+    if (!isLoopbackRequest(req)) {
+      accessCounters.deniedHttp += 1;
+      serverLog.warn("support bundle requested from outside localhost", {
+        address: String((req.socket && req.socket.remoteAddress) || ""),
+      });
+      res.status(403).set("Content-Type", "text/plain; charset=utf-8").send("403: отчёт доступен только с этой машины");
+      return;
+    }
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    res.set("Cache-Control", "no-store");
+    res.set("Content-Type", "text/plain; charset=utf-8");
+    res.set("Content-Disposition", `attachment; filename="ose-support-${stamp}.txt"`);
+    res.send(supportBundleText());
+  });
 
   let twitchChatCtrl = null;
   let chatBotCtrl = null;
@@ -133,13 +426,31 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
   let isSpinning = false;
   let hudEditMode = false;
   let pendingVideoTarget = null; // { sceneName, splash } — advance after the splash ends
+  let recovering = false; // идёт запрос списка донатов к DonationAlerts
   let language = db ? db.getLanguage() : "en";
   I18n.setLang(language);
-  const serverLog = createLogger(bus, "server");
-  let remoteUrl = `http://${getLocalIp()}:${state.config.port || 8710}/remote`;
+
+  // Адрес пульта всегда с кодом доступа: он же нужен при подключении к шине из
+  // сети (панель и оверлей на этой машине кода не требуют).
+  function buildRemoteUrl(port) {
+    return `http://${getLocalIp()}:${port}/remote?token=${state.remoteToken()}`;
+  }
+  let remoteUrl = buildRemoteUrl(state.config.port || 8710);
 
   function stateSnapshot() {
-    return { ...state.snapshot(), remoteUrl, hudEditMode };
+    return {
+      ...state.snapshot(),
+      remoteUrl,
+      hudEditMode,
+      alertQueue: queueSnapshot(),
+      /*
+        Начало текущей сессии. У стрим-событий нет sessionId — сессия считается
+        по времени (так же, как в агрегатах сессий), поэтому панель просит
+        «только этот стрим» именно границей времени. 0 — сессии ещё нет, тогда
+        ограничения нет.
+      */
+      sessionStartedAt: (currentSession && currentSession.startedAt) || 0,
+    };
   }
 
   function broadcast(type, payload) {
@@ -149,8 +460,64 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
     });
   }
 
-  // Микрокадры — только оверлеям (включая HUD и превью темы, они грузят тот же
-  // overlay.html), а не всем клиентам.
+  // Правила очереди в терминах модуля (config хранит их в snake_case).
+  function queueRulesFromConfig() {
+    const config = state.alertQueueConfig();
+    return {
+      minAmount: config.min_amount,
+      mergeSameUser: config.merge_same_user,
+      mergeWindowSec: config.merge_window_sec,
+    };
+  }
+
+  /*
+    Снимок очереди для интерфейса.
+
+    К снимку самой очереди добавляется флаг «очередь включена»: это настройка
+    приложения (alert_queue.enabled), а не свойство очереди — сама очередь про
+    него не знает, потому что при выключенной очереди в неё просто не кладут.
+  */
+  function queueSnapshot() {
+    return { ...alertQueue.snapshot(), enabled: state.alertQueueConfig().enabled !== false };
+  }
+
+  /*
+    Очередь алертов — одна на всё приложение (см. alert-queue.js).
+
+    Раньше рассылка была прямой: что пришло на шину, то и ушло клиентам, а
+    порядок и паузы держал виджет внутри страницы OBS. Из этого следовало, что
+    панель не знает, что происходит в эфире, перезагрузка страницы OBS молча
+    выбрасывает непоказанное, а повлиять на порядок нельзя.
+
+    Теперь расписание держит сервер, а рассылка идёт веерно всем клиентам:
+    очередь общая, и «показано» сервер отсчитывает по таймеру, а не по
+    подтверждению от страницы (кто именно её получил — неважно).
+  */
+  const alertQueue = createAlertQueue({
+    rules: queueRulesFromConfig(),
+    onPlay: (item) => broadcast(EVENT_TYPES.ALERT, item),
+    onChange: (change) => {
+      broadcast(EVENT_TYPES.ALERT_QUEUE_UPDATE, { queue: queueSnapshot(), reason: change.reason });
+    },
+  });
+
+  /*
+    Отдать алерт в эфир: через очередь или напрямую.
+
+    alert_queue.enabled === false — «простой режим»: алерты уходят клиентам сразу,
+    без правил, объединения, паузы и списка очереди. Это запасной выход, если
+    очередь мешает; всё остальное (история, цель сбора, озвучка) работает как есть.
+  */
+  function publishAlert(alert, meta) {
+    if (state.alertQueueConfig().enabled === false) {
+      broadcast(EVENT_TYPES.ALERT, alert);
+      return { accepted: true, queued: false };
+    }
+    return alertQueue.enqueue(alert, meta);
+  }
+
+  // Микрокадры — только оверлеям (включая HUD и превью темы, они грузят тот
+  // же overlay.html), а не всем клиентам.
   function broadcastMicFrame(buffer) {
     wss.clients.forEach((client) => {
       if (client.readyState === 1 && MIC_FRAME_ROLES.has(client.role)) {
@@ -289,6 +656,47 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
     }
   }
 
+  /*
+    Переподключение сервиса по кнопке.
+
+    «Донаты перестали приходить» — почти всегда оборванный сокет, и самый
+    быстрый способ это починить — перезапустить интеграцию, не трогая ни
+    настройки, ни приложение. Идёт через те же restart*(), что и старт,
+    поэтому состояние в панели обновляется как обычно (connection_status).
+  */
+  function restartIntegration(rawService) {
+    const service = String(rawService || "");
+    switch (service) {
+      case "twitch":
+        restartTwitchChat();
+        restartTwitchEvents();
+        break;
+      case "twitchChat":
+        restartTwitchChat();
+        break;
+      case "twitchEvents":
+        restartTwitchEvents();
+        break;
+      case "donationAlerts":
+        restartDonationAlerts();
+        break;
+      case "youtube":
+        restartYoutube();
+        break;
+      case "obs":
+        restartObs();
+        break;
+      default:
+        serverLog.warn("unknown integration to restart", { service });
+        return false;
+    }
+    // Для DonationAlerts строка идёт в его собственный журнал: панель
+    // показывает её рядом с ответами сервиса, то есть там, где её ищут.
+    const log = service === "donationAlerts" ? donationsLog : serverLog;
+    log.info("integration restarted by request", { service });
+    return true;
+  }
+
   function restartObs() {
     if (obsCtrl) obsCtrl.stop();
     obsCtrl = null;
@@ -384,6 +792,14 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
 
   mountOAuthRoutes(app, {
     state,
+    /*
+      Строки OAuth идут под именем самого сервиса.
+
+      Так они попадают и в файл журнала (по нему разбирается «почему
+      invalid_client» без скриншотов браузера), и в панель DonationAlerts —
+      туда, где видно остальные строки этого сервиса, а не в общий поток.
+    */
+    loggerFor: (service) => createLogger(bus, service),
     hooks: {
       onTwitchConnected: restartTwitchEvents,
       onDonationAlertsConnected: restartDonationAlerts,
@@ -402,6 +818,9 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
 
   wss.on("connection", (socket, req) => {
     socket.role = roleFromUrl(req && req.url);
+    // Запоминаем происхождение: из сети или с этой машины. Нужно и для журнала,
+    // и чтобы понимать, к каким клиентам применим код доступа.
+    socket.external = !isLoopbackRequest(req);
     socket.send(JSON.stringify({ type: EVENT_TYPES.LOCALES, payload: { lang: language, locales: LOCALES } }));
     socket.send(JSON.stringify({ type: EVENT_TYPES.STATE, payload: stateSnapshot() }));
     if (db) {
@@ -409,6 +828,17 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
       socket.send(JSON.stringify({ type: EVENT_TYPES.WHEEL_CONFIG, payload: { config: db.getWheelConfig() } }));
       socket.send(JSON.stringify({ type: EVENT_TYPES.WHEEL_SPEED_CONFIG, payload: { config: db.getWheelSpeedConfig() } }));
       socket.send(JSON.stringify({ type: EVENT_TYPES.OVERLAY_MIC_CONFIG, payload: { config: db.getMicConfig() } }));
+    }
+
+    /*
+      Перезагрузка страницы OBS не должна съедать то, что играет: очередь уже
+      знает текущий алерт, поэтому просто отдаём его заново. Второй записи в
+      историю не будет — за историю отвечают побочные эффекты bus.on("alert"),
+      а не рассылка.
+    */
+    if (socket.role === "overlay") {
+      const current = alertQueue.snapshot().now;
+      if (current) socket.send(JSON.stringify({ type: EVENT_TYPES.ALERT, payload: current }));
     }
 
     socket.on("message", (raw, isBinary) => {
@@ -436,6 +866,13 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
         return;
       }
 
+      const external = !!socket.external;
+      // Каждая команда оставляет след: тип, роль клиента, происхождение и пара
+      // безопасных деталей (без самого payload — см. audit-log.js). Команды
+      // сверх лимита тоже фиксируем, но не выполняем.
+      const limited = !allowCommand(socket);
+      audit.record({ type: msg.type, role: socket.role, external, limited, details: summarizePayload(msg.payload) });
+      if (limited) return;
       handleClientCommand(msg);
     });
   });
@@ -1075,6 +1512,10 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
         state.setYoutubeVideoId(msg.payload && msg.payload.videoId);
         break;
       }
+      case EVENT_TYPES.CMD_RESTART_INTEGRATION: {
+        restartIntegration(msg.payload && msg.payload.service);
+        break;
+      }
       case EVENT_TYPES.CMD_SET_NOTIFICATION_SOUND: {
         state.setNotificationSound(!!(msg.payload && msg.payload.enabled));
         broadcast(EVENT_TYPES.STATE, stateSnapshot());
@@ -1155,7 +1596,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
         break;
       }
       case EVENT_TYPES.CMD_SET_TWITCH_REWARDS: {
-        const rewards = state.setTwitchRewards((msg.payload && msg.payload.rewards) || []);
+        state.setTwitchRewards((msg.payload && msg.payload.rewards) || []);
         broadcast(EVENT_TYPES.STATE, stateSnapshot());
         break;
       }
@@ -1187,6 +1628,80 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
         });
         break;
       }
+      /*
+        Очередь алертов: панель и пульт могут вмешаться в то, что играет и что
+        ждёт. Отдельного ответа на команду нет — любое изменение очереди
+        рассылает свежий снимок (ALERT_QUEUE_UPDATE), по нему UI и рисуется.
+      */
+      case EVENT_TYPES.CMD_ALERT_QUEUE_PAUSE: {
+        const minutes = Math.max(0, Number(msg.payload && msg.payload.minutes) || 0);
+        const snapshot = alertQueue.pause(minutes);
+        // Срок паузы живёт в конфиге, чтобы перезапуск приложения её не снимал.
+        state.setAlertQueueConfig({ pauseUntil: snapshot.pausedUntil || 0 });
+        break;
+      }
+      case EVENT_TYPES.CMD_ALERT_QUEUE_RESUME: {
+        alertQueue.resume();
+        state.setAlertQueueConfig({ pauseUntil: 0 });
+        break;
+      }
+      case EVENT_TYPES.CMD_ALERT_QUEUE_SKIP: {
+        alertQueue.finishCurrent("skip");
+        break;
+      }
+      case EVENT_TYPES.CMD_ALERT_QUEUE_REMOVE: {
+        alertQueue.remove((msg.payload && msg.payload.id) || "");
+        break;
+      }
+      case EVENT_TYPES.CMD_ALERT_QUEUE_UP: {
+        alertQueue.moveUp((msg.payload && msg.payload.id) || "");
+        break;
+      }
+      case EVENT_TYPES.CMD_ALERT_QUEUE_PLAY_NOW: {
+        // Текущий алерт не выбрасывается: он встаёт в начало ожидающих.
+        alertQueue.playNow((msg.payload && msg.payload.id) || "");
+        break;
+      }
+      case EVENT_TYPES.CMD_ALERT_QUEUE_CLEAR: {
+        alertQueue.clear();
+        break;
+      }
+      case EVENT_TYPES.CMD_ALERT_QUEUE_CONFIG: {
+        const patch = msg.payload || {};
+        /*
+          Порядок важен: сначала настройка, потом правила. Правила рассылают
+          снимок очереди, а в нём уже должно стоять новое значение «очередь
+          включена» — оно живёт в конфиге, а не в самой очереди.
+        */
+        state.setAlertQueueConfig(patch);
+        alertQueue.setRules(queueRulesFromConfig());
+        if (patch.enabled === false) {
+          /*
+            Выключенная очередь не должна выстрелить залежавшимся: то, что ждало
+            своей очереди, показывать уже незачем — новые алерты пойдут напрямую.
+          */
+          alertQueue.clear();
+        }
+        break;
+      }
+      case EVENT_TYPES.CMD_RECOVER_DONATIONS: {
+        recoverDonations(msg.payload || {});
+        break;
+      }
+      case EVENT_TYPES.CMD_RESET_SESSION_STATS: {
+        /*
+          Сброс счёта стрима — руками, по кнопке.
+
+          Иногда это нужно по делу: начали новый стрим, не перезапуская
+          приложение, или счётчик пополнился тестовым донатом. Никаких данных
+          при этом не теряется — счёт это только цифра на экране, история и цель
+          сбора живут своей жизнью; поэтому рассылаем новый счёт, а не молчим.
+        */
+        const session = state.resetSessionDonations();
+        broadcast(EVENT_TYPES.SESSION_STATS, session);
+        serverLog.info("session donation counter reset by request");
+        break;
+      }
       default:
         break;
     }
@@ -1197,6 +1712,81 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
     broadcast(EVENT_TYPES.THEME_UPDATE, snap.appearance);
   }
 
+  /*
+    Подтянуть донаты, пришедшие пока приложение было выключено.
+
+    Сокет DonationAlerts отдаёт только живые события, поэтому «что было в
+    офлайне» можно узнать только из REST-списка донатов (scope
+    oauth-donation-index — приложение с прежним набором scope получит 401/403).
+
+    Новым считается донат, id которого нет в истории: id стабилен на стороне
+    сервиса, а время — нет (в ответе нет часового пояса). Донаты, которые
+    сервис сам помечает показанными, тоже пропускаем: их уже видели.
+
+    Запрос только по кнопке: у DonationAlerts лимит 60 запросов в минуту, а
+    фоновый опрос в цикле всё равно не нужен — новые донаты приходят сокетом.
+  */
+  async function recoverDonations(options = {}) {
+    if (recovering) {
+      return { ok: false, error: "in_progress", count: 0 };
+    }
+    const limit = Math.max(1, Math.min(100, Number(options.limit) || 30));
+    const report = (result) =>
+      broadcast(EVENT_TYPES.ALERT_QUEUE_UPDATE, { queue: alertQueue.snapshot(), recover: result });
+
+    const ctrl = donationAlertsCtrl;
+    if (!ctrl || typeof ctrl.getAccessToken !== "function") {
+      report({ ok: false, error: "not_authorized" });
+      return { ok: false, error: "not_authorized", count: 0 };
+    }
+
+    recovering = true;
+    // Сам факт «пошли за пропущенными» виден результатом ниже; в журнале
+    // сервиса от него остаётся одна строка вместо двух.
+    donationsLog.debug("fetching missed donations");
+    let result;
+    try {
+      result = await fetchRecentDonations({ getAccessToken: ctrl.getAccessToken, limit });
+    } finally {
+      recovering = false;
+    }
+
+    if (!result.ok) {
+      donationsLog.warn("missed donations fetch failed", { error: result.error });
+      report({ ok: false, error: result.error });
+      return { ok: false, error: result.error, count: 0 };
+    }
+
+    const known = db ? db.knownSourceIds() : new Set();
+    const missed = result.donations
+      .filter((donation) => !donation.shown)
+      .filter((donation) => !(donation.sourceId && known.has(donation.sourceId)))
+      // От старых к новым: подтянутое должно идти в эфир в том же порядке, в
+      // каком приходило, иначе «пропущенное» перепутается местами.
+      .sort((a, b) => a.createdAt - b.createdAt);
+
+    for (const donation of missed) {
+      /*
+        Через шину, а не сразу в очередь: подтянутый донат — настоящий донат, он
+        должен попасть и в историю (с source_id, чтобы не подтянуться второй
+        раз), и в цель сбора, и в «последние события».
+      */
+      bus.emit("alert", {
+        kind: "donation",
+        user: donation.user,
+        amount: donation.amount,
+        currency: donation.currency,
+        message: donation.message,
+        sourceId: donation.sourceId,
+        recovered: true,
+      });
+    }
+
+    donationsLog.success("missed donations fetched", { count: missed.length, checked: result.donations.length });
+    report({ ok: true, count: missed.length });
+    return { ok: true, count: missed.length };
+  }
+
   // Ленивый опрос Longshot: включаем только пока в раскладке есть видимый таймер
   // Executive Hangar. Вызывается после правок раскладки.
   function syncLongshotActivity() {
@@ -1205,9 +1795,44 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
 
   bus.on("alert", (alert) => {
     const withDuration = { durationMs: ALERT_DURATIONS_MS[alert.kind] || 5000, ...alert };
-    broadcast(EVENT_TYPES.ALERT, withDuration);
 
+    /*
+      Колесо — не донат: его показ привязан к сцене розыгрыша, которую
+      scheduleWheelHide прячет по своему таймеру. Прогон карточки победителя
+      через очередь означал бы либо задержку на время чужих алертов, либо показ
+      поверх доната, — поэтому wheel-алерты идут напрямую, как и раньше, и в
+      очередь объединения не попадают.
+
+      Флаг enabled=false в конфиге возвращает прежнее поведение целиком
+      (прямая рассылка без очереди) — это запасной выход, если пользователю
+      нужен «простой режим».
+    */
     const isWheelAlert = alert.kind === "wheel_start" || alert.kind === "wheel_winner";
+
+    if (isWheelAlert) {
+      broadcast(EVENT_TYPES.ALERT, withDuration);
+    } else {
+      /*
+        Тестовый алерт — это нажатая кнопка: пользователь ждёт картинку сейчас,
+        поэтому его не отсеивает правилом минимальной суммы и он не встаёт за
+        очередью, но паузу при этом не снимает.
+      */
+      const meta = {};
+      if (alert.isTest) {
+        meta.force = true;
+        meta.ignorePause = true;
+      }
+      // Подтянутый с DonationAlerts донат очередь помечает, чтобы в панели и на
+      // пульте было видно, что это «пропущенное», а не прямой эфир.
+      if (alert.recovered) meta.recovered = true;
+      publishAlert(withDuration, meta);
+    }
+
+    /*
+      Побочные эффекты остаются в момент прихода доната, а не показа: донат
+      случился тогда, когда случился. Очередь управляет только картинкой, так
+      что история, цель сбора и «последние события» не могут «опоздать».
+    */
     if (!isWheelAlert) {
       state.pushRecentEvent({ kind: alert.kind, user: alert.user, amount: alert.amount ?? alert.count, message: alert.message });
       broadcast(EVENT_TYPES.RECENT_EVENT, state.runtime.recentEvents[0]);
@@ -1218,6 +1843,15 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
     }
 
     if (alert.kind === "donation" && typeof alert.amount === "number") {
+      /*
+        Счёт текущего стрима. Подтянутые с DonationAlerts донаты не считаем: они
+        случились в прошлом (в другой сессии), а сложение их в «за этот стрим»
+        дало бы цифру, которой не было.
+      */
+      if (!alert.recovered) {
+        const session = state.addDonationToSession(alert.amount, alert.currency);
+        broadcast(EVENT_TYPES.SESSION_STATS, session);
+      }
       const goal = state.addToGoal(alert.amount);
       broadcast(EVENT_TYPES.GOAL_UPDATE, goal);
       const top = state.maybeUpdateTopDonation({ user: alert.user, amount: alert.amount, currency: alert.currency });
@@ -1313,6 +1947,12 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
     restartYoutube();
     restartObs();
 
+    /*
+      Пауза очереди переживает перезапуск приложения: «поставь на паузу на 30
+      минут» не должно означать «пока приложение не перезапустят».
+    */
+    alertQueue.restorePause(state.alertQueueConfig().pause_until);
+
     // Executive Hangar: тянем публичный конфиг Longshot и рассылаем анкер.
     // Опрос ленивый — только пока в раскладке есть видимый таймер
     // (см. syncLongshotActivity), так что лишний виджет не создаёт фоновый
@@ -1327,6 +1967,8 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
 
     if (db) {
       currentSession = db.startSession(state.config.twitch.channel);
+      // Новый стрим — новый счёт донатов.
+      state.resetSessionDonations();
     }
 
     return { port, remoteUrl };
@@ -1360,7 +2002,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
     // already updated its WebSocket target optimistically before sending the
     // command), so no broadcast is needed here.
     state.setAppConfig({ port: next });
-    remoteUrl = `http://${getLocalIp()}:${next}/remote`;
+    remoteUrl = buildRemoteUrl(next);
 
     wss.clients.forEach((client) => {
       try {
@@ -1376,7 +2018,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
         server.removeListener("listening", onListening);
         serverLog.error("port switch failed, reverting", { port: next, error: err.message });
         state.setAppConfig({ port: prev });
-        remoteUrl = `http://${getLocalIp()}:${prev}/remote`;
+        remoteUrl = buildRemoteUrl(prev);
         server.once("error", (err2) => serverLog.error("rollback listen failed", { error: err2.message }));
         server.once("listening", () => {
           serverLog.success("re-listening on previous port", { url: `http://localhost:${prev}` });
@@ -1413,6 +2055,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
     serverLog.info("stopping server");
     clearAutoSpin();
     clearWheelHide();
+    alertQueue.stop();
     if (currentSession) {
       if (db) db.endSession(currentSession.id);
       currentSession = null;
@@ -1424,6 +2067,8 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
     if (youtubeCtrl) youtubeCtrl.stop();
     if (longshotSync) longshotSync.stop();
     longshotSync = null;
+    perfMonitor.stop();
+    longRun.stop();
     wss.close();
     server.close();
   }
@@ -1447,8 +2092,32 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
       tier: record.tier,
     };
     const withDuration = { durationMs: ALERT_DURATIONS_MS[alert.kind] || 5000, ...alert };
-    broadcast(EVENT_TYPES.ALERT, withDuration);
+    /*
+      Ручной повтор: человек нажал кнопку в истории, значит хочет видеть этот
+      алерт, а не тот, что сейчас в эфире. Поэтому повтор идёт без фильтра по
+      сумме, в начало очереди и даже на паузе — но текущий алерт не выкидывается
+      (он вернётся в начало ожидающих, см. alert-queue.playNow для «сейчас»).
+    */
+    publishAlert(withDuration, { force: true, front: true, ignorePause: true });
     return record;
+  }
+
+  // Новый код доступа: старый сразу перестаёт работать, адрес пульта меняется.
+  // Подключённые из сети клиенты отваливаются и должны открыть новый адрес.
+  function rotateRemoteToken() {
+    state.rotateRemoteToken();
+    remoteUrl = buildRemoteUrl(currentPort());
+    serverLog.warn("remote access code rotated");
+    wss.clients.forEach((client) => {
+      if (!client.external) return;
+      try {
+        client.close();
+      } catch {
+        /* клиент уже отвалился */
+      }
+    });
+    broadcast(EVENT_TYPES.STATE, stateSnapshot());
+    return { ok: true, remoteUrl };
   }
 
   return {
@@ -1457,6 +2126,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
     wss,
     state,
     bus,
+    perfMonitor,
     start,
     stop,
     broadcast,
@@ -1468,7 +2138,17 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey } = {}) {
     importConfig,
     getStreamEvents,
     replayEvent,
+    recoverDonations,
+    // Живая очередь алертов — для диагностики и тестов; UI работает через шину.
+    alertQueue,
     setLanguage,
+    healthReport,
+    supportBundleText,
+    listBackups,
+    restoreBackup,
+    rotateRemoteToken,
+    recentAudit: (count) => audit.recent(count),
+    longRun,
   };
 }
 
@@ -1529,13 +2209,28 @@ function toStreamEvent(alert, isTest) {
     is_test: !!isTest,
     count: typeof alert.count === "number" ? alert.count : null,
     tier: alert.tier || null,
+    // id доната на стороне сервиса — по нему «пропущенные» донаты не попадают
+    // в историю второй раз (см. db.knownSourceIds).
+    source_id: alert.sourceId != null ? String(alert.sourceId) : null,
   };
 }
 
-module.exports = { createServer, buildTestAlert, eventTypeForKind, toStreamEvent, roleFromUrl, shouldHideWheelAfterSpin };
+module.exports = { createServer, buildTestAlert, eventTypeForKind, toStreamEvent, roleFromUrl, shouldHideWheelAfterSpin, isAllowedWsOrigin };
 
 // `npm run server:only` runs the bus without Electron — handy for iterating
 // on overlay/editor visuals in a normal browser tab.
 if (require.main === module) {
-  createServer().start();
+  let handle = null;
+  // Тот же страж, что и в Electron-режиме: отчёт на диск, сброс конфига и
+  // понятный выход вместо тихого падения без лога. Ставим его ДО createServer:
+  // именно старт (чтение конфига, привязка порта) чаще всего и падает.
+  installCrashHandlers({
+    appName: "Open Stream Environment (server only)",
+    getLogsDir,
+    flush: () => {
+      if (handle) handle.state.flushConfigSync();
+    },
+  });
+  handle = createServer();
+  handle.start();
 }

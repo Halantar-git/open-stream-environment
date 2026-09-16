@@ -19,6 +19,7 @@ const {
   extractPayload,
   donationAlertFromPayload,
   alertFromPayload,
+  isUnrecoverableAuthError,
 } = require("../server/integrations/donationalerts");
 
 describe("donationalerts parsing", () => {
@@ -107,5 +108,28 @@ describe("donationalerts parsing", () => {
       message: "gg",
     });
     expect(alert.kind).toBe("donation");
+  });
+});
+
+describe("donationalerts: политика переподключения", () => {
+  test("отклонённые ключи приложения — не повод повторять", () => {
+    // Ровно то, что приходит от /oauth/token, когда сервис не узнал пару
+    // client_id/client_secret: без правки ключей повторы ничего не изменят.
+    const rejected = 'refresh_token: 400 {"error":"invalid_client","error_description":"Client authentication failed","message":"Client authentication failed"}';
+
+    expect(isUnrecoverableAuthError(rejected)).toBe(true);
+  });
+
+  test("обычные сбои повторять стоит", () => {
+    // Сеть, 401 и сломанный формат ответа лечит переподключение.
+    [
+      "fetch failed",
+      "refresh_token: 401 {}",
+      "invalid_grant",
+      "socket_connection_token missing",
+      "refresh_token: 500 {\"message\":\"Server Error\"}",
+      "",
+      undefined,
+    ].forEach((message) => expect(isUnrecoverableAuthError(message)).toBe(false));
   });
 });

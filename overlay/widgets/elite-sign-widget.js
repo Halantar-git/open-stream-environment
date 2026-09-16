@@ -68,10 +68,6 @@
     "M242.967,419.406c-0.94-2.144-0.582-6.982,0.233-8.65c0.815-1.668,1.673-2.349,2.859-3.174c-4.113-3.312-8.009-6.793-6.076-16.072l7.515-36.089l2.503-4.058l2.503,4.058l7.515,36.089c1.933,9.28-1.964,12.761-6.076,16.072c1.186,0.825,2.044,1.506,2.859,3.174c0.815,1.668,1.173,6.506,0.233,8.65C254.417,425.375,245.583,425.375,242.967,419.406",
   ].join(" ");
 
-  // viewBox 0 0 500 500, no internal SVG transform to apply.
-  const SVG_W = 500;
-  const SVG_H = 500;
-
   // Bounds of the emblem within the viewBox (derived from the reference path),
   // used to fill the widget instead of the padded 500x500 viewBox.
   const EMB_MIN_X = 25;

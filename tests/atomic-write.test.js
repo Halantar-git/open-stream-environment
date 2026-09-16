@@ -25,7 +25,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const { atomicWriteFileSync, AsyncAtomicStore } = require("../server/atomic-write");
+const { atomicWriteFileSync, AsyncAtomicStore, sweepStaleTempFiles } = require("../server/atomic-write");
 
 function tmpDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "ose-atomic-"));
@@ -56,7 +56,9 @@ describe("atomic-write", () => {
     await store.flush();
 
     expect(readJson(file)).toEqual({ a: 3 });
-    expect(fs.readdirSync(dir)).toEqual(["store.json"]);
+    // Рядом живут только сам файл и, возможно, бэкап (см. atomic-backup.test.js):
+    // важно, что temp-мусора не осталось.
+    expect(fs.readdirSync(dir).filter((name) => name.endsWith(".tmp"))).toEqual([]);
     expect(store.lastError).toBeNull();
   });
 
@@ -170,5 +172,78 @@ describe("atomic-write", () => {
     await store.flush();
     expect(readJson(file)).toEqual({ ok: true });
     expect(fs.readFileSync(file, "utf8")).toContain("\n"); // pretty-print по умолчанию
+  });
+
+  test("статистика: записи, байты и схлопнутые снапшоты", async () => {
+    const dir = tmpDir();
+    const file = path.join(dir, "store.json");
+    const store = new AsyncAtomicStore(file);
+
+    for (let i = 0; i < 5; i++) store.write({ a: i, pad: "x".repeat(50) });
+    await store.flush();
+
+    const { total } = store.getStats();
+    expect(total.writes).toBeGreaterThanOrEqual(1);
+    expect(total.writes).toBeLessThan(5);
+    expect(total.coalesced).toBeGreaterThan(0);
+    // Каждый снапшот либо записан, либо схлопнут.
+    expect(total.writes + total.coalesced).toBe(5);
+    expect(total.bytes).toBeGreaterThan(0);
+    expect(total.failed).toBe(0);
+
+    store.stop();
+  });
+
+  test("убирает осиротевшие temp-файлы, но не свежие", () => {
+    const dir = tmpDir();
+    const file = path.join(dir, "store.json");
+    const stale = path.join(dir, ".store.json.12345.7.tmp");
+    const fresh = path.join(dir, ".store.json.999.1.tmp");
+    fs.writeFileSync(stale, "x");
+    fs.writeFileSync(fresh, "x");
+    const old = new Date(Date.now() - 10 * 60 * 1000);
+    fs.utimesSync(stale, old, old);
+
+    // Конструктор стора подчищает мусор от убитых процессов.
+    const store = new AsyncAtomicStore(file);
+    expect(fs.existsSync(stale)).toBe(false);
+    expect(fs.existsSync(fresh)).toBe(true);
+    store.stop();
+  });
+
+  test("sweepStaleTempFiles возвращает число удалённых", () => {
+    const dir = tmpDir();
+    const file = path.join(dir, "store.json");
+    const a = path.join(dir, ".store.json.1.1.tmp");
+    const b = path.join(dir, ".store.json.2.2.tmp");
+    fs.writeFileSync(a, "x");
+    fs.writeFileSync(b, "x");
+    const old = new Date(Date.now() - 60 * 60 * 1000);
+    fs.utimesSync(a, old, old);
+    fs.utimesSync(b, old, old);
+    expect(sweepStaleTempFiles(file)).toBe(2);
+  });
+
+  test("отчёт по интервалу: строка только когда были записи", async () => {
+    const dir = tmpDir();
+    const file = path.join(dir, "store.json");
+    const lines = [];
+    const store = new AsyncAtomicStore(file, {
+      label: "store.json",
+      report: (line) => lines.push(line),
+      reportEveryMs: 10,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(lines).toHaveLength(0); // в простое не шумит
+
+    store.write({ a: 1 });
+    await store.flush();
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    store.stop();
+
+    expect(lines.length).toBeGreaterThan(0);
+    expect(lines[0]).toContain("store.json");
+    expect(lines[0]).toContain("записей 1");
   });
 });

@@ -48,9 +48,8 @@
 })(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
   "use strict";
 
-  // Elite HUD fonts (Orbitron display/mono).
+  // Elite HUD display font (Orbitron).
   const FONT_DISPLAY = '"Orbitron", "Segoe UI", sans-serif';
-  const FONT_MONO = '"Orbitron", "Consolas", monospace';
 
   const ORANGE = "#ff7605";
   const RED = "#ff3b30";

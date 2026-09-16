@@ -46,7 +46,7 @@
     }
 
     render() {
-      const { escapeHtml, t, state } = this.context;
+      const { t, state } = this.context;
       const max = this.config.maxItems || 5;
       const items = (state.recentEvents || []).slice(0, max);
 

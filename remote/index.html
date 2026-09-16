@@ -146,6 +146,26 @@
     </section>
 
     <section class="grid-section">
+      <h2 class="grid-section__title" data-i18n="queue.title">Очередь алертов</h2>
+      <div class="queue-panel">
+        <div class="queue-panel__now" id="queueNow">
+          <span class="queue-panel__now-label" data-i18n="queue.now">В эфире</span>
+          <span class="queue-panel__now-empty" data-i18n="queue.nothingPlaying">Сейчас ничего не показывается</span>
+        </div>
+        <div class="queue-panel__meta">
+          <span class="queue-panel__pending" id="queuePending"></span>
+          <span class="queue-panel__pause" id="queuePauseState" hidden></span>
+        </div>
+        <div class="queue-panel__session" id="queueSession" hidden></div>
+        <div class="action-grid action-grid--queue">
+          <button class="action-btn" type="button" id="queueSkipBtn" data-i18n="queue.skip">Пропустить</button>
+          <button class="action-btn" type="button" id="queuePauseBtn" data-i18n="queue.pause">Пауза</button>
+          <button class="action-btn action-btn--danger" type="button" id="queueClearBtn" data-i18n="queue.clear">Очистить очередь</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid-section">
       <h2 class="grid-section__title" data-i18n="remote.obsCommands">OBS команды</h2>
       <div class="action-grid" id="obsCommandGrid"></div>
     </section>

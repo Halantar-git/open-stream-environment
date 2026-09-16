@@ -15,57 +15,136 @@
  * along with this program.  If not, see <https://gnu.org>.
  */
 
+/*
+  Chrome of the theme editor window.
+
+  Modelled on the control panel (control/control.css) rather than invented from
+  scratch: colour, typography and every component come from shared/theme.css,
+  the top bar repeats `.topbar` (brand mark, pill tab strip, tonal icon buttons
+  and a status chip in one 56px row), the scroll column repeats `.settings`
+  (card stack, centred column, clamp() metrics), the side rail repeats
+  `.inspector` (272px, container-low surface, uppercase section titles) and the
+  toast repeats `.alert-toast`. Classes here only lay things out.
+
+  The window keeps the app's palette as-is: the page sits on `--md-surface-dim`,
+  cards and the rail on `--md-surface-container-*`, accents on `--md-primary` /
+  `--md-secondary` / `--md-tertiary`. Those are the very values the control
+  panel uses, so background, surfaces and brand colours all match the main app.
+*/
+
 html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: var(--md-on-surface); font-family: var(--font-body); overflow: hidden; }
+/* Native form controls and scrollbars must follow the window, not the OS. */
+html { color-scheme: dark; }
 body { display: flex; flex-direction: column; }
+
+/* ---- top bar: `.topbar` layout ----------------------------------------- */
 
 .tw-header {
   flex-shrink: 0;
-  height: 52px;
+  height: 56px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 24px;
   padding: 0 16px;
   background: var(--md-surface-container-low);
   border-bottom: 1px solid var(--md-outline-variant);
 }
+.tw-header__brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.tw-header__mark {
+  width: 22px; height: 22px; flex-shrink: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--md-secondary), var(--md-primary), var(--md-tertiary));
+}
 .tw-header__title {
   font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
   white-space: nowrap;
-  flex-shrink: 0;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-.tw-header__status {
+.tw-header__actions { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.tw-header .md-button { font-size: 12px; padding: 7px 14px; }
+
+/* Tab pills, exactly like `.topbar__tabs`; scrolls when the window is narrow. */
+.te-tabs {
+  display: flex;
+  gap: 2px;
+  min-width: 0;
+  padding: 4px;
+  border-radius: var(--shape-full);
+  background: var(--md-surface-container);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.te-tabs::-webkit-scrollbar { display: none; }
+.te-tab-btn {
+  border: none;
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 18px;
+  border-radius: var(--shape-full);
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-app-region: no-drag;
+  transition: background 150ms var(--easing-standard), color 150ms var(--easing-standard);
+}
+.te-tab-btn:hover { color: var(--md-on-surface); }
+.te-tab-btn.is-active { background: var(--md-primary); color: var(--md-on-primary); }
+
+/* Status chip mirrors `.md-chip` usage in the panel. */
+.tw-status { flex-shrink: 0; }
+/* After `.tw-header .md-button` on purpose: the icon buttons keep a bigger glyph. */
+.tw-header .te-icon-btn { font-size: 15px; line-height: 1; padding: 7px 12px; }
+.tw-header .te-icon-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+.tw-header .te-icon-btn:hover:not(:disabled) { background: rgba(232, 225, 240, var(--state-hover)); color: var(--md-on-surface); }
+
+/* ---- body: settings column + inspector rail ---------------------------- */
+
+.tw-body { flex: 1; min-height: 0; display: flex; align-items: stretch; }
+
+/* `.settings` metrics: clamp() padding/gap, centred column. */
+.tw-form {
   flex: 1;
   min-width: 0;
+  overflow-y: auto;
+  padding: clamp(1rem, 2.5vw, 2rem);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.75rem, 1.5vw, 1.25rem);
+}
+.tw-form[hidden] { display: none; }
+
+/* Embedded CSS editor: replaces the form column while it is open, so the draft
+   preview, the contrast check and the token list stay in view. Its chrome comes
+   from csseditor/css-editor.css (`.csswin-*`). */
+.te-css {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--md-on-surface-variant);
-  font-size: 12px;
 }
+.te-css[hidden] { display: none; }
 
-.tw-body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
-
-/* ---- Theme form (moved out of the control panel) ---- */
-.theme-editor__colors { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-.theme-editor__color { display: flex; flex-direction: column; gap: 4px; align-items: center; }
-.theme-editor__color label { font-size: 11px; color: var(--md-on-surface-variant); }
-.theme-editor__color input[type="color"] {
-  width: 44px; height: 32px; border-radius: var(--shape-sm); border: 1px solid var(--md-outline-variant);
-  background: none; padding: 0; cursor: pointer;
+/* `.inspector` metrics: 272px, container-low, left border. */
+.tw-rail {
+  flex-shrink: 0;
+  width: 272px;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--md-surface-container-low);
+  border-left: 1px solid var(--md-outline-variant);
 }
-.theme-editor__row { display: flex; gap: 10px; }
-.theme-editor__row .md-field { flex: 1; }
-.theme-editor select {
-  font-family: var(--font-body); font-size: 13px; color: var(--md-on-surface); background: var(--md-surface-container-highest);
-  border: 1px solid var(--md-outline-variant); border-radius: var(--shape-sm); padding: 9px 10px; width: 100%;
-}
-.theme-editor__section { display: flex; flex-direction: column; gap: 8px; }
-.theme-editor__section-title {
+.te-rail__group { display: flex; flex-direction: column; gap: 8px; }
+.te-rail__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.te-rail__title {
   font-family: var(--font-display);
   font-size: 11px;
   font-weight: 700;
@@ -73,38 +152,270 @@ body { display: flex; flex-direction: column; }
   letter-spacing: 0.6px;
   color: var(--md-on-surface-variant);
 }
-.theme-editor__grid { display: grid; gap: 10px; }
-.theme-editor__grid--3 { grid-template-columns: repeat(3, 1fr); }
-.theme-editor__grid--2 { grid-template-columns: repeat(2, 1fr); }
-.theme-editor__color-row { display: flex; align-items: center; gap: 8px; }
-.theme-editor__color-row input[type="color"] {
-  width: 42px; height: 30px; border: 1px solid var(--md-outline-variant); border-radius: var(--shape-sm);
-  background: none; padding: 0; cursor: pointer; flex-shrink: 0;
+.te-rail__tools { display: flex; gap: 6px; }
+
+/* ---- tab panels and cards ---------------------------------------------- */
+
+.te-tab[hidden] { display: none; }
+.te-tab {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.75rem, 1.5vw, 1.25rem);
+  width: 100%;
+  max-width: min(900px, 100%);
+  margin: 0 auto;
 }
-.theme-editor__auto { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--md-on-surface-variant); cursor: pointer; white-space: nowrap; }
-.theme-editor__glow { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
-.theme-editor__glow-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.theme-editor__glow-label { font-size: 11px; color: var(--md-on-surface-variant); }
-.theme-editor__glow-controls { display: flex; align-items: center; gap: 10px; }
-.theme-editor__glow-controls input[type="color"] {
-  width: 42px; height: 30px; border: 1px solid var(--md-outline-variant); border-radius: var(--shape-sm);
-  background: none; padding: 0; cursor: pointer; flex-shrink: 0;
+.tw-form > .te-block { width: 100%; max-width: min(900px, 100%); margin: 0 auto; }
+.te-tab__tools { display: flex; justify-content: flex-end; margin-bottom: -10px; }
+
+/* `.md-card` supplies surface/border/radius; the metrics repeat `.settings__card`. */
+.te-block {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.6rem, 1vw, 0.8rem);
+  padding: clamp(1rem, 2vw, 1.5rem);
 }
-.theme-editor__glow-controls input[type="range"] { flex: 1; accent-color: var(--md-primary); }
-.theme-editor__glow-value { min-width: 40px; text-align: right; font-size: 11px; color: var(--md-on-surface-variant); font-variant-numeric: tabular-nums; }
-.theme-editor__reset { display: flex; justify-content: flex-end; }
-.theme-editor__actions { display: flex; flex-wrap: wrap; gap: 10px; }
-.theme-editor__3d-list {
-  display: flex; flex-direction: column; gap: 12px;
-  max-height: 260px; overflow-y: auto; padding-right: 4px;
+/* In-card group headings use the `.settings__subhead h3` recipe. */
+.te-block__title { font-size: 0.95rem; font-weight: 600; color: var(--md-on-surface); }
+.te-grid { display: grid; grid-template-columns: repeat(var(--te-cols, 1), minmax(0, 1fr)); gap: 10px; }
+.te-row { display: flex; align-items: center; gap: 10px; }
+.te-row > select { flex: 1; min-width: 0; }
+
+/* ---- fields: inherit the app's `.md-field` ----------------------------- */
+
+.te-field { min-width: 0; }
+.te-field__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 18px; }
+.te-field__note {
+  font-size: 11px;
+  color: var(--md-on-surface-variant);
+  opacity: 0.8;
+  min-height: 14px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
 }
-.theme-editor__3d-group { display: flex; flex-direction: column; gap: 4px; }
-.theme-editor__3d-group-title {
-  font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.5px; color: var(--md-on-surface-variant);
+.te-field__note.is-warn { color: var(--md-error); opacity: 1; }
+
+.te-auto { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--md-on-surface-variant); cursor: pointer; white-space: nowrap; }
+.te-auto input[type="checkbox"] { accent-color: var(--md-primary); }
+
+.md-field input:disabled,
+.md-field select:disabled { opacity: 0.5; cursor: default; }
+
+.te-color-row { display: flex; align-items: center; gap: 8px; }
+/* Same recipe as the panel's colour rows (`.properties__color-row input[type=color]`). */
+.te-color-row input[type="color"] {
+  width: 56px; height: 40px; flex-shrink: 0;
+  padding: 2px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-sm);
+  background: none;
+  cursor: pointer;
 }
-.theme-editor__3d-row {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 13px; color: var(--md-on-surface); cursor: pointer;
+.te-color-row input[type="color"]:disabled { opacity: 0.5; cursor: default; }
+.te-color-row input.te-hex {
+  flex: 1; min-width: 0;
+  font-family: var(--font-mono);
+  text-transform: lowercase;
 }
-.theme-editor__3d-row input[type="checkbox"] { accent-color: var(--md-primary); }
+.te-color-row input.te-hex.is-invalid { border-color: var(--md-error); }
+.te-pick {
+  width: 40px; height: 40px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--md-outline);
+  border-radius: var(--shape-sm);
+  background: transparent; color: var(--md-on-surface);
+  font-size: 15px; cursor: pointer;
+  transition: background 150ms var(--easing-standard);
+}
+.te-pick:hover:not(:disabled) { background: rgba(232, 225, 240, var(--state-hover)); }
+.te-pick:disabled { opacity: 0.5; cursor: default; }
+
+.te-size-row { display: flex; align-items: center; gap: 8px; }
+.te-size-row input[type="text"] { flex: 1; min-width: 0; }
+.te-size-row select { width: 76px; flex-shrink: 0; padding: 10px 8px; }
+
+.te-range-row { display: flex; align-items: center; gap: 10px; }
+.te-range-row input[type="range"] { flex: 1; min-width: 0; padding: 0; accent-color: var(--md-primary); }
+.te-range-value { min-width: 44px; text-align: right; font-size: 12px; color: var(--md-on-surface-variant); font-variant-numeric: tabular-nums; }
+
+/* ---- palette tools ----------------------------------------------------- */
+
+.te-presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+/* Same recipe as `.library-card`. */
+.te-preset {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-md);
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface);
+  cursor: pointer;
+  text-align: left;
+  transition: background 150ms var(--easing-standard), border-color 150ms, transform 150ms;
+}
+.te-preset:hover { background: var(--md-surface-container-highest); border-color: var(--md-primary); transform: translateY(-1px); }
+.te-preset__dots { display: flex; gap: 3px; }
+.te-preset__dots span { width: 14px; height: 14px; border-radius: 50%; display: block; }
+.te-preset__name { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.te-recent { display: flex; flex-wrap: wrap; gap: 6px; }
+.te-recent__chip {
+  width: 24px; height: 24px; padding: 0;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-sm);
+  cursor: pointer;
+}
+.te-recent__chip:hover { border-color: var(--md-primary); }
+
+/* ---- 3D widget list ---------------------------------------------------- */
+
+.te-3d-list { display: flex; flex-direction: column; gap: 12px; max-height: 320px; overflow-y: auto; padding-right: 4px; }
+.te-3d-group { display: flex; flex-direction: column; gap: 4px; }
+.te-3d-group__title { font-family: var(--font-display); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--md-on-surface-variant); }
+.te-3d-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--md-on-surface); cursor: pointer; }
+.te-3d-row input[type="checkbox"] { accent-color: var(--md-primary); }
+
+/* ---- preview (renders the draft theme, not the editor chrome) ----------- */
+
+.te-preview {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 10px;
+  border-radius: var(--shape-md);
+  background: var(--md-surface);
+  border: 1px solid var(--md-outline-variant);
+}
+.te-pv {
+  background: var(--panel-bg, var(--md-surface-container));
+  backdrop-filter: blur(var(--panel-blur, 20px));
+  -webkit-backdrop-filter: blur(var(--panel-blur, 20px));
+  border: var(--panel-border, 1px solid var(--md-outline-variant));
+  border-radius: var(--panel-radius, 24px);
+  box-shadow: var(--panel-glow, 0 24px 48px rgba(0, 0, 0, 0.45));
+  color: var(--md-on-surface);
+  font-family: var(--font-body);
+  padding: 9px 10px;
+}
+.te-pv--alert { display: flex; align-items: center; gap: 9px; }
+.te-pv__icon {
+  width: 26px; height: 26px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--shape-full);
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  font-size: 13px;
+}
+.te-pv__title { font-family: var(--font-display); font-weight: 700; font-size: 12px; }
+.te-pv__text { color: var(--md-on-surface-variant); font-size: 11px; margin-top: 1px; }
+
+.te-pv--chat { display: flex; flex-direction: column; gap: 4px; }
+.te-pv__row { display: flex; gap: 6px; font-size: 11px; }
+.te-pv__user { color: var(--md-primary); font-weight: 600; }
+.te-pv__msg { color: var(--md-on-surface); }
+
+.te-pv--goal { display: flex; flex-direction: column; gap: 7px; }
+.te-pv__head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 11px; }
+.te-pv__num { font-family: var(--font-mono); color: var(--md-on-surface-variant); white-space: nowrap; }
+.te-pv__track { height: 8px; border-radius: var(--shape-full); background: var(--md-surface-container-highest); overflow: hidden; display: block; }
+.te-pv__fill { height: 100%; border-radius: var(--shape-full); background: linear-gradient(90deg, var(--md-secondary), var(--md-primary)); display: block; }
+
+.te-pv--poll { display: flex; flex-direction: column; gap: 5px; }
+.te-pv__bar { display: grid; grid-template-columns: minmax(0, 1fr) 34px; grid-template-rows: auto auto; gap: 3px 8px; font-size: 11px; align-items: center; }
+.te-pv__opt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.te-pv__bar .te-pv__track { grid-column: 1; height: 8px; }
+.te-pv__bar .te-pv__fill { background: var(--md-tertiary); }
+.te-pv__bar b { grid-column: 2; grid-row: 1; font-family: var(--font-mono); text-align: right; color: var(--md-on-surface-variant); }
+
+/* ---- contrast ---------------------------------------------------------- */
+
+.te-contrast { display: flex; flex-direction: column; gap: 4px; }
+.te-contrast__row {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11px;
+  padding: 5px 8px;
+  border-radius: var(--shape-sm);
+  background: var(--md-surface-container);
+}
+.te-contrast__row.is-low { background: var(--md-error-container); color: var(--md-on-error-container); }
+.te-contrast__dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid transparent; flex-shrink: 0; }
+.te-contrast__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.te-contrast__ratio { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.te-contrast__badge { width: 12px; text-align: center; }
+
+/* ---- tokens ------------------------------------------------------------ */
+
+.te-tokens { display: flex; flex-direction: column; gap: 1px; max-height: 240px; overflow-y: auto; }
+.te-tokens__row {
+  display: flex; align-items: center; gap: 6px;
+  width: 100%;
+  padding: 4px 8px;
+  border: none; border-radius: var(--shape-sm);
+  background: transparent; color: var(--md-on-surface);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 150ms var(--easing-standard);
+}
+.te-tokens__row:hover { background: var(--md-surface-container); }
+.te-tokens__row.is-copied { background: var(--md-primary-container); color: var(--md-on-primary-container); }
+.te-tokens__dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; border: 1px solid var(--md-outline-variant); }
+.te-tokens__dot--none { background: none; border-style: dashed; }
+.te-tokens__name { flex-shrink: 0; color: var(--md-on-surface-variant); max-width: 108px; overflow: hidden; text-overflow: ellipsis; }
+.te-tokens__value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
+
+/* ---- small buttons / toast (`.alert-toast` recipe) --------------------- */
+
+.te-mini {
+  padding: 8px 10px;
+  border: 1px solid var(--md-outline);
+  border-radius: var(--shape-full);
+  background: transparent;
+  color: var(--md-on-surface);
+  font-family: var(--font-body); font-size: 12px; font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 150ms var(--easing-standard);
+}
+.te-mini:hover { background: rgba(232, 225, 240, var(--state-hover)); }
+
+.te-link {
+  border: none; background: transparent;
+  padding: 6px 10px;
+  border-radius: var(--shape-full);
+  color: var(--md-primary);
+  font-family: var(--font-body); font-size: 12px; font-weight: 500;
+  cursor: pointer;
+  transition: background 150ms var(--easing-standard);
+}
+.te-link:hover { background: rgba(198, 184, 255, var(--state-hover)); }
+
+.te-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translate(-50%, 8px);
+  padding: 10px 12px;
+  border-radius: var(--shape-md);
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface);
+  border: 1px solid var(--md-outline-variant);
+  box-shadow: var(--elev-2);
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 140ms var(--easing-standard), transform 140ms var(--easing-standard);
+  pointer-events: none;
+}
+.te-toast.is-on { opacity: 1; transform: translate(-50%, 0); }
+.te-toast.is-error { background: var(--md-error-container); color: var(--md-on-error-container); border-color: transparent; }
+
+/* ---- responsive -------------------------------------------------------- */
+
+@media (max-width: 1000px) {
+  .te-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 900px) {
+  .tw-body { flex-direction: column; overflow-y: auto; }
+  .tw-form { overflow: visible; }
+  .tw-rail { width: auto; border-left: none; border-top: 1px solid var(--md-outline-variant); overflow: visible; }
+}

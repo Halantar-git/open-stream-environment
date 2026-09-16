@@ -19,7 +19,7 @@ const fs = require("fs");
 const fsp = require("fs").promises;
 const path = require("path");
 
-const { atomicWriteFileSync } = require("./atomic-write");
+const { atomicWriteFileSync, sweepStaleTempFiles } = require("./atomic-write");
 
 /*
   Append-only история событий (JSON Lines) с ленивым индексом.
@@ -106,6 +106,9 @@ function currentFileSize(filePath) {
 function createHistoryStore(filePath, options = {}) {
   const logger = typeof options.logger === "function" ? options.logger : null;
   let maxRecords = resolveMaxRecords(options.maxRecords);
+
+  // Temp-файлы от убитых процессов (уплотнение пишет temp+rename).
+  sweepStaleTempFiles(filePath);
 
   // --- лёгкий индекс (только метаданные) ---
   let built = false;
@@ -237,6 +240,7 @@ function createHistoryStore(filePath, options = {}) {
     if (filters.sess !== undefined && entry.sess !== filters.sess) return false;
     if (filters.type !== undefined && entry.type !== filters.type) return false;
     if (filters.includeTest === false && entry.test) return false;
+    if (filters.since !== undefined && entry.ts < filters.since) return false;
     if (filters.search) {
       const u = String((record && record.username) || "").toLowerCase();
       const m = String((record && record.message) || "").toLowerCase();
@@ -302,6 +306,13 @@ function createHistoryStore(filePath, options = {}) {
       type: opts.type ? intern(typeDict, typeList, opts.type) : undefined,
       includeTest: opts.includeTest,
       search: opts.search ? String(opts.search).trim().toLowerCase() : "",
+      /*
+        Нижняя граница по времени. У стрим-событий нет sessionId — сессия
+        считается по времени (так же, как в агрегатах сессий, см.
+        db.getSessionsWithStats), поэтому «только этот стрим» задаётся началом
+        сессии, а не идентификатором.
+      */
+      since: Number(opts.since) > 0 ? Number(opts.since) : undefined,
     };
   }
 

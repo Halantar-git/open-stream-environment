@@ -219,6 +219,8 @@ export function initPropertiesPanel({
             <option value="latestFollower" ${config.metric === "latestFollower" ? "selected" : ""}>${t("properties.metricLatestFollower")}</option>
             <option value="latestSubscriber" ${config.metric === "latestSubscriber" ? "selected" : ""}>${t("properties.metricLatestSubscriber")}</option>
             <option value="topDonation" ${config.metric === "topDonation" ? "selected" : ""}>${t("properties.metricTopDonation")}</option>
+            <option value="sessionDonations" ${config.metric === "sessionDonations" ? "selected" : ""}>${t("properties.metricSessionDonations")}</option>
+            <option value="sessionAmount" ${config.metric === "sessionAmount" ? "selected" : ""}>${t("properties.metricSessionAmount")}</option>
           </select>
         </div>
         <div class="md-field"><label>${t("properties.statLabel")}</label><input type="text" id="pStatLabel" value="${escapeAttr(config.label || "")}"></div>

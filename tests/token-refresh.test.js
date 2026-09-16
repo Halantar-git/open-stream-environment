@@ -57,6 +57,24 @@ describe("server/token-refresh", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  test("пустые ключи приложения — ошибка до запроса, с узнаваемым именем", async () => {
+    const config = { clientId: "", clientSecret: "", refreshToken: "rt", accessToken: "old", expiresAt: 0 };
+    const { refresher } = makeRefresher(config);
+
+    // Сеть не трогаем: сервис ответил бы невнятным invalid_client, а повторять
+    // такой запрос бессмысленно — повтор его не вылечит.
+    await expect(refresher.refreshAccessToken()).rejects.toThrow(/invalid_client/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test("пустой только секрет — тоже ошибка до запроса", async () => {
+    const config = { clientId: "id", clientSecret: "   ", refreshToken: "rt", accessToken: "old", expiresAt: 0 };
+    const { refresher } = makeRefresher(config);
+
+    await expect(refresher.refreshAccessToken()).rejects.toThrow(/invalid_client/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   test("refreshAccessToken обменивает refresh_token и сохраняет expiresAt", async () => {
     const config = { clientId: "id", clientSecret: "secret", refreshToken: "rt", accessToken: "old", expiresAt: 0 };
     const { refresher, saveTokens } = makeRefresher(config);
