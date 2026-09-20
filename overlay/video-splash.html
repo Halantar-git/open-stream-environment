@@ -20,6 +20,9 @@
 <head>
   <meta charset="utf-8" />
   <title>Open Stream Environment — splash</title>
+  <!-- Заставка открывается внутри OBS, поэтому внешние шрифты недоступны:
+       берём встроенный Roboto (тот же, что в логотипе), а не Segoe UI из системы. -->
+  <link rel="stylesheet" href="/shared/fonts.css" />
   <style>
     html,
     body {
@@ -60,7 +63,7 @@
       animation: splash-pulse 1.6s ease-in-out infinite;
     }
     .splash-default__label {
-      font-family: "Segoe UI", "Roboto", Arial, sans-serif;
+      font-family: "Roboto", "Segoe UI", Arial, sans-serif;
       font-weight: 700;
       font-size: 20px;
       letter-spacing: 6px;

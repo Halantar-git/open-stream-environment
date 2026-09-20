@@ -26,6 +26,10 @@
     * все цели loadFile/loadURL существуют на диске;
     * каталоги http-целей реально отдаются статикой сервера;
     * каждый файл окна попадает в `build.files` и не вырезан исключением;
+    * файлы, на которые ссылается сам CSS (`url(…)`), — в том числе встроенные
+      шрифты тем — есть на диске и едут в сборку;
+    * каждое семейство шрифта из тем объявлено во встроенном наборе, и наоборот:
+      ни один вшитый шрифт не лежит мертвым грузом;
     * то, чего в сборке быть не должно (базы, бэкапы, карантин, логи, медиа
       пользователя), исключениями накрыто.
 */
@@ -176,6 +180,84 @@ function allReferences() {
   return out;
 }
 
+/*
+  Ссылки из CSS: url("…") в @font-face и обычных правилах. Из HTML они не видны —
+  страница подключает CSS, а шрифт упомянут только внутри него, — поэтому
+  проверяются отдельно: забытый в `build.files` файл иначе уедет в релиз мимо
+  всех тестов и всплывёт у пользователя подменой на системный шрифт.
+*/
+function cssReferences() {
+  const out = [];
+  allFiles
+    .filter((file) => file.endsWith(".css"))
+    .forEach((file) => {
+      const source = fs.readFileSync(path.join(ROOT, file), "utf8");
+      /*
+        Один проход с альтернативой на три формы записи: значение в кавычках
+        может само содержать кавычку другого типа — так устроены SVG-заливки в
+        data-URI. Проход слева направо съедает такое значение целиком и не
+        разбирает `url()` внутри него как отдельную ссылку.
+      */
+      const re = /url\(\s*(?:"([^"]*)"|'([^']*)'|([^"'()\s]+))\s*\)/g;
+      let match;
+      while ((match = re.exec(source))) {
+        const ref = (match[1] || match[2] || match[3] || "").trim();
+        if (!ref || /^(https?:|data:|\/\/|#)/.test(ref)) continue;
+        out.push({ file, ref, target: resolveReference(file, ref) });
+      }
+    });
+  return out;
+}
+
+// Семейства, объявленные во встроенном наборе шрифтов (`shared/fonts.css`).
+function declaredFontFamilies() {
+  const source = fs.readFileSync(path.join(ROOT, "shared", "fonts.css"), "utf8");
+  return new Set([...source.matchAll(/@font-face\s*\{[^}]*?font-family\s*:\s*"([^"]+)"/g)].map((match) => match[1]));
+}
+
+/*
+  Первое семейство шрифтовых токенов тем — то, что реально рисует текст. Смотрим
+  и встроенные темы, и пресеты движка, и список шрифтов редактора: разойдись имя
+  здесь и в `fonts.css` — и тема молча уедет на системный шрифт.
+*/
+function themeFontFamilies() {
+  const sources = ["shared/themes.js", "shared/theme-engine.js", "themeeditor/theme-editor.js"];
+  const patterns = [/--font-(?:display|body|mono)"?\s*:\s*'([^']+)'/g, /value:\s*'([^']+)'/g];
+  const out = new Map();
+
+  sources.forEach((file) => {
+    const source = fs.readFileSync(path.join(ROOT, file), "utf8");
+    patterns.forEach((re) => {
+      let match;
+      while ((match = re.exec(source))) {
+        const family = match[1].split(",")[0].trim().replace(/^["']|["']$/g, "");
+        if (family && !out.has(family)) out.set(family, file);
+      }
+    });
+  });
+
+  return out;
+}
+
+// Семейства, которые остаются системными фолбэками и намеренно не вшиваются.
+const SYSTEM_FONT_FALLBACKS = new Set([
+  "Segoe UI",
+  "Consolas",
+  "Georgia",
+  "Arial",
+  "system-ui",
+  "sans-serif",
+  "serif",
+  "monospace",
+]);
+
+// Исходники, где могут упоминаться семейства шрифтов, — без самих файлов шрифтов.
+function fontConsumerSources() {
+  return allFiles
+    .filter((file) => /\.(css|html|js)$/.test(file) && !file.startsWith("assets/fonts/") && file !== "shared/fonts.css")
+    .map((file) => fs.readFileSync(path.join(ROOT, file), "utf8"));
+}
+
 describe("поставка: цели окон", () => {
   test("loadFile-цели найдены и существуют на диске", () => {
     const targets = loadFileTargets();
@@ -237,6 +319,43 @@ describe("поставка: цели окон", () => {
   });
 });
 
+describe("поставка: встроенные шрифты", () => {
+  test("файлы, на которые ссылается CSS, на месте", () => {
+    const references = cssReferences();
+    // Порог с запасом: если разбор сломается, тест должен упасть, а не тихо пройти.
+    expect(references.length).toBeGreaterThan(20);
+
+    const missing = references.filter(({ target }) => !fs.existsSync(path.join(ROOT, target)));
+    expect(missing.map(({ file, ref }) => `${file} → ${ref}`)).toEqual([]);
+  });
+
+  test("файлы, на которые ссылается CSS, попадают в сборку", () => {
+    const leaked = cssReferences().filter(({ target }) => !isShipped(target));
+
+    expect(leaked.map(({ file, target }) => `${file} → ${target}`)).toEqual([]);
+  });
+
+  test("каждое семейство тем объявлено во встроенном наборе", () => {
+    const declared = declaredFontFamilies();
+    expect(declared.size).toBeGreaterThan(0);
+
+    const missing = [...themeFontFamilies()]
+      .filter(([family]) => !SYSTEM_FONT_FALLBACKS.has(family) && !declared.has(family))
+      .map(([family, file]) => `${file} → ${family}`);
+
+    expect(missing).toEqual([]);
+  });
+
+  test("ни один вшитый шрифт не лежит в сборке мертвым грузом", () => {
+    const sources = fontConsumerSources();
+    const unused = [...declaredFontFamilies()].filter(
+      (family) => !sources.some((source) => source.includes(`"${family}"`) || source.includes(`'${family}'`))
+    );
+
+    expect(unused).toEqual([]);
+  });
+});
+
 describe("поставка: build.files", () => {
   test("каждый шаблон включения находит хотя бы один файл", () => {
     const empty = includePatterns.filter(({ re }) => !allFiles.some((file) => re.test(file)));
@@ -254,6 +373,7 @@ describe("поставка: build.files", () => {
       "server/health.js",
       "server/support-bundle.js",
       "shared/theme.css",
+      "shared/fonts.css",
     ].forEach((file) => {
       expect({ file, shipped: isShipped(file) }).toEqual({ file, shipped: true });
     });
