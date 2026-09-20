@@ -848,15 +848,16 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   line-height: 1.5;
 }
 
-/* ---------- Alert queue panel ---------- */
-.topbar__queue-btn { margin-left: 10px; font-size: 12px; padding: 7px 14px; }
-.topbar__queue-btn svg { width: 14px; height: 14px; }
-.topbar__queue-btn.is-active { background: var(--md-primary-container); color: var(--md-on-primary-container); }
-
+/* ---------- Alert queue panel: парная панель к «DA» ---------- */
 .queue-panel {
   position: fixed;
   top: 56px;
-  right: 0;
+  /*
+    Парная панель к «DA»: стоит слева от неё, поэтому смещена ровно на ширину
+    соседа. Отступ привязан к .da-panel вручную — тот же приём, что у
+    .participants-panel рядом с .wheel-panel: измените ширину DA, поправьте здесь.
+  */
+  right: min(480px, 100vw);
   bottom: 0;
   width: min(400px, 100vw);
   z-index: 50;
@@ -885,19 +886,6 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   margin-right: auto;
   white-space: nowrap;
 }
-.queue-panel__close {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  font-size: 16px;
-  line-height: 1;
-  color: var(--md-on-surface-variant);
-  background: transparent;
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--shape-sm);
-  cursor: pointer;
-}
-.queue-panel__close:hover { background: var(--md-surface-container-highest); color: var(--md-on-surface); }
 .queue-panel__body {
   flex: 1;
   overflow-y: auto;

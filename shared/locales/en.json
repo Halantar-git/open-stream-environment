@@ -6,8 +6,7 @@
     "wheel": "Wheel",
     "poll": "Poll",
     "settings": "Settings",
-    "history": "History",
-    "queue": "Queue"
+    "history": "History"
   },
   "da": {
     "title": "DonationAlerts",
@@ -1264,6 +1263,7 @@
       "title": "DonationAlerts",
       "p1": "Donations automatically increase the goal counter and trigger an alert.",
       "p2": "Donation voice-over (TTS): in the DonationAlerts card you can enable reading the donation message aloud — language, voice, volume and speech rate, plus a test button. If the service returns a voice link, the DonationAlerts voice can also be used for regular donations (a separate toggle).",
+      "p3": "The DA button in the top bar opens a pair of panels: DonationAlerts itself and, to its left, the alert queue. They open and close together and share one close button: the queue shows what is on air and what is waiting, and lets you pause alerts and set the display rules — hide donations below an amount and merge consecutive donations from the same viewer.",
       "s1": "Create a client at donationalerts.com/application/clients.",
       "s2": "Set the Redirect URI to the value shown in Settings → DonationAlerts.",
       "s3": "Paste the Client ID and Client Secret, then press Connect DonationAlerts."

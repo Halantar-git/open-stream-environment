@@ -68,7 +68,6 @@
         <button class="md-button md-button--tonal topbar__terminal-btn" id="toggleTerminalBtn" data-i18n-title="editor.terminal"></button>
         <button class="md-button md-button--tonal topbar__history-btn" id="toggleHistoryBtn" data-i18n-title="settings.history"></button>
         <button class="md-button md-button--tonal topbar__da-btn" id="toggleDaBtn" data-i18n-title="da.title"></button>
-        <button class="md-button md-button--tonal topbar__queue-btn" id="toggleQueueBtn" data-i18n-title="nav.queue"></button>
         <button class="md-button md-button--tonal topbar__help-btn" id="toggleHelpBtn" data-i18n-title="help.title"></button>
         <div class="topbar__lang" id="languageSwitcher" role="group" data-i18n-title="settings.language">
           <button class="md-button md-button--tonal topbar__lang-btn" data-lang="ru" type="button">RU</button>
@@ -184,6 +183,12 @@
       </div>
     </aside>
 
+    <!--
+      Парная панель объявлена раньше основной — и это не случайно. У обеих
+      одинаковый z-index, поэтому наложение решает разметка: основная панель
+      рисуется последней, её тень (--elev-3, разлёт 16px) ложится на парную, и
+      та выглядит «под» ней. Поменяете местами — парная окажется сверху.
+    -->
     <aside class="participants-panel" id="participantsPanel" hidden>
       <header class="participants-panel__header">
         <span class="participants-panel__title" data-i18n="giveaway.participantsTitle">Участники</span>
@@ -201,6 +206,14 @@
       <div class="wheel-panel__body" id="wheelPanelBody"></div>
     </aside>
 
+    <!-- Парная панель — раньше основной, см. пояснение у «Участников». -->
+    <aside class="participants-panel" id="pollOptionsPanel" hidden>
+      <header class="participants-panel__header">
+        <span class="participants-panel__title" data-i18n="poll.optionsTitle">Пункты голосования</span>
+      </header>
+      <div class="participants-panel__body" id="pollOptionsPanelBody"></div>
+    </aside>
+
     <aside class="wheel-panel poll-panel" id="pollPanel" hidden>
       <header class="wheel-panel__header">
         <span class="wheel-panel__title" data-i18n="poll.panelTitle">Голосование</span>
@@ -209,17 +222,15 @@
       <div class="wheel-panel__body" id="pollPanelBody"></div>
     </aside>
 
-    <aside class="participants-panel" id="pollOptionsPanel" hidden>
-      <header class="participants-panel__header">
-        <span class="participants-panel__title" data-i18n="poll.optionsTitle">Пункты голосования</span>
-      </header>
-      <div class="participants-panel__body" id="pollOptionsPanelBody"></div>
-    </aside>
-
+    <!--
+      Очередь — парная панель к «DA»: открывается и закрывается вместе с ней и
+      стоит слева от неё, как «Участники» слева от настроек колеса. Своей кнопки
+      в шапке и своего крестика у неё поэтому нет — пару закрывает крестик DA.
+      Объявлена раньше «DA» по той же причине, что и «Участники» (см. выше).
+    -->
     <aside class="queue-panel" id="queuePanel" hidden>
       <header class="queue-panel__header">
         <span class="queue-panel__title" data-i18n="queue.title">Очередь алертов</span>
-        <button class="queue-panel__close" id="queueCloseBtn" aria-label="Закрыть" data-i18n-title="common.close">×</button>
       </header>
       <div class="queue-panel__body">
         <section class="queue-block">

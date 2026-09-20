@@ -3163,8 +3163,6 @@ const { EVENT_TYPES } = window.SharedEvents;
     панель не может разойтись с сервером.
   */
   const queuePanelEl = document.getElementById("queuePanel");
-  const toggleQueueBtn = document.getElementById("toggleQueueBtn");
-  const queueCloseBtn = document.getElementById("queueCloseBtn");
   const queueNowCardEl = document.getElementById("queueNowCard");
   const queuePendingEl = document.getElementById("queuePending");
   const queueStatsEl = document.getElementById("queueStats");
@@ -3349,16 +3347,21 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (queuePanelEl && !queuePanelEl.hidden) renderQueuePanel();
   }
 
+  /*
+    Очередь — парная панель к «DA»: своей кнопки в шапке нет, состояние она
+    делит с панелью DonationAlerts (см. setDaOpen), поэтому здесь только показ
+    и перерисовка.
+  */
   function setQueueOpen(open) {
-    if (!queuePanelEl || !toggleQueueBtn) return;
+    if (!queuePanelEl) return;
     queuePanelEl.hidden = !open;
-    toggleQueueBtn.classList.toggle("is-active", open);
     if (open) renderQueuePanel();
   }
-  if (toggleQueueBtn) {
-    toggleQueueBtn.innerHTML = `${ICONS.layers} ${t("nav.queue")}`;
-  }
-  if (queueCloseBtn) queueCloseBtn.addEventListener("click", () => setQueueOpen(false));
+
+  // Крестик стоит только на правой панели пары, поэтому закрывает обе — иначе
+  // очередь осталась бы висеть одна, без единого способа её убрать.
+  const daCloseBtn = document.getElementById("daCloseBtn");
+  if (daCloseBtn) daCloseBtn.addEventListener("click", () => setQueueOpen(false));
 
   if (queueSkipBtn) queueSkipBtn.addEventListener("click", () => send(EVENT_TYPES.CMD_ALERT_QUEUE_SKIP, {}));
   if (queueClearBtn) queueClearBtn.addEventListener("click", () => send(EVENT_TYPES.CMD_ALERT_QUEUE_CLEAR, {}));
@@ -3410,6 +3413,16 @@ const { EVENT_TYPES } = window.SharedEvents;
   }
 
   // ---- panel manager: keep only one panel open at a time ----
+  /*
+    «DA» и «Очередь» — одна пара экранов, как «Колесо» и «Участники»: открытие
+    и закрытие идёт через одну точку, а очередь в реестре не значится — иначе
+    Escape и переключение панелей убирали бы её отдельно от DA.
+  */
+  function setDaOpen(open) {
+    daPanel.setOpen(open);
+    setQueueOpen(open);
+  }
+
   const panelRegistry = [
     { id: "terminalPanel", setOpen: loggerPanel.setOpen },
     { id: "debugPanel", setOpen: debugPanel.setOpen },
@@ -3417,8 +3430,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     { id: "historyPanel", setOpen: setHistoryOpen },
     { id: "wheelPanel", setOpen: setWheelOpen },
     { id: "pollPanel", setOpen: setPollOpen },
-    { id: "queuePanel", setOpen: setQueueOpen },
-    { id: "daPanel", setOpen: daPanel.setOpen },
+    { id: "daPanel", setOpen: setDaOpen },
   ];
 
   function panelIsOpen(id) {
@@ -3444,7 +3456,6 @@ const { EVENT_TYPES } = window.SharedEvents;
     ["toggleHistoryBtn", "historyPanel"],
     ["toggleWheelBtn", "wheelPanel"],
     ["togglePollBtn", "pollPanel"],
-    ["toggleQueueBtn", "queuePanel"],
     ["toggleDaBtn", "daPanel"],
   ].forEach(([btnId, panelId]) => {
     const btn = document.getElementById(btnId);
@@ -3740,8 +3751,6 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (wheelBtn) wheelBtn.innerHTML = `${ICONS.sceneWheel} ${t("nav.wheel")}`;
     const pollBtn = document.getElementById("togglePollBtn");
     if (pollBtn) pollBtn.innerHTML = `${ICONS.scenePoll} ${t("nav.poll")}`;
-    const queueBtn = document.getElementById("toggleQueueBtn");
-    if (queueBtn) queueBtn.innerHTML = `${ICONS.layers} ${t("nav.queue")}`;
     renderQueuePanel();
     daPanel.refreshLabel();
     loggerPanel.refreshLabel();
