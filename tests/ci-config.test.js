@@ -32,7 +32,11 @@
     * релизный workflow запускается по тегу, отказывается собирать версию,
       не совпадающую с package.json, и умеет загружать артефакты (GH_TOKEN);
     * релиз собирает ровно один workflow: два сборщика на один тег — это гонка
-      за один и тот же черновик, а не двойная страховка.
+      за один и тот же черновик, а не двойная страховка;
+    * уведомление сайта после публикации релиза шлёт то событие и тому
+      репозиторию, которые сайт слушает: опечатка здесь ничего не ломает — сайт
+      просто никогда не пересоберётся, и видно это будет только по устаревшей
+      версии на странице.
 */
 
 const fs = require("fs");
@@ -48,6 +52,7 @@ function workflow(name) {
 
 const ci = workflow("ci.yml");
 const release = workflow("release.yml");
+const notify = workflow("notify-site.yml");
 
 // Все «npm run <скрипт>» и «script: <скрипт>» из workflow (matrix передаёт имя
 // скрипта именно так).
@@ -99,6 +104,7 @@ describe("CI: файлы workflow", () => {
     [
       ["ci.yml", ci],
       ["release.yml", release],
+      ["notify-site.yml", notify],
     ].forEach(([name, source]) => {
       expect({ name, tabs: source.includes("\t") }).toEqual({ name, tabs: false });
       const badIndent = source
@@ -161,5 +167,26 @@ describe("CI: файлы workflow", () => {
     });
 
     expect(publishers).toEqual(["release.yml"]);
+  });
+
+  test("после публикации релиза сайт просят пересобраться", () => {
+    /*
+      Сайт (ose-website) берёт версию, дату и адреса установщиков из последнего
+      релиза при своей выкладке, а про сам релиз узнать не может: он выходит
+      здесь. Публикация релиза шлёт сайту repository_dispatch, который тот
+      слушает (тип события объявлен в его pages.yml). Опечатка в типе события или
+      в имени репозитория ничего не ломает — сайт просто никогда не пересоберётся,
+      и заметно это будет только по устаревшей версии на странице.
+    */
+    expect(notify).toContain("release:");
+    expect(notify).toContain("types: [published]");
+    expect(notify).toContain("repos/Halantar-git/ose-website/dispatches");
+    expect(notify).toContain('{"event_type":"app-release"}');
+    expect(notify).toContain("SITE_DISPATCH_TOKEN");
+
+    /* Черновик релиза сайту не интересен: releases/latest его не видит, поэтому
+       рассылка не должна висеть на создании релиза или на теге. */
+    expect(notify).not.toContain("tags:");
+    expect(notify).not.toContain("types: [created]");
   });
 });
