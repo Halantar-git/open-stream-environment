@@ -87,10 +87,12 @@ function orbItem(id = "o") {
 }
 
 let raf;
+let clock;
 let originalGlobals;
 
 beforeEach(() => {
   raf = createRaf();
+  clock = 0;
   originalGlobals = {
     document: global.document,
     window: global.window,
@@ -102,7 +104,7 @@ beforeEach(() => {
   global.window = { devicePixelRatio: 1, addEventListener() {}, removeEventListener() {} };
   global.requestAnimationFrame = raf.request;
   global.cancelAnimationFrame = raf.cancel;
-  global.performance = { now: () => 0 };
+  global.performance = { now: () => clock };
 });
 
 afterEach(() => {
@@ -142,6 +144,32 @@ describe("WidgetMd3Orb", () => {
 
     w.mount(parent);
     expect(raf.pending()).toBe(0);
+    w.unmount();
+  });
+
+  test("выключатель движения: сфера стоит по центру, но продолжает дышать", () => {
+    const ctx = makeContext("nebula");
+    const parent = makeEl("div");
+    const w = new WidgetMd3Orb({ ...orbItem(), renderType: "canvas", config: { motion: false } }, ctx);
+
+    w.mount(parent);
+    ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "follow", user: "bob" }); // сфера видна только с алертом
+    expect(raf.pending()).toBe(1); // цикл идёт: анимация не заморожена
+
+    const arcs = w.element._ctx.arc;
+    arcs.mockClear();
+    clock = 1000;
+    raf.flush(1000);
+    const firstRadius = arcs.mock.calls[0][2];
+
+    arcs.mockClear();
+    clock = 2000;
+    raf.flush(2000);
+    // Без покачивания сфера каждый кадр рисуется в центре канваса (320x160)
+    expect(arcs).toHaveBeenCalledWith(160, 80, expect.any(Number), 0, Math.PI * 2);
+    // А дыхание осталось: радиус считается от времени
+    expect(arcs.mock.calls[0][2]).not.toBe(firstRadius);
+
     w.unmount();
   });
 

@@ -87,10 +87,12 @@ function grimhexItem(id = "g") {
 }
 
 let raf;
+let clock;
 let originalGlobals;
 
 beforeEach(() => {
   raf = createRaf();
+  clock = 0;
   originalGlobals = {
     document: global.document,
     window: global.window,
@@ -103,7 +105,7 @@ beforeEach(() => {
   global.window = { devicePixelRatio: 1, addEventListener() {}, removeEventListener() {} };
   global.requestAnimationFrame = raf.request;
   global.cancelAnimationFrame = raf.cancel;
-  global.performance = { now: () => 0 };
+  global.performance = { now: () => clock };
   global.Path2D = function (d) { this.d = d; };
 });
 
@@ -139,6 +141,52 @@ describe("WidgetGrimHex", () => {
 
     w.mount(parent);
     expect(raf.pending()).toBe(0); // onMount вернулся раньше — цикла нет
+    w.unmount();
+  });
+
+  test("выключатель движения: знак стоит на месте, неон продолжает играть", () => {
+    const parent = makeEl("div");
+    const still = new WidgetGrimHex(
+      { ...grimhexItem(), renderType: "canvas", config: { motion: false } },
+      makeContext("grimhex")
+    );
+
+    still.mount(parent);
+    expect(raf.pending()).toBe(1); // цикл идёт: анимация не заморожена
+
+    const ctx = still.element._ctx;
+    // Кадр заканчивается отрисовкой колпачков (_drawCaps), а они сбрасывают
+    // globalAlpha в 1 — поэтому яркость неона снимаем в момент заливки
+    const alphas = [];
+    ctx.fill.mockImplementation(() => alphas.push(ctx.globalAlpha));
+
+    ctx.translate.mockClear();
+    clock = 1000;
+    raf.flush(1000);
+    const firstFrame = alphas.splice(0);
+    expect(firstFrame.length).toBeGreaterThan(0);
+    expect(ctx.translate).toHaveBeenCalledWith(160, 80); // знак по центру, без покачивания
+
+    ctx.translate.mockClear();
+    clock = 2000;
+    raf.flush(2000);
+    expect(ctx.translate).toHaveBeenCalledWith(160, 80); // и дальше строго по центру
+    expect(alphas).not.toEqual(firstFrame); // а яркость кадров разная — неон дышит
+
+    still.unmount();
+    expect(raf.pending()).toBe(0);
+  });
+
+  test("с включённым движением кадр покачивается", () => {
+    const parent = makeEl("div");
+    const w = new WidgetGrimHex({ ...grimhexItem(), renderType: "canvas" }, makeContext("grimhex"));
+
+    w.mount(parent);
+    clock = 1000;
+    raf.flush(1000);
+    // swayX/swayY считаются от времени — кадр уже смещён от центра
+    expect(w.element._ctx.translate).not.toHaveBeenLastCalledWith(160, 80);
+
     w.unmount();
   });
 

@@ -35,6 +35,11 @@ function escapeHtml(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+// Signs with a "Motion" switch in the inspector: it stops the widget from
+// drifting (sway, roll, spin) while its neon animation keeps playing. The TESO
+// seal and the Pixel cube are left out.
+const MOTION_TOGGLE_TYPES = ["grimhex", "musain", "nuclear", "cobra", "elite-sign", "md3-orb"];
+
 export function initPropertiesPanel({
   state,
   t,
@@ -204,7 +209,8 @@ export function initPropertiesPanel({
         <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>`;
     } else if (inst.type === "grimhex" || inst.type === "musain" || inst.type === "nuclear" || inst.type === "cobra" || inst.type === "elite-sign" || inst.type === "teso-seal" || inst.type === "md3-orb" || inst.type === "pixel-cube") {
       extraHtml = `
-        <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>`;
+        <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>
+        ${MOTION_TOGGLE_TYPES.includes(inst.type) ? `<div class="properties__toggle-row"><label>${t("properties.motion")}</label>${switchHtml("pMotion", config.motion !== false)}</div>` : ""}`;
     } else if (inst.type === "cobra-shield" || inst.type === "cobra-radar" || inst.type === "grimhex-radar") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.opacity")}: <span id="pOpacityValue">${config.opacity ?? 100}%</span></label><input type="range" id="pOpacity" min="0" max="100" step="1" value="${config.opacity ?? 100}"></div>`;
@@ -415,6 +421,9 @@ export function initPropertiesPanel({
         if (label) label.textContent = String(v);
         send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { perspective: v } } });
       });
+      // Only MOTION_TOGGLE_TYPES carry the switch: for the other types of this
+      // branch the element is absent, and wireSwitch(null) does nothing.
+      wireSwitch(propertiesEl.querySelector("#pMotion"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { motion: on } } }));
     } else if (inst.type === "cobra-shield" || inst.type === "cobra-radar" || inst.type === "grimhex-radar") {
       propertiesEl.querySelector("#pOpacity").addEventListener("input", (e) => {
         const v = Number(e.target.value);

@@ -170,6 +170,9 @@
 
       const now = performance.now();
       const t = now / 1000;
+      // "Motion" switched off in the inspector: the emblem holds position (no
+      // hover sway, no roll) while the neon animation keeps playing.
+      const still = this.config.motion === false;
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, cw, ch);
@@ -188,9 +191,9 @@
       intensity = clamp(intensity, 0.12, 1);
 
       // --- hover sway + soft roll ---
-      const swayX = Math.sin(t * 0.5) * 4;
-      const swayY = Math.cos(t * 0.4) * 3;
-      const rot = Math.sin(t * 0.22) * 0.05;
+      const swayX = still ? 0 : Math.sin(t * 0.5) * 4;
+      const swayY = still ? 0 : Math.cos(t * 0.4) * 3;
+      const rot = still ? 0 : Math.sin(t * 0.22) * 0.05;
       const dx = glitching ? (Math.random() * 2 - 1) * 7 : 0;
 
       const cx = cw / 2 + swayX + dx;

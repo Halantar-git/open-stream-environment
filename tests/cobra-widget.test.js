@@ -86,10 +86,12 @@ function cobraItem(id = "c") {
 }
 
 let raf;
+let clock;
 let originalGlobals;
 
 beforeEach(() => {
   raf = createRaf();
+  clock = 0;
   originalGlobals = {
     document: global.document,
     window: global.window,
@@ -102,7 +104,7 @@ beforeEach(() => {
   global.window = { devicePixelRatio: 1, addEventListener() {}, removeEventListener() {} };
   global.requestAnimationFrame = raf.request;
   global.cancelAnimationFrame = raf.cancel;
-  global.performance = { now: () => 0 };
+  global.performance = { now: () => clock };
   global.Path2D = function (d) { this.d = d; };
 });
 
@@ -138,6 +140,52 @@ describe("WidgetCobra", () => {
 
     w.mount(parent);
     expect(raf.pending()).toBe(0); // onMount вернулся раньше — цикла нет
+    w.unmount();
+  });
+
+  test("выключатель движения: корабль стоит на месте, неон продолжает играть", () => {
+    const parent = makeEl("div");
+    const still = new WidgetCobra(
+      { ...cobraItem(), renderType: "canvas", config: { motion: false } },
+      makeContext("cobra-mk2")
+    );
+
+    still.mount(parent);
+    expect(raf.pending()).toBe(1); // цикл идёт: анимация не заморожена
+
+    const c2d = still.element._ctx;
+    // Кадр завершает заливка слоёв, но альфу снимаем в момент fill — так
+    // проверка не зависит от того, что виджет ставит в конце
+    const alphas = [];
+    c2d.fill.mockImplementation(() => alphas.push(c2d.globalAlpha));
+
+    c2d.translate.mockClear();
+    clock = 1000;
+    raf.flush(1000);
+    const firstFrame = alphas.splice(0);
+    expect(firstFrame.length).toBeGreaterThan(0);
+    expect(c2d.translate).toHaveBeenCalledWith(160, 80); // без покачивания
+
+    c2d.translate.mockClear();
+    clock = 2000;
+    raf.flush(2000);
+    expect(c2d.translate).toHaveBeenCalledWith(160, 80); // и дальше строго по центру
+    expect(alphas).not.toEqual(firstFrame); // а яркость кадров разная — неон дышит
+
+    still.unmount();
+    expect(raf.pending()).toBe(0);
+  });
+
+  test("с включённым движением кадр покачивается", () => {
+    const parent = makeEl("div");
+    const w = new WidgetCobra({ ...cobraItem(), renderType: "canvas" }, makeContext("cobra-mk2"));
+
+    w.mount(parent);
+    clock = 1000;
+    raf.flush(1000);
+    // swayX/swayY считаются от времени — кадр уже смещён от центра
+    expect(w.element._ctx.translate).not.toHaveBeenCalledWith(160, 80);
+
     w.unmount();
   });
 

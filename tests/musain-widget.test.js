@@ -17,8 +17,7 @@
 
 const EventBus = require("../overlay/event-bus");
 const { EVENT_TYPES } = require("../shared/events");
-const WidgetNuclear = require("../overlay/widgets/nuclear-widget");
-const WidgetManager = require("../overlay/widgets/widget-manager");
+const WidgetMusain = require("../overlay/widgets/musain-widget");
 
 // ---- minimal mock ----
 
@@ -82,8 +81,8 @@ function makeContext(theme) {
   return { bus: new EventBus(), EVENT_TYPES, theme };
 }
 
-function nuclearItem(id = "n") {
-  return { id, type: "nuclear", x: 0, y: 0, w: 20, h: 10, z: 0, visible: true, config: {} };
+function musainItem(id = "m") {
+  return { id, type: "musain", x: 0, y: 0, w: 20, h: 10, z: 0, visible: true, config: {} };
 }
 
 let raf;
@@ -99,12 +98,14 @@ beforeEach(() => {
     requestAnimationFrame: global.requestAnimationFrame,
     cancelAnimationFrame: global.cancelAnimationFrame,
     performance: global.performance,
+    Path2D: global.Path2D,
   };
   global.document = { createElement: (tag) => makeEl(tag) };
   global.window = { devicePixelRatio: 1, addEventListener() {}, removeEventListener() {} };
   global.requestAnimationFrame = raf.request;
   global.cancelAnimationFrame = raf.cancel;
   global.performance = { now: () => clock };
+  global.Path2D = function (d) { this.d = d; };
 });
 
 afterEach(() => {
@@ -113,17 +114,18 @@ afterEach(() => {
   global.requestAnimationFrame = originalGlobals.requestAnimationFrame;
   global.cancelAnimationFrame = originalGlobals.cancelAnimationFrame;
   global.performance = originalGlobals.performance;
+  global.Path2D = originalGlobals.Path2D;
 });
 
-describe("WidgetNuclear", () => {
-  test("запускает цикл и рисует только для темы nuclear", () => {
+describe("WidgetMusain", () => {
+  test("запускает цикл и рисует только для темы grimhex", () => {
     const parent = makeEl("div");
-    const w = new WidgetNuclear({ ...nuclearItem(), renderType: "canvas" }, makeContext("nuclear"));
+    const w = new WidgetMusain({ ...musainItem(), renderType: "canvas" }, makeContext("grimhex"));
 
     w.mount(parent);
     expect(w.renderType).toBe("canvas");
     expect(w.element.tagName).toBe("CANVAS");
-    expect(raf.pending()).toBe(1); // 30 FPS loop started
+    expect(raf.pending()).toBe(1); // ambient loop started
 
     raf.flush(1000); // one frame
     expect(w.element._ctx.fill).toHaveBeenCalled();
@@ -134,97 +136,50 @@ describe("WidgetNuclear", () => {
 
   test("не запускает цикл на чужой теме (уровень виджета)", () => {
     const parent = makeEl("div");
-    const w = new WidgetNuclear({ ...nuclearItem(), renderType: "canvas" }, makeContext("nebula"));
+    const w = new WidgetMusain({ ...musainItem(), renderType: "canvas" }, makeContext("nebula"));
 
     w.mount(parent);
     expect(raf.pending()).toBe(0); // onMount вернулся раньше — цикла нет
     w.unmount();
   });
 
-  test("выключатель движения: знак не крутится, неон продолжает играть", () => {
+  test("выключатель движения: вывеска стоит на месте, неон продолжает играть", () => {
     const parent = makeEl("div");
-    const still = new WidgetNuclear(
-      { ...nuclearItem(), renderType: "canvas", config: { motion: false } },
-      makeContext("nuclear")
+    const still = new WidgetMusain(
+      { ...musainItem(), renderType: "canvas", config: { motion: false } },
+      makeContext("grimhex")
     );
 
     still.mount(parent);
     expect(raf.pending()).toBe(1); // цикл идёт: анимация не заморожена
 
-    const c2d = still.element._ctx;
-    // Альфу снимаем в момент fill: так проверка не зависит от того, что виджет
-    // ставит в конце кадра
-    const alphas = [];
-    c2d.fill.mockImplementation(() => alphas.push(c2d.globalAlpha));
-
-    c2d.rotate.mockClear();
+    const ctx = still.element._ctx;
+    ctx.translate.mockClear();
     clock = 1000;
     raf.flush(1000);
-    const firstFrame = alphas.splice(0);
-    expect(firstFrame.length).toBeGreaterThan(0);
-    expect(c2d.rotate).toHaveBeenCalledWith(0); // без вращения
+    const bright = ctx.globalAlpha;
+    expect(ctx.translate).toHaveBeenCalledWith(160, 80); // вывеска по центру, без покачивания
 
-    c2d.rotate.mockClear();
+    ctx.translate.mockClear();
     clock = 2000;
     raf.flush(2000);
-    expect(c2d.rotate).toHaveBeenCalledWith(0); // и дальше угол не меняется
-    expect(alphas).not.toEqual(firstFrame); // а яркость кадров разная — неон дышит
+    expect(ctx.translate).toHaveBeenCalledWith(160, 80); // и дальше строго по центру
+    expect(ctx.globalAlpha).not.toBe(bright); // а яркость кадров разная — неон дышит
 
     still.unmount();
     expect(raf.pending()).toBe(0);
   });
 
-  test("с включённым движением знак крутится", () => {
+  test("с включённым движением кадр покачивается", () => {
     const parent = makeEl("div");
-    const w = new WidgetNuclear({ ...nuclearItem(), renderType: "canvas" }, makeContext("nuclear"));
+    const w = new WidgetMusain({ ...musainItem(), renderType: "canvas" }, makeContext("grimhex"));
 
     w.mount(parent);
     clock = 1000;
     raf.flush(1000);
-    // rot считается от времени — кадр повёрнут
-    expect(w.element._ctx.rotate).toHaveBeenCalledWith(0.22);
+    // swayX/swayY считаются от времени — кадр уже смещён от центра
+    expect(w.element._ctx.translate).not.toHaveBeenLastCalledWith(160, 80);
 
     w.unmount();
-  });
-
-  test("glitch активируется по событию чата/доната", () => {
-    const ctx = makeContext("nuclear");
-    const parent = makeEl("div");
-    const w = new WidgetNuclear({ ...nuclearItem(), renderType: "canvas" }, ctx);
-    w.mount(parent);
-
-    expect(w._glitchUntil).toBe(0);
-    ctx.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "x", message: "hi" });
-    expect(w._glitchUntil).toBeGreaterThan(0);
-
-    w.unmount();
-  });
-});
-
-describe("WidgetManager — изоляция Nuclear", () => {
-  test("не создаёт nuclear виджет, пока тема не nuclear", () => {
-    const root = makeEl("div");
-    const context = { bus: new EventBus(), EVENT_TYPES, theme: "nebula" };
-    const mgr = new WidgetManager(root, {
-      shouldMount: (item) => item.type !== "nuclear" || context.theme === "nuclear",
-      resolveRenderType: (item) => (item.type === "nuclear" && context.theme === "nuclear" ? "canvas" : "2d"),
-      context,
-    });
-    mgr.register("nuclear", WidgetNuclear);
-
-    mgr.syncLayout([nuclearItem()]);
-    expect(mgr.size).toBe(0); // пропущен
-
-    context.theme = "nuclear";
-    mgr.syncLayout([nuclearItem()]);
-    expect(mgr.size).toBe(1);
-    expect(mgr.get("n").theme).toBe("nuclear");
-    expect(mgr.get("n").renderType).toBe("canvas");
-
-    // обратно на лёгкую тему — виджет демонтируется
-    context.theme = "pixel";
-    mgr.syncLayout([nuclearItem()]);
-    expect(mgr.size).toBe(0);
-    expect(root.children).toHaveLength(0);
   });
 });

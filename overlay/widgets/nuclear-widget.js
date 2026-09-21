@@ -142,6 +142,9 @@
 
       const now = performance.now();
       const t = now / 1000;
+      // "Motion" switched off in the inspector: the symbol holds position (no
+      // spin, no sway) while the neon animation keeps playing.
+      const still = this.config.motion === false;
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, cw, ch);
@@ -160,9 +163,9 @@
       intensity = clamp(intensity, 0.12, 1);
 
       // --- pseudo-3D motion: slow rotation + sway + glitch jitter ---
-      const rot = t * 0.22; // continuous spin, unlike the static Grim HEX sign
-      const swayX = Math.sin(t * 0.5) * 3;
-      const swayY = Math.cos(t * 0.4) * 2;
+      const rot = still ? 0 : t * 0.22; // continuous spin, unlike the static Grim HEX sign
+      const swayX = still ? 0 : Math.sin(t * 0.5) * 3;
+      const swayY = still ? 0 : Math.cos(t * 0.4) * 2;
       const dx = glitching ? (Math.random() * 2 - 1) * 7 : 0;
 
       const cx = cw / 2 + swayX + dx;

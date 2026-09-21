@@ -216,6 +216,9 @@
       const now = performance.now();
       const t = now / 1000;
       const { primary, secondary, tertiary } = this.colors;
+      // "Motion" switched off in the inspector: the orb holds position (no sway)
+      // while it keeps breathing, orbiting and popping.
+      const still = this.config.motion === false;
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, cw, ch);
@@ -229,8 +232,8 @@
       scale = clamp(scale, 0.8, 1.25);
 
       // Gentle sway.
-      const swayX = Math.sin(t * 0.5) * 4;
-      const swayY = Math.cos(t * 0.4) * 3;
+      const swayX = still ? 0 : Math.sin(t * 0.5) * 4;
+      const swayY = still ? 0 : Math.cos(t * 0.4) * 3;
       const cx = cw / 2 + swayX;
       const cy = ch / 2 + swayY;
       const R = Math.min(cw, ch) * 0.33 * scale;

@@ -205,6 +205,10 @@
 
       const now = performance.now();
       const t = now / 1000;
+      // «Движение» выключено в инспекторе: вывеска стоит на месте — без
+      // покачивания и поворота, — а неоновая анимация (мерцание, дыхание
+      // яркости, глитч по событиям) продолжает играть как обычно.
+      const still = this.config.motion === false;
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, cw, ch);
@@ -223,9 +227,9 @@
       intensity = clamp(intensity, 0.12, 1);
 
       // --- pseudo-3D sway + glitch jitter (unchanged) ---
-      const swayX = Math.sin(t * 0.5) * 4;
-      const swayY = Math.cos(t * 0.4) * 3;
-      const rot = Math.sin(t * 0.22) * 0.06;
+      const swayX = still ? 0 : Math.sin(t * 0.5) * 4;
+      const swayY = still ? 0 : Math.cos(t * 0.4) * 3;
+      const rot = still ? 0 : Math.sin(t * 0.22) * 0.06;
       const dx = glitching ? (Math.random() * 2 - 1) * 7 : 0;
 
       const cx = cw / 2 + swayX + dx;

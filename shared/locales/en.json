@@ -838,6 +838,7 @@
     "maxMessages": "Max messages",
     "showBadges": "Show badges",
     "perspective": "Perspective",
+    "motion": "Motion",
     "maxItems": "Max items",
     "testAlertHint": "The test alert will trigger on the real overlay in OBS (and in the browser via the link below):",
     "testFollow": "Follow",
