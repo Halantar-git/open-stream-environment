@@ -92,7 +92,6 @@
 
       this.element.classList.add("teso-holo-alert-surface");
       this._applySurface();
-      this._applyTilt();
       this._injectStyles();
 
       this.subscribe(this.context.EVENT_TYPES.ALERT, (alert) => this.queueAlert(alert));
@@ -136,12 +135,6 @@
       s.clipPath = clip;
       s.boxShadow = `${elev}, ${glow}`;
       s.transition = "opacity 0.35s ease";
-    }
-
-    // Subtle holographic tilt.
-    _applyTilt() {
-      this.element.style.transform = "perspective(1400px) rotateY(-6deg) rotateX(1deg)";
-      this.element.style.transformStyle = "preserve-3d";
     }
 
     // Inject the alert/badge keyframes once per document.

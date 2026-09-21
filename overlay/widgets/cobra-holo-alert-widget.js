@@ -104,7 +104,6 @@
 
       this.element.classList.add("elite-surface");
       this._applySurface();
-      this._applyTilt();
       this._nextFlickerAt = performance.now() + 2000 + Math.random() * 3000;
 
       this.subscribe(this.context.EVENT_TYPES.ALERT, (alert) => this.queueAlert(alert));
@@ -157,12 +156,6 @@
       s.borderRadius = radius;
       s.clipPath = clip;
       s.boxShadow = `${elev}, ${glow}`;
-    }
-
-    // Subtle holographic tilt.
-    _applyTilt() {
-      this.element.style.transform = "perspective(1400px) rotateY(-6deg) rotateX(1deg)";
-      this.element.style.transformStyle = "preserve-3d";
     }
 
     // ---- queue ----

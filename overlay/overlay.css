@@ -542,9 +542,9 @@ body[data-decoration="nuclear"]::after {
    fill makes empty widgets (chat/recent/alerts and the like) visible even
    when they have no live content yet. We force opacity:1 so widgets that hide
    themselves until an event (3D holo-alerts set element opacity:0 on mount)
-   still show their frame while arranging. The perspective/tilt that 3D widgets
-   apply (holo-alerts + sign/chat perspective) is flattened here so the frame
-   and drag/resize bounds match the widget's real rectangle. */
+   still show their frame while arranging. The perspective tilt that 3D signs
+   and chats apply (the perspective slider) is flattened here so the frame and
+   drag/resize bounds match the widget's real rectangle. */
 #canvas.is-editing .widget-instance {
   pointer-events: auto;
   cursor: move;
