@@ -97,6 +97,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   function applyKnownUpdate(version) {
     knownUpdateVersion = version || null;
     renderAppVersion();
+    renderUpdateCheckButton();
   }
 
   function setUpdateMenu(open) {
@@ -3736,6 +3737,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     renderDataStats();
     renderSceneBudget();
     copyUrlBtn.textContent = t("editor.copyUrl");
+    renderUpdateCheckButton();
     copySceneUrlBtn.textContent = t("scenes.copyUrl");
     exportConfigBtn.textContent = t("settings.export");
     importConfigBtn.textContent = t("settings.import");
@@ -3928,28 +3930,58 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   if (libraryListEl) libraryListEl.addEventListener("scroll", hideWidgetTooltip);
 
-  if (checkUpdatesBtn && checkUpdatesStatus) {
-    checkUpdatesBtn.addEventListener("click", async () => {
-      if (!window.desktop || !window.desktop.checkForUpdates) {
+  /*
+    Кнопка проверки в «Настройки → Приложение» живёт в двух состояниях: пока
+    обновления нет — «Проверить обновления», а когда оно найдено — «Обновить и
+    перезапустить». Иначе после проверки установку пришлось бы искать в другом
+    месте (она есть в меню кнопки версии в шапке), а кнопка, которая только что
+    нашла обновление, продолжала бы предлагать «проверить».
+  */
+  function renderUpdateCheckButton() {
+    if (!checkUpdatesBtn) return;
+    const key = knownUpdateVersion ? "settings.updateAndRestart" : "settings.checkUpdates";
+    const label = t(key);
+    // До прихода словарей (они едут по WebSocket) t() отдаёт сам ключ — тогда
+    // оставляем текст из разметки, чтобы кнопка не мигала
+    // «settings.checkUpdates»; верная подпись придёт вместе с applyLocales().
+    if (label && label !== key) checkUpdatesBtn.textContent = label;
+  }
+
+  function installKnownUpdate() {
+    if (window.desktop && window.desktop.downloadAndInstall) window.desktop.downloadAndInstall();
+  }
+
+  async function runUpdateCheck() {
+    if (!window.desktop || !window.desktop.checkForUpdates) {
+      checkUpdatesStatus.textContent = t("settings.updateUnavailable");
+      return;
+    }
+    checkUpdatesBtn.disabled = true;
+    checkUpdatesStatus.textContent = t("settings.updateChecking");
+    try {
+      const res = await window.desktop.checkForUpdates();
+      if (!res || !res.ok) {
         checkUpdatesStatus.textContent = t("settings.updateUnavailable");
-        return;
+      } else if (res.updateAvailable && res.version) {
+        applyKnownUpdate(res.version);
+        checkUpdatesStatus.textContent = t("settings.updateAvailable", { version: res.version });
+      } else {
+        // Обновления нет — снимаем подсказку, если версия была известна раньше.
+        applyKnownUpdate(null);
+        checkUpdatesStatus.textContent = t("settings.updateNone");
       }
-      checkUpdatesBtn.disabled = true;
-      checkUpdatesStatus.textContent = t("settings.updateChecking");
-      try {
-        const res = await window.desktop.checkForUpdates();
-        if (!res || !res.ok) {
-          checkUpdatesStatus.textContent = t("settings.updateUnavailable");
-        } else if (res.updateAvailable && res.version) {
-          applyKnownUpdate(res.version);
-          checkUpdatesStatus.textContent = t("settings.updateAvailable", { version: res.version });
-        } else {
-          checkUpdatesStatus.textContent = t("settings.updateNone");
-        }
-      } catch {
-        checkUpdatesStatus.textContent = t("settings.updateError");
-      } finally {
-        checkUpdatesBtn.disabled = false;
-      }
+    } catch {
+      checkUpdatesStatus.textContent = t("settings.updateError");
+    } finally {
+      checkUpdatesBtn.disabled = false;
+      renderUpdateCheckButton();
+    }
+  }
+
+  if (checkUpdatesBtn && checkUpdatesStatus) {
+    checkUpdatesBtn.addEventListener("click", () => {
+      if (knownUpdateVersion) installKnownUpdate();
+      else runUpdateCheck();
     });
+    renderUpdateCheckButton();
   }

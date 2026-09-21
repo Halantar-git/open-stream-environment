@@ -38,6 +38,7 @@ const { installCrashHandlers } = require("./server/crash-guard");
 const { configureStorage, getUserMediaDir, getConfigDir, getLogsDir } = require("./server/storage-paths");
 const { collectMediaForExport, importMedia } = require("./server/media");
 const { eventsToCsv } = require("./server/export-events");
+const { parseUpdateCheckResult } = require("./server/update-check");
 
 // electron-updater is a runtime dependency; guard the require so a dev run
 // without `npm install` (no electron-updater yet) doesn't crash the main process.
@@ -1082,8 +1083,11 @@ app.whenReady().then(() => {
     }
     try {
       const result = await autoUpdater.checkForUpdates();
-      const version = result && result.updateInfo ? result.updateInfo.version : null;
-      return { ok: true, updateAvailable: !!version, version: version || null };
+      // «Нет обновления» — это тоже объект, и `updateInfo` в нём заполнен
+      // текущей версией, поэтому решение принимает parseUpdateCheckResult:
+      // по одному лишь наличию updateInfo панель предлагала установленную
+      // версию сама себе (на 3.2.6 — «доступно обновление 3.2.6»).
+      return { ok: true, ...parseUpdateCheckResult(result) };
     } catch (err) {
       return { ok: false, error: String((err && err.message) || err) };
     }

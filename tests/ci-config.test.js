@@ -173,6 +173,24 @@ describe("CI: файлы workflow", () => {
     expect(release.match(/gh release upload/g)).toHaveLength(1);
   });
 
+  test("имена ассетов совпадают с тем, что записано в latest*.yml", () => {
+    /*
+      Так было сломано на v3.2.6: electron-builder пишет в latest*.yml имена с
+      дефисами вместо пробелов, а GitHub при загрузке меняет пробелы на точки.
+      Манифест ждал `Open-Stream-Environment-…-setup.exe`, в релизе лежал
+      `Open.Stream.Environment-…-setup.exe` — и автообновление просило файл,
+      которого нет. Поэтому пробелы в именах убираются до загрузки.
+    */
+    expect(release).toContain("tr ' ' '-'");
+    expect(release).toContain("upload/*");
+    expect(release).not.toContain('gh release upload "$tag" dist/*');
+
+    // Манифесты перечислены по именам: `release/*.yml` тянул builder-debug.yml.
+    expect(release).toContain("release/latest.yml");
+    expect(release).toContain("release/latest-linux.yml");
+    expect(release).toContain("release/latest-mac.yml");
+  });
+
   test("по тегу публикует ровно один workflow", () => {
     /*
       Такой дубль уже жил в репозитории: по тегу запускались «Build and Release»

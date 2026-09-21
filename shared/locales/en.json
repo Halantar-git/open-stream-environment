@@ -409,6 +409,7 @@
     "updateNow": "Update",
     "updateDismiss": "Later",
     "checkUpdates": "Check for updates",
+    "updateAndRestart": "Update and restart",
     "updateChecking": "Checking…",
     "updateNone": "No updates available",
     "updateUnavailable": "Auto-update unavailable",
@@ -1366,7 +1367,7 @@
     "updates": {
       "title": "Updates",
       "p1": "On startup the app checks for an update (without downloading) and, if one is available, highlights the Update button in the header.",
-      "p2": "Click Update to open a small menu with Later or Update. Update downloads and installs the new version; Later closes the menu. You can also press Check for updates in Settings → Application. In dev mode (npm start) auto-update is unavailable and only works in packaged builds."
+      "p2": "Click Update to open a small menu with Later or Update. Update downloads and installs the new version; Later closes the menu. You can also press Check for updates in Settings → Application: if an update is found, the same button becomes Update and restart, and if not, it shows No updates available next to it. In dev mode (npm start) auto-update is unavailable and only works in packaged builds."
     },
     "data": {
       "title": "Data and backups",

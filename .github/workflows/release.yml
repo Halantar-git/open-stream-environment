@@ -14,6 +14,12 @@ name: Release
 # своя платформа. Поэтому сборка теперь ничего не публикует (`--publish never`),
 # а единственная задача `release` складывает установщики всех платформ вместе.
 #
+# Имена ассетов перед загрузкой приводятся к тому, что electron-builder пишет в
+# latest*.yml: пробелы он заменяет на дефисы, а GitHub при загрузке — на точки.
+# Разойдись они — и автообновление просит файл, которого в релизе нет; именно так
+# сломался v3.2.6, где манифест ждал `Open-Stream-Environment-3.2.6-setup.exe`, а
+# в релизе лежал `Open.Stream.Environment-3.2.6-setup.exe`.
+#
 # Собираются те же платформы, что и раньше: Windows (NSIS), Linux (AppImage и deb)
 # и macOS (dmg и zip для arm64). macOS не подписывается — сертификата нет, поэтому
 # Gatekeeper попросит подтвердить запуск; шаг оставлен, чтобы набор установщиков и
@@ -110,7 +116,9 @@ jobs:
           name: installers-${{ matrix.os }}
           if-no-files-found: error
           # latest*.yml и .blockmap лежат рядом с установщиками: без них
-          # автообновление не найдёт ни версию, ни файл.
+          # автообновление не найдёт ни версию, ни файл. Манифесты перечислены по
+          # именам намеренно: `release/*.yml` тянул ещё и builder-debug.yml —
+          # отладочный слепок сборщика, которому в релизе делать нечего.
           path: |
             release/*.exe
             release/*.blockmap
@@ -118,7 +126,9 @@ jobs:
             release/*.deb
             release/*.dmg
             release/*.zip
-            release/*.yml
+            release/latest.yml
+            release/latest-linux.yml
+            release/latest-mac.yml
 
   release:
     name: Draft release
@@ -130,6 +140,20 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+
+      # electron-builder пишет в latest*.yml имена с дефисами вместо пробелов
+      # (так он сам заливал ассеты, пока публиковал их сам), а `gh release
+      # upload` берёт имя локального файла, и GitHub заменяет в нём пробелы на
+      # точки. Обновление тогда просит файл, которого в релизе нет, — так
+      # сломалось автообновление на v3.2.6. Приводим имена к тому, что написано
+      # в манифестах.
+      - name: Normalize asset names
+        run: |
+          mkdir -p upload
+          for f in dist/*; do
+            cp "$f" "upload/$(basename "$f" | tr ' ' '-')"
+          done
+          ls -l upload
 
       # Один черновик на версию: если он уже есть (повторный запуск), ассеты
       # перезаписываются, а второй релиз не создаётся.
@@ -144,5 +168,5 @@ jobs:
           else
             gh release create "$tag" --repo "$GITHUB_REPOSITORY" --draft --title "$tag" --generate-notes
           fi
-          gh release upload "$tag" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+          gh release upload "$tag" upload/* --repo "$GITHUB_REPOSITORY" --clobber
           echo "Черновик $tag готов: установщики всех платформ в одном релизе"
