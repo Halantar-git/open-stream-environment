@@ -19,6 +19,11 @@
   Debug panel — a slide-out panel (like the terminal) with one-click buttons
   for all test events: five alert kinds plus a test chat burst. Replaces the
   per-widget test buttons, so tests live in one place.
+
+  The log follows new lines only while the reader is already at the bottom —
+  same as the terminal and the DA panel. An unconditional jump to the bottom is
+  exactly what makes a log unreadable here: protocol frames (they land in this
+  panel too) arrive often enough to yank the view away on every line.
 */
 
 import { el, on } from "./dom.js";
@@ -40,6 +45,8 @@ export function initDebugPanel({ t, ICONS, send, EVENT_TYPES }) {
   const toggleBtn = el("toggleDebugBtn");
 
   const MAX_DEBUG_LINES = 200;
+  // Идём за новыми строками только пока читатель внизу (как в терминале)
+  let atBottom = true;
 
   function formatTime(ts) {
     const d = new Date(Number(ts) || Date.now());
@@ -50,6 +57,7 @@ export function initDebugPanel({ t, ICONS, send, EVENT_TYPES }) {
     if (!panel || !toggleBtn) return;
     panel.hidden = !open;
     toggleBtn.classList.toggle("is-active", open);
+    if (open && body) body.scrollTop = body.scrollHeight;
   }
 
   function toggle() {
@@ -132,11 +140,13 @@ export function initDebugPanel({ t, ICONS, send, EVENT_TYPES }) {
     while (logEl.children.length > MAX_DEBUG_LINES) {
       logEl.removeChild(logEl.firstChild);
     }
-    if (body) body.scrollTop = body.scrollHeight;
+    if (body && atBottom) body.scrollTop = body.scrollHeight;
   }
 
   function clearDebug() {
     if (logEl) logEl.innerHTML = "";
+    // Выше читать уже нечего — снова следуем за новыми строками
+    atBottom = true;
   }
 
   function refresh() {
@@ -149,6 +159,12 @@ export function initDebugPanel({ t, ICONS, send, EVENT_TYPES }) {
 
   on("debugClearBtn", "click", clearDebug);
   on("debugCloseBtn", "click", () => setOpen(false));
+
+  if (body) {
+    body.addEventListener("scroll", () => {
+      atBottom = body.scrollHeight - body.scrollTop - body.clientHeight < 40;
+    });
+  }
 
   return { setOpen, toggle, refreshLabel, refresh, appendDebug, clearDebug };
 }
