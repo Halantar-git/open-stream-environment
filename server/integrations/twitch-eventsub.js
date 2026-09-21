@@ -122,6 +122,8 @@ function startTwitchEvents({ bus, state }) {
   let lastMessageAt = 0;
   let authFailure = false;
   let isReconnecting = false;
+  let previousSockets = new Set(); // соединения, заменённые через session_reconnect
+  let previousSocketTimer = null;
 
   const initialUrl = "wss://eventsub.wss.twitch.tv/ws?keepalive_timeout_seconds=30";
 
@@ -132,6 +134,33 @@ function startTwitchEvents({ bus, state }) {
   function clearKeepaliveWatchdog() {
     clearInterval(keepaliveTimer);
     keepaliveTimer = null;
+  }
+
+  /*
+    Старое соединение после session_reconnect закрываем только по session_welcome
+    нового — до welcome события со старого сокета ещё нельзя терять. Страховочный
+    таймаут закрывает их, если welcome так и не придёт: иначе старые сокеты
+    останутся жить, а их сообщения молча отбрасываются. Сетка на случай двух
+    reconnect подряд: закрываем все накопившиеся поколения.
+  */
+  function schedulePreviousSocketClose(socket) {
+    previousSockets.add(socket);
+    clearTimeout(previousSocketTimer);
+    previousSocketTimer = setTimeout(closePreviousSockets, 30000);
+  }
+
+  function closePreviousSockets() {
+    clearTimeout(previousSocketTimer);
+    previousSocketTimer = null;
+    const sockets = previousSockets;
+    previousSockets = new Set();
+    for (const old of sockets) {
+      try {
+        old.close();
+      } catch {
+        /* сокет уже мог закрыться сам */
+      }
+    }
   }
 
   function startKeepaliveWatchdog() {
@@ -245,6 +274,7 @@ function startTwitchEvents({ bus, state }) {
           isReconnecting = false;
           authFailure = false;
           setStatus("connected");
+          closePreviousSockets(); // только теперь старое соединение безопасно закрыть
           logger.success("reconnected (subscriptions preserved by Twitch)");
         } else {
           try {
@@ -264,9 +294,8 @@ function startTwitchEvents({ bus, state }) {
         const reconnectUrl = msg.payload.session.reconnect_url;
         logger.info("session_reconnect", { reconnectUrl });
         isReconnecting = true;
-        const old = socket;
+        schedulePreviousSocketClose(socket);
         connect(reconnectUrl);
-        if (old) setTimeout(() => { try { old.close(); } catch {} }, 5000);
       } else if (type === "session_keepalive") {
         logger.debug("keepalive received");
       } else if (type === "notification") {
@@ -278,9 +307,10 @@ function startTwitchEvents({ bus, state }) {
 
     socket.on("close", (code, reason) => {
       logger.warn("websocket closed", { code, reason: String(reason || "") });
-      clearKeepaliveWatchdog();
-      if (stopped) return;
+      // Заменённый через session_reconnect сокет не гасит watchdog нового.
       if (ws !== socket) return; // superseded by a session_reconnect
+      if (stopped) return;
+      clearKeepaliveWatchdog();
       isReconnecting = false; // полный реконнект: потребуется переподписка
       setStatus("disconnected");
       const delay = authFailure ? AUTH_RECONNECT_DELAY_MS : RECONNECT_DELAY_MS;
@@ -298,6 +328,7 @@ function startTwitchEvents({ bus, state }) {
     stop() {
       stopped = true;
       clearKeepaliveWatchdog();
+      closePreviousSockets();
       if (ws) {
         ws.close();
         ws = null;

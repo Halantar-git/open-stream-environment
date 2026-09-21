@@ -257,6 +257,30 @@ describe("history store", () => {
     expect(history.maxRecords).toBe(4);
   });
 
+  /*
+    Сбой записи (нет прав, диск кончился, файл занят) не должен терять события:
+    раньше батч просто выпадал из очереди и после перезапуска записи исчезали.
+  */
+  test("сбой записи не теряет записи: они видны и уходят в файл после восстановления", async () => {
+    const file = tmpFile();
+    const history = createHistoryStore(file, { retryDelayMs: 5 });
+
+    const spy = jest.spyOn(fs.promises, "appendFile").mockRejectedValue(new Error("диск недоступен"));
+    history.append({ id: "a", timestamp: 1 });
+    history.append({ id: "b", timestamp: 2 });
+    await history.flush();
+
+    // Записи не потеряны: файл пуст, но из памяти они видны полностью.
+    expect(readLines(file)).toEqual([]);
+    expect(history.count()).toBe(2);
+    expect(history.query({}).items.map((e) => e.id)).toEqual(["b", "a"]);
+
+    // Файл снова доступен — очередь доходит до диска.
+    spy.mockRestore();
+    await history.flush();
+    expect(readLines(file).map((l) => JSON.parse(l).id)).toEqual(["a", "b"]);
+  });
+
   test("query фильтрует по sessionId (для истории чата)", async () => {
     const file = tmpFile();
     const history = createHistoryStore(file);

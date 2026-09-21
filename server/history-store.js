@@ -49,6 +49,11 @@ const TRUNCATE = "truncate";
 const DEFAULT_MAX_RECORDS = 20000;
 // Во сколько раз файл может превысить лимит, прежде чем уплотниться.
 const COMPACT_FACTOR = 2;
+// Повтор после сбоя записи: не чаще одной паузы и не больше RETRY_LIMIT раз
+// подряд — постоянная ошибка (нет прав, диск переполнен) не должна крутить
+// запись без пауз и без пользы.
+const RETRY_DELAY_MS = 500;
+const RETRY_LIMIT = 3;
 
 let tmpSeq = 0;
 
@@ -106,6 +111,8 @@ function currentFileSize(filePath) {
 function createHistoryStore(filePath, options = {}) {
   const logger = typeof options.logger === "function" ? options.logger : null;
   let maxRecords = resolveMaxRecords(options.maxRecords);
+  // Задержка повтора после сбоя записи; в тестах её уменьшают, чтобы не ждать.
+  const retryDelayMs = Number(options.retryDelayMs) > 0 ? Number(options.retryDelayMs) : RETRY_DELAY_MS;
 
   // Temp-файлы от убитых процессов (уплотнение пишет temp+rename).
   sweepStaleTempFiles(filePath);
@@ -128,6 +135,9 @@ function createHistoryStore(filePath, options = {}) {
 
   let ops = []; // { kind: "append", items } | { kind: TRUNCATE, records }
   let draining = null;
+  let retryTimer = null; // отложенный повтор после сбоя записи
+  let retryPromise = null;
+  let failedAttempts = 0; // сбоев подряд; успешная запись сбрасывает счётчик
   let lastError = null;
   let fileBytes = currentFileSize(filePath);
 
@@ -374,6 +384,28 @@ function createHistoryStore(filePath, options = {}) {
     return draining;
   }
 
+  /*
+    Повтор записи после сбоя.
+
+    Батч возвращается в ops, поэтому достаточно ещё раз запустить drain — либо по
+    таймеру, либо следующей обычной записью. Таймер не держит процесс живым: при
+    выходе недописанное сбрасывает flushSync.
+  */
+  function scheduleRetry() {
+    if (retryTimer) return;
+    retryPromise = new Promise((resolve) => {
+      retryTimer = setTimeout(() => {
+        retryTimer = null;
+        resolve();
+      }, retryDelayMs);
+    });
+    if (typeof retryTimer.unref === "function") retryTimer.unref();
+    retryPromise.then(() => {
+      retryPromise = null;
+      ensureDrain();
+    });
+  }
+
   function enqueueRewrite(records) {
     const list = Array.isArray(records) ? records : [];
     ops = [{ kind: TRUNCATE, records: list }];
@@ -447,10 +479,17 @@ function createHistoryStore(filePath, options = {}) {
           try {
             await writeAtomic(filePath, content);
             applyRewrite(records, content, consumed);
+            failedAttempts = 0;
             lastError = null;
           } catch (err) {
             lastError = err;
+            failedAttempts += 1;
             if (logger) logger(err);
+            // Перезапись не удалась — возвращаем её в очередь: содержимое видно
+            // из rewrite, но на диске его пока нет (см. scheduleRetry).
+            ops.unshift(...batch);
+            if (failedAttempts <= RETRY_LIMIT) scheduleRetry();
+            break;
           }
         } else {
           const items = batch.flatMap((op) => op.items || []);
@@ -461,11 +500,21 @@ function createHistoryStore(filePath, options = {}) {
             await fsp.appendFile(filePath, content);
             fileBytes = base + Buffer.byteLength(content);
             applyAppend(items, base);
+            failedAttempts = 0;
             lastError = null;
           } catch (err) {
             lastError = err;
+            failedAttempts += 1;
             if (logger) logger(err);
-            // Сбой не теряет видимость: записи остаются в pending.
+            /*
+              Сбой не теряет записи: батч возвращается в очередь. В памяти они и
+              так видны (pending), а так ещё и попадут в файл, как только запись
+              станет возможной. Если appendFile успел записать часть байт, повтор
+              продублирует строку — это лечится, а вот молчаливая потеря записей
+              при перезапуске не лечится никак.
+            */
+            ops.unshift(...batch);
+            if (failedAttempts <= RETRY_LIMIT) scheduleRetry();
             break;
           }
         }
@@ -533,7 +582,19 @@ function createHistoryStore(filePath, options = {}) {
   }
 
   async function flush() {
-    while (draining) await draining.catch(() => {});
+    /*
+      Ждём не только текущее дренирование, но и отложенный повтор после сбоя:
+      иначе flush() вернулся бы раньше, чем записи попали в файл. Число проходов
+      ограничено бюджетом повторов — недоступный диск не превращает flush() в
+      бесконечное ожидание.
+    */
+    for (let attempt = 0; attempt <= RETRY_LIMIT + 1; attempt++) {
+      const retry = retryPromise;
+      if (retry) await retry.catch(() => {});
+      if (draining) await draining.catch(() => {});
+      else if (ops.length) ensureDrain();
+      else return;
+    }
   }
 
   // Синхронный сброс недописанных строк — для выхода из приложения.

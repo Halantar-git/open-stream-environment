@@ -540,6 +540,22 @@ describe("AppState config + runtime", () => {
     expect(bad.seeds.alertEnterEasing).toBe("");
   });
 
+  test("saveCustomTheme без seeds не падает и берёт цвета по умолчанию", () => {
+    // seeds может не прийти с кадром (или прийти не объектом): раньше
+    // `seeds.primary` бросал TypeError и роняло сервер.
+    expect(() => state.saveCustomTheme({ name: "x" })).not.toThrow();
+    const theme = state.saveCustomTheme({ name: "Без семян" });
+
+    expect(theme.name).toBe("Без семян");
+    expect(theme.seeds.primary).toBe("#c6b8ff");
+    expect(theme.seeds.secondary).toBe("#7ee0d6");
+    expect(theme.seeds.tertiary).toBe("#ffb0d8");
+    expect(theme.tokens).toBeTruthy();
+
+    // Совсем без аргументов (кадр без payload) — тоже не исключение.
+    expect(() => state.saveCustomTheme()).not.toThrow();
+  });
+
   test("duplicateCustomTheme создаёт копию с новым id и именем", () => {
     const theme = state.saveCustomTheme({ name: "Оригинал", seeds: { primary: "#111111", secondary: "#222222", tertiary: "#333333" } });
     const copy = state.duplicateCustomTheme(theme.id);
@@ -602,6 +618,24 @@ describe("AppState config + runtime", () => {
       expect(created.remoteToken()).toBeTruthy();
       expect(fs.existsSync(path.join(tmp, "config.json"))).toBe(false);
     });
+
+    test("настройки голосования переживают перезапуск", () => {
+      /*
+        Команда, тип диаграммы и варианты читаются из config.json
+        (this.config.poll): раньше сеттеры писали только в БД, и после
+        перезапуска настройки откатывались.
+      */
+      const created = new AppState(null, makeConfig());
+      created.setPollConfig({ command: "!vote", chartType: "pie" });
+      created.addPollOption("Да");
+      created.flushConfigSync();
+
+      // Новый экземпляр читает конфиг с диска — как при следующем запуске.
+      const reopened = new AppState(null);
+      expect(reopened.config.poll.command).toBe("!vote");
+      expect(reopened.config.poll.chartType).toBe("pie");
+      expect(reopened.config.poll.options.map((o) => o.label)).toEqual(["Да"]);
+    });
   });
 
   describe("ключи приложения (Client ID/Secret)", () => {
@@ -662,6 +696,35 @@ describe("AppState config + runtime", () => {
       // В снимке нет самого секрета — только флаг.
       state.config.donationAlerts.clientSecret = "super-secret-value";
       expect(JSON.stringify(state.snapshot().donationAlertsAuth)).not.toContain("super-secret-value");
+    });
+  });
+
+  describe("пароль OBS WebSocket", () => {
+    /*
+      Снимок состояния уходит всем подключённым клиентам (оверлей, пульт, чат),
+      поэтому расшифрованного пароля в нём быть не должно. Панели нужен только
+      признак «пароль задан»: пустое поле там означает «не менять» — так же, как
+      у Client Secret у DonationAlerts.
+    */
+    test("в снимке нет пароля, но есть признак его наличия", () => {
+      state.setObsConfig({ password: "obs-secret-value" });
+      expect(state.config.obs.password).toBe("obs-secret-value"); // приложению он нужен
+
+      const snap = state.snapshot();
+      expect(snap.obs.password).toBe("");
+      expect(snap.obs.hasPassword).toBe(true);
+      expect(JSON.stringify(snap)).not.toContain("obs-secret-value");
+
+      // Пустая строка — «не менять»: панель не подставляет пароль, поэтому
+      // отправка карточки настроек как есть не должна его стирать.
+      state.setObsConfig({ password: "" });
+      expect(state.config.obs.password).toBe("obs-secret-value");
+      expect(state.snapshot().obs.hasPassword).toBe(true);
+
+      // Стирается он только явным признаком — кнопкой в настройках.
+      state.setObsConfig({ clearPassword: true });
+      expect(state.config.obs.password).toBe("");
+      expect(state.snapshot().obs.hasPassword).toBe(false);
     });
   });
 });

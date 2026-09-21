@@ -178,7 +178,13 @@ function summarizeConfig(config) {
     hud: {
       editHotkey: c.hud_edit_hotkey || "",
       chatHotkey: c.chat_hud_hotkey || "",
-      chatHudEnabled: !!c.chatHud?.enabled,
+      /*
+        Флага «чат поверх игры включён» в конфиге нет: окно чата создаёт main.js,
+        а показывает/скрывает его глобальный хоткей, — в настройках остаётся только
+        выбранный монитор (null — основной). Раньше здесь читался несуществующий
+        chatHud.enabled, поэтому в отчёте всегда стояло false.
+      */
+      chatHudDisplay: c.chat_hud_display_id ?? null,
       chatHud: c.chatHud ? { width: c.chatHud.width, height: c.chatHud.height, opacity: c.chatHud.opacity, fontSize: c.chatHud.fontSize } : null,
     },
     twitchRewards: count(c.twitchRewards),

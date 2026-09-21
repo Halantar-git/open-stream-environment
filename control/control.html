@@ -216,6 +216,24 @@
     </aside>
 
     <!--
+      Ожидающие алерты — третья панель к «DA»: стоит слева от «Очереди алертов».
+      Своей кнопки в шапке и своего крестика у неё нет — всю тройку закрывает
+      крестик DA, поэтому в реестре панелей (см. panelRegistry) ни она, ни
+      очередь не значатся. Объявлена первой из трёх: панели с одинаковым
+      z-index рисуются по порядку, и левая должна быть объявлена раньше соседей.
+    -->
+    <aside class="queue-panel pending-panel" id="pendingPanel" hidden>
+      <header class="queue-panel__header">
+        <span class="queue-panel__title" id="queuePending"></span>
+      </header>
+      <div class="queue-panel__body">
+        <div class="queue-stats" id="queueStats"></div>
+        <div class="queue-list" id="queueList"></div>
+        <div class="queue-empty" id="queueEmpty" data-i18n="queue.empty" hidden>Очередь пуста</div>
+      </div>
+    </aside>
+
+    <!--
       Очередь — парная панель к «DA»: открывается и закрывается вместе с ней и
       стоит слева от неё, как «Участники» слева от настроек колеса. Своей кнопки
       в шапке и своего крестика у неё поэтому нет — пару закрывает крестик DA.
@@ -238,11 +256,16 @@
         <section class="queue-block">
           <div class="queue-pause" id="queuePauseState"></div>
           <div class="queue-row">
+            <!--
+              Одна кнопка на два действия: без паузы — «Пауза», в паузе —
+              «Продолжить» (так же, как в пульте). Подпись и подсветку ставит
+              renderQueuePanel, поэтому data-i18n здесь — только для первого
+              показа, до первого снимка очереди.
+            -->
             <button class="queue-btn" id="queuePauseBtn" data-i18n="queue.pause">Пауза</button>
             <button class="queue-btn" id="queuePause5Btn"></button>
             <button class="queue-btn" id="queuePause15Btn"></button>
             <button class="queue-btn" id="queuePause30Btn"></button>
-            <button class="queue-btn" id="queueResumeBtn" data-i18n="queue.resume">Продолжить</button>
           </div>
           <div class="queue-hint" data-i18n="queue.pauseHint">Донаты продолжают приходить, но алерты ждут. Срок истечёт сам.</div>
         </section>
@@ -275,20 +298,13 @@
           <div class="queue-hint" data-i18n="queue.recoverHint">Спросит у DonationAlerts донаты, пришедшие пока приложение было выключено, и покажет те, которых нет в истории.</div>
           <div class="queue-status" id="queueRecoverStatus" hidden></div>
         </section>
-
-        <section class="queue-block">
-          <div class="queue-block__title" id="queuePending"></div>
-          <div class="queue-stats" id="queueStats"></div>
-          <div class="queue-list" id="queueList"></div>
-          <div class="queue-empty" id="queueEmpty" data-i18n="queue.empty" hidden>Очередь пуста</div>
-        </section>
       </div>
     </aside>
 
     <aside class="da-panel" id="daPanel" hidden>
       <header class="da-panel__header">
         <span class="da-panel__title" data-i18n="da.title">DonationAlerts</span>
-        <span class="da-panel__chip" id="daStatusChip"><span class="da-panel__chip-dot"></span><span id="daStatusChipLabel"></span></span>
+        <span class="da-panel__chip" id="daStatusChip"><span class="da-panel__chip-dot"></span></span>
         <button class="da-panel__close" id="daCloseBtn" aria-label="Закрыть" data-i18n-title="common.close">×</button>
       </header>
       <div class="da-panel__body">
@@ -800,6 +816,8 @@
           <div class="md-field">
             <label data-i18n="settings.obsPassword">Пароль</label>
             <input type="password" id="obsPassword" placeholder="••••••••" />
+            <span class="md-field__hint" data-i18n="settings.obsPasswordHint">Оставьте пустым, чтобы не менять сохранённый пароль — поле не заполняется им само.</span>
+            <button class="md-button md-button--text" id="obsPasswordClearBtn" data-i18n="settings.obsPasswordClear" hidden>Очистить сохранённый пароль</button>
           </div>
           <div class="md-field">
             <label data-i18n="settings.obsWebcamSource">Камера</label>
@@ -945,6 +963,7 @@
   <script src="../shared/themes.js"></script>
   <script src="../shared/scenes-catalog.js"></script>
   <script src="../shared/teso-emblem.js"></script>
+  <script src="modules/guards.js"></script>
   <script type="module" src="control.js"></script>
 </body>
 </html>

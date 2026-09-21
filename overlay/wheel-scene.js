@@ -34,6 +34,9 @@
   let participantsState = { count: 0, participants: [] };
   let spinAudioEl = null;
   let spinFallback = null;
+  // Первый снимок после подключения: по нему восстанавливаем барабан, если в
+  // момент перезагрузки страницы розыгрыш уже шёл (см. обработчик STATE).
+  let firstStateSeen = false;
 
   // Длительность wheel-spin.mp3 (roulettevision) в мс — вращение подгоняется под неё.
   const WHEEL_SPIN_MS = 5300;
@@ -430,7 +433,19 @@
             count: msg.payload.giveaway.count || 0,
             participants: Array.isArray(msg.payload.giveaway.participants) ? msg.payload.giveaway.participants : [],
           };
+          /*
+            Сектора барабана живут только в памяти страницы и приходят отдельным
+            GIVEAWAY_WHEEL. Если источник в OBS перезагрузили посреди розыгрыша,
+            этого сообщения уже не будет — колесо пропадало бы с экрана до
+            следующего спина. Поэтому на первом снимке показываем барабан из
+            списка участников; дальше снимок его не трогает, иначе STATE
+            возвращал бы колесо после штатного скрытия.
+          */
+          if (!firstStateSeen && msg.payload.giveaway.active && participantsState.participants.length) {
+            showWheel(participantsState.participants);
+          }
         }
+        firstStateSeen = true;
         renderParticipants();
         break;
       case EVENT_TYPES.THEME_UPDATE:

@@ -77,15 +77,22 @@
       }
       const audio = new Audio(resolveMediaUrl(sound.audioFile));
       audio.volume = typeof state.soundboardConfig.volume === "number" ? state.soundboardConfig.volume : 0.8;
-      audio.play().catch(() => {
-        if (onEnded) onEnded();
-      });
-      audio.addEventListener("ended", () => {
-        const i = this.activeAudios.indexOf(audio);
-        if (i >= 0) this.activeAudios.splice(i, 1);
-        if (onEnded) onEnded();
-      });
       this.activeAudios.push(audio);
+
+      audio.addEventListener("ended", () => this.finishAudio(audio, onEnded));
+      // Отказ загрузки может не дать `ended`: без этого звук остался бы в
+      // activeAudios до размонтирования (утечка на длинном стриме).
+      audio.addEventListener("error", () => this.finishAudio(audio, onEnded));
+      audio.play().catch(() => this.finishAudio(audio, onEnded));
+    }
+
+    // Убирает звук из активных и ровно один раз сообщает о завершении: отказ
+    // play() и событие error могут прийти оба, а двойной onEnded сбил бы очередь.
+    finishAudio(audio, onEnded) {
+      const i = this.activeAudios.indexOf(audio);
+      if (i < 0) return;
+      this.activeAudios.splice(i, 1);
+      if (onEnded) onEnded();
     }
 
     drainQueue() {

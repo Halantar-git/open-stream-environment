@@ -98,6 +98,24 @@ function donationAlertFromPayload(payload) {
 }
 
 /*
+  Настоящий ли это донат.
+
+  На канал подписки приходят не только донаты: ответ на subscribe (и подобные
+  служебные кадры) несёт тот же channel, но в нём нет ни id доната, ни ника,
+  ни суммы. Без этой проверки он превращался в «донат от Анонима на 0 RUB» — он
+  и прилетал алертом при каждом старте приложения и лёг бы в историю.
+
+  Достаточно одного признака: у доната всегда есть хотя бы id, сумма или ник.
+*/
+function isDonationPayload(payload) {
+  if (!payload || typeof payload !== "object") return false;
+  if (payload.id != null && String(payload.id).trim() !== "") return true;
+  const amount = Number(payload.amount);
+  if (Number.isFinite(amount) && amount > 0) return true;
+  return String(payload.username || payload.name || "").trim() !== "";
+}
+
+/*
   Разбор ответа /api/v1/alerts/donations в наш формат.
 
   Даты приходят строкой "YYYY-MM-DD HH.MM.SS" без часового пояса (так в apidoc):
@@ -446,6 +464,11 @@ function startDonationAlerts({ bus, state }) {
     const channel = (msg.push && msg.push.channel) || (msg.result && msg.result.channel) || "";
 
     if (channel.startsWith("$alerts:donation")) {
+      if (!isDonationPayload(payload)) {
+        // Служебный кадр подписки — не донат (см. isDonationPayload).
+        debug("service frame on donation channel — skipped", payload);
+        return;
+      }
       // Кадр целиком — только в «Отладку»: сюда приходят и служебные кадры
       // подписки, и они выглядели в журнале как «донат» без доната.
       debug("raw donation frame", payload);
@@ -618,6 +641,7 @@ module.exports = {
   startDonationAlerts,
   extractPayload,
   donationAlertFromPayload,
+  isDonationPayload,
   alertFromPayload,
   fetchRecentDonations,
   normalizeDonationRow,

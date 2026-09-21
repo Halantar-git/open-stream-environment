@@ -35,6 +35,7 @@ import { initCanvasEditor } from "./modules/canvas-editor.js";
 const { EVENT_TYPES } = window.SharedEvents;
   const MicFrame = window.MicFrame;
   const { ICONS } = window.SharedIcons;
+  const { safeCssColor, createCaptureGeneration } = window.ControlGuards;
   const { WIDGET_TYPES, widgetsForTheme, themeAllowsWidget, replacedBy3d, widgetRole, resolveTypeForTheme, isAnimatedWidget } = window.WidgetCatalog;
   const t = (key, params) => (window.I18n ? window.I18n.t(key, params) : key);
 
@@ -183,6 +184,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const obsHostInput = document.getElementById("obsHost");
   const obsPortInput = document.getElementById("obsPort");
   const obsPasswordInput = document.getElementById("obsPassword");
+  const obsPasswordClearBtn = document.getElementById("obsPasswordClearBtn");
   const obsWebcamSourceInput = document.getElementById("obsWebcamSource");
   const obsMicSourceInput = document.getElementById("obsMicSource");
   const obsSceneMainInput = document.getElementById("obsSceneMain");
@@ -514,7 +516,16 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (state.obs) {
       obsHostInput.value = state.obs.host || "";
       obsPortInput.value = state.obs.port || 4455;
-      obsPasswordInput.value = state.obs.password || "";
+      /*
+        Пароль панель не показывает и не подставляет: сервер отдаёт его пустым
+        и только помечает, что он сохранён (obs.hasPassword). Пустая строка при
+        этом означает «не менять» (см. обработчик ниже), поэтому значение поля
+        сбрасываем, чтобы оно не попалось в отправку само.
+      */
+      if (document.activeElement !== obsPasswordInput) obsPasswordInput.value = "";
+      obsPasswordInput.placeholder = state.obs.hasPassword === true ? t("settings.obsPasswordSavedPlaceholder") : "••••••••";
+      // Кнопку очистки показываем только когда есть что очищать.
+      if (obsPasswordClearBtn) obsPasswordClearBtn.hidden = state.obs.hasPassword !== true;
       obsWebcamSourceInput.value = state.obs.webcamSource || "";
       obsMicSourceInput.value = state.obs.micSource || "";
       const sm = state.obs.sceneMap || {};
@@ -768,7 +779,22 @@ const { EVENT_TYPES } = window.SharedEvents;
   }
   obsHostInput.addEventListener("change", () => sendObsConfig({ host: obsHostInput.value.trim() }));
   obsPortInput.addEventListener("change", () => sendObsConfig({ port: Number(obsPortInput.value) || 4455 }));
-  obsPasswordInput.addEventListener("change", () => sendObsConfig({ password: obsPasswordInput.value }));
+  obsPasswordInput.addEventListener("change", () => {
+    const password = obsPasswordInput.value;
+    // Пустое поле — «оставить сохранённый пароль как есть»: отправлять нечего.
+    if (!password) return;
+    sendObsConfig({ password });
+    // Пароль ушёл — поле больше не нужно: показывать его дальше незачем.
+    obsPasswordInput.value = "";
+  });
+  if (obsPasswordClearBtn) {
+    obsPasswordClearBtn.addEventListener("click", () => {
+      // Стереть пароль можно только явно: уйдёт `clearPassword`, а не пустое
+      // поле — так отправка карточки настроек как есть его не затирает.
+      if (!confirm(t("settings.obsPasswordClearConfirm"))) return;
+      sendObsConfig({ clearPassword: true });
+    });
+  }
   obsWebcamSourceInput.addEventListener("change", () => sendObsConfig({ webcamSource: obsWebcamSourceInput.value.trim() }));
   obsMicSourceInput.addEventListener("change", () => sendObsConfig({ micSource: obsMicSourceInput.value.trim() }));
   obsSceneMainInput.addEventListener("change", () => sendObsConfig({ sceneMap: { main: obsSceneMainInput.value.trim() } }));
@@ -1957,8 +1983,27 @@ const { EVENT_TYPES } = window.SharedEvents;
   }
 
   // ---- wheel settings panels ----
+  // Разметка панелей «Колесо» и «Участники» зависит только от языка (подписи
+  // полей), а значения приходят событиями на каждое движение ползунка. Поэтому
+  // панель пересобирается лишь при смене языка, в остальных случаях значения
+  // обновляются на месте (syncWheelPanelValues): полная перерисовка под курсором
+  // обрывала перетаскивание ползунка и закрывала открытый цветовой пикер — тот
+  // же приём, что в панели свойств (modules/properties-panel.js).
+  let wheelPanelLang = null;
+  let participantsPanelLang = null;
+
+  function panelLang() {
+    return (window.I18n && window.I18n.getLang && window.I18n.getLang()) || "";
+  }
+
   function renderWheelPanel() {
     if (!wheelPanelBody) return;
+    const lang = panelLang();
+    if (lang === wheelPanelLang) {
+      syncWheelPanelValues();
+      return;
+    }
+    wheelPanelLang = lang;
     wheelPanelBody.innerHTML = `
       <div class="md-field"><label>${t("giveaway.command")}</label><input type="text" id="giveawayCommand" placeholder="!go" value="${escapeAttr(state.giveaway.command || "!go")}"></div>
       <div class="properties__test-grid">
@@ -2054,8 +2099,57 @@ const { EVENT_TYPES } = window.SharedEvents;
     });
   }
 
+  // Значение поля без пересборки разметки. Элемент, которым сейчас занят
+  // пользователь (тянут ползунок, открыт цветовой пикер, идёт ввод), не трогаем.
+  // false — значение осталось прежним и связанную с ним подпись обновлять нельзя.
+  function setPanelValue(selector, value) {
+    const node = wheelPanelBody && wheelPanelBody.querySelector(selector);
+    if (!node || node === document.activeElement) return false;
+    const next = String(value);
+    if (node.value !== next) node.value = next;
+    return true;
+  }
+
+  function setPanelText(selector, text) {
+    const node = wheelPanelBody && wheelPanelBody.querySelector(selector);
+    if (node && node !== document.activeElement) node.textContent = text;
+  }
+
+  function setPanelSwitch(selector, on) {
+    const node = wheelPanelBody && wheelPanelBody.querySelector(selector);
+    if (node && node.classList.contains("is-on") !== !!on) node.classList.toggle("is-on", !!on);
+  }
+
+  function syncWheelPanelValues() {
+    const pc = state.participantsConfig || {};
+    const wc = state.wheelConfig || {};
+    const ws = state.wheelSpeedConfig || {};
+    renderGiveaway(); // команда розыгрыша, счётчик и список участников
+    setPanelValue("#wsMaxNames", pc.maxNames ?? 10);
+    setPanelValue("#wsFontSize", pc.fontSize ?? 16);
+    setPanelValue("#wsTextColor", pc.textColor || "#e8e1f0");
+    if (setPanelValue("#wsBgOpacity", pc.backgroundOpacity ?? 82)) setPanelText("#wsBgOpacityValue", `${pc.backgroundOpacity ?? 82}%`);
+    setPanelValue("#wsX", pc.x ?? 24);
+    setPanelValue("#wsY", pc.y ?? 340);
+    setPanelValue("#wsW", pc.w ?? 340);
+    setPanelValue("#wsH", pc.h ?? 400);
+    setPanelSwitch("#wsMarquee", !!pc.marquee);
+    setPanelValue("#wheelX", wc.x ?? 960);
+    setPanelValue("#wheelY", wc.y ?? 540);
+    if (setPanelValue("#wsMusicVolume", wc.musicVolume ?? 50)) setPanelText("#wsMusicVolumeValue", `${wc.musicVolume ?? 50}%`);
+    if (setPanelValue("#wsSpeed", ws.speed ?? 3)) setPanelText("#wsSpeedValue", `${ws.speed ?? 3}`);
+  }
+
   function renderParticipantsPanel() {
     if (!participantsPanelBody) return;
+    // Та же осторожность, что и в панели колеса: снимок STATE приходит на каждое
+    // событие, и пересборка стирала бы набранный вручную ник участника.
+    const lang = panelLang();
+    if (lang === participantsPanelLang) {
+      renderGiveaway();
+      return;
+    }
+    participantsPanelLang = lang;
     participantsPanelBody.innerHTML = `
       <div class="settings__statuses"><span class="md-chip" id="giveawayChip"><span class="md-chip__dot"></span><span id="giveawayCount">${t("giveaway.participants")}: ${state.giveaway.count}</span></span></div>
       <div class="giveaway-manual">
@@ -2422,7 +2516,7 @@ const { EVENT_TYPES } = window.SharedEvents;
       ? [theme.seeds.primary, theme.seeds.secondary, theme.seeds.tertiary]
       : ["#888", "#888", "#888"];
     card.innerHTML = `
-      <div class="theme-swatch__dots">${dots.map((c) => `<span class="theme-swatch__dot" style="background:${c}"></span>`).join("")}</div>
+      <div class="theme-swatch__dots"></div>
       <div class="theme-swatch__row">
         <span class="theme-swatch__name">${escapeHtml(theme.name)}</span>
         ${
@@ -2441,6 +2535,17 @@ const { EVENT_TYPES } = window.SharedEvents;
           ? `<button class="theme-swatch__3d${enable3d ? " is-on" : ""}" data-action="3d" type="button" title="${escapeAttr(t("settings.theme3dToggleHint"))}">${escapeHtml(t("settings.theme3dToggle"))}</button>`
           : ""
       }`;
+    // Цвет приезжает из файла темы (импорт не валидирует содержимое), поэтому в
+    // разметку его подставлять нельзя — склеенное `style="background:${c}"`
+    // позволяет вырваться из атрибута. Задаём фон через CSSOM: сюда попадает
+    // только валидный цвет, а всё остальное заменяет безопасный дефолт.
+    const dotsWrap = card.querySelector(".theme-swatch__dots");
+    dots.forEach((c) => {
+      const dot = document.createElement("span");
+      dot.className = "theme-swatch__dot";
+      dot.style.backgroundColor = safeCssColor(c);
+      dotsWrap.appendChild(dot);
+    });
     card.addEventListener("click", (e) => {
       if (e.target.closest("[data-action]")) return;
       send(EVENT_TYPES.CMD_SET_ACTIVE_THEME, { id: theme.id });
@@ -3160,6 +3265,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     панель не может разойтись с сервером.
   */
   const queuePanelEl = document.getElementById("queuePanel");
+  const pendingPanelEl = document.getElementById("pendingPanel");
   const queueNowCardEl = document.getElementById("queueNowCard");
   const queuePendingEl = document.getElementById("queuePending");
   const queueStatsEl = document.getElementById("queueStats");
@@ -3172,7 +3278,6 @@ const { EVENT_TYPES } = window.SharedEvents;
   const queuePause5Btn = document.getElementById("queuePause5Btn");
   const queuePause15Btn = document.getElementById("queuePause15Btn");
   const queuePause30Btn = document.getElementById("queuePause30Btn");
-  const queueResumeBtn = document.getElementById("queueResumeBtn");
   const queueMinAmountInput = document.getElementById("queueMinAmount");
   const queueEnabledInput = document.getElementById("queueEnabled");
   const queueMergeSameUserInput = document.getElementById("queueMergeSameUser");
@@ -3255,6 +3360,11 @@ const { EVENT_TYPES } = window.SharedEvents;
     return t("queue.recoverFailed", { error: recover.error || "unknown" });
   }
 
+  /*
+    Рисует и «Очередь», и «Ожидают»: снимок очереди один, а элементы разошлись по
+    двум панелям — «В эфире» и правила остались в очереди, счётчик и список
+    ждущих уехали в левую. Поэтому и перерисовка вызывается из одной точки.
+  */
   function renderQueuePanel() {
     if (!queuePanelEl) return;
     const snapshot = queueSnapshot || { now: null, items: [], paused: false, pausedUntil: null, rules: {}, stats: {}, pending: 0 };
@@ -3267,13 +3377,25 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (queueClearBtn) queueClearBtn.disabled = items.length === 0;
 
     if (queuePauseStateEl) {
-      queuePauseStateEl.textContent = queuePauseText(snapshot);
+      /*
+        Бессрочную паузу видно по самой кнопке — она становится «Продолжить» и
+        подсвечивается, — поэтому отдельное слово «Пауза» было бы повтором.
+        Строку показываем только у паузы со сроком: там она говорит то, чего на
+        кнопке нет, — до какого времени.
+      */
+      const until = snapshot.paused ? Number(snapshot.pausedUntil) || 0 : 0;
+      queuePauseStateEl.textContent = until ? queuePauseText(snapshot) : "";
       queuePauseStateEl.classList.toggle("is-paused", !!snapshot.paused);
     }
     QUEUE_PAUSE_PRESETS.forEach(([btn, minutes]) => {
       if (btn) btn.textContent = t("queue.pauseFor", { count: minutes });
     });
-    if (queueResumeBtn) queueResumeBtn.disabled = !snapshot.paused;
+    // Кнопка паузы — переключатель на два действия: в паузе она же становится
+    // «Продолжить» и подсвечивается, как включённая (то же поведение в пульте).
+    if (queuePauseBtn) {
+      queuePauseBtn.textContent = t(snapshot.paused ? "queue.resume" : "queue.pause");
+      queuePauseBtn.classList.toggle("is-active", !!snapshot.paused);
+    }
 
     // Поля правил не перебиваем, пока пользователь в них печатает: сервер
     // присылает снимок после каждого изменения очереди, в том числе чужого.
@@ -3341,32 +3463,41 @@ const { EVENT_TYPES } = window.SharedEvents;
       queueRecoverOk = recover.ok === true;
       queueRecoverStatus = queueRecoverStatusText(recover);
     }
-    if (queuePanelEl && !queuePanelEl.hidden) renderQueuePanel();
+    // Список ожидающих лежит в своей панели: перерисовываем, если открыта любая
+    // из двух — вдруг одну из них когда-нибудь откроют отдельно от соседки.
+    const anyOpen = [queuePanelEl, pendingPanelEl].some((panel) => panel && !panel.hidden);
+    if (anyOpen) renderQueuePanel();
   }
 
   /*
-    Очередь — парная панель к «DA»: своей кнопки в шапке нет, состояние она
-    делит с панелью DonationAlerts (см. setDaOpen), поэтому здесь только показ
-    и перерисовка.
+    Очередь и «Ожидают» — панели-спутники «DA»: своей кнопки в шапке у них нет,
+    состояние они делят с панелью DonationAlerts (см. setDaOpen), поэтому здесь
+    только показ и перерисовка.
   */
   function setQueueOpen(open) {
-    if (!queuePanelEl) return;
-    queuePanelEl.hidden = !open;
+    if (queuePanelEl) queuePanelEl.hidden = !open;
+    if (pendingPanelEl) pendingPanelEl.hidden = !open;
     if (open) renderQueuePanel();
   }
 
-  // Крестик стоит только на правой панели пары, поэтому закрывает обе — иначе
-  // очередь осталась бы висеть одна, без единого способа её убрать.
+  // Крестик стоит только на правой панели тройки, поэтому закрывает все три —
+  // иначе спутники остались бы висеть одни, без единого способа их убрать.
   const daCloseBtn = document.getElementById("daCloseBtn");
   if (daCloseBtn) daCloseBtn.addEventListener("click", () => setQueueOpen(false));
 
   if (queueSkipBtn) queueSkipBtn.addEventListener("click", () => send(EVENT_TYPES.CMD_ALERT_QUEUE_SKIP, {}));
   if (queueClearBtn) queueClearBtn.addEventListener("click", () => send(EVENT_TYPES.CMD_ALERT_QUEUE_CLEAR, {}));
-  if (queuePauseBtn) queuePauseBtn.addEventListener("click", () => send(EVENT_TYPES.CMD_ALERT_QUEUE_PAUSE, {}));
+  if (queuePauseBtn) {
+    queuePauseBtn.addEventListener("click", () => {
+      // Что делать — решает последний снимок сервера, а не подпись на кнопке:
+      // пауза ставится без срока, до повторного нажатия.
+      const paused = !!(queueSnapshot && queueSnapshot.paused);
+      send(paused ? EVENT_TYPES.CMD_ALERT_QUEUE_RESUME : EVENT_TYPES.CMD_ALERT_QUEUE_PAUSE, {});
+    });
+  }
   QUEUE_PAUSE_PRESETS.forEach(([btn, minutes]) => {
     if (btn) btn.addEventListener("click", () => send(EVENT_TYPES.CMD_ALERT_QUEUE_PAUSE, { minutes }));
   });
-  if (queueResumeBtn) queueResumeBtn.addEventListener("click", () => send(EVENT_TYPES.CMD_ALERT_QUEUE_RESUME, {}));
 
   if (queueEnabledInput) {
     queueEnabledInput.addEventListener("change", () => {
@@ -3411,9 +3542,10 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   // ---- panel manager: keep only one panel open at a time ----
   /*
-    «DA» и «Очередь» — одна пара экранов, как «Колесо» и «Участники»: открытие
-    и закрытие идёт через одну точку, а очередь в реестре не значится — иначе
-    Escape и переключение панелей убирали бы её отдельно от DA.
+    «DA», «Очередь» и «Ожидают» — одна тройка экранов, как «Колесо» и
+    «Участники»: открытие и закрытие идёт через одну точку, а спутники DA в
+    реестре не значатся — иначе Escape и переключение панелей убирали бы их
+    отдельно от DA.
   */
   function setDaOpen(open) {
     daPanel.setOpen(open);
@@ -3503,7 +3635,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         populateSettings();
         renderSceneBudget();
         syncIntegrationSwitches();
-        renderWheelPanels();
+        if (!wheelPanelEl.hidden) renderWheelPanels();
         if (!pollPanelEl.hidden) renderPollPanels();
         selectScene(state.activeSceneId);
         syncMicBridge();
@@ -3635,7 +3767,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         state.participantsConfig = (msg.payload && msg.payload.config) || state.participantsConfig;
         canvasEditor.renderCanvas();
         propertiesPanel.render();
-        renderWheelPanel();
+        if (!wheelPanelEl.hidden) renderWheelPanel();
         break;
       case EVENT_TYPES.LONGSHOT_UPDATE:
         state.longshot = (msg.payload && msg.payload.longshot) || state.longshot;
@@ -3643,11 +3775,11 @@ const { EVENT_TYPES } = window.SharedEvents;
         break;
       case EVENT_TYPES.WHEEL_CONFIG:
         state.wheelConfig = (msg.payload && msg.payload.config) || state.wheelConfig;
-        renderWheelPanel();
+        if (!wheelPanelEl.hidden) renderWheelPanel();
         break;
       case EVENT_TYPES.WHEEL_SPEED_CONFIG:
         state.wheelSpeedConfig = (msg.payload && msg.payload.config) || state.wheelSpeedConfig;
-        renderWheelPanel();
+        if (!wheelPanelEl.hidden) renderWheelPanel();
         break;
       case EVENT_TYPES.POLL_UPDATE:
         state.poll = (msg.payload && msg.payload.poll) || state.poll;
@@ -3727,7 +3859,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     canvasEditor.renderLayers();
     propertiesPanel.render();
     renderSceneForm();
-    renderWheelPanels();
+    if (!wheelPanelEl.hidden) renderWheelPanels();
     if (!pollPanelEl.hidden) renderPollPanels();
     renderThemeGrid();
     renderLayoutPresets();
@@ -3817,6 +3949,10 @@ const { EVENT_TYPES } = window.SharedEvents;
   // это осознанный компромисс между плавностью и нагрузкой, понижать дальше
   // нечего, а 40 Гц было бы даже чаще.
   const MIC_FRAME_INTERVAL_MS = 33;
+  // Захват асинхронный: getUserMedia отвечает через секунды, а за это время мост
+  // могли остановить (виджет убрали) или перезапустить (сменили устройство).
+  // Поколение отличает актуальный ответ от опоздавшего.
+  const micCapture = createCaptureGeneration();
   const micBridge = {
     running: false,
     stream: null,
@@ -3832,6 +3968,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     start() {
       if (this.running) return;
       this.running = true;
+      const generation = micCapture.begin();
       const Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         console.warn("[mic-bridge] getUserMedia unavailable in the control panel");
@@ -3840,7 +3977,9 @@ const { EVENT_TYPES } = window.SharedEvents;
       }
       navigator.mediaDevices.getUserMedia({ audio: this._constraints() })
         .then((stream) => {
-          if (!this.running) { stream.getTracks().forEach((tr) => tr.stop()); return; }
+          // Поток получили после stop()/restart: молча отпускаем его, иначе
+          // микрофон остаётся захваченным — stop() про этот поток уже не знает.
+          if (!this.running || micCapture.isStale(generation)) { stream.getTracks().forEach((tr) => tr.stop()); return; }
           const ctx = new Ctx();
           if (ctx.state === "suspended") ctx.resume().catch(() => {});
           const source = ctx.createMediaStreamSource(stream);
@@ -3859,6 +3998,8 @@ const { EVENT_TYPES } = window.SharedEvents;
           if (!this.timer) this.timer = setInterval(() => this.tick(), MIC_FRAME_INTERVAL_MS);
         })
         .catch((err) => {
+          // Отказ устаревшего запроса ничего не говорит о текущем захвате.
+          if (micCapture.isStale(generation)) return;
           this.running = false;
           console.warn("[mic-bridge] microphone unavailable:", (err && err.name) || "unknown");
         });
@@ -3907,6 +4048,9 @@ const { EVENT_TYPES } = window.SharedEvents;
 
     stop() {
       this.running = false;
+      // Поколение закрывает все незавершённые getUserMedia: их результат уже
+      // неактуален и будет отброшен (см. комментарий в start).
+      micCapture.invalidate();
       if (this.timer) { clearInterval(this.timer); this.timer = null; }
       if (this.stream) { this.stream.getTracks().forEach((tr) => tr.stop()); this.stream = null; }
       if (this.ctx) { this.ctx.close().catch(() => {}); this.ctx = null; }

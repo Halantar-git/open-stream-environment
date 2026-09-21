@@ -52,7 +52,13 @@
   let currentStatus = null;
   let currentChannel = "";
   let ws = null;
-  const pendingSends = new Map(); // clientId -> { el, text, at, confirmed }
+  // Отправленные реплики, ждущие ответа сервера: clientId -> { el, text, at }.
+  // Запись живёт только до CHAT_SENT — иначе она оставалась бы в Map навсегда и
+  // позже перехватывала бы эхо повторно отправленного текста.
+  const pendingSends = new Map();
+  // Подтверждённые тексты (text -> время): своё сообщение возвращается из чата
+  // уже без clientId, и по тексту видно, что строка в списке — это оно.
+  const sentTexts = new Map();
 
   function sendCommand(type, payload) {
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -127,19 +133,44 @@
     } else {
       jumpBtn.hidden = false;
     }
-    return { el: row, text, at: Date.now(), confirmed: false };
+    return { el: row, text, at: Date.now() };
+  }
+
+  // Чистка по времени: сообщение могло не дойти до Twitch, и тогда ни ответа,
+  // ни эха не будет никогда — без этого карты росли бы весь стрим.
+  function pruneSent(now) {
+    for (const [clientId, entry] of pendingSends) {
+      if (now - entry.at >= ECHO_MATCH_MS) pendingSends.delete(clientId);
+    }
+    for (const [text, at] of sentTexts) {
+      if (now - at >= ECHO_MATCH_MS) sentTexts.delete(text);
+    }
   }
 
   function consumeOutgoingEcho(payload) {
+    const now = Date.now();
+    pruneSent(now);
+    // clientId приходит только в ответе сервера (CHAT_SENT).
+    const clientId = payload && payload.clientId;
+    if (clientId && pendingSends.has(clientId)) {
+      const entry = pendingSends.get(clientId);
+      pendingSends.delete(clientId);
+      setOutgoingStatus(entry, "is-sent", "✓");
+      return true;
+    }
     const text = String((payload && payload.message) || "").trim();
     if (!text) return false;
-    const now = Date.now();
-    for (const [clientId, entry] of pendingSends) {
-      if (entry.text === text && now - entry.at < ECHO_MATCH_MS) {
-        pendingSends.delete(clientId);
-        setOutgoingStatus(entry, "is-sent", "✓");
-        return true;
-      }
+    for (const [id, entry] of pendingSends) {
+      if (entry.text !== text || now - entry.at >= ECHO_MATCH_MS) continue;
+      pendingSends.delete(id);
+      setOutgoingStatus(entry, "is-sent", "✓");
+      sentTexts.set(text, now);
+      return true;
+    }
+    // Тот же текст от своего же подтверждённого сообщения — не дубль.
+    if (sentTexts.has(text)) {
+      sentTexts.delete(text);
+      return true;
     }
     return false;
   }
@@ -222,11 +253,14 @@
         const p = msg.payload || {};
         const entry = p.clientId ? pendingSends.get(p.clientId) : null;
         if (!entry) break;
+        // Запись снимаем в любом случае: в Map она больше не нужна, а её роль
+        // (погасить эхо своей реплики) после успеха берёт на себя sentTexts.
+        pendingSends.delete(p.clientId);
+        pruneSent(Date.now());
         if (p.ok) {
-          entry.confirmed = true;
+          sentTexts.set(entry.text, Date.now());
           setOutgoingStatus(entry, "is-sent", "✓");
         } else {
-          pendingSends.delete(p.clientId);
           setOutgoingStatus(entry, "is-error", "!");
         }
         break;

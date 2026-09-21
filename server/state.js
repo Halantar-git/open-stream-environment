@@ -824,6 +824,16 @@ class AppState {
     return this._memoryPollPresets;
   }
 
+  /*
+    Настройки голосования живут в config.json (их читает this.config.poll),
+    поэтому пишем и туда, и в БД: раньше сеттеры писали только в БД, а после
+    перезапуска команда, тип диаграммы и варианты откатывались к прежним.
+  */
+  _savePollConfig() {
+    if (this.db) this.db.savePollConfig(this.config.poll);
+    saveConfig(this.config);
+  }
+
   listPollPresets() {
     return this._getPollPresets().map((p) => ({
       id: p.id,
@@ -872,7 +882,7 @@ class AppState {
             .map((o) => ({ id: o.id, label: o.label }))
         : [],
     };
-    if (this.db) this.db.savePollConfig(this.config.poll);
+    this._savePollConfig();
     return this.pollSnapshot();
   }
 
@@ -933,7 +943,15 @@ class AppState {
   setObsConfig(patch = {}) {
     if (patch.host !== undefined) this.config.obs.host = String(patch.host).trim();
     if (patch.port !== undefined) this.config.obs.port = Number(patch.port) || 4455;
-    if (patch.password !== undefined) this.config.obs.password = String(patch.password);
+    /*
+      Пароль OBS. Панель никогда не подставляет сохранённый пароль (в снимке
+      состояния его нет, только `hasPassword`), поэтому пустая строка и
+      отсутствие поля означают «не менять»: иначе достаточно было бы отправить
+      карточку настроек как есть, чтобы стереть пароль. Стирают его явно —
+      `clearPassword` из кнопки в настройках.
+    */
+    if (patch.clearPassword === true) this.config.obs.password = "";
+    else if (patch.password !== undefined && String(patch.password)) this.config.obs.password = String(patch.password);
     if (patch.webcamSource !== undefined) this.config.obs.webcamSource = String(patch.webcamSource).trim();
     if (patch.micSource !== undefined) this.config.obs.micSource = String(patch.micSource).trim();
     if (patch.sceneMap && typeof patch.sceneMap === "object") {
@@ -1225,7 +1243,7 @@ class AppState {
 
   startPoll(command) {
     if (typeof command === "string" && command.trim()) this.config.poll.command = command.trim();
-    if (this.db) this.db.savePollConfig(this.config.poll);
+    this._savePollConfig();
     this.runtime.poll.active = true;
     this.runtime.poll.votes = new Map();
     return this.pollSnapshot();
@@ -1247,7 +1265,7 @@ class AppState {
     next.chartType = next.chartType === "pie" ? "pie" : "bars";
     if (!Array.isArray(next.options)) next.options = this.config.poll.options;
     this.config.poll = next;
-    if (this.db) this.db.savePollConfig(this.config.poll);
+    this._savePollConfig();
     return this.pollSnapshot();
   }
 
@@ -1256,7 +1274,7 @@ class AppState {
     if (!text) return null;
     const option = { id: crypto.randomUUID(), label: text };
     this.config.poll.options = [...this.config.poll.options, option];
-    if (this.db) this.db.savePollConfig(this.config.poll);
+    this._savePollConfig();
     return this.pollSnapshot();
   }
 
@@ -1269,7 +1287,7 @@ class AppState {
       for (const [user, oid] of this.runtime.poll.votes) {
         if (oid === optionId) this.runtime.poll.votes.delete(user);
       }
-      if (this.db) this.db.savePollConfig(this.config.poll);
+      this._savePollConfig();
     }
     return this.pollSnapshot();
   }
@@ -1277,7 +1295,7 @@ class AppState {
   clearPollOptions() {
     this.config.poll.options = [];
     this.runtime.poll.votes = new Map();
-    if (this.db) this.db.savePollConfig(this.config.poll);
+    this._savePollConfig();
     return this.pollSnapshot();
   }
 
@@ -1618,42 +1636,45 @@ class AppState {
     return this.config.appearance.enabled3d;
   }
 
-  saveCustomTheme({ id, name, seeds }) {
+  saveCustomTheme({ id, name, seeds } = {}) {
+    // Кадр может прийти без seeds (или с не-объектом): без приведения к объекту
+    // `seeds.primary` ниже бросал бы TypeError и роняло сервер.
+    const src = seeds && typeof seeds === "object" ? seeds : {};
     const cleanSeeds = {
-      primary: seeds.primary || "#c6b8ff",
-      secondary: seeds.secondary || "#7ee0d6",
-      tertiary: seeds.tertiary || "#ffb0d8",
-      surfaceSeed: seeds.surfaceSeed || seeds.primary || "#8878c8",
+      primary: src.primary || "#c6b8ff",
+      secondary: src.secondary || "#7ee0d6",
+      tertiary: src.tertiary || "#ffb0d8",
+      surfaceSeed: src.surfaceSeed || src.primary || "#8878c8",
       // Тёмная схема — как в приложении; светлая выводит ту же палитру из
       // светлой шкалы поверхностей.
-      mode: SCHEMES.includes(seeds.mode) ? seeds.mode : "dark",
-      shapeMode: SHAPE_MODES.includes(seeds.shapeMode) ? seeds.shapeMode : "rounded",
-      fontPreset: seeds.fontPreset === "orbital" ? "orbital" : "nebula",
-      fontDisplay: String(seeds.fontDisplay || "").trim(),
-      fontBody: String(seeds.fontBody || "").trim(),
-      fontMono: String(seeds.fontMono || "").trim(),
-      panelRadius: String(seeds.panelRadius || "").trim(),
-      panelBorderWidth: String(seeds.panelBorderWidth || "").trim(),
-      panelBorderStyle: String(seeds.panelBorderStyle || "").trim(),
-      panelBorderColor: String(seeds.panelBorderColor || "").trim(),
-      panelGlowColor: String(seeds.panelGlowColor || "").trim(),
-      panelGlowStrength: Math.max(0, Math.min(100, Number(seeds.panelGlowStrength) || 0)),
-      background: String(seeds.background || "").trim(),
-      text: String(seeds.text || "").trim(),
-      panelOpacity: seeds.panelOpacity === "" || seeds.panelOpacity == null ? "" : Math.max(0, Math.min(100, Number(seeds.panelOpacity) || 0)),
-      panelBlur: String(seeds.panelBlur || "").trim(),
+      mode: SCHEMES.includes(src.mode) ? src.mode : "dark",
+      shapeMode: SHAPE_MODES.includes(src.shapeMode) ? src.shapeMode : "rounded",
+      fontPreset: src.fontPreset === "orbital" ? "orbital" : "nebula",
+      fontDisplay: String(src.fontDisplay || "").trim(),
+      fontBody: String(src.fontBody || "").trim(),
+      fontMono: String(src.fontMono || "").trim(),
+      panelRadius: String(src.panelRadius || "").trim(),
+      panelBorderWidth: String(src.panelBorderWidth || "").trim(),
+      panelBorderStyle: String(src.panelBorderStyle || "").trim(),
+      panelBorderColor: String(src.panelBorderColor || "").trim(),
+      panelGlowColor: String(src.panelGlowColor || "").trim(),
+      panelGlowStrength: Math.max(0, Math.min(100, Number(src.panelGlowStrength) || 0)),
+      background: String(src.background || "").trim(),
+      text: String(src.text || "").trim(),
+      panelOpacity: src.panelOpacity === "" || src.panelOpacity == null ? "" : Math.max(0, Math.min(100, Number(src.panelOpacity) || 0)),
+      panelBlur: String(src.panelBlur || "").trim(),
       // Цвет ошибки и анимация появления алертов (пусто — значение по форме/дефолт).
-      error: /^#[0-9a-f]{6}$/i.test(String(seeds.error || "").trim()) ? String(seeds.error).trim() : "",
+      error: /^#[0-9a-f]{6}$/i.test(String(src.error || "").trim()) ? String(src.error).trim() : "",
       alertEnterDuration:
-        seeds.alertEnterDuration === "" || seeds.alertEnterDuration == null
+        src.alertEnterDuration === "" || src.alertEnterDuration == null
           ? ""
-          : Math.max(0, Math.min(2000, Math.round(Number(seeds.alertEnterDuration) || 0))),
-      alertEnterEasing: Object.prototype.hasOwnProperty.call(ALERT_EASINGS, seeds.alertEnterEasing)
-        ? seeds.alertEnterEasing
+          : Math.max(0, Math.min(2000, Math.round(Number(src.alertEnterDuration) || 0))),
+      alertEnterEasing: Object.prototype.hasOwnProperty.call(ALERT_EASINGS, src.alertEnterEasing)
+        ? src.alertEnterEasing
         : "",
       // Явный список 3D-виджетов своей темы (можно смешивать стили).
-      threeDWidgets: normalizeThreeDWidgets(seeds),
-      customCss: String(seeds.customCss || ""),
+      threeDWidgets: normalizeThreeDWidgets(src),
+      customCss: String(src.customCss || ""),
     };
     const tokens = buildThemeTokens(cleanSeeds);
     const cleanName = String(name || "Моя тема").slice(0, 40);
@@ -2012,7 +2033,13 @@ class AppState {
       twitchEnabled: this.config.twitch.enabled,
       donationAlertsEnabled: this.config.donationAlerts.enabled,
       youtubeEnabled: this.config.youtube.enabled,
-      obs: this.config.obs,
+      /*
+        Пароль OBS WebSocket в снимок не попадает: снимок уходит всем клиентам
+        (оверлею, пульту, чату), а нужен он только приложению — для подключения к
+        OBS. Панели вместо значения достаточно признака hasPassword: пустое поле
+        там означает «не менять» (как у Client Secret у DonationAlerts).
+      */
+      obs: { ...this.config.obs, password: "", hasPassword: !!String(this.config.obs.password || "") },
       soundboard: this.config.soundboard,
       tts: this.config.tts,
       donationVoice: this.config.donationVoice,

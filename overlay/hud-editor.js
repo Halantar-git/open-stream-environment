@@ -136,6 +136,9 @@
     s.width = (item.w || 10) + "%";
     s.height = (item.h || 10) + "%";
     s.zIndex = "1";
+    // Призрак таскают мышью в режиме редактирования (см. onPointerDown), а в
+    // overlay.css у класса стоит pointer-events: none — инлайн-стиль его перекрывает.
+    s.pointerEvents = "auto";
   }
 
   function removeGhost(id) {
@@ -294,13 +297,20 @@
   function onPointerDown(ev) {
     if (!enabled || !opts) return;
     const handle = ev.target.closest(".scale-handle");
+    /*
+      Призрак (виджет не смонтирован: тема или сервис выключены) тоже можно
+      таскать: правки уходят в элемент раскладки, а не в инстанс менеджера,
+      поэтому смонтированный виджет для перетаскивания не нужен. Ручки ресайза
+      у призрака нет — размер у него берётся из раскладки, а не из живого элемента.
+    */
+    const ghost = !handle && ev.target.closest(".widget-instance--ghost");
     const instEl = handle
       ? (opts.manager && opts.manager.get(handle.dataset.id)
           ? opts.manager.get(handle.dataset.id).element
           : null)
-      : ev.target.closest(".widget-instance");
+      : ghost || ev.target.closest(".widget-instance");
     if (!instEl || !opts.canvas.contains(instEl)) return;
-    const inst = opts.manager ? opts.manager.get(instEl.dataset.id) : null;
+    const inst = ghost ? { id: instEl.dataset.id, element: instEl } : opts.manager ? opts.manager.get(instEl.dataset.id) : null;
     if (!inst) return;
     ev.preventDefault();
     if (handle) startResize(ev, instEl, inst);

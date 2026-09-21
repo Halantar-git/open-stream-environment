@@ -17,6 +17,7 @@
 
 const { createLogger } = require("../logger");
 const { createTokenRefresher } = require("../token-refresh");
+const { nickColor } = require("../nick-color");
 
 /**
  * YouTube Live integration via YouTube Data API v3.
@@ -37,6 +38,40 @@ const MIN_POLL_MS = 1000;
 const FALLBACK_POLL_MS = 4000;
 const RETRY_DELAY_MS = 10000;
 const QUOTA_BACKOFF_MS = 30000;
+
+// Причины 403, при которых чат уже мёртв (эфир закончился, чат выключен или
+// удалён). Их лечит сброс liveChatId и поиск нового эфира, а не бэкофф: иначе
+// после конца стрима интеграция бесконечно опрашивает мёртвый чат.
+const ENDED_CHAT_REASONS = ["livechatended", "livechatdisabled", "livechatnotfound"];
+
+/**
+ * Разбирает тело отказа liveChatMessages и решает, что делать. Возвращает
+ * "ended" (чат мёртв — сбросить liveChatId и заново искать эфир) или "backoff"
+ * (лимит/квота/запрет — подождать и повторить). Раньше 403 всегда считался
+ * квотой, поэтому закончившийся эфир оставался в опросе навсегда.
+ *
+ * Причина лежит в `error.errors[].reason`, но дополнительно смотрим и сырое
+ * тело: ответ может прийти не-JSON (прокси, HTML-заглушка).
+ */
+function classifyLiveChatFailure(bodyText) {
+  const text = String(bodyText || "");
+
+  let reasons = "";
+  try {
+    const body = JSON.parse(text);
+    const error = body && body.error;
+    if (error && Array.isArray(error.errors)) {
+      reasons = error.errors.map((e) => String((e && e.reason) || "")).join(" ");
+    }
+  } catch {
+    /* тело не JSON — ниже смотрим на сырой текст */
+  }
+
+  // `offlineAt` встречается в теле уже завершившегося эфира.
+  const haystack = `${reasons} ${text}`.toLowerCase();
+  if (haystack.includes("offlineat")) return "ended";
+  return ENDED_CHAT_REASONS.some((reason) => haystack.includes(reason)) ? "ended" : "backoff";
+}
 
 function startYoutube({ bus, state }) {
   const logger = createLogger(bus, "youtube");
@@ -158,7 +193,11 @@ function startYoutube({ bus, state }) {
     bus.emit("chat_message", {
       user: author.displayName || "viewer",
       message: (snippet.textMessageDetails && snippet.textMessageDetails.messageText) || snippet.displayMessage || "",
-      color: "#e8e1f0",
+      // source отделяет YouTube от Twitch: чат-бот обрабатывает только Twitch.
+      source: "youtube",
+      // YouTube цвет автора не отдаёт — считаем его из channelId, чтобы ники
+      // разных зрителей различались и были стабильны между стримами.
+      color: nickColor(author.channelId || author.displayName),
       badges,
       emotes: {},
     });
@@ -238,8 +277,17 @@ function startYoutube({ bus, state }) {
       }
 
       if (res.status === 403) {
-        logger.warn("liveChatMessages returned 403 (rate limit/quota) — backing off");
-        scheduleTick(QUOTA_BACKOFF_MS);
+        const body = await res.text().catch(() => "");
+        if (classifyLiveChatFailure(body) === "ended") {
+          logger.warn("liveChatMessages returned 403 (chat ended/disabled) — reset liveChatId");
+          liveChatId = null;
+          nextPageToken = null;
+          setStatus("connecting");
+          scheduleTick(RETRY_DELAY_MS);
+        } else {
+          logger.warn("liveChatMessages returned 403 (rate limit/quota) — backing off");
+          scheduleTick(QUOTA_BACKOFF_MS);
+        }
         return;
       }
 
@@ -303,4 +351,4 @@ function startYoutube({ bus, state }) {
   };
 }
 
-module.exports = { startYoutube };
+module.exports = { startYoutube, classifyLiveChatFailure };

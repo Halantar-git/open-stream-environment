@@ -75,6 +75,23 @@ describe("server/media", () => {
     expect(fs.existsSync(path.join(getUserMediaDir(), "outro.mp4"))).toBe(true);
   });
 
+  test("cleanupOrphanedMedia сохраняет общую заставку", () => {
+    fs.writeFileSync(path.join(getUserMediaDir(), "global.mp4"), "g");
+    fs.writeFileSync(path.join(getUserMediaDir(), "drop.mp3"), "d");
+
+    const config = {
+      soundboard: { sounds: [] },
+      streamdeck: { icons: {} },
+      splash: { file: "media/global.mp4", duration: 3 },
+    };
+
+    const result = cleanupOrphanedMedia(config, []);
+
+    expect(result.removed).toBe(1);
+    expect(result.removedNames).toEqual(["drop.mp3"]);
+    expect(fs.existsSync(path.join(getUserMediaDir(), "global.mp4"))).toBe(true);
+  });
+
   test("collectMediaForExport/importMedia делает round-trip", () => {
     fs.writeFileSync(path.join(getUserMediaDir(), "a.mp3"), Buffer.from([1, 2, 3, 4]));
 

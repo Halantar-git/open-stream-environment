@@ -18,9 +18,36 @@
 const {
   extractPayload,
   donationAlertFromPayload,
+  isDonationPayload,
   alertFromPayload,
   isUnrecoverableAuthError,
 } = require("../server/integrations/donationalerts");
+
+describe("donationalerts: настоящий ли донат", () => {
+  test("служебный кадр подписки донатом не считается", () => {
+    // Именно этот кадр приходил при каждом подключении к сервису и превращался
+    // в алерт «Аноним · 0 RUB» сразу после старта приложения.
+    const serviceFrame = { channel: "$alerts:donation_123", recoverable: true, epoch: "abc", offset: 0 };
+
+    expect(isDonationPayload(serviceFrame)).toBe(false);
+    expect(isDonationPayload({})).toBe(false);
+    expect(isDonationPayload({ data: null })).toBe(false);
+  });
+
+  test("пустое значение кадром не считается", () => {
+    [null, undefined, "строка", 42].forEach((payload) => {
+      expect(isDonationPayload(payload)).toBe(false);
+    });
+  });
+
+  test("донат узнаётся по id, сумме или нику", () => {
+    expect(isDonationPayload({ id: 55 })).toBe(true);
+    expect(isDonationPayload({ amount: "300" })).toBe(true);
+    expect(isDonationPayload({ name: "Аноним" })).toBe(true);
+    // Нулевая сумма и пустой ник донатом не делают — должен быть хоть один признак.
+    expect(isDonationPayload({ amount: 0, username: "   " })).toBe(false);
+  });
+});
 
 describe("donationalerts parsing", () => {
   test("extractPayload разбирает современный Centrifugo push", () => {

@@ -24,18 +24,45 @@ const { isSealed } = require("./secret-store");
 // on the way back instead of trusting the redirect blindly.
 const pending = new Map();
 
+// Сколько живёт state — столько времени есть на прохождение авторизации в браузере.
+const STATE_TTL_MS = 10 * 60 * 1000;
+
+/*
+  Просроченные записи подчищаются при каждом обращении.
+
+  Иначе карта растёт без предела: закрытая вкладка авторизации state не возвращает,
+  а consumeState вызывается только при успешном возврате. Ссылок больше нет ни у
+  кого, так что удалять просроченное безопасно.
+*/
+function sweepExpiredStates(now) {
+  if (!pending.size) return;
+  for (const [token, entry] of pending) {
+    if (entry.expiresAt < now) pending.delete(token);
+  }
+}
+
 function makeState(provider) {
+  const now = Date.now();
+  sweepExpiredStates(now);
   const token = crypto.randomBytes(16).toString("hex");
-  pending.set(token, { provider, expiresAt: Date.now() + 10 * 60 * 1000 });
+  pending.set(token, { provider, expiresAt: now + STATE_TTL_MS });
   return token;
 }
 
 function consumeState(token, provider) {
+  const now = Date.now();
+  sweepExpiredStates(now);
   const entry = pending.get(token);
   pending.delete(token);
   if (!entry) return false;
-  if (entry.expiresAt < Date.now()) return false;
+  if (entry.expiresAt < now) return false;
   return entry.provider === provider;
+}
+
+// Сколько state сейчас ждёт возврата из браузера. Нужно тесту, который следит за
+// тем, чтобы неудачные попытки подключения не копились в памяти.
+function pendingStateCount() {
+  return pending.size;
 }
 
 function redirectUri(port, provider) {
@@ -501,4 +528,5 @@ module.exports = {
   credentialsProblemMessage,
   describeTokenExchangeFailure,
   describeSentCredentials,
+  pendingStateCount,
 };

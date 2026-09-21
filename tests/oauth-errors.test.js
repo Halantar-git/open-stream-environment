@@ -31,6 +31,8 @@ const {
   credentialsProblemMessage,
   describeTokenExchangeFailure,
   describeSentCredentials,
+  buildTwitchAuthorizeUrl,
+  pendingStateCount,
 } = require("../server/oauth");
 
 const { once } = require("events");
@@ -184,5 +186,31 @@ describe("oauth: попытка подключения остаётся в жу�
 
     expect(result.body).toContain("Client ID");
     expect(result.entries.filter((entry) => entry.level === "error")).toEqual([]);
+  });
+});
+
+/*
+  Начатые, но не доведённые до конца подключения не должны копиться в памяти:
+  state — одноразовый пропуск, который возвращается только успешным ответом
+  браузера. Закрытая вкладка не возвращает ничего, поэтому просроченные записи
+  подчищаются при выдаче нового state.
+*/
+describe("oauth: state для подключения не копится", () => {
+  test("просроченные state подчищаются при выдаче нового", () => {
+    jest.useFakeTimers();
+    try {
+      const config = { port: 8710, twitch: { clientId: "app-id" } };
+      const before = pendingStateCount();
+
+      for (let i = 0; i < 5; i++) buildTwitchAuthorizeUrl(config, 8710);
+      expect(pendingStateCount()).toBe(before + 5);
+
+      // Прошло больше времени жизни state — остаётся только свежий.
+      jest.advanceTimersByTime(11 * 60 * 1000);
+      buildTwitchAuthorizeUrl(config, 8710);
+      expect(pendingStateCount()).toBe(1);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

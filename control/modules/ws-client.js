@@ -45,18 +45,25 @@ export function initWsClient({ url, role, t, onMessage, onStatusClick, resolveUr
     return "";
   }
 
+  // Подсказка к чипу: состояние словами, оно же читается цветом точки. Пока
+  // статус не пришёл, подсказка остаётся одним именем сервиса.
+  function statusTitle(service, status) {
+    return status ? `${STATUS_LABEL(service)}: ${STATUS_TEXT(status)}` : STATUS_LABEL(service);
+  }
+
   function renderStatusChips() {
     const container = el("statusFabList");
     if (!container) return;
     const order = ["twitchChat", "twitchEvents", "donationAlerts", "youtube", "obs"];
     container.innerHTML = order
-      .filter((service) => connectionStatus[service] !== undefined && connectionStatus[service] !== "disabled")
       .map((service) => {
         const status = connectionStatus[service];
-        return `<button class="status-fab ${statusClass(status)}" data-service="${service}" type="button" title="${STATUS_LABEL(service)}">
+        // Чипы не скрываются: выключенный сервис — тоже состояние, и оно видно
+        // по цвету точки. В чипе — только точка и имя сервиса, состояние
+        // словами живёт в подсказке при наведении.
+        return `<button class="status-fab ${statusClass(status)}" data-service="${service}" type="button" title="${statusTitle(service, status)}">
           <span class="status-fab__dot"></span>
           <span class="status-fab__label">${STATUS_LABEL(service)}</span>
-          <span class="status-fab__status">${STATUS_TEXT(status)}</span>
         </button>`;
       })
       .join("");
@@ -70,10 +77,11 @@ export function initWsClient({ url, role, t, onMessage, onStatusClick, resolveUr
       const chip = el("chip-" + service);
       if (!chip) return;
       const status = connectionStatus[service];
-      chip.style.display = status === "disabled" ? "none" : "";
+      // Чип выключенного сервиса остаётся на месте: состояние показывает цвет
+      // точки. Подпись — имя сервиса (оно же в разметке), состояние словами —
+      // в подсказке, чтобы не дублировать цвет текстом.
       chip.className = "md-chip " + statusClass(status);
-      const label = chip.querySelector(".md-chip__label");
-      if (label) label.textContent = `${STATUS_LABEL(service)}: ${STATUS_TEXT(status)}`;
+      chip.title = statusTitle(service, status);
     });
   }
 

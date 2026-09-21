@@ -832,18 +832,20 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   line-height: 1.5;
 }
 
-/* ---------- Alert queue panel: парная панель к «DA» ---------- */
+/* ---------- Alert queue panels: две панели слева от «DA» ---------- */
+/*
+  «Очередь алертов» и «Ожидают» стоят слева от «DA» и делят оставшееся место
+  поровну, но не больше 400px каждая: на минимальной ширине окна (1100px) они
+  сжимаются примерно до 310px, чтобы третья панель не уехала за край. Ширины и
+  смещения привязаны к .da-panel вручную — тот же приём, что у
+  .participants-panel рядом с .wheel-panel: измените ширину DA, поправьте здесь.
+*/
 .queue-panel {
   position: fixed;
   top: 56px;
-  /*
-    Парная панель к «DA»: стоит слева от неё, поэтому смещена ровно на ширину
-    соседа. Отступ привязан к .da-panel вручную — тот же приём, что у
-    .participants-panel рядом с .wheel-panel: измените ширину DA, поправьте здесь.
-  */
   right: min(480px, 100vw);
   bottom: 0;
-  width: min(400px, 100vw);
+  width: min(400px, (100vw - 480px) / 2);
   z-index: 50;
   display: flex;
   flex-direction: column;
@@ -851,6 +853,10 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   color: var(--md-on-surface);
   border-left: 1px solid var(--md-outline-variant);
   box-shadow: var(--elev-3);
+}
+/* Смещение третьей панели = ширина «DA» плюс ширина очереди. */
+.pending-panel {
+  right: calc(min(480px, 100vw) + min(400px, (100vw - 480px) / 2));
 }
 .queue-panel[hidden] { display: none; }
 .queue-panel__header {
@@ -922,6 +928,8 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .queue-btn--danger { color: var(--md-error); border-color: var(--md-error); background: transparent; }
 .queue-btn--danger:hover:not(:disabled) { background: var(--md-error-container); color: var(--md-on-error-container); }
 .queue-btn--small { padding: 3px 8px; font-size: 11px; }
+/* Кнопка-переключатель «Пауза»/«Продолжить»: в паузе подсвечена как включённая. */
+.queue-btn.is-active { background: var(--md-primary-container); color: var(--md-on-primary-container); border-color: var(--md-primary); }
 
 /* Карточка алерта: текущий в эфире и элементы ожидания. */
 .queue-card,
@@ -1108,32 +1116,31 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   letter-spacing: 0.4px;
   text-transform: uppercase;
   color: var(--md-on-surface-variant);
-  margin-right: auto;
   white-space: nowrap;
 }
+/*
+  Индикатор подключения — только точка: состояние читается её цветом, словами оно
+  живёт в подсказке и в строке «Подключение» ниже. Раньше это была плашка с
+  текстом, и без текста она читалась как переключатель рядом с «Закрыть» —
+  поэтому точка стоит вплотную к названию панели, а отступ до крестика держит
+  `margin-right: auto`.
+*/
 .da-panel__chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 2px 9px;
-  border-radius: var(--shape-full);
-  border: 1px solid var(--md-outline-variant);
-  font-size: 11px;
-  white-space: nowrap;
-  color: var(--md-on-surface-variant);
+  margin-right: auto;
+  flex-shrink: 0;
 }
 .da-panel__chip-dot {
-  width: 7px;
-  height: 7px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: var(--md-outline);
   flex-shrink: 0;
 }
-.da-panel__chip.is-connected { color: var(--md-primary); border-color: var(--md-primary); }
 .da-panel__chip.is-connected .da-panel__chip-dot { background: var(--md-primary); }
-.da-panel__chip.is-error { color: var(--md-error); border-color: var(--md-error); }
 .da-panel__chip.is-error .da-panel__chip-dot { background: var(--md-error); }
-.da-panel__chip.is-pending .da-panel__chip-dot { background: var(--md-tertiary); }
+.da-panel__chip.is-pending .da-panel__chip-dot { background: var(--md-tertiary); animation: chip-pulse 1.2s ease-in-out infinite; }
 .da-panel__close {
   width: 28px;
   height: 28px;
@@ -2109,7 +2116,6 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   flex-shrink: 0;
 }
 .status-fab__label { white-space: nowrap; }
-.status-fab__status { font-size: 11px; font-weight: 500; color: var(--md-on-surface-variant); white-space: nowrap; }
 .status-fab.is-connected { border-color: rgba(46, 160, 67, 0.5); }
 .status-fab.is-connected .status-fab__dot { background: #2ea043; box-shadow: 0 0 0 3px rgba(46, 160, 67, 0.22); }
 .status-fab.is-error .status-fab__dot { background: #f85149; box-shadow: 0 0 0 3px rgba(248, 81, 73, 0.22); }

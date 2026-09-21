@@ -484,7 +484,10 @@ function createHudWindow(port) {
     fullscreen: true,
     backgroundColor: "#00000000",
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
+      // Preload здесь не нужен: оверлей не обращается к window.desktop (режим
+      // редактирования и раскладку он получает по WebSocket), а лишний мост к
+      // IPC в окне поверх игры — только лишняя поверхность атаки. Окно превью
+      // той же страницы грузится вообще без preload (см. openThemePreviewWindow).
       contextIsolation: true,
       nodeIntegration: false,
       backgroundThrottling: true,
@@ -845,6 +848,41 @@ function registerChatHudHotkey(hotkey) {
   return true;
 }
 
+// Свой ли это кадр: страницы приложения грузятся из сборки (file://) или с
+// локального сервера панели (http://localhost:PORT). Всё остальное — чужое.
+function isOwnAppUrl(url) {
+  const raw = String(url || "");
+  // file:// (loadFile) — схему проверяем префиксом: у file-URL не всегда есть
+  // хост, и разбор через new URL на таком значении может не пройти.
+  if (raw.startsWith("file:")) return true;
+  let parsed;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    return false;
+  }
+  return parsed.protocol === "http:" && (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1");
+}
+
+/*
+  * Микрофон (и только он) нужен ровно одному месту приложения — мик-мосту панели
+  * управления, который захватывает звук и шлёт уровни оверлею. Поэтому media
+  * разрешаем по двум признакам: запрос пришёл от нашего окна и просит только
+  * звук. Камера не запрашивается ни из одного окна, а раньше любая страница
+  * (включая загруженную в окно оверлея) молча получала и микрофон, и камеру.
+  * Пустой список типов считаем звуком: некоторые запросы его не заполняют, а всё
+  * перечисленное отклоняем, если там есть что-то кроме audio.
+  */
+function isMicBridgeRequest(url, details) {
+  if (!isOwnAppUrl(url)) return false;
+  const d = details || {};
+  const mediaTypes = d.mediaTypes || [];
+  // В проверке разрешений тип приходит одним значением (mediaType), в запросе —
+  // списком (mediaTypes): смотрим оба, иначе один из путей пропускал бы камеру.
+  if (d.mediaType && d.mediaType !== "audio" && d.mediaType !== "unknown") return false;
+  return !mediaTypes.some((type) => type !== "audio");
+}
+
 app.whenReady().then(() => {
   if (!gotSingleInstanceLock) return;
 
@@ -880,8 +918,20 @@ app.whenReady().then(() => {
 
   // Allow microphone access for the mic-visualizer bridge (the control panel
   // captures audio and forwards levels to the overlay over WebSocket).
-  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
-    callback(permission === "media");
+  session.defaultSession.setPermissionRequestHandler((wc, permission, callback, details) => {
+    const url = (details && details.requestingUrl) || (wc && wc.getURL && wc.getURL());
+    callback(permission === "media" && isMicBridgeRequest(url, details));
+  });
+
+  // Симметричная проверка: часть путей в Chromium отдаёт разрешение, минуя
+  // request-хендлер (медиа — в их числе), и тогда решение принимает только она.
+  // Остальные разрешения остаются прежними (по умолчанию Electron их не чинит:
+  // буфер обмена и файлы панель берёт через IPC, а не через web-permissions).
+  session.defaultSession.setPermissionCheckHandler((wc, permission, requestingOrigin, details) => {
+    if (permission !== "media") return true;
+    // У file-страниц origin может прийти урезанным — тогда берём адрес кадра.
+    const url = requestingOrigin || (wc && wc.getURL && wc.getURL());
+    return isMicBridgeRequest(url, details);
   });
 
   configureStorage({ configDir: resolveConfigDir() });

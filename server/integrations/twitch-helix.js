@@ -83,21 +83,26 @@ async function createTwitchClip({ bus, state }) {
   }
 
   const doCreate = async (accessToken) => {
-    const res = await fetch(CLIPS_URL, {
-      method: "POST",
-      headers: {
-        "Client-Id": twitch.clientId,
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ broadcaster_id: twitch.broadcasterId, has_delay: false }),
-    });
-    const json = await res.json().catch(() => ({}));
-    return { res, json };
+    try {
+      const res = await fetch(CLIPS_URL, {
+        method: "POST",
+        headers: {
+          "Client-Id": twitch.clientId,
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ broadcaster_id: twitch.broadcasterId, has_delay: false }),
+      });
+      const json = await res.json().catch(() => ({}));
+      return { res, json };
+    } catch (err) {
+      // Сетевой сбой не должен реджектить промис — возвращаем ошибку.
+      return { res: null, json: {}, networkError: err };
+    }
   };
 
   let result = await doCreate(token);
-  if (result.res.status === 401) {
+  if (!result.networkError && result.res.status === 401) {
     logger.warn("clip creation returned 401 — refreshing and retrying once");
     try {
       token = await refresher.refreshAccessToken();
@@ -106,6 +111,11 @@ async function createTwitchClip({ bus, state }) {
       return { ok: false, error: "auth" };
     }
     result = await doCreate(token);
+  }
+
+  if (result.networkError) {
+    logger.error("clip creation failed", { message: result.networkError.message });
+    return { ok: false, error: "network" };
   }
 
   if (!result.res.ok) {
@@ -143,24 +153,29 @@ async function createStreamMarker({ bus, state, description }) {
   }
 
   const doCreate = async (accessToken) => {
-    const res = await fetch(MARKERS_URL, {
-      method: "POST",
-      headers: {
-        "Client-Id": twitch.clientId,
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        user_id: twitch.broadcasterId,
-        description: String(description || "").slice(0, 140),
-      }),
-    });
-    const json = await res.json().catch(() => ({}));
-    return { res, json };
+    try {
+      const res = await fetch(MARKERS_URL, {
+        method: "POST",
+        headers: {
+          "Client-Id": twitch.clientId,
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: twitch.broadcasterId,
+          description: String(description || "").slice(0, 140),
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      return { res, json };
+    } catch (err) {
+      // Сетевой сбой не должен реджектить промис — возвращаем ошибку.
+      return { res: null, json: {}, networkError: err };
+    }
   };
 
   let result = await doCreate(token);
-  if (result.res.status === 401) {
+  if (!result.networkError && result.res.status === 401) {
     logger.warn("stream marker returned 401 — refreshing and retrying once");
     try {
       token = await refresher.refreshAccessToken();
@@ -169,6 +184,11 @@ async function createStreamMarker({ bus, state, description }) {
       return { ok: false, error: "auth" };
     }
     result = await doCreate(token);
+  }
+
+  if (result.networkError) {
+    logger.error("stream marker failed", { message: result.networkError.message });
+    return { ok: false, error: "network" };
   }
 
   if (!result.res.ok) {

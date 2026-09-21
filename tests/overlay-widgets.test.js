@@ -25,6 +25,7 @@ const RecentWidget = require("../overlay/widgets/recent-widget");
 const TimerWidget = require("../overlay/widgets/timer-widget");
 const GrimHexTimerWidget = require("../overlay/widgets/grimhex-timer-widget");
 const AlertsWidget = require("../overlay/widgets/alerts-widget");
+const SoundboardWidget = require("../overlay/widgets/soundboard-widget");
 
 // ---- minimal DOM mock ----
 
@@ -240,13 +241,16 @@ describe("overlay widgets", () => {
     expect(w.host.innerHTML).toContain('data-kind="follow"');
   });
 
-  test("AlertsWidget проигрывает звук победителя и показывает карточку", () => {
+  test("AlertsWidget показывает карточку победителя и не дублирует звук колеса", () => {
     const ctx = makeContext();
     const { w } = mountWidget(AlertsWidget, ctx, { type: "alerts" });
 
     ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "wheel_winner", user: "bob", isFinalWinner: true });
 
-    expect(ctx.audio.playWinSound).toHaveBeenCalled();
+    // Звуком владеет страница колеса (overlay/wheel-scene.js): иначе в обычной
+    // раскладке OBS победный звук слышен дважды — из оверлея и из сцены колеса.
+    expect(ctx.audio.playWinSound).not.toHaveBeenCalled();
+    expect(ctx.audio.playEliminationAudio).not.toHaveBeenCalled();
     expect(w.host.children.length).toBe(1);
     w.unmount();
   });
@@ -333,5 +337,74 @@ describe("overlay widgets", () => {
     ctx.bus.emit(EVENT_TYPES.GOAL_UPDATE, ctx.state.goal);
 
     expect(w.host.innerHTML).toBe(before); // подписка снята — рендер не произошёл
+  });
+});
+
+/*
+  Пропавший звук не должен оставаться в activeAudios: удаление раньше висело
+  только на `ended`, а отказ play() и событие `error` его не дают — на длинном
+  стриме объекты Audio копились до размонтирования виджета.
+*/
+describe("SoundboardWidget: уборка проигрываемых звуков", () => {
+  class FakeAudio {
+    constructor(src) {
+      this.src = src;
+      this.volume = 1;
+      this.listeners = {};
+      FakeAudio.instances.push(this);
+    }
+    addEventListener(type, fn) {
+      (this.listeners[type] = this.listeners[type] || []).push(fn);
+    }
+    removeEventListener(type, fn) {
+      const list = this.listeners[type] || [];
+      const i = list.indexOf(fn);
+      if (i >= 0) list.splice(i, 1);
+    }
+    fire(type) {
+      for (const fn of [...(this.listeners[type] || [])]) fn();
+    }
+    play() {
+      return Promise.reject(new Error("blocked"));
+    }
+    pause() {}
+  }
+
+  beforeEach(() => {
+    FakeAudio.instances = [];
+    global.Audio = FakeAudio;
+  });
+
+  afterEach(() => {
+    delete global.Audio;
+  });
+
+  test("отказ play() убирает звук из activeAudios", async () => {
+    const ctx = makeContext();
+    const { w } = mountWidget(SoundboardWidget, ctx, { type: "soundboard" });
+    const onEnded = jest.fn();
+
+    w.playAudio({ audioFile: "media/a.mp3" }, onEnded);
+    expect(w.activeAudios).toHaveLength(1);
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(w.activeAudios).toHaveLength(0);
+    expect(onEnded).toHaveBeenCalledTimes(1);
+    w.unmount();
+  });
+
+  test("событие error убирает звук и не дублирует onEnded", () => {
+    const ctx = makeContext();
+    const { w } = mountWidget(SoundboardWidget, ctx, { type: "soundboard" });
+    const onEnded = jest.fn();
+
+    w.playAudio({ audioFile: "media/a.mp3" }, onEnded);
+    const audio = FakeAudio.instances[0];
+    audio.fire("error");
+    audio.fire("ended"); // повторное событие того же звука
+
+    expect(w.activeAudios).toHaveLength(0);
+    expect(onEnded).toHaveBeenCalledTimes(1);
+    w.unmount();
   });
 });

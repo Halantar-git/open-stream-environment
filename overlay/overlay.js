@@ -172,77 +172,14 @@
     return true;
   }
 
-  // ---- alert / winner audio helpers ----
-  function playFanfare() {
-    try {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
-      const ctx = new Ctx();
-      if (ctx.state === "suspended") ctx.resume().catch(() => {});
-      const notes = [523.25, 659.25, 783.99, 1046.5];
-      notes.forEach((freq, i) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = "triangle";
-        osc.frequency.value = freq;
-        const time = ctx.currentTime + i * 0.14;
-        gain.gain.setValueAtTime(0.0001, time);
-        gain.gain.exponentialRampToValueAtTime(0.22, time + 0.03);
-        gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.5);
-        osc.connect(gain).connect(ctx.destination);
-        osc.start(time);
-        osc.stop(time + 0.55);
-      });
-      setTimeout(() => ctx.close().catch(() => {}), 1700);
-    } catch (_) {
-      /* audio unavailable */
-    }
-  }
-
-  function playEliminationSound() {
-    try {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
-      const ctx = new Ctx();
-      if (ctx.state === "suspended") ctx.resume().catch(() => {});
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(330, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(140, ctx.currentTime + 0.4);
-      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.55);
-      setTimeout(() => ctx.close().catch(() => {}), 700);
-    } catch (_) {
-      /* audio unavailable */
-    }
-  }
-
-  function playWinSound() {
-    try {
-      const a = new Audio("/assets/audio/win.wav");
-      a.volume = 0.9;
-      const p = a.play();
-      if (p && p.catch) p.catch(() => playFanfare());
-    } catch (_) {
-      playFanfare();
-    }
-  }
-
-  function playEliminationAudio() {
-    try {
-      const a = new Audio("/assets/audio/elimination.wav");
-      a.volume = 0.9;
-      const p = a.play();
-      if (p && p.catch) p.catch(() => playEliminationSound());
-    } catch (_) {
-      playEliminationSound();
-    }
-  }
+  /*
+    Звук победителя и выбывания в оверлее больше не играет: им владеет страница
+    колеса (overlay/wheel-scene.js), которая и ведёт розыгрыш. Иначе в обычной
+    раскладке OBS звук слышен дважды — в сцене с колесом лежит и основной оверлей,
+    а окна HUD и превью темы добавляли к этому свои копии. Вместе с основными
+    вызовами убраны и запасные «синтезированные» звуки: они стали мёртвым кодом,
+    а из контекста виджетов убран `audio`.
+  */
 
   // ---- shared widget context (theme is updated in applyTheme) ----
   const context = {
@@ -258,7 +195,6 @@
     currencySymbol,
     resolveMediaUrl,
     readCssVar,
-    audio: { playWinSound, playEliminationAudio },
     theme: "nebula",
     threeDWidgets: [],
   };

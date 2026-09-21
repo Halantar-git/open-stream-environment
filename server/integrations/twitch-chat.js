@@ -19,12 +19,33 @@ const tmi = require("tmi.js");
 
 const { createLogger } = require("../logger");
 const { createTokenRefresher } = require("../token-refresh");
+const { nickColor } = require("../nick-color");
 
 /**
  * Reads chat as an anonymous viewer (tmi.js's "justinfan" mode) — no
  * Twitch app or token required, just the channel name. This only lets us
  * read; follows/subs/cheers need EventSub (see twitch-eventsub.js).
  */
+/**
+ * Превращает IRC-теги tmi.js в сообщение для шины. Вынесено отдельно (и без
+ * сокета), чтобы это можно было проверить тестом.
+ *
+ * Цвет берём из тега `color`. Пустым он бывает — тогда раньше все такие зрители
+ * становились одним серым; теперь цвет считается по идентификатору, как в
+ * `nick-color.js`, и остаётся стабильным для зрителя.
+ */
+function chatMessageFromTags(tags, message) {
+  const t = tags || {};
+  return {
+    user: t["display-name"] || t.username || "viewer",
+    userId: t["user-id"] || "",
+    color: t.color || nickColor(t["user-id"] || t.username || t["display-name"]),
+    badges: Object.keys(t.badges || {}),
+    message,
+    emotes: t.emotes || {},
+  };
+}
+
 function startTwitchChat({ bus, channel }) {
   const logger = createLogger(bus, "twitch-chat");
 
@@ -42,14 +63,8 @@ function startTwitchChat({ bus, channel }) {
 
   client.on("message", (_channel, tags, message, self) => {
     if (self) return;
-    bus.emit("chat_message", {
-      user: tags["display-name"] || tags.username || "viewer",
-      userId: tags["user-id"] || "",
-      color: tags.color || "#c9c1d6",
-      badges: Object.keys(tags.badges || {}),
-      message,
-      emotes: tags.emotes || {},
-    });
+    // source отделяет Twitch от YouTube: чат-бот обрабатывает только Twitch.
+    bus.emit("chat_message", { ...chatMessageFromTags(tags, message), source: "twitch" });
   });
 
   client.on("connected", () => {
@@ -141,21 +156,27 @@ async function sendTwitchChatMessage({ bus, state, message }) {
   }
 
   const doSend = async (accessToken) => {
-    const res = await fetch(CHAT_SEND_URL, {
-      method: "POST",
-      headers: {
-        "Client-Id": twitch.clientId,
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        broadcaster_id: twitch.broadcasterId,
-        sender_id: twitch.broadcasterId,
-        message: text,
-      }),
-    });
-    const json = await res.json().catch(() => ({}));
-    return { res, json };
+    try {
+      const res = await fetch(CHAT_SEND_URL, {
+        method: "POST",
+        headers: {
+          "Client-Id": twitch.clientId,
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          broadcaster_id: twitch.broadcasterId,
+          sender_id: twitch.broadcasterId,
+          message: text,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      return { res, json };
+    } catch (err) {
+      // Сетевой сбой (DNS, таймаут, разрыв) — не реджектим: вызывающие ждут
+      // объект с ошибкой, иначе промис уходит в unhandledRejection.
+      return { res: null, json: {}, networkError: err };
+    }
   };
 
   // Rate-limit: reserve a slot and wait until the previous send's cooldown
@@ -169,7 +190,7 @@ async function sendTwitchChatMessage({ bus, state, message }) {
   }
 
   let result = await doSend(token);
-  if (result.res.status === 401) {
+  if (!result.networkError && result.res.status === 401) {
     logger.warn("chat send returned 401 — refreshing and retrying once");
     try {
       token = await refresher.refreshAccessToken();
@@ -178,6 +199,11 @@ async function sendTwitchChatMessage({ bus, state, message }) {
       return { ok: false, error: "auth" };
     }
     result = await doSend(token);
+  }
+
+  if (result.networkError) {
+    logger.error("chat send failed", { message: result.networkError.message });
+    return { ok: false, error: "network" };
   }
 
   if (!result.res.ok) {
@@ -247,31 +273,36 @@ async function moderateUser({ bus, state, userId, duration, reason }) {
   }
 
   const doSend = async (accessToken) => {
-    const data = {
-      user_id: targetId,
-      reason: String(reason || "Нарушение правил чата").slice(0, 500),
-    };
-    if (typeof duration === "number" && Number.isFinite(duration) && duration > 0) {
-      data.duration = Math.max(1, Math.round(duration));
-    }
-    const res = await fetch(
-      `${MODERATION_URL}?broadcaster_id=${encodeURIComponent(twitch.broadcasterId)}&moderator_id=${encodeURIComponent(twitch.broadcasterId)}`,
-      {
-        method: "POST",
-        headers: {
-          "Client-Id": twitch.clientId,
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ data }),
+    try {
+      const data = {
+        user_id: targetId,
+        reason: String(reason || "Нарушение правил чата").slice(0, 500),
+      };
+      if (typeof duration === "number" && Number.isFinite(duration) && duration > 0) {
+        data.duration = Math.max(1, Math.round(duration));
       }
-    );
-    const json = await res.json().catch(() => ({}));
-    return { res, json };
+      const res = await fetch(
+        `${MODERATION_URL}?broadcaster_id=${encodeURIComponent(twitch.broadcasterId)}&moderator_id=${encodeURIComponent(twitch.broadcasterId)}`,
+        {
+          method: "POST",
+          headers: {
+            "Client-Id": twitch.clientId,
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ data }),
+        }
+      );
+      const json = await res.json().catch(() => ({}));
+      return { res, json };
+    } catch (err) {
+      // Сетевой сбой — возвращаем ошибку, а не реджектим промис.
+      return { res: null, json: {}, networkError: err };
+    }
   };
 
   let result = await doSend(token);
-  if (result.res.status === 401) {
+  if (!result.networkError && result.res.status === 401) {
     logger.warn("moderation returned 401 — refreshing and retrying once");
     try {
       token = await refresher.refreshAccessToken();
@@ -280,6 +311,11 @@ async function moderateUser({ bus, state, userId, duration, reason }) {
       return { ok: false, error: "auth" };
     }
     result = await doSend(token);
+  }
+
+  if (result.networkError) {
+    logger.error("moderation failed", { message: result.networkError.message });
+    return { ok: false, error: "network" };
   }
 
   if (!result.res.ok) {
@@ -292,4 +328,4 @@ async function moderateUser({ bus, state, userId, duration, reason }) {
   return { ok: true };
 }
 
-module.exports = { startTwitchChat, sendTwitchChatMessage, moderateUser };
+module.exports = { startTwitchChat, sendTwitchChatMessage, moderateUser, chatMessageFromTags };

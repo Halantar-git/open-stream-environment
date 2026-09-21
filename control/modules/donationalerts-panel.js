@@ -55,7 +55,6 @@ export function initDonationAlertsPanel({ t, ICONS, send, EVENT_TYPES, state, sh
   const panel = el("daPanel");
   const toggleBtn = el("toggleDaBtn");
   const chip = el("daStatusChip");
-  const chipLabel = el("daStatusChipLabel");
   const facts = el("daFacts");
   const enabledSwitch = el("daEnabledSwitch");
   const voiceSwitch = el("daPanelVoiceSwitch");
@@ -427,8 +426,10 @@ export function initDonationAlertsPanel({ t, ICONS, send, EVENT_TYPES, state, sh
 
     if (chip) {
       chip.className = `da-panel__chip ${statusClass ? statusClass(status) : ""}`;
+      // В чипе осталась только точка: состояние читается её цветом, словами оно
+      // живёт в подсказке и в строке «Подключение» ниже.
+      chip.title = statusText(status);
     }
-    if (chipLabel) chipLabel.textContent = statusText(status);
 
     if (enabledSwitch) enabledSwitch.checked = enabled;
     if (voiceSwitch) voiceSwitch.checked = voiceOn;

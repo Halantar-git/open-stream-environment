@@ -22,7 +22,9 @@ const {
   userLevel,
   renderTemplate,
   normalizeName,
+  startChatBot,
 } = require("../server/integrations/chat-bot");
+const EventBus = require("../overlay/event-bus");
 
 describe("chat-bot helpers", () => {
   test("normalizeName очищает префикс и регистр", () => {
@@ -166,5 +168,65 @@ describe("createBotEngine built-in commands", () => {
     expect(ball.length).toBeGreaterThan(0);
 
     expect(engine.handleChat({ user: "u", badges: [], message: "!roll 6" }).reply).toMatch(/выбросил \d+ \(1–6\)/);
+  });
+});
+
+/*
+  Бот умеет только Twitch (Helix-чат и модерация канала). Сообщения YouTube
+  должны полностью игнорироваться, иначе ответ уехал бы в чужой чат.
+*/
+describe("startChatBot: источник сообщений", () => {
+  function makeState() {
+    return {
+      config: {
+        chatBot: {
+          enabled: true,
+          prefix: "!",
+          commands: [{ id: "c1", name: "discord", response: "Discord: discord.gg/test", level: "everyone", cooldown: 0, userCooldown: 0 }],
+          timers: [],
+          moderation: { enabled: false },
+        },
+        twitch: { channel: "chan", clientId: "cid", userAccessToken: "tok", broadcasterId: "bid" },
+      },
+      runtime: { startedAt: Date.now() },
+    };
+  }
+
+  function flush() {
+    return new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  beforeEach(() => {
+    global.fetch = jest.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) }));
+  });
+
+  afterEach(() => {
+    delete global.fetch;
+  });
+
+  test("отвечает на Twitch и не трогает YouTube", async () => {
+    const bus = new EventBus();
+    const ctrl = startChatBot({ bus, state: makeState() });
+
+    bus.emit("chat_message", { user: "yt_viewer", message: "!discord", badges: ["moderator"], source: "youtube" });
+    await flush();
+    expect(global.fetch).not.toHaveBeenCalled();
+
+    bus.emit("chat_message", { user: "tw_viewer", message: "!discord", badges: [], source: "twitch" });
+    await flush();
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+
+    ctrl.stop();
+  });
+
+  test("тестовые сообщения по-прежнему отбрасываются", async () => {
+    const bus = new EventBus();
+    const ctrl = startChatBot({ bus, state: makeState() });
+
+    bus.emit("chat_message", { user: "cli", message: "!discord", badges: [], source: "twitch", isTest: true });
+    await flush();
+    expect(global.fetch).not.toHaveBeenCalled();
+
+    ctrl.stop();
   });
 });

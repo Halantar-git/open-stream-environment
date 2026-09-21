@@ -717,11 +717,14 @@ export function initCanvasEditor({
         ]
           .map(
             (m) =>
-              `<div class="md3-chat__row" style="display:flex;gap:7px;font-size:13px;line-height:1.55;color:${text};">
+              // ${text} — единственный токен, который тема хранит как есть (seeds.text),
+              // поэтому в разметку он идёт только через escapeAttr: остальные акценты
+              // theme-engine выводит в hex сам.
+              `<div class="md3-chat__row" style="display:flex;gap:7px;font-size:13px;line-height:1.55;color:${escapeAttr(text)};">
                 <span style="color:${muted}">[12:00]</span>
                 <span style="color:${primary};font-weight:700">${escapeHtml(m.user)}</span>
                 <span style="color:${muted}">:</span>
-                <span style="color:${text}">${escapeHtml(m.message)}</span>
+                <span style="color:${escapeAttr(text)}">${escapeHtml(m.message)}</span>
               </div>`
           )
           .join("");
@@ -734,7 +737,7 @@ export function initCanvasEditor({
         const text = (state.appearance.tokens && state.appearance.tokens["--md-on-surface"]) || "#e6e1e5";
         const muted = (state.appearance.tokens && state.appearance.tokens["--md-on-surface-variant"]) || "#cac4d0";
         return `<div class="md3-goal-preview" style="position:relative;height:100%;display:flex;flex-direction:column;padding:4px;">
-          <div style="display:flex;justify-content:space-between;gap:10px;color:${text};font-size:11px;"><span style="font-family:'Manrope','Segoe UI',sans-serif;font-weight:700;">${escapeHtml(state.goal.title || t("preview.goalTitle"))}</span><span style="color:${muted};font-family:'JetBrains Mono','Consolas',monospace;">${formatMoney(state.goal.current)} / ${formatMoney(state.goal.target)}</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;color:${escapeAttr(text)};font-size:11px;"><span style="font-family:'Manrope','Segoe UI',sans-serif;font-weight:700;">${escapeHtml(state.goal.title || t("preview.goalTitle"))}</span><span style="color:${muted};font-family:'JetBrains Mono','Consolas',monospace;">${formatMoney(state.goal.current)} / ${formatMoney(state.goal.target)}</span></div>
           <svg viewBox="0 0 200 40" preserveAspectRatio="xMidYMid meet" style="flex:1;width:100%;min-height:0;">
             <defs><linearGradient id="md3g" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="${escapeAttr(primary)}"/><stop offset="100%" stop-color="${escapeAttr(secondary)}"/></linearGradient></defs>
             <rect x="4" y="12" width="192" height="16" rx="8" fill="rgba(255,255,255,0.10)"/>
@@ -754,7 +757,7 @@ export function initCanvasEditor({
           </svg>
           <div style="min-width:0;display:flex;flex-direction:column;gap:2px;">
             <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:${muted};">${escapeHtml(t("properties.testFollow"))}</span>
-            <span style="font-size:13px;font-weight:700;color:${text};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">nova_viewer</span>
+            <span style="font-size:13px;font-weight:700;color:${escapeAttr(text)};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">nova_viewer</span>
           </div>
         </div>`;
       }
@@ -781,11 +784,11 @@ export function initCanvasEditor({
         ]
           .map(
             (m) =>
-              `<div class="pixel-chat__row" style="display:flex;gap:7px;font-size:13px;line-height:1.5;color:${text};font-family:'Roboto Condensed','Segoe UI',sans-serif;">
+              `<div class="pixel-chat__row" style="display:flex;gap:7px;font-size:13px;line-height:1.5;color:${escapeAttr(text)};font-family:'Roboto Condensed','Segoe UI',sans-serif;">
                 <span style="color:${muted}">[12:00]</span>
                 <span style="color:${gold};font-weight:700">${escapeHtml(m.user)}</span>
                 <span style="color:${muted}">:</span>
-                <span style="color:${text}">${escapeHtml(m.message)}</span>
+                <span style="color:${escapeAttr(text)}">${escapeHtml(m.message)}</span>
               </div>`
           )
           .join("");
@@ -805,7 +808,7 @@ export function initCanvasEditor({
           })
           .join("");
         return `<div class="pixel-goal-preview" style="position:relative;height:100%;display:flex;flex-direction:column;padding:4px;">
-          <div style="display:flex;justify-content:space-between;gap:10px;color:${text};font-size:11px;font-family:'PT Sans Caption','Segoe UI',sans-serif;"><span style="font-weight:700;">${escapeHtml(state.goal.title || t("preview.goalTitle"))}</span><span style="color:${muted};">${formatMoney(state.goal.current)} / ${formatMoney(state.goal.target)}</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;color:${escapeAttr(text)};font-size:11px;font-family:'PT Sans Caption','Segoe UI',sans-serif;"><span style="font-weight:700;">${escapeHtml(state.goal.title || t("preview.goalTitle"))}</span><span style="color:${muted};">${formatMoney(state.goal.current)} / ${formatMoney(state.goal.target)}</span></div>
           <svg viewBox="0 0 200 40" preserveAspectRatio="xMidYMid meet" style="flex:1;width:100%;min-height:0;">${cells}</svg>
         </div>`;
       }
@@ -819,7 +822,7 @@ export function initCanvasEditor({
           </svg>
           <div style="min-width:0;display:flex;flex-direction:column;gap:2px;">
             <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${muted};">${escapeHtml(t("properties.testFollow"))}</span>
-            <span style="font-size:13px;font-weight:700;color:${text};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">nova_viewer</span>
+            <span style="font-size:13px;font-weight:700;color:${escapeAttr(text)};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">nova_viewer</span>
           </div>
         </div>`;
       }

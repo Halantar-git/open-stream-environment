@@ -335,10 +335,12 @@ function startChatBot({ bus, state }) {
   }
 
   function sendReply(text) {
-    sendTwitchChatMessage({ bus, state, message: text }).then((result) => {
-      if (result && result.ok) rememberReply(text);
-      else if (result && result.error) logger.warn("bot reply failed", { error: result.error });
-    });
+    sendTwitchChatMessage({ bus, state, message: text })
+      .then((result) => {
+        if (result && result.ok) rememberReply(text);
+        else if (result && result.error) logger.warn("bot reply failed", { error: result.error });
+      })
+      .catch((err) => logger.error("bot reply crashed", { message: err && err.message }));
   }
 
   const userIds = new Map(); // username (lowercase) -> userId
@@ -359,21 +361,32 @@ function startChatBot({ bus, state }) {
       return;
     }
     if (modCmd.name === "ban") {
-      moderateUser({ bus, state, userId: targetId, reason: `Бан по команде ${msg.user}` }).then((result) => {
-        if (result.ok) sendReply(`@${targetName} забанен.`);
-        else logger.warn("ban command failed", { error: result.error });
-      });
+      moderateUser({ bus, state, userId: targetId, reason: `Бан по команде ${msg.user}` })
+        .then((result) => {
+          if (result.ok) sendReply(`@${targetName} забанен.`);
+          else logger.warn("ban command failed", { error: result.error });
+        })
+        .catch((err) => logger.error("ban command crashed", { message: err && err.message }));
     } else {
       const duration = Math.max(1, Math.min(1209600, Math.round(Number(modCmd.durationRaw) || 600)));
-      moderateUser({ bus, state, userId: targetId, duration, reason: `Таймаут по команде ${msg.user}` }).then((result) => {
-        if (result.ok) sendReply(`@${targetName} в таймауте на ${duration} сек.`);
-        else logger.warn("timeout command failed", { error: result.error });
-      });
+      moderateUser({ bus, state, userId: targetId, duration, reason: `Таймаут по команде ${msg.user}` })
+        .then((result) => {
+          if (result.ok) sendReply(`@${targetName} в таймауте на ${duration} сек.`);
+          else logger.warn("timeout command failed", { error: result.error });
+        })
+        .catch((err) => logger.error("timeout command crashed", { message: err && err.message }));
     }
   }
 
   function onChat(msg) {
     if (!msg || msg.isTest) return;
+    /*
+      Бот умеет только Twitch: ответы уходят в Helix-чат канала, уровни прав
+      берутся из Twitch-бейджей, а модерация требует Twitch user-id. Сообщения
+      YouTube не обрабатываем, иначе ответ и «таймаут» уехали бы в чужой чат,
+      а YouTube-модератор получил бы уровень Twitch-модератора.
+    */
+    if (msg.source !== "twitch") return;
     if (isRecentReply(msg.message)) return;
 
     if (msg.userId) userIds.set(String(msg.user || "").toLowerCase(), msg.userId);
@@ -402,9 +415,11 @@ function startChatBot({ bus, state }) {
         userId: msg.userId,
         duration: verdict.timeoutSec,
         reason: verdict.reason,
-      }).then((result) => {
-        if (!result.ok && result.error) logger.warn("moderation action failed", { error: result.error });
-      });
+      })
+        .then((result) => {
+          if (!result.ok && result.error) logger.warn("moderation action failed", { error: result.error });
+        })
+        .catch((err) => logger.error("moderation action crashed", { message: err && err.message }));
       return;
     }
 

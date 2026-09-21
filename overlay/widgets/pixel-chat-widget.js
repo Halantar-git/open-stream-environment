@@ -42,7 +42,16 @@
   const DEFAULT_MUTED = "#b8b8b8";
   const DEFAULT_USER = "#d6b675";
   const FONT = "'Roboto Condensed', 'Segoe UI', sans-serif";
-  const MAX_MESSAGES = 50;
+  const DEFAULT_MAX_MESSAGES = 50;
+  const MAX_MESSAGES_LIMIT = 200;
+
+  // Лимит строк берётся из инспектора (1..100). Мусор в конфиге (не число, 0,
+  // отрицательное, NaN) не должен снимать лимит — тогда DOM рос бы безгранично.
+  function clampMaxMessages(value) {
+    const n = Math.floor(Number(value));
+    if (!Number.isFinite(n) || n < 1) return DEFAULT_MAX_MESSAGES;
+    return Math.min(MAX_MESSAGES_LIMIT, n);
+  }
 
   class WidgetPixelChat extends BaseWidget {
     constructor(config, context) {
@@ -174,7 +183,8 @@
 
       this.messagesInner.appendChild(row);
 
-      while (this.messagesInner.children.length > MAX_MESSAGES) {
+      const maxMessages = clampMaxMessages(this.config.maxMessages);
+      while (this.messagesInner.children.length > maxMessages) {
         this.messagesInner.firstChild.remove();
       }
 

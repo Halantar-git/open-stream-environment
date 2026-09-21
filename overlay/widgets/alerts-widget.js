@@ -56,11 +56,13 @@
       this.playing = false;
     }
 
+    /*
+      Звук победителя и выбывания играет страница колеса (overlay/wheel-scene.js):
+      розыгрыш идёт на ней. Здесь его не дублируем: в обычной раскладке OBS в сцене
+      с колесом лежит и основной оверлей, поэтому звук слышался дважды, а окно HUD
+      и окно превью темы добавляли к этому третью копию. Карточка остаётся.
+    */
     queueAlert(alert) {
-      if (alert.kind === "wheel_winner") {
-        if (alert.isElimination) this.context.audio.playEliminationAudio();
-        else this.context.audio.playWinSound();
-      }
       this.queue.push(alert);
       if (!this.playing) this.drain();
     }

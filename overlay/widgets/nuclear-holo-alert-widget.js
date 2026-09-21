@@ -161,12 +161,9 @@
 
     // ---- queue ----
 
+    // Звук победителя и выбывания играет страница колеса (см. alerts-widget.js).
     queueAlert(alert) {
       if (!alert) return;
-      if (alert.kind === "wheel_winner") {
-        if (alert.isElimination) this.context.audio.playEliminationAudio();
-        else this.context.audio.playWinSound();
-      }
       this.queue.push(alert);
       if (!this.current) this.showNext();
     }

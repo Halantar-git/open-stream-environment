@@ -64,7 +64,7 @@ function roleFromUrl(url, fallback = "other") {
 const { createAlertQueue } = require("./alert-queue");
 const { createLogger, enableFileLogging } = require("./logger");
 const { installCrashHandlers } = require("./crash-guard");
-const { mountOAuthRoutes, buildTwitchAuthorizeUrl, buildDonationAlertsAuthorizeUrl, buildYoutubeAuthorizeUrl } = require("./oauth");
+const { mountOAuthRoutes } = require("./oauth");
 const { startTwitchChat, sendTwitchChatMessage } = require("./integrations/twitch-chat");
 const { startChatBot } = require("./integrations/chat-bot");
 const { startTwitchEvents } = require("./integrations/twitch-eventsub");
@@ -421,9 +421,14 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey, appName, version
   let obsCtrl = null;
   let longshotSync = null;
   let currentSession = null;
+  let integrationsStarted = false; // поднимаются один раз и только при живом сервере (см. startIntegrations)
+  // Спин идёт ~5.3 с, дальше показывается результат: таймер-предохранитель берём
+  // с запасом, чтобы он не срабатывал на нормальном цикле (см. beginSpin).
+  const SPIN_TIMEOUT_MS = 15000;
   let autoSpinTimer = null;
   let wheelHideTimer = null;
   let isSpinning = false;
+  let spinTimeoutTimer = null;
   let hudEditMode = false;
   let pendingVideoTarget = null; // { sceneName, splash } — advance after the splash ends
   let recovering = false; // идёт запрос списка донатов к DonationAlerts
@@ -565,6 +570,33 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey, appName, version
     wheelHideTimer = null;
   }
 
+  /*
+    Спин считается идущим, пока страница колеса не ответит CMD_SET_GIVEAWAY_WINNER.
+    Если её в этот момент перезагрузили (обновление источника в OBS, рестарт),
+    ответа не придёт никогда: запрет на новый спин остался бы навсегда, и кнопка
+    «Крутить» молча перестала бы работать до перезапуска приложения. Поэтому
+    начало спина взводит таймер-предохранитель, а конец — снимает его.
+  */
+  function beginSpin() {
+    isSpinning = true;
+    if (spinTimeoutTimer) clearTimeout(spinTimeoutTimer);
+    spinTimeoutTimer = setTimeout(() => {
+      spinTimeoutTimer = null;
+      if (!isSpinning) return;
+      isSpinning = false;
+      serverLog.warn("спин колеса не завершился: страница колеса не прислала победителя — запрет на новый спин снят");
+    }, SPIN_TIMEOUT_MS);
+    if (typeof spinTimeoutTimer.unref === "function") spinTimeoutTimer.unref();
+  }
+
+  function endSpin() {
+    isSpinning = false;
+    if (spinTimeoutTimer) {
+      clearTimeout(spinTimeoutTimer);
+      spinTimeoutTimer = null;
+    }
+  }
+
   // Скрывает колесо, когда цикл розыгрыша закончился. Обычный режим: после
   // показа победителя (столько же, сколько висит карточка результата). В режиме
   // на выбывание следующий спин запускает scheduleAutoSpin и сам скрывать не даёт.
@@ -589,7 +621,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey, appName, version
       broadcast(EVENT_TYPES.GIVEAWAY_WHEEL, { sectors: state.giveawaySnapshot().participants });
       const winner = state.pickRandomWinner();
       if (winner) {
-        isSpinning = true;
+        beginSpin();
         broadcast(EVENT_TYPES.GIVEAWAY_SPIN, { winner });
       }
     }, 1800);
@@ -778,11 +810,27 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey, appName, version
     return true;
   }
 
+  /*
+    Консоль панели получает контроллер OBS один раз, при создании обработчика, а
+    сам контроллер пересоздаётся при каждом restartObs(). Значение, отданное один
+    раз, после первого переподключения указывало бы на мёртвый объект, и команды
+    scene/cam/filter/obs всегда отвечали бы «OBS offline». Поэтому отдаём
+    постоянный объект-делегат: каждый вызов смотрит на текущий obsCtrl.
+  */
+  const obsCtrlRef = {
+    isConnected: () => !!(obsCtrl && obsCtrl.isConnected()),
+    switchScene: (sceneName) => obsCtrl && obsCtrl.switchScene(sceneName),
+    setCameraAngle: (angleId) => obsCtrl && obsCtrl.setCameraAngle(angleId),
+    triggerCameraFilter: (filterId, durationSec) => obsCtrl && obsCtrl.triggerCameraFilter(filterId, durationSec),
+    sendRawRequest: (requestType, requestData) =>
+      obsCtrl ? obsCtrl.sendRawRequest(requestType, requestData) : Promise.resolve(),
+  };
+
   // Interactive CLI console exposed to the control panel log panel.
   const cli = createCliHandler({
     state,
     bus,
-    obsCtrl,
+    obsCtrl: obsCtrlRef,
     broadcast,
     startedAt: Date.now(),
     handleRemoteAction,
@@ -805,15 +853,6 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey, appName, version
       onDonationAlertsConnected: restartDonationAlerts,
       onYoutubeConnected: restartYoutube,
     },
-  });
-
-  // ---- IPC-style commands over the same WS the overlay listens on ----
-  app.get("/api/oauth-urls", (req, res) => {
-    res.json({
-      twitch: buildTwitchAuthorizeUrl(state.config, state.config.port),
-      donationAlerts: buildDonationAlertsAuthorizeUrl(state.config, state.config.port),
-      youtube: buildYoutubeAuthorizeUrl(state.config, state.config.port),
-    });
   });
 
   wss.on("connection", (socket, req) => {
@@ -873,7 +912,17 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey, appName, version
       const limited = !allowCommand(socket);
       audit.record({ type: msg.type, role: socket.role, external, limited, details: summarizePayload(msg.payload) });
       if (limited) return;
-      handleClientCommand(msg);
+      try {
+        handleClientCommand(msg);
+      } catch (err) {
+        // Один кривой кадр от клиента — не повод терять эфир: пишем в журнал и
+        // продолжаем работать (остальным клиентам и серверу ничего не грозит).
+        serverLog.error("command from client failed", {
+          type: msg.type,
+          role: socket.role,
+          error: (err && err.message) || String(err),
+        });
+      }
     });
   });
 
@@ -943,7 +992,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey, appName, version
       case "WHEEL_START": {
         clearAutoSpin();
         clearWheelHide();
-        isSpinning = false;
+        endSpin();
         const giveaway = state.startGiveaway(payload && payload.command);
         broadcastGiveaway(giveaway);
         bus.emit("alert", { kind: "wheel_start", command: giveaway.command });
@@ -951,7 +1000,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey, appName, version
       }
       case "WHEEL_STOP": {
         clearAutoSpin();
-        isSpinning = false;
+        endSpin();
         broadcastGiveaway(state.stopGiveaway());
         break;
       }
@@ -961,7 +1010,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey, appName, version
         broadcast(EVENT_TYPES.GIVEAWAY_WHEEL, { sectors: state.giveawaySnapshot().participants });
         const winner = state.pickRandomWinner();
         if (winner) {
-          isSpinning = true;
+          beginSpin();
           broadcast(EVENT_TYPES.GIVEAWAY_SPIN, { winner });
         }
         break;
@@ -974,7 +1023,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey, appName, version
       case "WHEEL_RESET_PARTICIPANTS": {
         clearAutoSpin();
         clearWheelHide();
-        isSpinning = false;
+        endSpin();
         broadcastGiveaway(state.clearGiveawayParticipants());
         broadcast(EVENT_TYPES.GIVEAWAY_WHEEL, { sectors: [] });
         break;
@@ -1345,7 +1394,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey, appName, version
       case EVENT_TYPES.CMD_START_GIVEAWAY: {
         clearAutoSpin();
         clearWheelHide();
-        isSpinning = false;
+        endSpin();
         const giveaway = state.startGiveaway(msg.payload && msg.payload.command);
         broadcastGiveaway(giveaway);
         bus.emit("alert", {
@@ -1356,7 +1405,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey, appName, version
       }
       case EVENT_TYPES.CMD_STOP_GIVEAWAY: {
         clearAutoSpin();
-        isSpinning = false;
+        endSpin();
         broadcastGiveaway(state.stopGiveaway());
         break;
       }
@@ -1379,7 +1428,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey, appName, version
         broadcast(EVENT_TYPES.GIVEAWAY_WHEEL, { sectors: state.giveawaySnapshot().participants });
         const winner = state.pickRandomWinner();
         if (winner) {
-          isSpinning = true;
+          beginSpin();
           broadcast(EVENT_TYPES.GIVEAWAY_SPIN, { winner });
         }
         break;
@@ -1387,7 +1436,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey, appName, version
       case EVENT_TYPES.CMD_SET_GIVEAWAY_WINNER: {
         const username = msg.payload && msg.payload.username;
         if (!state.consumePendingWinner(username)) break;
-        isSpinning = false; // текущий цикл завершён, pendingWinner очищен
+        endSpin(); // текущий цикл завершён, pendingWinner очищен
         const giveaway = state.setGiveawayWinner(username);
         const isFinalWinner = !!giveaway.isFinalWinner;
         const isElimination = !!giveaway.eliminationMode && !isFinalWinner;
@@ -1424,7 +1473,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey, appName, version
       case EVENT_TYPES.CMD_CLEAR_GIVEAWAY_PARTICIPANTS: {
         clearAutoSpin();
         clearWheelHide();
-        isSpinning = false;
+        endSpin();
         broadcastGiveaway(state.clearGiveawayParticipants());
         broadcast(EVENT_TYPES.GIVEAWAY_WHEEL, { sectors: [] });
         break;
@@ -1732,7 +1781,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey, appName, version
     }
     const limit = Math.max(1, Math.min(100, Number(options.limit) || 30));
     const report = (result) =>
-      broadcast(EVENT_TYPES.ALERT_QUEUE_UPDATE, { queue: alertQueue.snapshot(), recover: result });
+      broadcast(EVENT_TYPES.ALERT_QUEUE_UPDATE, { queue: queueSnapshot(), recover: result });
 
     const ctrl = donationAlertsCtrl;
     if (!ctrl || typeof ctrl.getAccessToken !== "function") {
@@ -1933,13 +1982,15 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey, appName, version
     handleRemoteAction("SCENE_SET", { scene });
   });
 
-  function start() {
-    const port = state.config.port || 8710;
-    server.listen(port, () => {
-      serverLog.success("overlay + control bus listening", { url: `http://localhost:${port}` });
-      serverLog.success("web remote ready", { url: remoteUrl });
-    });
+  /*
+    Всё, что поднимается вместе с сервером: интеграции, очередь, сессия.
 
+    Вынесено в отдельную функцию, потому что при занятом порте сервер слушать не
+    начинает — а поднимать интеграции в этом случае нельзя (см. start()).
+  */
+  function startIntegrations() {
+    if (integrationsStarted) return;
+    integrationsStarted = true;
     restartTwitchChat();
     restartChatBot();
     restartTwitchEvents();
@@ -1970,6 +2021,34 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey, appName, version
       // Новый стрим — новый счёт донатов.
       state.resetSessionDonations();
     }
+  }
+
+  function start() {
+    const port = state.config.port || 8710;
+    /*
+      Порт может быть занят — вторым экземпляром приложения или посторонней
+      программой. Без обработчика `error` это было непойманное исключение: диалог
+      «критическая ошибка» и выход. Теперь, как и при смене порта, пишем в журнал
+      простыми словами и процесс не роняем.
+
+      Но интеграции в этом случае не поднимаем: иначе приложение выглядело бы
+      работающим (Twitch подключён, алерты идут), а панель и оверлей молчали бы,
+      потому что сервер не слушает порт. Пользователь видит в журнале причину и
+      меняет порт в настройках.
+    */
+    const onListenError = (err) => {
+      serverLog.error(
+        `не удалось запустить сервер: порт ${port} занят другой программой. Смените порт в настройках.`,
+        { port, code: (err && err.code) || "", error: (err && err.message) || String(err) }
+      );
+    };
+    server.once("error", onListenError);
+    server.listen(port, () => {
+      server.removeListener("error", onListenError);
+      serverLog.success("overlay + control bus listening", { url: `http://localhost:${port}` });
+      serverLog.success("web remote ready", { url: remoteUrl });
+      startIntegrations();
+    });
 
     return { port, remoteUrl };
   }
@@ -2055,6 +2134,7 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey, appName, version
     serverLog.info("stopping server");
     clearAutoSpin();
     clearWheelHide();
+    endSpin(); // снимает таймер-предохранитель спина
     alertQueue.stop();
     if (currentSession) {
       if (db) db.endSession(currentSession.id);
@@ -2065,12 +2145,18 @@ function createServer({ db, onSetHudHotkey, onSetChatHudHotkey, appName, version
     if (twitchEventsCtrl) twitchEventsCtrl.stop();
     if (donationAlertsCtrl) donationAlertsCtrl.stop();
     if (youtubeCtrl) youtubeCtrl.stop();
+    // Остальные интеграции останавливаются здесь же: без этого контроллер OBS
+    // продолжал бы жить со своим авто-переподключением до конца процесса.
+    if (obsCtrl) obsCtrl.stop();
     if (longshotSync) longshotSync.stop();
     longshotSync = null;
     perfMonitor.stop();
     longRun.stop();
     wss.close();
-    server.close();
+    // Сервер мог вообще не начать слушать (занятый порт, см. start()): тогда
+    // close() закрывать нечего, а о неудаче он сообщает событием `error` — это
+    // опять непойманное исключение, только уже при выходе.
+    if (server.listening) server.close();
   }
 
   function getStreamEvents(opts = {}) {
