@@ -24,6 +24,10 @@
   same as the terminal and the DA panel. An unconditional jump to the bottom is
   exactly what makes a log unreadable here: protocol frames (they land in this
   panel too) arrive often enough to yank the view away on every line.
+
+  Прокручивается только список логов (см. .debug-panel__log): кнопки тестов и
+  заголовок «Логи» остаются на месте, поэтому «внизу ли читатель» считается по
+  списку, а не по всей панели.
 */
 
 import { el, on } from "./dom.js";
@@ -39,7 +43,6 @@ const ALERT_TESTS = [
 
 export function initDebugPanel({ t, ICONS, send, EVENT_TYPES }) {
   const panel = el("debugPanel");
-  const body = el("debugBody");
   const testsEl = el("debugTests");
   const logEl = el("debugLogList");
   const toggleBtn = el("toggleDebugBtn");
@@ -57,7 +60,7 @@ export function initDebugPanel({ t, ICONS, send, EVENT_TYPES }) {
     if (!panel || !toggleBtn) return;
     panel.hidden = !open;
     toggleBtn.classList.toggle("is-active", open);
-    if (open && body) body.scrollTop = body.scrollHeight;
+    if (open && logEl) logEl.scrollTop = logEl.scrollHeight;
   }
 
   function toggle() {
@@ -140,7 +143,7 @@ export function initDebugPanel({ t, ICONS, send, EVENT_TYPES }) {
     while (logEl.children.length > MAX_DEBUG_LINES) {
       logEl.removeChild(logEl.firstChild);
     }
-    if (body && atBottom) body.scrollTop = body.scrollHeight;
+    if (logEl && atBottom) logEl.scrollTop = logEl.scrollHeight;
   }
 
   function clearDebug() {
@@ -160,9 +163,9 @@ export function initDebugPanel({ t, ICONS, send, EVENT_TYPES }) {
   on("debugClearBtn", "click", clearDebug);
   on("debugCloseBtn", "click", () => setOpen(false));
 
-  if (body) {
-    body.addEventListener("scroll", () => {
-      atBottom = body.scrollHeight - body.scrollTop - body.clientHeight < 40;
+  if (logEl) {
+    logEl.addEventListener("scroll", () => {
+      atBottom = logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight < 40;
     });
   }
 

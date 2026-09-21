@@ -1998,8 +1998,17 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .debug-panel__close:hover { background: #30363d; }
 .debug-panel__body {
   flex: 1;
-  overflow-y: auto;
+  min-height: 0;
+  /*
+    Скроллится только секция логов (см. .debug-panel__log), поэтому у body он
+    выключен: иначе при каждой новой строке вверх уезжали и кнопки тестов, и
+    заголовок «Логи». Панель — flex-колонка: кнопки сверху, список забирает
+    остаток высоты.
+  */
+  overflow: hidden;
   padding: 12px;
+  display: flex;
+  flex-direction: column;
 }
 .debug-panel__group {
   font-size: 11px;
@@ -2059,6 +2068,12 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   gap: 2px;
   font-size: 11px;
   line-height: 1.45;
+  /* Единственная прокручиваемая часть панели: заголовок «Логи» и кнопки тестов
+     остаются на месте. min-height: 0 обязателен — без него flex-элемент не
+     сжимается ниже содержимого и скролл снова уходит на body. */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 .debug-panel__line {
   display: flex;
