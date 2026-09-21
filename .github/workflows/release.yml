@@ -1,13 +1,18 @@
 name: Release
 
-# Релиз делает то, что раньше приходилось делать руками: собирает установщики под
-# Windows и Linux, прогоняет тесты и заливает артефакты в GitHub Release — оттуда
-# их берёт встроенное автообновление (electron-updater читает latest.yml из
-# ассетов релиза).
+# Релиз собирает установщики под Windows, Linux и macOS, прогоняет линт и тесты и
+# складывает всё в ОДИН черновик GitHub Release — оттуда их берёт встроенное
+# автообновление (electron-updater читает latest*.yml из ассетов релиза).
 #
-# Запуск: тег вида v3.2.0 (или вручную из вкладки Actions). Версия в package.json
+# Запуск: тег вида v3.2.5 (или вручную из вкладки Actions). Версия в package.json
 # обязана совпадать с тегом — проверяется первым шагом, иначе сборка остановится
 # до того, как что-то уедет в релиз.
+#
+# Публикация намеренно разведена со сборкой. Так было сломано на v3.2.5: каждый
+# job матрицы вызывал `electron-builder --publish`, а тот на каждый job создавал
+# свой черновик — по одному тегу выходило три релиза, и в каждом лежала только
+# своя платформа. Поэтому сборка теперь ничего не публикует (`--publish never`),
+# а единственная задача `release` складывает установщики всех платформ вместе.
 #
 # Собираются те же платформы, что и раньше: Windows (NSIS), Linux (AppImage и deb)
 # и macOS (dmg и zip для arm64). macOS не подписывается — сертификата нет, поэтому
@@ -15,15 +20,15 @@ name: Release
 # файлы автообновления (latest.yml / latest-linux.yml / latest-mac.yml) не менялись.
 #
 # Второго workflow, который собирает релиз, быть не должно: два сборщика льют
-# ассеты в один черновик наперегонки, и падает тот, кто дошёл вторым. Что такой
-# дубль не вернётся, проверяет tests/ci-config.test.js.
+# ассеты в один черновик наперегонки. Что такой дубль не вернётся, а публикация
+# не размножится по платформам, проверяет tests/ci-config.test.js.
 
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
 
-# Нужен для загрузки артефактов в релиз средствами GITHUB_TOKEN.
+# Нужен, чтобы создать черновик релиза и загрузить в него ассеты.
 permissions:
   contents: write
 
@@ -84,17 +89,60 @@ jobs:
       - name: Test
         run: npm test
 
-      # Публикацию отдаём electron-builder напрямую, а не через npm-скрипт.
+      # Цель задаётся флагом, а не именем npm-скрипта: npm считает `--publish`
+      # своим ключом и не отдаёт его скрипту, поэтому до сборщика доезжает
+      # «--win always», и он падает с «Unknown target: always». Локальные
+      # `npm run dist:win` / `dist:linux` остаются сборкой без публикации.
       #
-      # `npm run dist:win -- --publish always` не работает: npm считает
-      # `--publish` своим ключом и не передаёт его скрипту, поэтому до сборщика
-      # доезжает «electron-builder --win always», и он падает с «Unknown target:
-      # always». Цель здесь задаётся флагом, а не именем скрипта; локальные
-      # `npm run dist:win` / `dist:linux` остаются для сборки без публикации.
-      - name: Build and publish
+      # `--publish never` здесь обязателен: по тегу electron-builder публикует сам,
+      # и тогда черновиков станет столько же, сколько платформ в матрице.
+      - name: Build
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Сборки без сертификатов: на macOS electron-builder не должен искать
           # подпись (её нет), иначе шаг падает на поиске identity.
           CSC_IDENTITY_AUTO_DISCOVERY: false
-        run: npx electron-builder ${{ matrix.target }} --publish always
+        run: npx electron-builder ${{ matrix.target }} --publish never
+
+      # Установщики уезжают в артефакт, а не в релиз: публикует одна задача ниже.
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.os }}
+          if-no-files-found: error
+          # latest*.yml и .blockmap лежат рядом с установщиками: без них
+          # автообновление не найдёт ни версию, ни файл.
+          path: |
+            release/*.exe
+            release/*.blockmap
+            release/*.AppImage
+            release/*.deb
+            release/*.dmg
+            release/*.zip
+            release/*.yml
+
+  release:
+    name: Draft release
+    needs: [verify, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download installers
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      # Один черновик на версию: если он уже есть (повторный запуск), ассеты
+      # перезаписываются, а второй релиз не создаётся.
+      - name: Create or update the draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          tag="v$VERSION"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "Черновик $tag уже есть — обновляем ассеты"
+          else
+            gh release create "$tag" --repo "$GITHUB_REPOSITORY" --draft --title "$tag" --generate-notes
+          fi
+          gh release upload "$tag" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+          echo "Черновик $tag готов: установщики всех платформ в одном релизе"

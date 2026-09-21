@@ -33,6 +33,10 @@
       не совпадающую с package.json, и умеет загружать артефакты (GH_TOKEN);
     * релиз собирает ровно один workflow: два сборщика на один тег — это гонка
       за один и тот же черновик, а не двойная страховка;
+    * публикация не размножается по платформам: сборка ничего не публикует, а
+      черновик создаёт одна задача. Так было сломано на v3.2.5 — публиковал
+      каждый job матрицы, и по тегу выходило три релиза с неполным набором
+      файлов вместо одного;
     * уведомление сайта после публикации релиза шлёт то событие и тому
       репозиторию, которые сайт слушает: опечатка здесь ничего не ломает — сайт
       просто никогда не пересоберётся, и видно это будет только по устаревшей
@@ -132,7 +136,7 @@ describe("CI: файлы workflow", () => {
     expect(release).toContain("package.json");
     expect(release).toContain("contents: write");
     expect(release).toContain("GH_TOKEN");
-    expect(release).toContain("--publish always");
+    expect(release).toContain("gh release upload");
   });
 
   test("релиз собирается только после зелёных тестов и для всех платформ поставки", () => {
@@ -146,8 +150,27 @@ describe("CI: файлы workflow", () => {
     expect(release).toContain("--win");
     expect(release).toContain("--linux");
     expect(release).toContain("--mac");
-    expect(release.indexOf("npm run lint")).toBeLessThan(release.indexOf("--publish always"));
-    expect(release.indexOf("npm test")).toBeLessThan(release.indexOf("--publish always"));
+    // Сверяем с шагом сборки, а не с первым упоминанием флага в комментариях.
+    expect(release.indexOf("npm run lint")).toBeLessThan(release.indexOf("npx electron-builder"));
+    expect(release.indexOf("npm test")).toBeLessThan(release.indexOf("npx electron-builder"));
+  });
+
+  test("установщики собираются по платформам, а черновик релиза один", () => {
+    /*
+      Так было сломано на v3.2.5: публиковал каждый job матрицы, и по одному тегу
+      выходило три черновика — в каждом только своя платформа. Публикация должна
+      жить в одной задаче, иначе GitHub снова получит несколько релизов одной
+      версии, а автообновление не найдёт latest.yml целиком.
+    */
+    expect(release).toContain("--publish never");
+    expect(release).not.toContain("--publish always");
+    expect(release).toContain("upload-artifact");
+    expect(release).toContain("download-artifact");
+    expect(release).toContain("--draft");
+
+    // Ровно одно место создаёт релиз и ровно одно кладёт в него ассеты.
+    expect(release.match(/gh release create/g)).toHaveLength(1);
+    expect(release.match(/gh release upload/g)).toHaveLength(1);
   });
 
   test("по тегу публикует ровно один workflow", () => {
