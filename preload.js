@@ -45,7 +45,6 @@ contextBridge.exposeInMainWorld("desktop", {
   downloadAndInstall: () => ipcRenderer.invoke("app:download-and-install"),
   checkForUpdates: () => ipcRenderer.invoke("app:check-for-updates"),
   onUpdateAvailable: (cb) => ipcRenderer.on("update:available", (_event, info) => cb(info)),
-  onUpdateDownloaded: (cb) => ipcRenderer.on("update:downloaded", (_event, info) => cb(info)),
   pickSoundFile: (kind) => ipcRenderer.invoke("app:pick-sound-file", kind),
   replayEvent: (id) => ipcRenderer.invoke("trigger-event-replay", id),
   db: {

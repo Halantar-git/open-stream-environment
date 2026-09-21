@@ -866,15 +866,10 @@ app.whenReady().then(() => {
     });
 
     autoUpdater.on("update-downloaded", (info) => {
-      new Notification({
-        title: "OSE Обновление",
-        body: `Версия ${info.version} скачана и готова к установке. Перезапустите приложение.`,
-      }).show();
-
-      // Сообщаем панели управления — она покажет баннер с кнопкой установки.
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send("update:downloaded", { version: info.version });
-      }
+      // Обновление скачано. Панель сразу вызывает quitAndInstall(), и приложение
+      // перезапускается уже новой версией — ни баннера, ни системного уведомления
+      // здесь нет намеренно: они только мелькали перед перезапуском.
+      console.log(`[auto-updater] ${info.version} downloaded`);
     });
   }
 

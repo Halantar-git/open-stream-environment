@@ -139,10 +139,6 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   renderAppVersion();
   const statusFabStack = document.getElementById("statusFabStack");
-  const updateBanner = document.getElementById("updateBanner");
-  const updateBannerText = document.getElementById("updateBannerText");
-  const updateInstallBtn = document.getElementById("updateInstallBtn");
-  const updateDismissBtn = document.getElementById("updateDismissBtn");
   const checkUpdatesBtn = document.getElementById("checkUpdatesBtn");
   const checkUpdatesStatus = document.getElementById("checkUpdatesStatus");
   const remoteUrlHint = document.getElementById("remoteUrlHint");
@@ -3922,36 +3918,12 @@ const { EVENT_TYPES } = window.SharedEvents;
     else micBridge.stop();
   }
 
-  // ---- auto-updates banner ----
-  function showUpdateBanner(info) {
-    const version = (info && info.version) || "";
-    applyKnownUpdate(version);
-    if (!updateBanner) return;
-    if (updateBannerText) {
-      updateBannerText.textContent = version
-        ? t("settings.updateAvailable", { version })
-        : t("settings.updateAvailableGeneric");
-    }
-    updateBanner.hidden = false;
-  }
-
-  if (updateInstallBtn) {
-    updateInstallBtn.addEventListener("click", () => {
-      if (window.desktop && window.desktop.downloadAndInstall) window.desktop.downloadAndInstall();
-    });
-  }
-  if (updateDismissBtn) {
-    updateDismissBtn.addEventListener("click", () => {
-      if (updateBanner) updateBanner.hidden = true;
-    });
-  }
+  // ---- auto-updates ----
   if (window.desktop && window.desktop.onUpdateAvailable) {
     // При наличии обновления (например, после стартовой проверки) просто
-    // зажигаем кнопку «Обновить» в шапке — без скачивания и без баннера.
+    // зажигаем кнопку «Обновить» в шапке: ни баннера, ни системного
+    // уведомления — установка идёт из меню этой кнопки.
     window.desktop.onUpdateAvailable((info) => applyKnownUpdate(info && info.version));
-  }
-  if (window.desktop && window.desktop.onUpdateDownloaded) {
-    window.desktop.onUpdateDownloaded((info) => showUpdateBanner(info));
   }
 
   if (libraryListEl) libraryListEl.addEventListener("scroll", hideWidgetTooltip);
