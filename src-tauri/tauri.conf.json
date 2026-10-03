@@ -35,6 +35,14 @@
       "../shared": "shared",
       "../assets": "assets",
       "../config/config.example.json": "config/config.example.json"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "both",
+        "installerIcon": "../assets/icons/icon.ico",
+        "displayLanguageSelector": true,
+        "languages": ["Russian", "English"]
+      }
     }
   },
   "plugins": {
