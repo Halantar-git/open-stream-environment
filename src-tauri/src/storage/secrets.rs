@@ -152,13 +152,15 @@ impl SecretStore {
             return String::new();
         }
 
+        // Значение записывается заново: прежняя неудача чтения к нему больше не
+        // относится — даже если шифровать нечем и оно ляжет открытым текстом.
+        self.clear_issue(label);
+
         let Some(ciphertext) = platform::encrypt(value.as_bytes()) else {
             self.warn_unprotected();
             return value.to_string();
         };
 
-        // Значение снова читаемо — прошлая неудача чтения была не про него.
-        self.clear_issue(label);
         format!(
             "{SEALED_PREFIX}{}",
             base64::engine::general_purpose::STANDARD.encode(ciphertext)
