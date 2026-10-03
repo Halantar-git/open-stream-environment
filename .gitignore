@@ -22,3 +22,8 @@ _discord-post.txt
 discord-update.txt
 discord-short.txt
 commit.txt
+# Артефакт установки ключа: `tauri signer generate -w ~/.tauri/ose.key` запускают из
+# PowerShell, где «~» не раскрывается, и приватный ключ подписи создаётся в
+# каталоге с буквальным именем «~» внутри репозитория. Ключу в дереве не место:
+# release.bat делает git add . и закоммитил бы его.
+~/

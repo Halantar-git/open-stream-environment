@@ -2,32 +2,26 @@ name: Release
 
 # Релиз собирает установщики под Windows, Linux и macOS, прогоняет линт и тесты и
 # складывает всё в ОДИН черновик GitHub Release — оттуда их берёт встроенное
-# автообновление (electron-updater читает latest*.yml из ассетов релиза).
+# автообновление (`tauri-plugin-updater` читает `latest.json` из ассетов релиза).
 #
-# Запуск: тег вида v3.2.5 (или вручную из вкладки Actions). Версия в package.json
-# обязана совпадать с тегом — проверяется первым шагом, иначе сборка остановится
-# до того, как что-то уедет в релиз.
+# Запуск: тег вида v3.2.9 (или вручную из вкладки Actions). Версия обязана
+# совпадать в `package.json`, `src-tauri/tauri.conf.json` и теге — это проверяется
+# первым шагом, иначе сборка остановится до того, как что-то уедет в релиз.
 #
-# Публикация намеренно разведена со сборкой. Так было сломано на v3.2.5: каждый
-# job матрицы вызывал `electron-builder --publish`, а тот на каждый job создавал
-# свой черновик — по одному тегу выходило три релиза, и в каждом лежала только
-# своя платформа. Поэтому сборка теперь ничего не публикует (`--publish never`),
-# а единственная задача `release` складывает установщики всех платформ вместе.
+# Черновик создаёт и наполняет `tauri-action` по `tagName`: все job'ы матрицы
+# пишут в один и тот же релиз по тегу, а не размножают его. Так было сломано на
+# Electron-версии (v3.2.5): каждый job звал `electron-builder --publish` и создавал
+# свой черновик. Проверяет, что сборщик ровно один, tests/ci-config.test.js.
 #
-# Имена ассетов перед загрузкой приводятся к тому, что electron-builder пишет в
-# latest*.yml: пробелы он заменяет на дефисы, а GitHub при загрузке — на точки.
-# Разойдись они — и автообновление просит файл, которого в релизе нет; именно так
-# сломался v3.2.6, где манифест ждал `Open-Stream-Environment-3.2.6-setup.exe`, а
-# в релизе лежал `Open.Stream.Environment-3.2.6-setup.exe`.
+# Подпись обновлений: приватный ключ `minisign` лежит в секрете
+# `TAURI_SIGNING_PRIVATE_KEY` (и пароль — в
+# `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, если ключ с паролем). Публичный ключ —
+# в `plugins.updater.pubkey` (`tauri.conf.json`). Ключ создаётся владельцем:
+# `npx tauri signer generate -w %USERPROFILE%\.tauri\ose.key`, и приватную часть
+# **никогда** не коммитят (release.bat делает `git add .`).
 #
-# Собираются те же платформы, что и раньше: Windows (NSIS), Linux (AppImage и deb)
-# и macOS (dmg и zip для arm64). macOS не подписывается — сертификата нет, поэтому
-# Gatekeeper попросит подтвердить запуск; шаг оставлен, чтобы набор установщиков и
-# файлы автообновления (latest.yml / latest-linux.yml / latest-mac.yml) не менялись.
-#
-# Второго workflow, который собирает релиз, быть не должно: два сборщика льют
-# ассеты в один черновик наперегонки. Что такой дубль не вернётся, а публикация
-# не размножится по платформам, проверяет tests/ci-config.test.js.
+# Публикация намеренно разведена со сборкой: `releaseDraft: true` создаёт черновик,
+# а видимым релиз делает владелец вручную — только тогда срабатывает notify-site.
 
 on:
   push:
@@ -48,32 +42,31 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Tag must match package.json
+      - name: Versions must agree and match the tag
         id: version
         shell: bash
         run: |
           version="$(node -p "require('./package.json').version")"
+          tauri_version="$(node -p "require('./src-tauri/tauri.conf.json').version")"
           echo "value=$version" >> "$GITHUB_OUTPUT"
+          if [ "$version" != "$tauri_version" ]; then
+            echo "::error::Версия в package.json ($version) не совпадает с tauri.conf.json ($tauri_version)"
+            exit 1
+          fi
           if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "v$version" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::Тег $GITHUB_REF_NAME не совпадает с версией в package.json ($version)"
+            echo "::error::Тег $GITHUB_REF_NAME не совпадает с версией ($version)"
             exit 1
           fi
           echo "Версия: $version"
 
-  build:
+  publish:
     name: Build (${{ matrix.os }})
     needs: verify
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: windows-latest
-            target: --win
-          - os: ubuntu-latest
-            target: --linux
-          - os: macos-latest
-            target: --mac
+        os: [windows-latest, ubuntu-latest, macos-latest]
 
     steps:
       - name: Checkout repository
@@ -95,78 +88,41 @@ jobs:
       - name: Test
         run: npm test
 
-      # Цель задаётся флагом, а не именем npm-скрипта: npm считает `--publish`
-      # своим ключом и не отдаёт его скрипту, поэтому до сборщика доезжает
-      # «--win always», и он падает с «Unknown target: always». Локальные
-      # `npm run dist:win` / `dist:linux` остаются сборкой без публикации.
-      #
-      # `--publish never` здесь обязателен: по тегу electron-builder публикует сам,
-      # и тогда черновиков станет столько же, сколько платформ в матрице.
-      - name: Build
-        env:
-          # Сборки без сертификатов: на macOS electron-builder не должен искать
-          # подпись (её нет), иначе шаг падает на поиске identity.
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-        run: npx electron-builder ${{ matrix.target }} --publish never
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
 
-      # Установщики уезжают в артефакт, а не в релиз: публикует одна задача ниже.
-      - name: Upload installers
-        uses: actions/upload-artifact@v4
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
         with:
-          name: installers-${{ matrix.os }}
-          if-no-files-found: error
-          # latest*.yml и .blockmap лежат рядом с установщиками: без них
-          # автообновление не найдёт ни версию, ни файл. Манифесты перечислены по
-          # именам намеренно: `release/*.yml` тянул ещё и builder-debug.yml —
-          # отладочный слепок сборщика, которому в релизе делать нечего.
-          path: |
-            release/*.exe
-            release/*.blockmap
-            release/*.AppImage
-            release/*.deb
-            release/*.dmg
-            release/*.zip
-            release/latest.yml
-            release/latest-linux.yml
-            release/latest-mac.yml
+          workspaces: src-tauri
 
-  release:
-    name: Draft release
-    needs: [verify, build]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download installers
-        uses: actions/download-artifact@v4
-        with:
-          path: dist
-          merge-multiple: true
+      - name: Cargo test
+        run: cargo test --manifest-path src-tauri/Cargo.toml --lib
 
-      # electron-builder пишет в latest*.yml имена с дефисами вместо пробелов
-      # (так он сам заливал ассеты, пока публиковал их сам), а `gh release
-      # upload` берёт имя локального файла, и GitHub заменяет в нём пробелы на
-      # точки. Обновление тогда просит файл, которого в релизе нет, — так
-      # сломалось автообновление на v3.2.6. Приводим имена к тому, что написано
-      # в манифестах.
-      - name: Normalize asset names
+      - name: Install Linux system libraries
+        if: runner.os == 'Linux'
         run: |
-          mkdir -p upload
-          for f in dist/*; do
-            cp "$f" "upload/$(basename "$f" | tr ' ' '-')"
-          done
-          ls -l upload
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libgtk-3-dev
 
-      # Один черновик на версию: если он уже есть (повторный запуск), ассеты
-      # перезаписываются, а второй релиз не создаётся.
-      - name: Create or update the draft release
+      # Сборка, подпись обновлений и загрузка в один черновик по тегу — на
+      # `tauri-action`. Установщики всех платформ ложатся в один релиз вместе с
+      # `latest.json` и `.sig`: без них автообновление не найдёт ни версию, ни
+      # файл.
+      - name: Build and upload
+        uses: tauri-apps/tauri-action@v0
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ needs.verify.outputs.version }}
-        run: |
-          tag="v$VERSION"
-          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
-            echo "Черновик $tag уже есть — обновляем ассеты"
-          else
-            gh release create "$tag" --repo "$GITHUB_REPOSITORY" --draft --title "$tag" --generate-notes
-          fi
-          gh release upload "$tag" upload/* --repo "$GITHUB_REPOSITORY" --clobber
-          echo "Черновик $tag готов: установщики всех платформ в одном релизе"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: v__VERSION__
+          releaseName: "Open Stream Environment v__VERSION__"
+          releaseBody: "Список изменений — в CHANGELOG.md."
+          releaseDraft: true
+          prerelease: false

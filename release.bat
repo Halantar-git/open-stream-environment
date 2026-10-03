@@ -23,6 +23,13 @@ if not "%version%"=="%current%" (
 rem Keep the version in sync across docs. PowerShell handles UTF-8 (no BOM).
 set "OSE_VERSION=%version%"
 
+rem Версия Tauri-сборки должна совпадать (release.yml сверяет package.json и
+rem tauri.conf.json). На Electron-ветке каталога нет — шаг пропускается.
+if exist "src-tauri\tauri.conf.json" (
+  node -e "const fs=require('fs');const p='src-tauri/tauri.conf.json';const c=JSON.parse(fs.readFileSync(p,'utf8'));c.version=process.env.OSE_VERSION;fs.writeFileSync(p,JSON.stringify(c,null,2)+'\n');"
+  if errorlevel 1 goto :error
+)
+
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$v=$env:OSE_VERSION; $d=(Get-Date).ToString('yyyy-MM-dd'); $enc=New-Object System.Text.UTF8Encoding($false); $r=[System.IO.File]::ReadAllText('README.md'); $r=$r -replace '\*\*[0-9]+\.[0-9]+\.[0-9]+\*\*\.',('**'+$v+'**.'); [System.IO.File]::WriteAllText('README.md',$r,$enc); $u=[System.IO.File]::ReadAllText('discord-update.txt'); $u=$u -replace '[0-9]+\.[0-9]+\.[0-9]+',$v; [System.IO.File]::WriteAllText('discord-update.txt',$u,$enc); $c=[System.IO.File]::ReadAllText('CHANGELOG.md'); $h='## ['+$v+'] '; if ($c.IndexOf($h) -lt 0) { $i=$c.IndexOf('## ['); $c=$c.Substring(0,$i)+$h+[char]0x2014+' '+$d+[Environment]::NewLine+[Environment]::NewLine+$c.Substring($i) }; [System.IO.File]::WriteAllText('CHANGELOG.md',$c,$enc);"
 if errorlevel 1 goto :error
 

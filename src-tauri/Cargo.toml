@@ -1,0 +1,87 @@
+[package]
+name = "open-stream-environment"
+version = "3.2.8"
+edition = "2021"
+# 1.81 — из-за `std::panic::PanicHookInfo` в обработчике падений (в отчёте и
+# диалоге нужно и сообщение, и место). Более старый компилятор не соберёт.
+rust-version = "1.81"
+description = "Стрим-оверлей и панель управления для Twitch и OBS"
+license = "GPL-3.0-or-later"
+
+[lib]
+name = "ose"
+path = "src/lib.rs"
+
+[[bin]]
+name = "open-stream-environment"
+path = "src/main.rs"
+
+[features]
+# Эту фичу включает `tauri build` (CLI добавляет `--features custom-protocol`). По ней
+# `tauri::is_dev()` понимает, что приложение собрано, и статика берётся из ресурсов, а
+# не из исходников. Без объявленной фичи включить её нельзя, и сборка считала бы себя
+# разработкой (`cargo run`).
+custom-protocol = ["tauri/custom-protocol"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# tray-icon — системный трей (порт `Tray`/`Menu` из main.js).
+tauri = { version = "2", features = ["tray-icon"] }
+serde = { version = "1", features = ["derive"] }
+# preserve_order: порядок ключей в config.json должен остаться таким, каким его
+# записал Electron (`JSON.stringify` сохраняет порядок вставки). Без этого флага
+# serde_json складывает объекты в BTreeMap и переписал бы файл с сортировкой
+# ключей — диффы в репозитории и в резервных копиях стали бы нечитаемыми.
+serde_json = { version = "1", features = ["preserve_order"] }
+tokio = { version = "1", features = ["net", "sync", "macros", "time"] }
+axum = { version = "0.8", features = ["ws"] }
+tower-http = { version = "0.6", features = ["fs"] }
+# Секреты в config.json лежат как `enc:<base64>` — свой формат: блоб DPAPI
+# (см. storage/secrets.rs, там же — почему формат Electron не повторяем).
+base64 = "0.22"
+# Идентификаторы сессий и событий — как `crypto.randomUUID()` в Electron: те же
+# uuid v4 строкой, поэтому формат совпадает с записями старой версии.
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+rustfft = "6"
+# Чтение чата Twitch идёт по WebSocket (`wss://irc-ws.chat.twitch.tv`). Крейт
+# тянет `axum` ради `/ws`, здесь он становится прямым. `native-tls` даёт TLS для
+# `wss`: на Windows — schannel (без внешних сборок и OpenSSL), на macOS —
+# Security.framework, на Linux — системный OpenSSL.
+tokio-tungstenite = { version = "0.29", features = ["native-tls"] }
+futures-util = "0.3"
+# HTTP для Twitch Helix (отправка в чат, модерация, клип/маркер) и обмена
+# токенов. TLS — тот же `native-tls`, что и у сокета.
+reqwest = { version = "0.13", default-features = false, features = ["json", "native-tls"] }
+# Подпись пароля в OBS WebSocket v5: `base64(sha256(...))`, два прохода.
+sha2 = "0.10"
+tauri-plugin-opener = "2.5.5"
+tauri-plugin-dialog = "2.7.3"
+tauri-plugin-fs = "2.5.2"
+tauri-plugin-clipboard-manager = "2.3.3"
+tauri-plugin-shell = "2.3.6"
+tauri-plugin-global-shortcut = "2.3.2"
+tauri-plugin-notification = "2.4.0"
+tauri-plugin-single-instance = "2.4.5"
+tauri-plugin-window-state = "2.4.1"
+tauri-plugin-updater = "2.12.0"
+
+[target.'cfg(windows)'.dependencies]
+# DPAPI — то, чем шифрует `safeStorage` на Windows. Сырой FFI: подписи предсказуемы,
+# и лишний слой абстракции здесь не нужен.
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_Security_Cryptography",
+    "Win32_System_Memory",
+    # Размер рабочего набора процесса — для отчёта о падении (память процесса).
+    "Win32_System_ProcessStatus",
+    "Win32_System_Threading",
+] }
+
+[dev-dependencies]
+# Тесты сервера ходят по нему как клиент (`oneshot`), не поднимая порт.
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

@@ -1,0 +1,19 @@
+{
+  "identifier": "default",
+  "description": "Права окон панели и оверлея (порт `preload.js`/`main.js`)",
+  "windows": ["*"],
+  "remote": {
+    "urls": ["http://127.0.0.1:*", "http://localhost:*"]
+  },
+  "permissions": [
+    "core:default",
+    "opener:default",
+    "dialog:default",
+    "fs:default",
+    "clipboard-manager:default",
+    "shell:default",
+    "notification:default",
+    "window-state:default",
+    "bridge"
+  ]
+}

@@ -16,79 +16,39 @@
  */
 
 /*
-  Гейт поставки.
+  Гейт поставки (Tauri).
 
   Один раз уже случилось так, что окна редакторов не попали в собранное
-  приложение: в `build.files` не было нужных каталогов, а `loadFile` в main.js
-  на них ссылался. Юнит-тесты и линт этого не видят — ошибка вылезает только у
-  пользователя установленной сборки. Поэтому здесь по исходникам проверяется:
+  приложение: каталога не было в списке ресурсов, а страница на него ссылалась.
+  Юнит-тесты и линт этого не видят — ошибка вылезает только у пользователя
+  установленной сборки. Поэтому здесь по исходникам проверяется:
 
-    * все цели loadFile/loadURL существуют на диске;
-    * каталоги http-целей реально отдаются статикой сервера;
-    * каждый файл окна попадает в `build.files` и не вырезан исключением;
-    * файлы, на которые ссылается сам CSS (`url(…)`), — в том числе встроенные
-      шрифты тем — есть на диске и едут в сборку;
-    * каждое семейство шрифта из тем объявлено во встроенном наборе, и наоборот:
-      ни один вшитый шрифт не лежит мертвым грузом;
-    * то, чего в сборке быть не должно (базы, бэкапы, карантин, логи, медиа
-      пользователя), исключениями накрыто.
+    * все ссылки страниц на файлы есть на диске;
+    * всё, что грузят страницы и CSS, попадает в `bundle.resources`;
+    * каталоги страниц и общие ресурсы объявлены в ресурсах;
+    * встроенные шрифты тем объявлены в наборе и не лежат мёртвым грузом;
+    * то, чего в поставке быть не должно (базы, бэкапы, карантин, логи, медиа
+      пользователя), в `bundle.resources` не попадает.
 */
 
 const fs = require("fs");
 const path = require("path");
 
-const pkg = require("../package.json");
-
 const ROOT = path.join(__dirname, "..");
 const SKIP_DIRS = new Set(["node_modules", "release", "backup", ".git", "coverage"]);
-
-// Мини-глоб в семантике electron-builder: `**` — любой набор каталогов (в том
-// числе ни одного), `*` — часть имени внутри одного каталога, `?` — один символ.
-function globToRegExp(glob) {
-  let re = "^";
-  for (let i = 0; i < glob.length; i++) {
-    const ch = glob[i];
-    if (ch === "*") {
-      if (glob[i + 1] === "*") {
-        i += 1;
-        if (glob[i + 1] === "/") {
-          i += 1;
-          re += "(?:.*/)?";
-        } else {
-          re += ".*";
-        }
-      } else {
-        re += "[^/]*";
-      }
-    } else if (ch === "?") {
-      re += "[^/]";
-    } else {
-      re += ch.replace(/[.+^${}()|[\]\\]/g, "\\$&");
-    }
-  }
-  return new RegExp(re + "$");
-}
-
-const files = pkg.build.files;
-const includePatterns = files
-  .filter((pattern) => !pattern.startsWith("!"))
-  .map((pattern) => ({ pattern, re: globToRegExp(pattern) }));
-const excludePatterns = files.filter((pattern) => pattern.startsWith("!")).map((pattern) => globToRegExp(pattern.slice(1)));
-
-function isShipped(relativePath) {
-  const target = relativePath.split(path.sep).join("/");
-  if (!includePatterns.some(({ re }) => re.test(target))) return false;
-  return !excludePatterns.some((re) => re.test(target));
-}
+// Артефакты Rust-сборки и схемы Tauri: в поставку они не едут, а обход иначе
+// вычитывал бы копии `shared/` и `assets/` из `src-tauri/target`.
+const SKIP_PATHS = new Set(["src-tauri/target", "src-tauri/gen"]);
 
 function listFiles(dir = ROOT, prefix = "") {
   const out = [];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const relative = `${prefix}${entry.name}`;
     if (entry.isDirectory()) {
-      if (SKIP_DIRS.has(entry.name) || entry.name.startsWith(".")) continue;
-      out.push(...listFiles(path.join(dir, entry.name), `${prefix}${entry.name}/`));
+      if (SKIP_DIRS.has(entry.name) || entry.name.startsWith(".") || SKIP_PATHS.has(relative)) continue;
+      out.push(...listFiles(path.join(dir, entry.name), `${relative}/`));
     } else {
-      out.push(`${prefix}${entry.name}`);
+      out.push(relative);
     }
   }
   return out;
@@ -96,51 +56,32 @@ function listFiles(dir = ROOT, prefix = "") {
 
 const allFiles = listFiles();
 
-// Цели, которые окна грузят с диска: loadFile(path.join(__dirname, "a", "b.html")).
-function loadFileTargets() {
-  const source = fs.readFileSync(path.join(ROOT, "main.js"), "utf8");
-  const targets = [];
-  const re = /loadFile\(\s*path\.join\(\s*__dirname\s*((?:\s*,\s*"[^"]+")+)\s*\)/g;
-  let match;
-  while ((match = re.exec(source))) {
-    const parts = [...match[1].matchAll(/"([^"]+)"/g)].map((part) => part[1]);
-    targets.push(parts.join("/"));
-  }
-  return targets;
-}
+// Конфиг сборки Tauri — единственный источник правды о том, что попадает в поставку.
+const tauri = JSON.parse(fs.readFileSync(path.join(ROOT, "src-tauri", "tauri.conf.json"), "utf8"));
 
-// http-цели окон: loadURL(`http://localhost:${port}/overlay/overlay.html?x=1`).
-function loadUrlTargets() {
-  const source = fs.readFileSync(path.join(ROOT, "main.js"), "utf8");
-  const targets = [];
-  const re = /loadURL\(\s*`http:\/\/localhost:\$\{[^}]+\}(\/[^`?"]*)/g;
-  let match;
-  while ((match = re.exec(source))) targets.push(match[1].replace(/^\//, ""));
-  return targets;
-}
+// Источники ресурсов как пути репозитория: `../control` → `control`,
+// `../config/config.example.json` → `config/config.example.json`.
+const resourceSources = Object.keys(tauri.bundle.resources).map((source) => source.replace(/^\.\.\//, ""));
 
-// Каталоги, которые сервер отдаёт статикой (express.static(path.join(__dirname, "..", "…"))).
-function servedDirs() {
-  const source = fs.readFileSync(path.join(ROOT, "server", "index.js"), "utf8");
-  const dirs = new Set();
-  const re = /express\.static\(path\.join\(__dirname,\s*"\.\.",\s*"([^"]+)"/g;
-  let match;
-  while ((match = re.exec(source))) dirs.add(match[1]);
-  return dirs;
+// Попадает ли файл в поставку: он сам или что-то под его каталогом объявлено
+// в ресурсах. Так `config/config.example.json` уезжает, а `config/config.json`
+// (данные пользователя) — нет.
+function isShipped(relativePath) {
+  const target = relativePath.split(path.sep).join("/");
+  return resourceSources.some((entry) => target === entry || target.startsWith(`${entry}/`));
 }
 
 const PAGE_DIRS = ["control", "chatwindow", "themeeditor", "widgeteditor", "overlay", "remote", "splash", "csseditor"];
 
-// Страницы приложения: окна Electron и страницы, которые сервер отдаёт в OBS.
+// Страницы приложения: их сервер отдаёт в окна и в OBS Browser Source.
 function pageFiles() {
   return allFiles.filter((file) => file.endsWith(".html") && PAGE_DIRS.some((dir) => file.startsWith(`${dir}/`)));
 }
 
 /*
-  Локальные ссылки страницы: то, что окно грузит с диска или с сервера.
-  Внешнее (шрифты, data-URL, якоря) пропускаем; заодно подхватываем `import`
-  из встроенных модульных скриптов — так грузится, например, CSS-редактор
-  внутри редактора темы.
+  Локальные ссылки страницы: то, что окно грузит с сервера. Внешнее (шрифты,
+  data-URL, якоря) пропускаем; заодно подхватываем `import` из встроенных
+  модульных скриптов — так грузится, например, CSS-редактор внутри редактора темы.
 */
 function localReferences(relativePath) {
   const source = fs.readFileSync(path.join(ROOT, relativePath), "utf8");
@@ -162,7 +103,7 @@ function localReferences(relativePath) {
 
 function resolveReference(pageRelative, ref) {
   /*
-    Абсолютный путь — это запрос к серверу: express отдаёт такие файлы из корня
+    Абсолютный путь — это запрос к серверу: он отдаёт такие файлы из корня
     проекта (`/shared/theme.css` → `shared/theme.css`). Ведущий слэш снимаем
     руками: path.resolve посчитал бы его абсолютным путём в корне диска и тест
     искал бы файлы в C:\shared на Windows.
@@ -183,8 +124,8 @@ function allReferences() {
 /*
   Ссылки из CSS: url("…") в @font-face и обычных правилах. Из HTML они не видны —
   страница подключает CSS, а шрифт упомянут только внутри него, — поэтому
-  проверяются отдельно: забытый в `build.files` файл иначе уедет в релиз мимо
-  всех тестов и всплывёт у пользователя подменой на системный шрифт.
+  проверяются отдельно: забытый в ресурсах файл иначе уехал бы в релиз мимо всех
+  тестов и всплыл у пользователя подменой на системный шрифт.
 */
 function cssReferences() {
   const out = [];
@@ -258,34 +199,7 @@ function fontConsumerSources() {
     .map((file) => fs.readFileSync(path.join(ROOT, file), "utf8"));
 }
 
-describe("поставка: цели окон", () => {
-  test("loadFile-цели найдены и существуют на диске", () => {
-    const targets = loadFileTargets();
-    expect(targets.length).toBeGreaterThan(0);
-
-    targets.forEach((target) => {
-      expect({ target, exists: fs.existsSync(path.join(ROOT, target)) }).toEqual({ target, exists: true });
-    });
-  });
-
-  test("каждый файл окна попадает в сборку", () => {
-    loadFileTargets().forEach((target) => {
-      expect({ target, shipped: isShipped(target) }).toEqual({ target, shipped: true });
-    });
-  });
-
-  test("http-цели окон отдаются статикой сервера", () => {
-    const dirs = servedDirs();
-    const targets = loadUrlTargets();
-    expect(targets.length).toBeGreaterThan(0);
-
-    targets.forEach((target) => {
-      const [dir] = target.split("/");
-      expect({ target, served: dirs.has(dir) }).toEqual({ target, served: true });
-      expect({ target, exists: fs.existsSync(path.join(ROOT, target)) }).toEqual({ target, exists: true });
-    });
-  });
-
+describe("поставка: страницы и ссылки", () => {
   test("все ссылки страниц на файлы на месте", () => {
     const references = allReferences();
     // Порог с запасом: если разбор сломается, тест должен упасть, а не тихо пройти.
@@ -295,17 +209,14 @@ describe("поставка: цели окон", () => {
     expect(missing.map(({ page, ref }) => `${page} → ${ref}`)).toEqual([]);
   });
 
-  test("все, что грузят страницы, попадает в сборку", () => {
+  test("всё, что грузят страницы, попадает в поставку", () => {
     const leaked = allReferences().filter(({ target }) => !isShipped(target));
 
     expect(leaked.map(({ page, target }) => `${page} → ${target}`)).toEqual([]);
   });
 
-  test("каталоги, которые сервер отдаёт статикой, в сборке", () => {
-    const dirs = servedDirs();
-    expect(dirs.size).toBeGreaterThan(0);
-
-    dirs.forEach((dir) => {
+  test("каталоги страниц объявлены в ресурсах", () => {
+    PAGE_DIRS.forEach((dir) => {
       const files = allFiles.filter((file) => file.startsWith(`${dir}/`));
       expect({ dir, files: files.length }).not.toEqual({ dir, files: 0 });
       expect({ dir, shipped: files.some((file) => isShipped(file)) }).toEqual({ dir, shipped: true });
@@ -329,7 +240,7 @@ describe("поставка: встроенные шрифты", () => {
     expect(missing.map(({ file, ref }) => `${file} → ${ref}`)).toEqual([]);
   });
 
-  test("файлы, на которые ссылается CSS, попадают в сборку", () => {
+  test("файлы, на которые ссылается CSS, попадают в поставку", () => {
     const leaked = cssReferences().filter(({ target }) => !isShipped(target));
 
     expect(leaked.map(({ file, target }) => `${file} → ${target}`)).toEqual([]);
@@ -356,30 +267,33 @@ describe("поставка: встроенные шрифты", () => {
   });
 });
 
-describe("поставка: build.files", () => {
-  test("каждый шаблон включения находит хотя бы один файл", () => {
-    const empty = includePatterns.filter(({ re }) => !allFiles.some((file) => re.test(file)));
-    expect(empty.map(({ pattern }) => pattern)).toEqual([]);
+describe("поставка: конфигурация Tauri", () => {
+  test("источники ресурсов существуют на диске", () => {
+    const missing = resourceSources.filter((entry) => !fs.existsSync(path.join(ROOT, entry)));
+    expect(missing).toEqual([]);
   });
 
-  test("главные файлы приложения в сборке", () => {
-    [
-      "main.js",
-      "preload.js",
-      "server/index.js",
-      "server/db.js",
-      "server/crash-guard.js",
-      "server/data-integrity.js",
-      "server/health.js",
-      "server/support-bundle.js",
-      "shared/theme.css",
-      "shared/fonts.css",
-    ].forEach((file) => {
-      expect({ file, shipped: isShipped(file) }).toEqual({ file, shipped: true });
-    });
+  test("статика приложения объявлена в ресурсах", () => {
+    // Каталоги, которые сервер отдаёт статикой (см. server::SERVED_DIRS в Rust), и
+    // общие ресурсы: разъехавшись с конфигом, сборка отдала бы 404 на страницу,
+    // которую dev-режим открывает.
+    const dirs = [
+      "control",
+      "overlay",
+      "remote",
+      "chatwindow",
+      "splash",
+      "widgeteditor",
+      "themeeditor",
+      "csseditor",
+      "shared",
+      "assets",
+    ];
+    const missing = dirs.filter((dir) => !isShipped(`${dir}/index.html`));
+    expect(missing).toEqual([]);
   });
 
-  test("данные пользователя, бэкапы, карантин и логи в сборку не попадают", () => {
+  test("данные пользователя, бэкапы, карантин и логи в поставку не попадают", () => {
     const forbidden = [
       "config/config.json",
       "config/local-db.json",
@@ -403,14 +317,15 @@ describe("поставка: build.files", () => {
     expect(isShipped("config/logs/2026/ose-2026-09-15.log")).toBe(false);
   });
 
-  test("цели сборки настроены для всех платформ", () => {
-    // Сборка может быть запущена под любую ОС: если цель пропадёт, релиз уйдёт
-    // артефактами только для одной платформы и никто этого не заметит.
-    ["win", "mac", "linux"].forEach((platform) => {
-      expect({ platform, target: pkg.build[platform]?.target }).not.toEqual({ platform, target: undefined });
-    });
-    expect(pkg.build.asar).toBe(true);
-    expect(pkg.build.publish?.provider).toBe("github");
-    expect(pkg.build.directories?.output).toBeTruthy();
+  test("сборка и обновления настроены", () => {
+    // Без `createUpdaterArtifacts` и `plugins.updater` установщики выйдут без
+    // `latest.json`/`.sig`, и встроенное автообновление не найдёт ни версию, ни
+    // файл. `targets` включает все платформы: пропажа цели оставила бы релиз без
+    // установщиков одной ОС и никто бы этого не заметил.
+    expect(tauri.bundle.active).toBe(true);
+    expect(tauri.bundle.targets).toBeTruthy();
+    expect(tauri.bundle.createUpdaterArtifacts).toBe(true);
+    expect(tauri.plugins?.updater?.endpoints?.length).toBeGreaterThan(0);
+    expect(tauri.plugins?.updater?.pubkey).toBeTruthy();
   });
 });

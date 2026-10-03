@@ -3,7 +3,6 @@
   "productName": "Open Stream Environment",
   "version": "3.2.8",
   "description": "Material Design 3 stream overlay + Figma-style drag-and-drop control panel for Twitch/OBS. Overlay served locally as an OBS Browser Source; Twitch chat/follows/subs and DonationAlerts donations drive live alerts.",
-  "main": "main.js",
   "private": true,
   "author": "Halantar <tranquility.rus@gmail.com>",
   "license": "GPL-3.0-or-later",
@@ -12,17 +11,13 @@
     "url": "https://github.com/Halantar-git/open-stream-environment.git"
   },
   "scripts": {
-    "start": "electron .",
-    "server:only": "node server/index.js",
     "test": "jest",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "dist": "electron-builder --win --linux",
-    "dist:all": "electron-builder --win --mac --linux",
-    "dist:win": "electron-builder --win",
-    "dist:linux": "electron-builder --linux",
-    "dist:dir": "electron-builder --dir"
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "dependencies": {
     "electron-updater": "^6.8.9",
@@ -32,6 +27,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@tauri-apps/cli": "^2.12.0",
     "electron": "^43.4.1",
     "electron-builder": "^26.15.3",
     "eslint": "^10.10.0",
@@ -44,94 +40,12 @@
     "testPathIgnorePatterns": [
       "/node_modules/",
       "/backup/"
+    ],
+    "modulePathIgnorePatterns": [
+      "<rootDir>/backup/"
     ]
   },
   "engines": {
     "node": ">=22.12.0"
-  },
-  "build": {
-    "appId": "com.openstreamenvironment.app",
-    "productName": "Open Stream Environment",
-    "files": [
-      "main.js",
-      "preload.js",
-      "splash/**/*",
-      "chatwindow/**/*",
-      "widgeteditor/**/*",
-      "themeeditor/**/*",
-      "csseditor/**/*",
-      "server/**/*",
-      "control/**/*",
-      "overlay/**/*",
-      "remote/**/*",
-      "shared/**/*",
-      "config/**/*",
-      "assets/**/*",
-      "!config/config.json",
-      "!config/local-db.json",
-      "!config/window-state.json",
-      "!config/local-db.jsonl",
-      "!config/local-db.chat.jsonl",
-      "!config/*.bak.*",
-      "!config/*.corrupt-*",
-      "!config/logs/**/*",
-      "!config/media/**/*"
-    ],
-    "directories": {
-      "output": "release"
-    },
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "assets/icons/icon.ico"
-    },
-    "mac": {
-      "target": [
-        "dmg",
-        "zip"
-      ],
-      "category": "public.app-category.video",
-      "icon": "assets/icons/icon.icns"
-    },
-    "linux": {
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "deb",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "category": "AudioVideo",
-      "icon": "assets/icons"
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowElevation": true,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Open Stream Environment",
-      "artifactName": "${productName}-${version}-setup.${ext}"
-    },
-    "publish": {
-      "provider": "github",
-      "owner": "Halantar-git",
-      "repo": "open-stream-environment"
-    },
-    "asar": true
   }
 }

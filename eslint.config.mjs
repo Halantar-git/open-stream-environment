@@ -1,10 +1,11 @@
 /*
  * ESLint flat config.
  *
- * The project mixes three runtimes in one tree — Node (server/, main.js),
- * Chromium renderers (overlay/, control/, remote/, chatwindow/) and Jest
- * (tests/) — so the globals of all three are declared together. This trades a
- * little precision for zero false `no-undef` noise on a codebase this size.
+ * The project mixes renderers (overlay/, control/, remote/, chatwindow/,
+ * themeeditor/…) and Jest (tests/) in one tree, so the globals of both are
+ * declared together. The backend is Rust (src-tauri/) and is checked by
+ * `cargo clippy`, not by ESLint. This trades a little precision for zero false
+ * `no-undef` noise on a codebase this size.
  *
  * The control panel and the standalone CSS editor are browser ES modules; the
  * rest of the tree is classic scripts / CommonJS, so `sourceType` is overridden
@@ -46,7 +47,7 @@ const sharedGlobals = {
 
 export default [
   {
-    ignores: ["node_modules/**", "release/**", "backup/**", "coverage/**"],
+    ignores: ["node_modules/**", "release/**", "backup/**", "coverage/**", "src-tauri/target/**"],
   },
   js.configs.recommended,
   prettier,

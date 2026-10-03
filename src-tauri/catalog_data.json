@@ -1,0 +1,960 @@
+{
+  "sourceHash": "b6916a3c6115da4c",
+  "widgetTypes": {
+    "alerts": {
+      "type": "alerts",
+      "label": "Алерты",
+      "description": "Всплывающие карточки: фоллоу, сабы, донаты",
+      "icon": "widgetAlerts",
+      "services": [
+        "twitchEvents",
+        "donationAlerts",
+        "youtube"
+      ],
+      "defaultGeometry": {
+        "x": 30,
+        "y": 4,
+        "w": 40,
+        "h": 20
+      },
+      "minW": 20,
+      "minH": 12,
+      "defaultConfig": {}
+    },
+    "goal": {
+      "type": "goal",
+      "label": "Цель доната",
+      "description": "Прогресс-бар сбора",
+      "icon": "widgetGoal",
+      "services": [
+        "donationAlerts",
+        "youtube"
+      ],
+      "defaultGeometry": {
+        "x": 3,
+        "y": 84,
+        "w": 32,
+        "h": 6
+      },
+      "minW": 16,
+      "minH": 4,
+      "defaultConfig": {
+        "showPercentage": false
+      }
+    },
+    "chat": {
+      "type": "chat",
+      "label": "Чат Twitch",
+      "description": "Лента сообщений чата канала",
+      "icon": "widgetChat",
+      "services": [
+        "twitchChat",
+        "youtube"
+      ],
+      "defaultGeometry": {
+        "x": 68,
+        "y": 6,
+        "w": 29,
+        "h": 46
+      },
+      "minW": 16,
+      "minH": 16,
+      "defaultConfig": {
+        "maxMessages": 8,
+        "showBadges": true
+      }
+    },
+    "recent": {
+      "type": "recent",
+      "label": "Последние события",
+      "description": "Список последних фоллоу / сабов / донатов",
+      "icon": "widgetRecent",
+      "services": [
+        "twitchEvents",
+        "donationAlerts",
+        "youtube"
+      ],
+      "defaultGeometry": {
+        "x": 3,
+        "y": 4,
+        "w": 24,
+        "h": 26
+      },
+      "minW": 14,
+      "minH": 12,
+      "defaultConfig": {
+        "maxItems": 5
+      }
+    },
+    "custom": {
+      "type": "custom",
+      "label": "Свой виджет",
+      "description": "Текст, картинка, свой HTML или встраивание",
+      "icon": "widgetCustom",
+      "defaultGeometry": {
+        "x": 35,
+        "y": 40,
+        "w": 30,
+        "h": 16
+      },
+      "minW": 8,
+      "minH": 6,
+      "defaultConfig": {
+        "mode": "text",
+        "showBackground": true,
+        "textTitle": "",
+        "text": "Новый текст",
+        "textAlign": "center",
+        "textSize": "medium",
+        "imageUrl": "",
+        "imageFit": "contain",
+        "html": "",
+        "css": "",
+        "js": "",
+        "embedUrl": ""
+      }
+    },
+    "stat": {
+      "type": "stat",
+      "label": "Счётчик",
+      "description": "Фолловеры, подписчики, топ донат или донаты за стрим — плашкой",
+      "icon": "widgetStat",
+      "services": [
+        "twitchEvents",
+        "donationAlerts",
+        "youtube"
+      ],
+      "defaultGeometry": {
+        "x": 3,
+        "y": 4,
+        "w": 18,
+        "h": 8
+      },
+      "minW": 10,
+      "minH": 5,
+      "defaultConfig": {
+        "metric": "followers",
+        "label": ""
+      }
+    },
+    "social": {
+      "type": "social",
+      "label": "Соц. баннер",
+      "description": "По очереди показывает ваши соцсети",
+      "icon": "widgetSocial",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 90,
+        "w": 20,
+        "h": 7
+      },
+      "minW": 12,
+      "minH": 5,
+      "defaultConfig": {
+        "rotateIntervalSec": 8,
+        "socials": [
+          {
+            "platform": "TG",
+            "text": "t.me/your_channel"
+          },
+          {
+            "platform": "DC",
+            "text": "discord.gg/your_server"
+          },
+          {
+            "platform": "YT",
+            "text": "youtube.com/@channel"
+          }
+        ]
+      }
+    },
+    "timer": {
+      "type": "timer",
+      "label": "Таймер Executive Hangar",
+      "description": "Executive Hangar: фазы, огни и обратный отсчёт (темы Orbital и свои)",
+      "icon": "widgetTimer",
+      "themes": [
+        "orbital",
+        "custom"
+      ],
+      "defaultGeometry": {
+        "x": 36,
+        "y": 8,
+        "w": 28,
+        "h": 18
+      },
+      "minW": 16,
+      "minH": 10,
+      "defaultConfig": {
+        "showLights": true,
+        "showCycle": true,
+        "showTelemetry": true
+      }
+    },
+    "grimhex-timer": {
+      "type": "grimhex-timer",
+      "label": "Таймер Grim HEX",
+      "description": "Executive Hangar: фазы, огни и обратный отсчёт (только для темы Grim HEX)",
+      "icon": "widgetTimer",
+      "dimension": "3d",
+      "theme": "grimhex",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 36,
+        "y": 6,
+        "w": 28,
+        "h": 20
+      },
+      "minW": 16,
+      "minH": 10,
+      "defaultConfig": {
+        "showLights": true,
+        "showCycle": true,
+        "showTelemetry": true
+      }
+    },
+    "mic": {
+      "type": "mic",
+      "label": "Визуализатор микрофона",
+      "description": "Анимированная звуковая волна",
+      "icon": "widgetMic",
+      "defaultGeometry": {
+        "x": 50,
+        "y": 82,
+        "w": 40,
+        "h": 12
+      },
+      "minW": 10,
+      "minH": 3,
+      "defaultConfig": {}
+    },
+    "death": {
+      "type": "death",
+      "label": "Счётчик смертей",
+      "description": "Крупный счётчик смертей для челлендж-стримов",
+      "icon": "widgetDeath",
+      "defaultGeometry": {
+        "x": 80,
+        "y": 4,
+        "w": 16,
+        "h": 12
+      },
+      "minW": 8,
+      "minH": 5,
+      "defaultConfig": {
+        "label": "Смерти",
+        "color": "#ff4d4d"
+      }
+    },
+    "soundboard": {
+      "type": "soundboard",
+      "label": "Шумотека",
+      "description": "Звук и попап-карточка за баллы канала",
+      "icon": "widgetSoundboard",
+      "defaultGeometry": {
+        "x": 32,
+        "y": 38,
+        "w": 36,
+        "h": 24
+      },
+      "minW": 12,
+      "minH": 8,
+      "defaultConfig": {
+        "popupDurationMs": 4600,
+        "imageSize": 200,
+        "showImage": true,
+        "showText": true,
+        "showBackground": true,
+        "showBorder": true
+      }
+    },
+    "grimhex": {
+      "type": "grimhex",
+      "label": "Вывеска Grim HEX",
+      "description": "Анимированная неоновая 3D-вывеска (только для темы Grim HEX)",
+      "icon": "widgetGrimHex",
+      "dimension": "3d",
+      "theme": "grimhex",
+      "role": "sign",
+      "defaultGeometry": {
+        "x": 38,
+        "y": 6,
+        "w": 24,
+        "h": 16
+      },
+      "minW": 10,
+      "minH": 6,
+      "defaultConfig": {
+        "perspective": 0
+      }
+    },
+    "musain": {
+      "type": "musain",
+      "label": "Вывеска Café Musain",
+      "description": "Анимированная неоновая вывеска Café Musain (только для темы Grim HEX)",
+      "icon": "widgetMusain",
+      "dimension": "3d",
+      "theme": "grimhex",
+      "defaultGeometry": {
+        "x": 34,
+        "y": 8,
+        "w": 28,
+        "h": 21
+      },
+      "minW": 12,
+      "minH": 6,
+      "defaultConfig": {
+        "perspective": 0
+      }
+    },
+    "grimhex-chat": {
+      "type": "grimhex-chat",
+      "label": "Чат Grim HEX",
+      "description": "Чат стрима в неоновом HUD Grim HEX (только для темы Grim HEX)",
+      "icon": "widgetGrimHexChat",
+      "services": [
+        "twitchChat",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "grimhex",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 68,
+        "y": 6,
+        "w": 29,
+        "h": 46
+      },
+      "minW": 16,
+      "minH": 16,
+      "defaultConfig": {
+        "maxMessages": 50,
+        "perspective": 0
+      }
+    },
+    "grimhex-goal": {
+      "type": "grimhex-goal",
+      "label": "Цель Grim HEX",
+      "description": "Донат-цель из 5 неоновых секторов (только для темы Grim HEX)",
+      "icon": "widgetGrimHexGoal",
+      "services": [
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "grimhex",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 84,
+        "w": 32,
+        "h": 6
+      },
+      "minW": 16,
+      "minH": 4,
+      "defaultConfig": {
+        "showPercentage": false
+      }
+    },
+    "grimhex-holo-alert": {
+      "type": "grimhex-holo-alert",
+      "label": "Голограмма Grim HEX",
+      "description": "Голографический терминал с вращающимся 3D-значком (только для темы Grim HEX)",
+      "icon": "widgetGrimHexHoloAlert",
+      "services": [
+        "twitchEvents",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "grimhex",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 40,
+        "y": 16,
+        "w": 26,
+        "h": 14
+      },
+      "minW": 16,
+      "minH": 8,
+      "defaultConfig": {}
+    },
+    "grimhex-radar": {
+      "type": "grimhex-radar",
+      "label": "Радар Grim HEX",
+      "description": "Голографический радар с кораблями-донатерами (только для темы Grim HEX)",
+      "icon": "widgetGrimHexRadar",
+      "services": [
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "grimhex",
+      "role": "radar",
+      "defaultGeometry": {
+        "x": 42,
+        "y": 8,
+        "w": 16,
+        "h": 24
+      },
+      "minW": 12,
+      "minH": 12,
+      "defaultConfig": {
+        "opacity": 100
+      }
+    },
+    "nuclear": {
+      "type": "nuclear",
+      "label": "Знак радиации",
+      "description": "Анимированный неоновый 3D-знак радиации (только для темы Nuclear)",
+      "icon": "widgetNuclear",
+      "dimension": "3d",
+      "theme": "nuclear",
+      "role": "sign",
+      "defaultGeometry": {
+        "x": 38,
+        "y": 6,
+        "w": 24,
+        "h": 16
+      },
+      "minW": 10,
+      "minH": 6,
+      "defaultConfig": {
+        "perspective": 0
+      }
+    },
+    "nuclear-chat": {
+      "type": "nuclear-chat",
+      "label": "Чат Nuclear",
+      "description": "Чат стрима в радиоактивном HUD (только для темы Nuclear)",
+      "icon": "widgetNuclearChat",
+      "services": [
+        "twitchChat",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "nuclear",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 68,
+        "y": 6,
+        "w": 29,
+        "h": 46
+      },
+      "minW": 16,
+      "minH": 16,
+      "defaultConfig": {
+        "maxMessages": 50,
+        "perspective": 0
+      }
+    },
+    "nuclear-goal": {
+      "type": "nuclear-goal",
+      "label": "Цель Nuclear",
+      "description": "Донат-цель из радиоактивных секторов (только для темы Nuclear)",
+      "icon": "widgetNuclearGoal",
+      "services": [
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "nuclear",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 84,
+        "w": 32,
+        "h": 6
+      },
+      "minW": 16,
+      "minH": 4,
+      "defaultConfig": {
+        "showPercentage": false
+      }
+    },
+    "nuclear-holo-alert": {
+      "type": "nuclear-holo-alert",
+      "label": "Голограмма Nuclear",
+      "description": "Радиоактивный терминал с вращающимся 3D-значком (только для темы Nuclear)",
+      "icon": "widgetNuclearHoloAlert",
+      "services": [
+        "twitchEvents",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "nuclear",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 40,
+        "y": 16,
+        "w": 26,
+        "h": 14
+      },
+      "minW": 16,
+      "minH": 8,
+      "defaultConfig": {}
+    },
+    "cobra": {
+      "type": "cobra",
+      "label": "Корабль Cobra Mk II",
+      "description": "Анимированная голограмма корабля Cobra Mk II (только для темы Cobra Mk II)",
+      "icon": "widgetCobra",
+      "dimension": "3d",
+      "theme": "cobra-mk2",
+      "role": "sign",
+      "defaultGeometry": {
+        "x": 38,
+        "y": 6,
+        "w": 24,
+        "h": 16
+      },
+      "minW": 10,
+      "minH": 6,
+      "defaultConfig": {
+        "perspective": 0
+      }
+    },
+    "elite-sign": {
+      "type": "elite-sign",
+      "label": "Вывеска Elite",
+      "description": "Анимированная неоновая вывеска с эмблемой Elite (только для темы Cobra Mk II)",
+      "icon": "widgetEliteSign",
+      "dimension": "3d",
+      "theme": "cobra-mk2",
+      "defaultGeometry": {
+        "x": 38,
+        "y": 6,
+        "w": 24,
+        "h": 16
+      },
+      "minW": 10,
+      "minH": 6,
+      "defaultConfig": {
+        "perspective": 0
+      }
+    },
+    "teso-seal": {
+      "type": "teso-seal",
+      "label": "Печать Уроборос",
+      "description": "Анимированная золотая печать Уроборос (только для темы TESO)",
+      "icon": "widgetTesoSeal",
+      "dimension": "3d",
+      "theme": "teso-seal",
+      "role": "sign",
+      "defaultGeometry": {
+        "x": 38,
+        "y": 6,
+        "w": 24,
+        "h": 16
+      },
+      "minW": 10,
+      "minH": 6,
+      "defaultConfig": {
+        "perspective": 0
+      }
+    },
+    "teso-chat": {
+      "type": "teso-chat",
+      "label": "Чат TESO",
+      "description": "Чат стрима в золотом HUD TESO (только для темы TESO)",
+      "icon": "widgetTesoChat",
+      "services": [
+        "twitchChat",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "teso-seal",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 68,
+        "y": 6,
+        "w": 29,
+        "h": 46
+      },
+      "minW": 16,
+      "minH": 16,
+      "defaultConfig": {
+        "maxMessages": 50,
+        "perspective": 0
+      }
+    },
+    "teso-goal": {
+      "type": "teso-goal",
+      "label": "Цель TESO",
+      "description": "ХП-бар цели в стиле TESO (только для темы TESO)",
+      "icon": "widgetTesoGoal",
+      "services": [
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "teso-seal",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 84,
+        "w": 32,
+        "h": 3
+      },
+      "minW": 16,
+      "minH": 2,
+      "defaultConfig": {
+        "showPercentage": false
+      }
+    },
+    "teso-holo-alert": {
+      "type": "teso-holo-alert",
+      "label": "Голограмма TESO",
+      "description": "Голографический терминал с вращающейся золотой печатью (только для темы TESO)",
+      "icon": "widgetTesoHoloAlert",
+      "services": [
+        "twitchEvents",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "teso-seal",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 40,
+        "y": 16,
+        "w": 26,
+        "h": 14
+      },
+      "minW": 16,
+      "minH": 8,
+      "defaultConfig": {}
+    },
+    "cobra-chat": {
+      "type": "cobra-chat",
+      "label": "Чат Cobra",
+      "description": "Чат стрима в оранжевом HUD Cobra Mk II (только для темы Cobra Mk II)",
+      "icon": "widgetCobraChat",
+      "services": [
+        "twitchChat",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "cobra-mk2",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 68,
+        "y": 6,
+        "w": 29,
+        "h": 46
+      },
+      "minW": 16,
+      "minH": 16,
+      "defaultConfig": {
+        "maxMessages": 50,
+        "perspective": 0
+      }
+    },
+    "cobra-goal": {
+      "type": "cobra-goal",
+      "label": "Цель Cobra",
+      "description": "Донат-цель из оранжевых секторов (только для темы Cobra Mk II)",
+      "icon": "widgetCobraGoal",
+      "services": [
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "cobra-mk2",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 84,
+        "w": 32,
+        "h": 6
+      },
+      "minW": 16,
+      "minH": 4,
+      "defaultConfig": {
+        "showPercentage": false
+      }
+    },
+    "cobra-holo-alert": {
+      "type": "cobra-holo-alert",
+      "label": "Голограмма Cobra",
+      "description": "Голографический терминал с вращающимся кораблём (только для темы Cobra Mk II)",
+      "icon": "widgetCobraHoloAlert",
+      "services": [
+        "twitchEvents",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "cobra-mk2",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 40,
+        "y": 16,
+        "w": 26,
+        "h": 14
+      },
+      "minW": 16,
+      "minH": 8,
+      "defaultConfig": {}
+    },
+    "cobra-shield": {
+      "type": "cobra-shield",
+      "label": "Щит Cobra",
+      "description": "Донат-цель с кораблём и кольцами щита (только для темы Cobra Mk II)",
+      "icon": "widgetCobraShield",
+      "services": [
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "cobra-mk2",
+      "role": "shield",
+      "defaultGeometry": {
+        "x": 40,
+        "y": 64,
+        "w": 20,
+        "h": 28
+      },
+      "minW": 12,
+      "minH": 14,
+      "defaultConfig": {
+        "opacity": 100
+      }
+    },
+    "cobra-radar": {
+      "type": "cobra-radar",
+      "label": "Радар Cobra",
+      "description": "Перспективный круговой радар с кораблями-донатерами (только для темы Cobra Mk II)",
+      "icon": "widgetCobraRadar",
+      "services": [
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "cobra-mk2",
+      "role": "radar",
+      "defaultGeometry": {
+        "x": 42,
+        "y": 8,
+        "w": 16,
+        "h": 24
+      },
+      "minW": 12,
+      "minH": 12,
+      "defaultConfig": {
+        "opacity": 100
+      }
+    },
+    "md3-orb": {
+      "type": "md3-orb",
+      "label": "Сфера Material You",
+      "description": "Мягкая 3D-сфера в тонах темы с орбитой (только для темы Material You)",
+      "icon": "widgetMd3Orb",
+      "dimension": "3d",
+      "theme": "nebula",
+      "role": "sign",
+      "defaultGeometry": {
+        "x": 38,
+        "y": 6,
+        "w": 24,
+        "h": 16
+      },
+      "minW": 10,
+      "minH": 6,
+      "defaultConfig": {
+        "perspective": 0
+      }
+    },
+    "md3-chat": {
+      "type": "md3-chat",
+      "label": "Чат Material You",
+      "description": "Чат стрима на приподнятой карточке Material You (только для темы Material You)",
+      "icon": "widgetMd3Chat",
+      "services": [
+        "twitchChat",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "nebula",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 68,
+        "y": 6,
+        "w": 29,
+        "h": 46
+      },
+      "minW": 16,
+      "minH": 16,
+      "defaultConfig": {
+        "maxMessages": 50,
+        "perspective": 0
+      }
+    },
+    "md3-goal": {
+      "type": "md3-goal",
+      "label": "Цель Material You",
+      "description": "Донат-цель с градиентным прогрессом в стиле Material You (только для темы Material You)",
+      "icon": "widgetMd3Goal",
+      "services": [
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "nebula",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 84,
+        "w": 32,
+        "h": 6
+      },
+      "minW": 16,
+      "minH": 4,
+      "defaultConfig": {
+        "showPercentage": false
+      }
+    },
+    "md3-holo-alert": {
+      "type": "md3-holo-alert",
+      "label": "Алерт Material You",
+      "description": "Всплывающий алерт с вращающимся 3D-значком (только для темы Material You)",
+      "icon": "widgetMd3HoloAlert",
+      "services": [
+        "twitchEvents",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "nebula",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 40,
+        "y": 16,
+        "w": 26,
+        "h": 14
+      },
+      "minW": 16,
+      "minH": 8,
+      "defaultConfig": {}
+    },
+    "pixel-cube": {
+      "type": "pixel-cube",
+      "label": "Куб Pixel Perfect",
+      "description": "Вращающийся изометрический пиксель-куб (только для темы Pixel Perfect)",
+      "icon": "widgetPixelCube",
+      "dimension": "3d",
+      "theme": "pixel",
+      "role": "sign",
+      "defaultGeometry": {
+        "x": 38,
+        "y": 6,
+        "w": 24,
+        "h": 16
+      },
+      "minW": 10,
+      "minH": 6,
+      "defaultConfig": {
+        "perspective": 0
+      }
+    },
+    "pixel-chat": {
+      "type": "pixel-chat",
+      "label": "Чат Pixel Perfect",
+      "description": "Пиксельный чат на плоской панели (только для темы Pixel Perfect)",
+      "icon": "widgetPixelChat",
+      "services": [
+        "twitchChat",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "pixel",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 68,
+        "y": 6,
+        "w": 29,
+        "h": 46
+      },
+      "minW": 16,
+      "minH": 16,
+      "defaultConfig": {
+        "maxMessages": 50,
+        "perspective": 0
+      }
+    },
+    "pixel-goal": {
+      "type": "pixel-goal",
+      "label": "Цель Pixel Perfect",
+      "description": "Блочная пиксельная шкала донат-цели (только для темы Pixel Perfect)",
+      "icon": "widgetPixelGoal",
+      "services": [
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "pixel",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 84,
+        "w": 32,
+        "h": 6
+      },
+      "minW": 16,
+      "minH": 4,
+      "defaultConfig": {
+        "showPercentage": false
+      }
+    },
+    "pixel-holo-alert": {
+      "type": "pixel-holo-alert",
+      "label": "Алерт Pixel Perfect",
+      "description": "Пиксельный алерт с вращающимся значком (только для темы Pixel Perfect)",
+      "icon": "widgetPixelHoloAlert",
+      "services": [
+        "twitchEvents",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "pixel",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 40,
+        "y": 16,
+        "w": 26,
+        "h": 14
+      },
+      "minW": 16,
+      "minH": 8,
+      "defaultConfig": {}
+    }
+  },
+  "canvas": {
+    "w": 1920,
+    "h": 1080
+  },
+  "animatedTypes": [
+    "mic",
+    "grimhex",
+    "musain",
+    "grimhex-radar",
+    "grimhex-holo-alert",
+    "grimhex-goal",
+    "cobra",
+    "cobra-radar",
+    "cobra-shield",
+    "cobra-holo-alert",
+    "cobra-goal",
+    "elite-sign",
+    "nuclear",
+    "nuclear-goal",
+    "nuclear-holo-alert",
+    "teso-seal",
+    "md3-orb",
+    "md3-goal",
+    "pixel-cube",
+    "pixel-goal"
+  ]
+}

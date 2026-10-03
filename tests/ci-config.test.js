@@ -23,20 +23,22 @@
   при попытке выпустить релиз. Здесь читаются те же файлы и проверяется то, что
   ломается тише всего:
 
-    * matrix прогоняет lint и тесты на всех трёх платформах, на которых
+    * matrix прогоняет линт и тесты на всех трёх платформах, на которых
       поставляется приложение;
     * версия Node в CI совпадает с engines.node — иначе CI проверяет не ту среду,
       в которой приложение запускается;
     * каждый «npm run <скрипт>» из workflow существует в package.json: опечатка
       вроде `distt:win` иначе всплыла бы только в день релиза;
-    * релизный workflow запускается по тегу, отказывается собирать версию,
-      не совпадающую с package.json, и умеет загружать артефакты (GH_TOKEN);
+    * бэкенд на Rust — под тем же гейтом: `cargo test`/`cargo clippy` в CI и в
+      релизе, иначе порт на Tauri мог бы уехать в релиз красным;
+    * релизный workflow запускается по тегу, отказывается собирать версию, не
+      совпадающую с package.json/tauri.conf.json, и подписывает обновления;
     * релиз собирает ровно один workflow: два сборщика на один тег — это гонка
       за один и тот же черновик, а не двойная страховка;
-    * публикация не размножается по платформам: сборка ничего не публикует, а
-      черновик создаёт одна задача. Так было сломано на v3.2.5 — публиковал
-      каждый job матрицы, и по тегу выходило три релиза с неполным набором
-      файлов вместо одного;
+    * десктопные установщики складываются в единственный черновик релиза
+      (`tauri-action` по `tagName`), а не размножаются по платформам. Так было
+      сломано на Electron-версии (v3.2.5): публиковал каждый job матрицы, и по
+      тегу выходило три релиза с неполным набором файлов;
     * уведомление сайта после публикации релиза шлёт то событие и тому
       репозиторию, которые сайт слушает: опечатка здесь ничего не ломает — сайт
       просто никогда не пересоберётся, и видно это будет только по устаревшей
@@ -87,6 +89,15 @@ describe("CI: файлы workflow", () => {
     expect(ci.indexOf("npm run lint")).toBeLessThan(ci.indexOf("npm test"));
   });
 
+  test("Rust-бэкенд под тем же гейтом, что и фронт", () => {
+    // Порт на Tauri нельзя выпустить, не прогнав его тесты и clippy: иначе
+    // зелёный Jest ничего не говорит о бэкенде.
+    expect(ci).toContain("cargo test --manifest-path src-tauri/Cargo.toml --lib");
+    expect(ci).toContain("cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings");
+    // На Linux WebKitGTK/GTK не в системе — без них крейт `tauri` не соберётся.
+    expect(ci).toContain("libwebkit2gtk-4.1-dev");
+  });
+
   test("версия Node в CI совпадает с engines", () => {
     const engine = String(pkg.engines?.node || "").replace(/^[^\d]*/, "");
     expect(engine).toMatch(/^\d+\.\d+\.\d+/);
@@ -130,65 +141,38 @@ describe("CI: файлы workflow", () => {
     expect(missing).toEqual([]);
   });
 
-  test("релиз: только по тегу, с проверкой версии и загрузкой артефактов", () => {
+  test("релиз: только по тегу, с проверкой версий", () => {
     expect(release).toContain('tags: ["v*"]');
     expect(release).toContain("GITHUB_REF_NAME");
     expect(release).toContain("package.json");
+    // Версия Tauri-сборки берётся из tauri.conf.json и должна совпадать.
+    expect(release).toContain("src-tauri/tauri.conf.json");
     expect(release).toContain("contents: write");
-    expect(release).toContain("GH_TOKEN");
-    expect(release).toContain("gh release upload");
   });
 
-  test("релиз собирается только после зелёных тестов и для всех платформ поставки", () => {
-    /*
-      Цель сборки передаётся electron-builder флагом, а не именем npm-скрипта:
-      npm считает `--publish` своим ключом и не отдаёт его скрипту — тогда до
-      сборщика доезжает «--win always», и релиз падает на «Unknown target».
-      Проверяем то, что от этого не зависит: все платформы, публикация и порядок
-      «сначала линт и тесты».
-    */
-    expect(release).toContain("--win");
-    expect(release).toContain("--linux");
-    expect(release).toContain("--mac");
-    // Сверяем с шагом сборки, а не с первым упоминанием флага в комментариях.
-    expect(release.indexOf("npm run lint")).toBeLessThan(release.indexOf("npx electron-builder"));
-    expect(release.indexOf("npm test")).toBeLessThan(release.indexOf("npx electron-builder"));
+  test("релиз собирается только после зелёных тестов", () => {
+    expect(release).toContain("npm run lint");
+    expect(release).toContain("npm test");
+    expect(release).toContain("cargo test --manifest-path src-tauri/Cargo.toml --lib");
+    expect(release.indexOf("npm run lint")).toBeLessThan(release.indexOf("tauri-apps/tauri-action"));
+    expect(release.indexOf("npm test")).toBeLessThan(release.indexOf("tauri-apps/tauri-action"));
   });
 
   test("установщики собираются по платформам, а черновик релиза один", () => {
     /*
-      Так было сломано на v3.2.5: публиковал каждый job матрицы, и по одному тегу
-      выходило три черновика — в каждом только своя платформа. Публикация должна
-      жить в одной задаче, иначе GitHub снова получит несколько релизов одной
-      версии, а автообновление не найдёт latest.yml целиком.
+      Так было сломано на Electron-версии: публиковал каждый job матрицы, и по
+      одному тегу выходило три черновика — в каждом только своя платформа. Теперь
+      сборку и загрузку делает `tauri-action` по `tagName`: все job'ы пишут в один
+      релиз по тегу, а не создают свою копию.
     */
-    expect(release).toContain("--publish never");
-    expect(release).not.toContain("--publish always");
-    expect(release).toContain("upload-artifact");
-    expect(release).toContain("download-artifact");
-    expect(release).toContain("--draft");
-
-    // Ровно одно место создаёт релиз и ровно одно кладёт в него ассеты.
-    expect(release.match(/gh release create/g)).toHaveLength(1);
-    expect(release.match(/gh release upload/g)).toHaveLength(1);
-  });
-
-  test("имена ассетов совпадают с тем, что записано в latest*.yml", () => {
-    /*
-      Так было сломано на v3.2.6: electron-builder пишет в latest*.yml имена с
-      дефисами вместо пробелов, а GitHub при загрузке меняет пробелы на точки.
-      Манифест ждал `Open-Stream-Environment-…-setup.exe`, в релизе лежал
-      `Open.Stream.Environment-…-setup.exe` — и автообновление просило файл,
-      которого нет. Поэтому пробелы в именах убираются до загрузки.
-    */
-    expect(release).toContain("tr ' ' '-'");
-    expect(release).toContain("upload/*");
-    expect(release).not.toContain('gh release upload "$tag" dist/*');
-
-    // Манифесты перечислены по именам: `release/*.yml` тянул builder-debug.yml.
-    expect(release).toContain("release/latest.yml");
-    expect(release).toContain("release/latest-linux.yml");
-    expect(release).toContain("release/latest-mac.yml");
+    ["windows-latest", "ubuntu-latest", "macos-latest"].forEach((os) => {
+      expect({ os, present: release.includes(os) }).toEqual({ os, present: true });
+    });
+    expect(release).toContain("tauri-apps/tauri-action");
+    expect(release).toContain("releaseDraft: true");
+    // Подпись обновлений: без приватного ключа `latest.json` и `.sig` не появятся,
+    // и встроенное автообновление не найдёт ни версию, ни файл.
+    expect(release).toContain("TAURI_SIGNING_PRIVATE_KEY");
   });
 
   test("по тегу публикует ровно один workflow", () => {
@@ -203,7 +187,7 @@ describe("CI: файлы workflow", () => {
     const publishers = files.filter((name) => {
       const source = workflow(name);
       const onTagPush = /tags:/.test(source);
-      const buildsInstallers = /electron-builder/.test(source);
+      const buildsInstallers = /tauri-apps\/tauri-action/.test(source);
       return onTagPush && buildsInstallers;
     });
 

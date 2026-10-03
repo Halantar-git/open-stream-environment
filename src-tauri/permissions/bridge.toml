@@ -1,0 +1,66 @@
+# Команды моста `window.desktop.*` и `window.chatDesktop.*` (см. `preload-tauri.js`).
+#
+# Зачем это нужно. Панель, оверлей и окна-редакторы грузятся со своего HTTP-сервера
+# (`http://127.0.0.1:порт`), а для Tauri это **внешний** источник. Собственные
+# команды приложения Tauri 2 разрешает без разрешений только локальным страницам;
+# для внешних нужен app-манифест — этот файл. Без него IPC отвечает
+# «… not allowed. Plugin not found», и весь мост молча не работает: панель видит
+# метод (`window.desktop.changeLanguage`) и не уходит на резервный путь через шину,
+# поэтому, например, не переключался язык.
+#
+# Список должен совпадать с `preload-tauri.js`; тест
+# `bridge_permissions_cover_every_preload_command` держит их вместе.
+
+[[permission]]
+identifier = "bridge"
+description = "Разрешает команды моста панели, оверлея и окон-редакторов (страницы локального HTTP-сервера)."
+commands.allow = [
+  "get_info",
+  "get_displays",
+  "open_external",
+  "copy_text",
+  "connect_twitch",
+  "connect_donation_alerts",
+  "connect_youtube",
+  "export_config",
+  "import_config",
+  "save_support_bundle",
+  "export_theme",
+  "import_theme",
+  "open_chat_window",
+  "change_language",
+  "open_widget_editor",
+  "open_theme_preview",
+  "open_theme_samples",
+  "open_theme_editor",
+  "get_theme_editor_init",
+  "close_current_window",
+  "quit_and_install",
+  "download_and_install",
+  "check_for_updates",
+  "pick_sound_file",
+  "replay_event",
+  "db_get_sessions",
+  "db_get_sessions_with_stats",
+  "db_get_chat",
+  "db_get_chat_page",
+  "db_get_stream_events",
+  "db_remove_stream_events",
+  "db_clear_stream_events",
+  "db_clear_sessions",
+  "db_clear_chat",
+  "db_get_storage_stats",
+  "open_data_folder",
+  "db_get_history_limit",
+  "db_set_history_limit",
+  "db_get_chat_history_enabled",
+  "db_set_chat_history_enabled",
+  "db_reset_all",
+  "export_stream_events",
+  "backup_list",
+  "backup_restore",
+  "rotate_access_code",
+  "get_chat_always_on_top",
+  "toggle_chat_always_on_top",
+  "toggle_fullscreen",
+]

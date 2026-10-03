@@ -23,6 +23,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # ---- Фронтенд (JS): он остаётся прежним и гоняется на Jest. ----
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -39,3 +40,34 @@ jobs:
 
       - name: Test
         run: npm test
+
+      # ---- Бэкенд (Rust, src-tauri): гейт порта. ----
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # На Linux, в отличие от Windows (WebView2 в системе) и macOS (WkWebView),
+      # библиотеки WebKitGTK и GTK идут отдельно — без них крейт `tauri` не
+      # соберётся, и упадут даже `cargo test --lib` и `cargo clippy`.
+      - name: Install Linux system libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libgtk-3-dev
+
+      - name: Cargo test
+        run: cargo test --manifest-path src-tauri/Cargo.toml --lib
+
+      - name: Cargo clippy
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
