@@ -18,9 +18,10 @@
 /*
   Elgato Stream Deck plugin for Open Stream Environment (OSE).
 
-  Scene-only remote: one key per OSE scene (start / brb / wheel / talk / end).
-  The active scene is highlighted via a second state, and custom icons from the
-  OSE control panel (streamdeck.icons.<scene>) are applied over the defaults.
+  Scene-only remote: one key per OSE scene (start / brb / wheel / talk / main /
+  end / poll / pause). The active scene is highlighted via a second state:
+  bundled per-scene artwork from assets/scenes/, or custom icons from the OSE
+  control panel (streamdeck.icons.<scene>) applied over the defaults.
 
   Bridges two WebSockets:
     - the Stream Deck application on 127.0.0.1 (registration + key events);
@@ -218,11 +219,12 @@ function fetchImageAsDataUrl(url) {
   });
 }
 
-// Default manifest icons, pre-read so we can restore them after a custom icon
-// is cleared. Try both `__dirname` (unbundled) and `process.cwd()` (bundled into
-// dist/app.js) since the plugin runs from the plugin root directory.
-const DEFAULT_IMAGES = { 0: null, 1: null };
-
+// Icons are pre-read so we can restore them after a custom icon is cleared.
+// Per-scene artwork lives in `assets/scenes/<scene>.png` (idle) and
+// `<scene>-active.png` (highlighted); the generic `assets/scene*.png` stays as a
+// fallback for an unknown scene. Try both `__dirname` (unbundled) and
+// `process.cwd()` (bundled into dist/app.js) since the plugin runs from the
+// plugin root directory.
 function loadDefaultIcon(file) {
   for (const base of [__dirname, process.cwd()]) {
     try {
@@ -234,24 +236,37 @@ function loadDefaultIcon(file) {
   return null;
 }
 
-DEFAULT_IMAGES[0] = loadDefaultIcon("assets/scene.png");
-DEFAULT_IMAGES[1] = loadDefaultIcon("assets/scene-active.png");
+const GENERIC_IMAGES = {
+  0: loadDefaultIcon("assets/scene.png"),
+  1: loadDefaultIcon("assets/scene-active.png"),
+};
 
-function applyCustomIcon(context, iconPath) {
-  const prev = appliedIcon.get(context);
-  if (prev === iconPath) return;
+const SCENE_IMAGES = new Map();
+for (const [id] of SCENES) {
+  const idle = loadDefaultIcon(`assets/scenes/${id}.png`);
+  const active = loadDefaultIcon(`assets/scenes/${id}-active.png`);
+  if (idle || active) {
+    SCENE_IMAGES.set(id, { 0: idle || GENERIC_IMAGES[0], 1: active || GENERIC_IMAGES[1] });
+  }
+}
+
+function sceneImages(scene) {
+  return SCENE_IMAGES.get(scene) || GENERIC_IMAGES;
+}
+
+function applyIcon(context, scene, iconPath) {
+  // The dedupe key doubles as the "what is currently drawn" marker: a scene id
+  // for the bundled artwork, or the fetched path for a custom icon.
+  const target = iconPath ? iconPath : `scene:${scene}`;
+  if (appliedIcon.get(context) === target) return;
+  appliedIcon.set(context, target);
 
   if (!iconPath) {
-    // Restore the manifest defaults, but only if we had pushed a custom icon.
-    if (prev) {
-      if (DEFAULT_IMAGES[0]) setImage(context, DEFAULT_IMAGES[0], 0);
-      if (DEFAULT_IMAGES[1]) setImage(context, DEFAULT_IMAGES[1], 1);
-    }
-    appliedIcon.set(context, "");
+    const images = sceneImages(scene);
+    if (images[0]) setImage(context, images[0], 0);
+    if (images[1]) setImage(context, images[1], 1);
     return;
   }
-
-  appliedIcon.set(context, iconPath);
 
   const cached = iconCache.get(iconPath);
   if (cached) {
@@ -306,6 +321,9 @@ function handleStreamDeckEvent(msg) {
     }
     case "willDisappear":
       instances.delete(msg.context);
+      // Drop the dedupe marker so the next willAppear re-pushes the artwork
+      // (a key keeps its last image, not the manifest default, on re-appear).
+      appliedIcon.delete(msg.context);
       break;
     default:
       break;
@@ -334,7 +352,7 @@ function syncInstance(context) {
   setState(context, oseState.activeScene === scene ? 1 : 0);
 
   const icon = oseState.icons && oseState.icons[scene];
-  applyCustomIcon(context, icon || "");
+  applyIcon(context, scene, icon || "");
 }
 
 function syncAll() {
