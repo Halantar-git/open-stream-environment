@@ -262,10 +262,12 @@ pub fn router(root: &Path, diagnostics: Arc<Diagnostics>) -> Router {
         diagnostics: diagnostics.clone(),
         locales: Locales::load(root).map(Arc::new),
     };
+    let media_dir = diagnostics.storage().media_dir();
     static_routes(root)
         .merge(ws_routes(bus))
         .merge(diagnostics_routes(diagnostics.clone()))
         .merge(oauth_routes(diagnostics))
+        .merge(media_routes(media_dir))
 }
 
 /// Состояние шины: диагностика (в ней же реестр клиентов) и словари.
@@ -539,6 +541,17 @@ fn static_routes(root: &Path) -> Router {
         router = router.nest_service(&format!("/{name}"), ServeDir::new(dir(name)));
     }
     router.layer(middleware::from_fn(redirect_directory_roots))
+}
+
+/// Пользовательские медиа (`media` в каталоге данных): видео-заставки, фоны
+/// паузы, картинки и звуки звуковой панели.
+///
+/// Каталог лежит вне статики приложения — это данные пользователя, а не
+/// ресурсы сборки, — поэтому у него отдельный маршрут. `ServeDir` отвечает на
+/// `Range`: без этого `<video>` не проигрывает файл, а сразу шлёт `error`, и
+/// заставка проматывается мгновенно. Так же отдавал файлы Electron-сервер.
+fn media_routes(media_dir: PathBuf) -> Router {
+    Router::new().nest_service("/media", ServeDir::new(media_dir))
 }
 
 fn diagnostics_routes(diagnostics: Arc<Diagnostics>) -> Router {
@@ -1102,6 +1115,40 @@ mod tests {
             assert_eq!(status, StatusCode::OK, "{uri}");
             assert!(body.len() > 1000, "{uri}: страница подозрительно мала");
         }
+    }
+
+    #[tokio::test]
+    async fn serves_user_media_with_ranges() {
+        let fixture = Fixture::new();
+        let media = fixture.diagnostics.storage().media_dir();
+        fs::create_dir_all(&media).expect("каталог media должен создаваться");
+        fs::write(media.join("intro.mp4"), b"0123456789").expect("файл заставки");
+
+        // Обычный запрос: файл отдаётся с типом видео.
+        let response = request(&fixture, "/media/intro.mp4").await;
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(
+            response.headers()[header::CONTENT_TYPE]
+                .to_str()
+                .unwrap()
+                .starts_with("video/mp4"),
+            "заставка должна отдаваться как видео"
+        );
+
+        // С `Range` — 206: без этого `<video>` не проигрывает файл.
+        let ranged = fixture
+            .app()
+            .oneshot(
+                Request::builder()
+                    .uri("/media/intro.mp4")
+                    .header(header::RANGE, "bytes=0-3")
+                    .extension(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 1234))))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .expect("запрос должен дойти до сервера");
+        assert_eq!(ranged.status(), StatusCode::PARTIAL_CONTENT);
     }
 
     #[tokio::test]
