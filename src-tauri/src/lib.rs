@@ -227,6 +227,9 @@ pub fn run() {
             .initialization_script(include_str!("../preload-tauri.js"))
             .inner_size(1440.0, 900.0)
             .min_inner_size(1100.0, 700.0)
+            // Тёмный фон окна — как `backgroundColor: "#0e0b17"` в Electron: пока
+            // webview не отрисовался, видно тёмную панель, а не белое полотно.
+            .background_color(tauri::window::Color(0x0e, 0x0b, 0x17, 0xff))
             // Без заставки показываем сразу; с ней — только когда страница готова.
             .visible(!has_splash)
             .on_page_load(move |window, payload| {
@@ -571,8 +574,11 @@ fn finish_startup(app: &tauri::AppHandle, main: &WebviewWindow) {
     if let Some(splash) = app.get_webview_window("splash") {
         let _ = splash.close();
     }
-    let _ = main.maximize();
+    // Сначала показываем, потом разворачиваем: у WebView2 окно, показанное уже
+    // развёрнутым из скрытого состояния, иногда остаётся белым до первого
+    // изменения размера — `maximize` после `show` и даёт это изменение.
     let _ = main.show();
+    let _ = main.maximize();
 }
 
 /// Корень репозитория: рядом лежат `control/`, `overlay/`, `shared/`, `assets/`.

@@ -222,6 +222,7 @@ pub fn open_chat_window(app: tauri::AppHandle, state: tauri::State<'_, DesktopSt
     open_window(
         &app,
         "chat",
+        "Чат — Open Stream Environment",
         page_url(
             state.diagnostics.port(),
             "/chatwindow/chat-window.html",
@@ -250,6 +251,7 @@ pub fn open_widget_editor(
     open_window(
         &app,
         &label,
+        "Редактор виджета — Open Stream Environment",
         page_url(
             state.diagnostics.port(),
             "/widgeteditor/widget-editor.html",
@@ -271,6 +273,7 @@ pub fn open_theme_preview(app: tauri::AppHandle, state: tauri::State<'_, Desktop
     open_window(
         &app,
         "theme-preview",
+        "Предпросмотр темы — Open Stream Environment",
         page_url(
             state.diagnostics.port(),
             "/overlay/overlay.html",
@@ -292,6 +295,7 @@ pub fn open_theme_samples(app: tauri::AppHandle, state: tauri::State<'_, Desktop
     open_window(
         &app,
         "theme-samples",
+        "Образцы тем — Open Stream Environment",
         page_url(state.diagnostics.port(), "/overlay/samples.html", &[]),
         (720.0, 900.0),
         (480.0, 640.0),
@@ -320,6 +324,7 @@ pub fn open_theme_editor(
     open_window(
         &app,
         "theme-editor",
+        "Редактор темы — Open Stream Environment",
         page_url(
             state.diagnostics.port(),
             "/themeeditor/theme-editor.html",
@@ -1053,6 +1058,7 @@ fn focus_existing(app: &tauri::AppHandle, label: &str) -> bool {
 fn open_window(
     app: &tauri::AppHandle,
     label: &str,
+    title: &str,
     url: tauri::Url,
     size: (f64, f64),
     min: (f64, f64),
@@ -1060,6 +1066,12 @@ fn open_window(
     maximized: bool,
 ) -> Value {
     match WebviewWindowBuilder::new(app, label, WebviewUrl::External(url))
+        // Заголовок задаём явно: иначе окно носит имя по умолчанию ("Tauri App"),
+        // а заголовок страницы в заголовок окна не переносится.
+        .title(title)
+        // Тёмный фон — как `backgroundColor: "#0e0b17"` в Electron: пока страница
+        // не отрисовалась, видно тёмное полотно, а не белое.
+        .background_color(tauri::window::Color(0x0e, 0x0b, 0x17, 0xff))
         .initialization_script(include_str!("../preload-tauri.js"))
         .inner_size(size.0, size.1)
         .min_inner_size(min.0, min.1)
