@@ -209,7 +209,12 @@ pub fn run() {
             // заполнен `location.host`, и она сама подключается к шине по
             // WebSocket — как в Electron-версии, где оверлей грузится по HTTP
             // именно из-за этого.
-            let url = format!("http://127.0.0.1:{port}/control/control.html?port={port}");
+            // `version` — чтобы шапка панели показала текущую версию (в Electron
+            // его так же подставлял `main.js`).
+            let url = format!(
+                "http://127.0.0.1:{port}/control/control.html?port={port}&version={}",
+                env!("CARGO_PKG_VERSION")
+            );
 
             // Стартовая заставка: показывается, пока панель не готова, и не
             // меньше `SPLASH_MIN_MS` — как `createSplashWindow` в `main.js`.
