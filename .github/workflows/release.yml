@@ -96,9 +96,9 @@ jobs:
         with:
           workspaces: src-tauri
 
-      - name: Cargo test
-        run: cargo test --manifest-path src-tauri/Cargo.toml --lib
-
+      # На Linux библиотеки WebKitGTK и GTK идут отдельно — без них крейт
+      # `tauri` не соберётся, и упадёт даже `cargo test --lib`. Ставить их нужно
+      # до тестов (как в ci.yml), иначе релизная сборка краснеет на Ubuntu.
       - name: Install Linux system libraries
         if: runner.os == 'Linux'
         run: |
@@ -109,6 +109,9 @@ jobs:
             librsvg2-dev \
             patchelf \
             libgtk-3-dev
+
+      - name: Cargo test
+        run: cargo test --manifest-path src-tauri/Cargo.toml --lib
 
       # Сборка, подпись обновлений и загрузка в один черновик по тегу — на
       # `tauri-action`. Установщики всех платформ ложатся в один релиз вместе с
