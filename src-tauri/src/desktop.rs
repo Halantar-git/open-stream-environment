@@ -1095,11 +1095,14 @@ fn open_window(
     {
         Ok(window) => {
             // Страховка: если страница так и не догрузилась, показываем окно сами.
+            // Без проверки видимости: скрытое окно на Windows может рапортовать
+            // себя видимым, и тогда условие не дало бы страховке сработать.
             let fallback = window.clone();
             tauri::async_runtime::spawn(async move {
                 tokio::time::sleep(std::time::Duration::from_millis(WINDOW_SHOW_FALLBACK_MS)).await;
-                if !fallback.is_visible().unwrap_or(false) {
-                    show_loaded_window(&fallback, maximized);
+                let _ = fallback.show();
+                if maximized {
+                    let _ = fallback.maximize();
                 }
             });
             json!({ "ok": true })
