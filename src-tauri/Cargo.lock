@@ -2844,7 +2844,7 @@ dependencies = [
 
 [[package]]
 name = "open-stream-environment"
-version = "3.2.8"
+version = "4.0.0"
 dependencies = [
  "axum",
  "base64 0.22.1",
