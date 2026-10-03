@@ -28,7 +28,10 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 # tray-icon — системный трей (порт `Tray`/`Menu` из main.js).
-tauri = { version = "2", features = ["tray-icon"] }
+# macos-private-api — прозрачные окна заставки и HUD: на macOS Tauri открывает
+# `transparent()` только с этой фичей (и с `app.macOSPrivateApi` в конфиге),
+# иначе код просто не соберётся под macOS.
+tauri = { version = "2", features = ["tray-icon", "macos-private-api"] }
 serde = { version = "1", features = ["derive"] }
 # preserve_order: порядок ключей в config.json должен остаться таким, каким его
 # записал Electron (`JSON.stringify` сохраняет порядок вставки). Без этого флага

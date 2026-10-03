@@ -402,9 +402,16 @@ pub async fn download_and_install(app: tauri::AppHandle) -> Result<Value, String
             Ok(()) => {
                 // На Windows установщик сам перезапускает приложение; на прочих
                 // платформах это делаем мы — как `quitAndInstall` в JS.
+                // `restart` не возвращает управление, поэтому под не-Windows ветка
+                // расходится и `Ok` стоит только под Windows (иначе unreachable).
                 #[cfg(not(target_os = "windows"))]
-                app.restart();
-                Ok(json!({ "ok": true }))
+                {
+                    app.restart();
+                }
+                #[cfg(target_os = "windows")]
+                {
+                    Ok(json!({ "ok": true }))
+                }
             }
             Err(error) => Ok(json!({ "ok": false, "error": error.to_string() })),
         },
