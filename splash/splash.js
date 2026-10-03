@@ -19,14 +19,14 @@
   const params = new URLSearchParams(location.search);
   const version = params.get("version");
   const subtitleEl = document.getElementById("subtitle");
-  if (subtitleEl) subtitleEl.textContent = version ? `Desktop // v${version}` : "Desktop";
+  if (subtitleEl) subtitleEl.textContent = version ? `Tauri // v${version}` : "Tauri";
 
   const logs = [
     ">> CONNECTING LOCAL DATABASE (LOWDB)...",
     "[OK] DATABASE INITIALIZED & VACUUMED",
     ">> LOADING AUDIO ENGINE (FIELD OF FORTUNE STYLES)...",
     ">> ESTABLISHING WEBSOCKETS (TWITCH & DONATIONALERTS)...",
-    ">> RUNNING SYSTEM UNIT TESTS (JEST)...",
+    ">> RUNNING BACKEND TESTS (CARGO)...",
     "[SUCCESS] ALL TESTS PASSED. STREAM WORKSPACE IS READY",
   ];
   let currentLog = 0;
