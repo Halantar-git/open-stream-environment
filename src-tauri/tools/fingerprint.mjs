@@ -12,7 +12,10 @@ export function fnv1a(text) {
   const mask = 0xffffffffffffffffn;
   const prime = 0x00000100000001b3n;
   let hash = 0xcbf29ce484222325n;
-  for (const byte of Buffer.from(text, "utf8")) {
+  // Переводы строк нормализуются к LF: Git отдаёт один и тот же файл с CRLF на
+  // Windows и с LF на Unix, а данные снимаются на машине разработчика — без
+  // этого отпечаток «устаревал» при смене платформы.
+  for (const byte of Buffer.from(text.replace(/\r\n/g, "\n"), "utf8")) {
     hash = ((hash ^ BigInt(byte)) * prime) & mask;
   }
   return hash.toString(16).padStart(16, "0");

@@ -20,6 +20,10 @@ pub mod storage;
 pub mod theme_engine;
 pub mod themes;
 
+/// Сверка отпечатков исходников с сгенерированными данными — нужна только тестам.
+#[cfg(test)]
+mod fingerprint;
+
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};

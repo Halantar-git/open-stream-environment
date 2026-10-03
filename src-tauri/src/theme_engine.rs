@@ -844,28 +844,16 @@ mod tests {
         serde_json::from_str(SAMPLES_JSON).expect("эталон движка тем")
     }
 
-    /// FNV-1a 64 по UTF-8 — тот же счёт, что в `tools/fingerprint.mjs`.
-    fn fnv1a(bytes: &[u8]) -> String {
-        let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
-        for byte in bytes {
-            hash ^= *byte as u64;
-            hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
-        }
-        format!("{hash:016x}")
-    }
-
     #[test]
     fn the_samples_were_taken_from_the_current_source_file() {
         let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .expect("src-tauri лежит в корне репозитория")
             .join(SOURCE_FILE);
-        let source =
-            std::fs::read(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
 
         assert_eq!(
             samples()["sourceHash"].as_str().unwrap_or_default(),
-            fnv1a(&source),
+            crate::fingerprint::fnv1a_file(&path),
             "{SOURCE_FILE} изменился — пересоберите эталон: {REBUILD_COMMAND}"
         );
     }
