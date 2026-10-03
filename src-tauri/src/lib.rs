@@ -171,14 +171,6 @@ pub fn run() {
                     desktop::notify_stream_alert(&notify_handle, alert);
                 }));
             }
-            // Стартовая проверка обновления без скачивания: если оно есть, панель
-            // зажжёт кнопку «Обновить» — как `update-available` в JS.
-            let update_handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                if let Some(payload) = desktop::startup_update_notice(&update_handle).await {
-                    let _ = update_handle.emit("update:available", payload);
-                }
-            });
             // Службы стартуют вместе с сервером — как `startIntegrations` в JS.
             diagnostics.restart_twitch_chat();
             // Бот пересобирается по тем же настройкам — канал и команды.
@@ -221,7 +213,7 @@ pub fn run() {
             let has_splash = splash.is_some();
             let splash_started = std::time::Instant::now();
 
-            let mut builder = WebviewWindowBuilder::new(
+            let builder = WebviewWindowBuilder::new(
                 app,
                 "main",
                 WebviewUrl::External(tauri::Url::parse(&url)?),
@@ -232,23 +224,37 @@ pub fn run() {
             .inner_size(1440.0, 900.0)
             .min_inner_size(1100.0, 700.0)
             // Без заставки показываем сразу; с ней — только когда страница готова.
-            .visible(!has_splash);
-            if has_splash {
-                builder = builder.on_page_load(move |window, payload| {
-                    if payload.event() != PageLoadEvent::Finished {
-                        return;
-                    }
+            .visible(!has_splash)
+            .on_page_load(move |window, payload| {
+                if payload.event() != PageLoadEvent::Finished {
+                    return;
+                }
+                let app = window.app_handle().clone();
+                if !has_splash {
+                    // Заставки нет (окно не создалось) — разворачиваем панель сами,
+                    // как `ready-to-show` в `main.js`.
+                    let _ = window.maximize();
+                }
+                if has_splash {
                     let remaining = SPLASH_MIN_MS.saturating_sub(
                         u64::try_from(splash_started.elapsed().as_millis()).unwrap_or(u64::MAX),
                     );
                     let window = window.clone();
-                    let app = window.app_handle().clone();
+                    let app = app.clone();
                     tauri::async_runtime::spawn(async move {
                         tokio::time::sleep(std::time::Duration::from_millis(remaining)).await;
                         finish_startup(&app, &window);
                     });
+                }
+                // Стартовая проверка обновления — после загрузки страницы, чтобы
+                // панель успела подписаться на `update:available`: раньше событие
+                // приходило в пустоту, и кнопка «Обновить» сама не зажигалась.
+                tauri::async_runtime::spawn(async move {
+                    if let Some(payload) = desktop::startup_update_notice(&app).await {
+                        let _ = app.emit("update:available", payload);
+                    }
                 });
-            }
+            });
             let main_window = builder.build()?;
 
             if has_splash {
