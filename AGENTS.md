@@ -14,7 +14,9 @@
 
 - версия поднята в `package.json` и `package-lock.json` (оба поля: верхнее
   `version` и `packages[""].version`) и в `src-tauri/tauri.conf.json` (поле
-  `version`) — `release.bat` синхронизирует их сам;
+  `version`) — `release.bat` синхронизирует их сам; заодно агент поднимает
+  `src-tauri/Cargo.toml` и `Cargo.lock` (поле `version` корневого пакета) —
+  `release.bat` их не трогает, а оттуда берётся версия в приложении и отчётах;
 - в `README.md` строка «Текущая версия: **X.Y.Z**.» обновлена;
 - в `CHANGELOG.md` секция `## [Unreleased]` стала `## [X.Y.Z] — YYYY-MM-DD`
   (сегодняшняя дата), версия совпадает с `package.json`, повторяющихся версий
