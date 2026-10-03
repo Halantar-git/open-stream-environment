@@ -13,6 +13,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use serde_json::{json, Map, Value};
+use tauri::webview::PageLoadEvent;
 use tauri::{Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_dialog::DialogExt;
@@ -1046,12 +1047,17 @@ fn page_url(port: u16, path: &str, query: &[(&str, &str)]) -> tauri::Url {
 /// Сфокусировать уже открытое окно; `true` — оно было.
 fn focus_existing(app: &tauri::AppHandle, label: &str) -> bool {
     if let Some(window) = app.get_webview_window(label) {
+        // Окно могло ещё не показаться (ждёт загрузку страницы) — показываем.
+        let _ = window.show();
         let _ = window.set_focus();
         true
     } else {
         false
     }
 }
+
+/// Сколько ждать загрузку страницы окна, прежде чем показать его принудительно.
+const WINDOW_SHOW_FALLBACK_MS: u64 = 8000;
 
 /// Открыть окно с уже подставленным мостом `window.desktop`.
 #[allow(clippy::too_many_arguments)]
@@ -1076,12 +1082,40 @@ fn open_window(
         .inner_size(size.0, size.1)
         .min_inner_size(min.0, min.1)
         .always_on_top(top)
-        .maximized(maximized)
+        // Показываем окно после загрузки страницы: показанное раньше, оно у
+        // WebView2 иногда остаётся пустым до первого изменения размера — та же
+        // беда, что у главного окна (см. `finish_startup` в `lib.rs`).
+        .visible(false)
+        .on_page_load(move |window, payload| {
+            if payload.event() == PageLoadEvent::Finished {
+                show_loaded_window(&window, maximized);
+            }
+        })
         .build()
     {
-        Ok(_) => json!({ "ok": true }),
+        Ok(window) => {
+            // Страховка: если страница так и не догрузилась, показываем окно сами.
+            let fallback = window.clone();
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_millis(WINDOW_SHOW_FALLBACK_MS)).await;
+                if !fallback.is_visible().unwrap_or(false) {
+                    show_loaded_window(&fallback, maximized);
+                }
+            });
+            json!({ "ok": true })
+        }
         Err(error) => json!({ "ok": false, "error": error.to_string() }),
     }
+}
+
+/// Показать окно, когда страница готова: сначала `show`, потом разворот —
+/// у WebView2 это гарантирует отрисовку (то же в `finish_startup` в `lib.rs`).
+fn show_loaded_window(window: &tauri::WebviewWindow, maximized: bool) {
+    let _ = window.show();
+    if maximized {
+        let _ = window.maximize();
+    }
+    let _ = window.set_focus();
 }
 
 /// Метка окна Tauri допускает не всё, а `widgetId` приходит из настроек.
