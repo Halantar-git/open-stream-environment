@@ -273,7 +273,9 @@ pub fn handle_message(
         }
         event_types::CMD_TEST_CHAT => {
             let count = payload.get("count").cloned().unwrap_or(Value::Null);
-            for message in test_chat_messages(&count) {
+            for mut message in test_chat_messages(&count) {
+                // Показываем настоящие значки, если наборы уже загружены.
+                diagnostics.add_chat_badge_images(&mut message);
                 broadcast(diagnostics, event_types::CHAT_MESSAGE, message);
             }
         }

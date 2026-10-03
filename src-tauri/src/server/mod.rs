@@ -540,7 +540,23 @@ fn static_routes(root: &Path) -> Router {
     for name in SERVED_DIRS {
         router = router.nest_service(&format!("/{name}"), ServeDir::new(dir(name)));
     }
-    router.layer(middleware::from_fn(redirect_directory_roots))
+    router
+        .layer(middleware::from_fn(redirect_directory_roots))
+        .layer(middleware::from_fn(no_cache))
+}
+
+/// Просить клиента перепроверять файлы: статика меняется вместе с приложением, а
+/// адреса у файлов те же. Без этого webview (WebView2) может отдать
+/// закэшированный JS и не показать новую разметку — так значок в чате не
+/// появлялся до ручной чистки кэша.
+async fn no_cache(request: Request, next: Next) -> Response {
+    let mut response = next.run(request).await;
+    if !response.headers().contains_key(header::CACHE_CONTROL) {
+        response
+            .headers_mut()
+            .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-cache"));
+    }
+    response
 }
 
 /// Пользовательские медиа (`media` в каталоге данных): видео-заставки, фоны
@@ -551,7 +567,9 @@ fn static_routes(root: &Path) -> Router {
 /// `Range`: без этого `<video>` не проигрывает файл, а сразу шлёт `error`, и
 /// заставка проматывается мгновенно. Так же отдавал файлы Electron-сервер.
 fn media_routes(media_dir: PathBuf) -> Router {
-    Router::new().nest_service("/media", ServeDir::new(media_dir))
+    Router::new()
+        .nest_service("/media", ServeDir::new(media_dir))
+        .layer(middleware::from_fn(no_cache))
 }
 
 fn diagnostics_routes(diagnostics: Arc<Diagnostics>) -> Router {
@@ -1115,6 +1133,14 @@ mod tests {
             assert_eq!(status, StatusCode::OK, "{uri}");
             assert!(body.len() > 1000, "{uri}: страница подозрительно мала");
         }
+    }
+
+    #[tokio::test]
+    async fn static_files_ask_the_client_to_revalidate() {
+        let fixture = Fixture::new();
+        // Обновление не должно залипать в кэше webview: адреса файлов те же.
+        let response = request(&fixture, "/control/control.html").await;
+        assert_eq!(response.headers()[header::CACHE_CONTROL], "no-cache");
     }
 
     #[tokio::test]

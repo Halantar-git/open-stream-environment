@@ -181,7 +181,12 @@
       const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       const badges = (msg.badges || [])
         .slice(0, 3)
-        .map((b) => `<span style="color:${MUTED};font-weight:700;">${escapeHtml(String(b).slice(0, 1).toUpperCase())}</span>`)
+        .map((b, i) => {
+          const url = msg.badgeImages && msg.badgeImages[i];
+          return url
+            ? `<img src="${escapeAttr(url)}" alt="" title="${escapeAttr(String(b))}" style="width:1.05em;height:1.05em;object-fit:contain;vertical-align:-0.15em" />`
+            : `<span style="color:${MUTED};font-weight:700;">${escapeHtml(String(b).slice(0, 1).toUpperCase())}</span>`;
+        })
         .join(" ");
       const text = renderEmotes ? renderEmotes(msg.message, msg.emotes) : escapeHtml(msg.message);
 

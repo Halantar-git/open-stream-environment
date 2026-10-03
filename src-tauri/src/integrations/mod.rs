@@ -15,6 +15,7 @@ pub mod nick_color;
 pub mod obs_websocket;
 pub mod obs_websocket_control;
 pub mod token_refresh;
+pub mod twitch_badges;
 pub mod twitch_chat;
 pub mod twitch_chat_control;
 pub mod twitch_chat_socket;

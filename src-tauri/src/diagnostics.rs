@@ -35,6 +35,7 @@ use crate::integrations::donationalerts_control::{
 use crate::integrations::longshot_sync::LongshotSync;
 use crate::integrations::obs_websocket_control::ObsClient;
 use crate::integrations::token_refresh::{TokenRefresher, TokenRefresherConfig};
+use crate::integrations::twitch_badges::{self, BadgeMap};
 use crate::integrations::twitch_chat::{ChatRateLimiter, ChatSender, CHAT_SEND_INTERVAL_MS};
 use crate::integrations::twitch_chat_control::{EmitFn, SpawnFn, TwitchChatControl};
 use crate::integrations::twitch_eventsub::SUBSCRIBE_URL;
@@ -132,6 +133,9 @@ pub struct Diagnostics {
     recovery_events: Vec<RecoveryEvent>,
     /// Подключение к чату Twitch: одно за раз, перезапускается настройками.
     twitch_chat: TwitchChatControl,
+    /// Наборы значков Twitch «имя/версия → адрес картинки»: наполняется из Helix
+    /// (`refresh_twitch_badges`), читается при сборке кадров чата.
+    twitch_badges: Arc<Mutex<BadgeMap>>,
     /// Отправка в чат и модерация: Helix + обмен токена, сеть настоящая.
     chat_sender: ChatSender,
     /// Чат-бот: движок команд и модерация поверх читателя и `ChatSender`.
@@ -351,6 +355,7 @@ impl Diagnostics {
             .with_reconnect(Duration::from_millis(
                 crate::integrations::twitch_chat_control::RECONNECT_DELAY_MS,
             )),
+            twitch_badges: Arc::new(Mutex::new(BadgeMap::new())),
             chat_sender,
             chat_bot,
             twitch_events,
@@ -618,8 +623,16 @@ impl Diagnostics {
         let runtime = Arc::clone(&self.runtime);
         let config = Arc::clone(&self.config);
         let clients = Arc::clone(&self.clients);
-        Arc::new(move |event: Value| {
+        let badges = Arc::clone(&self.twitch_badges);
+        Arc::new(move |mut event: Value| {
             if event["type"].as_str() == Some(event_types::CHAT_MESSAGE) {
+                // Картинки значков нужны только рассылке: боту и истории хватит имён.
+                {
+                    let map = badges.lock().unwrap_or_else(|error| error.into_inner());
+                    if let Some(payload) = event.get_mut("payload") {
+                        twitch_badges::add_badge_images(&map, payload);
+                    }
+                }
                 let message = &event["payload"];
                 bot.handle_message(message);
                 apply_chat_side_effects(message, &database, &session, &runtime, &config, &clients);
@@ -994,6 +1007,30 @@ impl Diagnostics {
         };
         self.twitch_chat
             .restart(enabled, &channel, self.chat_emit());
+        // Значки Twitch меняются редко: обновляем вместе с чатом — на старте,
+        // при смене канала и по кнопке «переподключить».
+        self.refresh_twitch_badges();
+    }
+
+    /// Забрать наборы значков Twitch (глобальные и канальные) и обновить кэш.
+    pub fn refresh_twitch_badges(&self) {
+        let config = Arc::clone(&self.config);
+        let tokens = twitch_tokens(Arc::clone(&self.config));
+        let cache = Arc::clone(&self.twitch_badges);
+        std::mem::drop(tauri::async_runtime::spawn(async move {
+            if let Some(map) = fetch_twitch_badges(config, tokens).await {
+                *cache.lock().unwrap_or_else(|error| error.into_inner()) = map;
+            }
+        }));
+    }
+
+    /// Проставить в кадре чата `badgeImages` по текущему кэшу значков.
+    pub fn add_chat_badge_images(&self, message: &mut Value) {
+        let map = self
+            .twitch_badges
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        twitch_badges::add_badge_images(&map, message);
     }
 
     /// Очередь алертов — команды панели и пульта правят её напрямую.
@@ -1863,6 +1900,46 @@ fn build_eventsub_subscribe(
 
 /// База Helix — как `https://api.twitch.tv/helix` в JS.
 const HELIX_API: &str = "https://api.twitch.tv/helix";
+
+/// Наборы значков Twitch через Helix: сначала глобальные, затем канальные.
+///
+/// `None` — забирать нечего (нет клиента или токена) либо сеть подвела: кэш
+/// остаётся прежним, а чат рисует буквы вместо картинок.
+async fn fetch_twitch_badges(config: Arc<Mutex<ConfigFile>>, tokens: Tokens) -> Option<BadgeMap> {
+    let (client_id, broadcaster_id) = {
+        let config = config.lock().unwrap_or_else(|error| error.into_inner());
+        let twitch = config.get("twitch").cloned().unwrap_or(Value::Null);
+        let text = |key: &str| {
+            twitch
+                .get(key)
+                .map(crate::state::js_string)
+                .unwrap_or_default()
+        };
+        (text("clientId"), text("broadcasterId"))
+    };
+    if client_id.is_empty() {
+        return None;
+    }
+    let Ok(token) = (tokens.ensure)().await else {
+        return None;
+    };
+
+    let global_url = format!("{HELIX_API}/chat/badges");
+    let (status, body) = http::helix_get(global_url, client_id.clone(), token.clone()).await;
+    if !(200..300).contains(&status) {
+        return None;
+    }
+    let mut map = twitch_badges::parse_badge_sets(&body);
+
+    if !broadcaster_id.is_empty() {
+        let channel_url = format!("{HELIX_API}/chat/badges?broadcaster_id={broadcaster_id}");
+        let (status, body) = http::helix_get(channel_url, client_id, token).await;
+        if (200..300).contains(&status) {
+            twitch_badges::merge_badges(&mut map, twitch_badges::parse_badge_sets(&body));
+        }
+    }
+    Some(map)
+}
 
 /// Начальные счётчики фолловеров/подписчиков после подписки — как
 /// `fetchInitialStats` в `twitch-eventsub.js`. Возвращает снимок или `None`,

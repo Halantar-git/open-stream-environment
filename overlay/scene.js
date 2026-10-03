@@ -200,7 +200,12 @@
     row.className = "scene-chat__msg";
     const badges = (msg.badges || [])
       .slice(0, 3)
-      .map((b) => `<span class="scene-chat__badge" data-role="${escapeAttr(String(b))}">${escapeHtml(String(b).slice(0, 1).toUpperCase())}</span>`)
+      .map((b, i) => {
+        const url = msg.badgeImages && msg.badgeImages[i];
+        return url
+          ? `<img class="scene-chat__badge" src="${escapeAttr(url)}" alt="" title="${escapeAttr(String(b))}" style="padding:0;background:none;object-fit:contain" />`
+          : `<span class="scene-chat__badge" data-role="${escapeAttr(String(b))}">${escapeHtml(String(b).slice(0, 1).toUpperCase())}</span>`;
+      })
       .join("");
     const text = window.TwitchEmotes && window.TwitchEmotes.renderEmotes
       ? window.TwitchEmotes.renderEmotes(msg.message, msg.emotes)

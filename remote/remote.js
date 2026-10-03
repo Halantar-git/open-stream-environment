@@ -704,7 +704,12 @@
     row.className = "remote-chat__msg";
     const badges = (msg.badges || [])
       .slice(0, 3)
-      .map((b) => `<span class="remote-chat__badge">${escapeHtml(String(b).slice(0, 1).toUpperCase())}</span>`)
+      .map((b, i) => {
+        const url = msg.badgeImages && msg.badgeImages[i];
+        return url
+          ? `<img class="remote-chat__badge" src="${escapeHtml(url)}" alt="" title="${escapeHtml(String(b))}" style="padding:0;background:none;object-fit:contain" />`
+          : `<span class="remote-chat__badge">${escapeHtml(String(b).slice(0, 1).toUpperCase())}</span>`;
+      })
       .join("");
     row.innerHTML = `${badges}<span class="remote-chat__user" style="color:${escapeHtml(msg.color || "#cac4d0")}">${escapeHtml(msg.user)}</span><span class="remote-chat__colon">:</span><span class="remote-chat__text">${escapeHtml(msg.message)}</span>`;
 

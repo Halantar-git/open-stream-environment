@@ -83,6 +83,13 @@ pub fn chat_message_from_tags(tags: Option<&Value>, message: &str) -> Value {
                 .collect::<Vec<Value>>()
         })
         .unwrap_or_default();
+    // Версии значков нужны, чтобы найти картинку на CDN (`badgeImages`); в
+    // самом кадре их использует только сервер.
+    let badge_versions = tags
+        .get("badges")
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default();
     let emotes = tags.get("emotes").cloned().unwrap_or_else(|| json!({}));
 
     let mut out = Map::new();
@@ -90,6 +97,7 @@ pub fn chat_message_from_tags(tags: Option<&Value>, message: &str) -> Value {
     out.insert("userId".to_string(), Value::from(user_id_text));
     out.insert("color".to_string(), Value::from(color));
     out.insert("badges".to_string(), Value::Array(badges));
+    out.insert("badgeVersions".to_string(), Value::Object(badge_versions));
     out.insert("message".to_string(), Value::from(message));
     out.insert("emotes".to_string(), emotes);
     Value::Object(out)
@@ -423,15 +431,16 @@ pub fn test_chat_messages(count: &Value) -> Vec<Value> {
     let mut index = 0usize;
     while (index as f64) < total {
         let (user, color) = USERS[index % USERS.len()];
-        let badges = match index % 3 {
-            0 => json!(["moderator"]),
-            1 => json!(["subscriber"]),
-            _ => json!([]),
+        let (badges, badge_versions) = match index % 3 {
+            0 => (json!(["moderator"]), json!({ "moderator": "1" })),
+            1 => (json!(["subscriber"]), json!({ "subscriber": "1" })),
+            _ => (json!([]), json!({})),
         };
         messages.push(json!({
             "user": user,
             "color": color,
             "badges": badges,
+            "badgeVersions": badge_versions,
             "message": MESSAGES[index % MESSAGES.len()],
             "isTest": true,
         }));
@@ -774,6 +783,11 @@ mod tests {
             "hi",
         );
         assert_eq!(message["badges"], json!(["moderator", "subscriber"]));
+        // Версии нужны серверу, чтобы найти картинки значков (`badgeImages`).
+        assert_eq!(
+            message["badgeVersions"],
+            json!({ "moderator": "1", "subscriber": "12" })
+        );
         assert_eq!(message["emotes"], json!({ "25": ["0-4"] }));
     }
 
@@ -786,6 +800,7 @@ mod tests {
                 "userId": "",
                 "color": DEFAULT_NICK_COLOR,
                 "badges": [],
+                "badgeVersions": {},
                 "message": "hi",
                 "emotes": {},
             })
