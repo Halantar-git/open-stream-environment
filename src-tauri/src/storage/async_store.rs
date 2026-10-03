@@ -121,6 +121,9 @@ struct Shared {
     file: PathBuf,
     options: StoreOptions,
     state: Mutex<State>,
+    /// Замок самой записи на диск: `flush_sync` и поток не пишут одновременно,
+    /// иначе снимок из очереди мог бы лечь поверх свежего (см. `flush_sync`).
+    disk: Mutex<()>,
     work: Condvar,
     done: Condvar,
     stopping: AtomicBool,
@@ -143,6 +146,7 @@ impl AtomicStore {
             file,
             options,
             state: Mutex::new(State::default()),
+            disk: Mutex::new(()),
             work: Condvar::new(),
             done: Condvar::new(),
             stopping: AtomicBool::new(false),
@@ -195,6 +199,12 @@ impl AtomicStore {
     /// Best-effort: ошибку отдаём наружу, но выход из приложения не роняем —
     /// каталог мог быть уже убран.
     pub fn flush_sync(&self) -> bool {
+        // Сериализуем с потоком записи: без этого его снимок (более старый, из
+        // очереди) мог бы лечь на диск уже после нашего и затереть свежий — на
+        // выходе это заметно (см. `save_sync`). Ждём только текущую запись, а не
+        // всю очередь.
+        let _disk = self.shared.disk.lock().unwrap();
+
         let data = {
             let state = self.shared.state.lock().unwrap();
             state.last_data.clone()
@@ -341,9 +351,14 @@ fn drain(shared: Arc<Shared>) {
             // Диск занят не под замком: иначе `write()` из панели ждал бы его.
             drop(state);
 
-            let started = Instant::now();
-            let result = write_snapshot(&shared, &snapshot);
-            let ms = started.elapsed().as_secs_f64() * 1000.0;
+            // Диск занят не под замком `state`, но под `disk`: запись не должна
+            // пересекаться с `flush_sync`.
+            let (result, ms) = {
+                let _disk = shared.disk.lock().unwrap();
+                let started = Instant::now();
+                let result = write_snapshot(&shared, &snapshot);
+                (result, started.elapsed().as_secs_f64() * 1000.0)
+            };
 
             state = shared.state.lock().unwrap();
             match result {
