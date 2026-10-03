@@ -220,7 +220,7 @@ pub fn open_chat_window(app: tauri::AppHandle, state: tauri::State<'_, DesktopSt
     }
     let port = state.diagnostics.port().to_string();
     open_window(
-        &app,
+        app,
         "chat",
         "Чат — Open Stream Environment",
         page_url(
@@ -249,7 +249,7 @@ pub fn open_widget_editor(
     }
     let port = state.diagnostics.port().to_string();
     open_window(
-        &app,
+        app,
         &label,
         "Редактор виджета — Open Stream Environment",
         page_url(
@@ -271,7 +271,7 @@ pub fn open_theme_preview(app: tauri::AppHandle, state: tauri::State<'_, Desktop
         return json!({ "ok": true });
     }
     open_window(
-        &app,
+        app,
         "theme-preview",
         "Предпросмотр темы — Open Stream Environment",
         page_url(
@@ -293,7 +293,7 @@ pub fn open_theme_samples(app: tauri::AppHandle, state: tauri::State<'_, Desktop
         return json!({ "ok": true });
     }
     open_window(
-        &app,
+        app,
         "theme-samples",
         "Образцы тем — Open Stream Environment",
         page_url(state.diagnostics.port(), "/overlay/samples.html", &[]),
@@ -322,7 +322,7 @@ pub fn open_theme_editor(
     }
     let port = state.diagnostics.port().to_string();
     open_window(
-        &app,
+        app,
         "theme-editor",
         "Редактор темы — Open Stream Environment",
         page_url(
@@ -1057,9 +1057,16 @@ fn focus_existing(app: &tauri::AppHandle, label: &str) -> bool {
 }
 
 /// Открыть окно с уже подставленным мостом `window.desktop`.
+///
+/// Сборка окна уводится в фоновую задачу намеренно. Окно, созданное синхронно
+/// в главном потоке внутри обработки IPC, на Windows остаётся пустым: WebView2
+/// не отрисовывает первую страницу, когда создание окна идёт продолжением
+/// входящего IPC-вызова. Из фоновой задачи окно доходит до главного потока
+/// обычным событием и рисуется. Ждать завершения нельзя — главный поток и
+/// фоновая задача заклинили бы друг друга.
 #[allow(clippy::too_many_arguments)]
 fn open_window(
-    app: &tauri::AppHandle,
+    app: tauri::AppHandle,
     label: &str,
     title: &str,
     url: tauri::Url,
@@ -1068,7 +1075,29 @@ fn open_window(
     top: bool,
     maximized: bool,
 ) -> Value {
-    match WebviewWindowBuilder::new(app, label, WebviewUrl::External(url))
+    let label = label.to_string();
+    let title = title.to_string();
+    tauri::async_runtime::spawn(async move {
+        if let Err(error) = build_window(&app, &label, &title, url, size, min, top, maximized) {
+            eprintln!("[ose] окно {label}: {error}");
+        }
+    });
+    json!({ "ok": true })
+}
+
+/// Собрать окно (вызывается только из фоновой задачи — см. `open_window`).
+#[allow(clippy::too_many_arguments)]
+fn build_window(
+    app: &tauri::AppHandle,
+    label: &str,
+    title: &str,
+    url: tauri::Url,
+    size: (f64, f64),
+    min: (f64, f64),
+    top: bool,
+    maximized: bool,
+) -> tauri::Result<()> {
+    WebviewWindowBuilder::new(app, label, WebviewUrl::External(url))
         // Заголовок задаём явно: иначе окно носит имя по умолчанию ("Tauri App"),
         // а заголовок страницы в заголовок окна не переносится.
         .title(title)
@@ -1081,10 +1110,7 @@ fn open_window(
         .always_on_top(top)
         .maximized(maximized)
         .build()
-    {
-        Ok(_) => json!({ "ok": true }),
-        Err(error) => json!({ "ok": false, "error": error.to_string() }),
-    }
+        .map(|_| ())
 }
 
 /// Метка окна Tauri допускает не всё, а `widgetId` приходит из настроек.
