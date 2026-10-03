@@ -89,6 +89,14 @@ jobs:
         run: npm test
 
       - name: Set up Rust
+        id: rust
+        uses: dtolnay/rust-toolchain@stable
+        # Сеть раннера иногда не отдаёт манифест rustup (таймаут
+        # static.rust-lang.org): повтор ниже спасает релиз от случайного красного.
+        continue-on-error: true
+
+      - name: Set up Rust (retry)
+        if: steps.rust.outcome == 'failure'
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Rust build

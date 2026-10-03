@@ -43,6 +43,16 @@ jobs:
 
       # ---- Бэкенд (Rust, src-tauri): гейт порта. ----
       - name: Set up Rust
+        id: rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+        # Сеть раннера иногда не отдаёт манифест rustup (таймаут
+        # static.rust-lang.org): повтор ниже спасает от случайного красного.
+        continue-on-error: true
+
+      - name: Set up Rust (retry)
+        if: steps.rust.outcome == 'failure'
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
