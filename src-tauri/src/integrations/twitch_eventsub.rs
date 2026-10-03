@@ -317,6 +317,7 @@ pub fn notification_events(config: &Value, payload: &Value) -> Vec<Value> {
                             "user": user,
                             "audioFile": text_of(sound.get("audioFile")),
                             "imageFile": text_of(sound.get("imageFile")),
+                            "videoFile": text_of(sound.get("videoFile")),
                         }),
                     ));
                 }
@@ -654,7 +655,7 @@ mod tests {
         let config = json!({
             "soundboard": {
                 "sounds": [
-                    { "id": "s1", "rewardTitle": "Барабаны", "audioFile": "a.mp3" },
+                    { "id": "s1", "rewardTitle": "Барабаны", "audioFile": "a.mp3", "videoFile": "a.webm" },
                 ],
             },
         });
@@ -673,6 +674,8 @@ mod tests {
         assert_eq!(events[0]["payload"]["soundId"], json!("s1"));
         assert_eq!(events[0]["payload"]["title"], json!("Барабаны"));
         assert_eq!(events[0]["payload"]["user"], json!("Вася"));
+        // Видео звука оверлей берёт из `videoFile` — его нельзя терять по пути.
+        assert_eq!(events[0]["payload"]["videoFile"], json!("a.webm"));
     }
 
     #[test]

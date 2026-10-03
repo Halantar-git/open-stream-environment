@@ -1320,6 +1320,7 @@ fn soundboard_payload(sound: &Value, user: &str) -> Value {
         "user": user,
         "audioFile": sound.get("audioFile").cloned().unwrap_or(Value::Null),
         "imageFile": sound.get("imageFile").cloned().unwrap_or(Value::Null),
+        "videoFile": sound.get("videoFile").cloned().unwrap_or(Value::Null),
     })
 }
 

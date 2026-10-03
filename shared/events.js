@@ -59,7 +59,7 @@
     DEATH_COUNT_UPDATE: "death_count_update", // { count }
     CAMERA_ANGLE_UPDATE: "camera_angle_update", // { activeCameraAngle }
     CAMERA_FILTER_UPDATE: "camera_filter_update", // { filterId, active }
-    SOUNDBOARD_PLAY: "soundboard_play", // { soundId, title, user, audioFile, imageFile }
+    SOUNDBOARD_PLAY: "soundboard_play", // { soundId, title, user, audioFile, imageFile, videoFile }
     VIDEO_SPLASH_PLAY: "video_splash_play", // { mediaFile, scene, nextScene } — server -> overlay: play intro/brb/outro splash
     MIC_AUDIO_DATA: "mic_audio_data", // { level, wave, freq } — mic bridge (control -> server -> overlay)
     HUD_EDIT_MODE: "hud_edit_mode", // { enabled } — game HUD overlay entered/left direct-edit mode

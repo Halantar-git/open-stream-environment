@@ -266,6 +266,7 @@ pub fn set_soundboard_config(config: &mut ConfigFile, patch: &Value) -> Value {
                     "rewardId": string_trim(sound.get("rewardId").unwrap_or(&Value::Null)),
                     "audioFile": string_trim(sound.get("audioFile").unwrap_or(&Value::Null)),
                     "imageFile": string_trim(sound.get("imageFile").unwrap_or(&Value::Null)),
+                    "videoFile": string_trim(sound.get("videoFile").unwrap_or(&Value::Null)),
                     "title": title,
                 })
             })
@@ -1527,6 +1528,7 @@ mod tests {
                 "rewardId": "",
                 "audioFile": "media/a.mp3",
                 "imageFile": "",
+                "videoFile": "",
                 "title": "Reward",
             })
         );

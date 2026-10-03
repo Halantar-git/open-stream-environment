@@ -2551,8 +2551,9 @@ fn queue_report(
 /// Собрать payload `soundboard_play` по звуку из настроек; `None` — нет такого.
 ///
 /// Заголовок — `title || rewardTitle || id`, имя пользователя — `user ||
-/// "Stream Deck"`. Отсутствующие `audioFile`/`imageFile` в JSON не попадают:
-/// в JS они уходили как `undefined` и так же исчезали при `JSON.stringify`.
+/// "Stream Deck"`. Отсутствующие `audioFile`/`imageFile`/`videoFile` в JSON не
+/// попадают: в JS они уходили как `undefined` и так же исчезали при
+/// `JSON.stringify`.
 fn soundboard_payload(config: &ConfigFile, sound_id: &str, user: &str) -> Option<Value> {
     let sound = config
         .get("soundboard")
@@ -2581,7 +2582,7 @@ fn soundboard_payload(config: &ConfigFile, sound_id: &str, user: &str) -> Option
     payload.insert("soundId".to_string(), id);
     payload.insert("title".to_string(), title);
     payload.insert("user".to_string(), Value::from(user));
-    for key in ["audioFile", "imageFile"] {
+    for key in ["audioFile", "imageFile", "videoFile"] {
         if let Some(value) = sound.get(key) {
             payload.insert(key.to_string(), value.clone());
         }
@@ -3064,7 +3065,7 @@ mod tests {
         let dir = TempDir::new("soundboard");
         dir.write_config(
             r#"{ "soundboard": { "sounds": [
-                { "id": "s1", "audioFile": "a.mp3", "imageFile": "a.png" },
+                { "id": "s1", "audioFile": "a.mp3", "imageFile": "a.png", "videoFile": "a.webm" },
                 { "id": "s2", "rewardTitle": "Барабаны", "audioFile": "b.mp3" }
             ] } }"#,
         );
@@ -3078,6 +3079,8 @@ mod tests {
         assert_eq!(first["user"], json!("Тест"));
         assert_eq!(first["audioFile"], json!("a.mp3"));
         assert_eq!(first["imageFile"], json!("a.png"));
+        // `videoFile` оверлей использует для видео в поп-апе звука.
+        assert_eq!(first["videoFile"], json!("a.webm"));
         // Пустой `user` — «Stream Deck», `rewardTitle` — заголовок, а
         // отсутствующий `imageFile` в JSON не попадает.
         let second = soundboard_payload(&config, "s2", "").expect("звук s2");
