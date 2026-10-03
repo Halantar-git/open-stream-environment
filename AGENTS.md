@@ -4,15 +4,17 @@
 
 ## Релиз
 
-**`release.bat` запускает только владелец репозитория.** Агент никогда не
-запускает скрипт, не коммитит, не создаёт теги и не пушит. Задача агента —
-довести дерево до состояния, когда `release.bat` отработает с первой попытки, и
-на этом остановиться.
+**`release.bat` запускает только владелец репозитория.** Агент не запускает
+скрипт, не создаёт теги и не пушит. А коммитить агент **может**: он ведёт
+рабочую ветку сам и фиксирует свои изменения по ходу. Задача агента — довести
+дерево до состояния, когда `release.bat` отработает с первой попытки, и на этом
+остановиться.
 
 Что считается «релиз подготовлен»:
 
 - версия поднята в `package.json` и `package-lock.json` (оба поля: верхнее
-  `version` и `packages[""].version`);
+  `version` и `packages[""].version`) и в `src-tauri/tauri.conf.json` (поле
+  `version`) — `release.bat` синхронизирует их сам;
 - в `README.md` строка «Текущая версия: **X.Y.Z**.» обновлена;
 - в `CHANGELOG.md` секция `## [Unreleased]` стала `## [X.Y.Z] — YYYY-MM-DD`
   (сегодняшняя дата), версия совпадает с `package.json`, повторяющихся версий
@@ -20,7 +22,9 @@
 - `commit.txt` — сообщение релизного коммита (формат прошлых релизов:
   `Релиз vX.Y.Z: краткое описание`, ниже — пункты);
 - `discord-update.txt` — заметки для сообщества под версию;
-- `npm test` и `npm run lint` зелёные;
+- `npm test`, `npm run lint`, `cargo test --manifest-path src-tauri/Cargo.toml
+  --lib` и `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --
+  -D warnings` зелёные;
 - `git status` не содержит мусора: `release.bat` делает `git add .`, поэтому
   любые лишние файлы уедут в коммит.
 
@@ -37,17 +41,23 @@
 - `npm version … --no-git-tag-version` вызывается только если версия в
   `package.json` отличается от введённой, поэтому повторный запуск безопасен.
 - Скрипт сам делает коммит, push `main` и тег `vX.Y.Z`, после чего срабатывают
-  `release.yml` (проверка «тег = `package.json`», линт, тесты, сборка, черновик
-  релиза) и `notify-site.yml` (пересборка сайта; нужен секрет
-  `SITE_DISPATCH_TOKEN`). Публикация релиза остаётся ручной.
+  `release.yml` (проверка «тег = `package.json` = `tauri.conf.json`», линт,
+  Rust-гейт, сборка `tauri-action`, черновик релиза) и `notify-site.yml`
+  (пересборка сайта; нужен секрет `SITE_DISPATCH_TOKEN`). Публикация релиза
+  остаётся ручной.
 
 ## Конвенции проекта
 
 - Русский язык: комментарии, CHANGELOG, README, заметки о релизе.
+- Бэкенд — Rust (`src-tauri/`), фронт — JS в системном webview. Node нужен
+  только для разработки (Jest, ESLint/Prettier, скрипты данных
+  `src-tauri/tools/*.mjs`) и в поставку не входит.
 - Словари `shared/locales/ru.json` и `en.json` синхронны по ключам и
   подстановкам `{{…}}`.
-- Тесты — Jest (`npm test`), линт — ESLint + Prettier (`npm run lint`,
-  `npm run format`).
+- Тесты фронта — Jest (`npm test`), бэкенда — `cargo test --lib`; линт —
+  ESLint + Prettier (`npm run lint`, `npm run format`) и `cargo clippy`.
+- Коммиты: агент фиксирует свою работу сам (ветку не создаёт, теги не ставит,
+  не пушит). Рабочая ветка — текущая; перед коммитом гейт должен быть зелёным.
 - Данные пользователя (`config.json`, `local-db.json`, `local-db.jsonl`,
   `local-db.chat.jsonl`, `window-state.json`, логи, медиа, temp-файлы) не
   коммитятся и исключены из сборки — это проверяют `packaging`-тесты.
