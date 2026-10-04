@@ -215,6 +215,29 @@ describe("поставка: страницы и ссылки", () => {
     expect(leaked.map(({ page, target }) => `${page} → ${target}`)).toEqual([]);
   });
 
+  /*
+    Токены оформления (`--md-*`, `--font-*`) и встроенные шрифты приходят из
+    общего `shared/theme.css`, поэтому каждая страница обязана его подключать.
+    Один раз ссылка на него пропала у панели при правке головы страницы — и
+    панель осталась без оформления, а тесты и линт этого не видели. Пульт и
+    OBS-сцена заставки живут на своём наборе (только встроенные шрифты), для
+    них общий theme.css не обязателен.
+  */
+  const THEME_OPTIONAL_PAGES = new Set(["remote/index.html", "overlay/video-splash.html"]);
+
+  test("страницы подключают общий theme.css", () => {
+    const missing = pageFiles()
+      .filter((page) => !THEME_OPTIONAL_PAGES.has(page))
+      .filter(
+        (page) =>
+          !localReferences(page)
+            .map((ref) => resolveReference(page, ref))
+            .includes("shared/theme.css")
+      );
+
+    expect(missing).toEqual([]);
+  });
+
   test("каталоги страниц объявлены в ресурсах", () => {
     PAGE_DIRS.forEach((dir) => {
       const files = allFiles.filter((file) => file.startsWith(`${dir}/`));
