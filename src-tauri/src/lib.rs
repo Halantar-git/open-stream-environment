@@ -611,6 +611,16 @@ fn bundled_root(app: &tauri::AppHandle) -> Option<PathBuf> {
     app.path().resource_dir().ok()
 }
 
+/// Корень статики приложения: в сборке — ресурсы, в разработке — репозиторий.
+///
+/// Тот же выбор, что делает `setup` для сервера. Команды, которым нужны файлы из
+/// `shared/**` (например, смена языка), обязаны брать их отсюда же: в собранном
+/// приложении `repository_root` указывает на сборочную машину и `shared/locales`
+/// там нет — словари не прочитались бы.
+pub(crate) fn content_root(app: &tauri::AppHandle) -> PathBuf {
+    bundled_root(app).unwrap_or_else(repository_root)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -455,11 +455,19 @@ pub fn change_language(
     let saved = state
         .diagnostics
         .save_language(lang.as_str().unwrap_or_default());
-    if let Some(locales) = crate::server::locales::Locales::load(&crate::repository_root()) {
-        state.diagnostics.broadcast(
+    // Словари берём из того же корня, что и сервер (`setup` выбирает его для
+    // отдачи статики): в собранном приложении это ресурсы, а не репозиторий —
+    // иначе путь указывал бы на сборочную машину и кадр `locales` не уходил бы.
+    let root = crate::content_root(&app);
+    match crate::server::locales::Locales::load(&root) {
+        Some(locales) => state.diagnostics.broadcast(
             crate::protocol::event_types::LOCALES,
             locales.payload(saved),
-        );
+        ),
+        None => state.diagnostics.logger("desktop").warn(
+            "locales not found, language frame not sent",
+            Some(&json!({ "dir": root.display().to_string() })),
+        ),
     }
     crate::refresh_tray_menu(&app, saved);
     json!(saved)
