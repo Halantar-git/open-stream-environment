@@ -399,14 +399,22 @@ impl Hud {
             return true;
         }
         let app = self.app.clone();
+        // Оболочка окна создаёт webview, а `WebviewWindowBuilder::build`
+        // небезопасен в контексте обработчика сообщения: колбэк глобального
+        // хоткея приходит из виндового message-loop в главном потоке, и
+        // синхронное создание окна там роняет процесс. Поэтому переключение
+        // уходит в фоновую задачу — как окна редакторов в `desktop::open_window`.
         let registered = if hud {
             self.app
                 .global_shortcut()
                 .on_shortcut(hotkey, move |_app, _shortcut, event| {
                     if event.state() == ShortcutState::Pressed {
-                        if let Some(state) = app.try_state::<DesktopState>() {
-                            state.diagnostics.toggle_hud_edit_mode();
-                        }
+                        let app = app.clone();
+                        std::mem::drop(tauri::async_runtime::spawn(async move {
+                            if let Some(state) = app.try_state::<DesktopState>() {
+                                state.diagnostics.toggle_hud_edit_mode();
+                            }
+                        }));
                     }
                 })
         } else {
@@ -414,9 +422,12 @@ impl Hud {
                 .global_shortcut()
                 .on_shortcut(hotkey, move |_app, _shortcut, event| {
                     if event.state() == ShortcutState::Pressed {
-                        if let Some(state) = app.try_state::<DesktopState>() {
-                            state.diagnostics.toggle_chat_hud();
-                        }
+                        let app = app.clone();
+                        std::mem::drop(tauri::async_runtime::spawn(async move {
+                            if let Some(state) = app.try_state::<DesktopState>() {
+                                state.diagnostics.toggle_chat_hud();
+                            }
+                        }));
                     }
                 })
         };
