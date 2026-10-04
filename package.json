@@ -1,7 +1,7 @@
 {
   "name": "open-stream-environment",
   "productName": "Open Stream Environment",
-  "version": "4.0.4",
+  "version": "4.0.5",
   "description": "Material Design 3 stream overlay + Figma-style drag-and-drop control panel for Twitch/OBS. Overlay served locally as an OBS Browser Source; Twitch chat/follows/subs and DonationAlerts donations drive live alerts.",
   "private": true,
   "author": "Halantar <tranquility.rus@gmail.com>",
