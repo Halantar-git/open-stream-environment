@@ -3174,6 +3174,51 @@ const { EVENT_TYPES } = window.SharedEvents;
     openBoostyBtn.addEventListener("click", () => window.desktop?.openExternal("https://boosty.to/halantar/donate"));
   }
 
+  // Кредиты и лицензии в настройках: имена и лицензии нейтральны, поэтому не
+  // переводятся, — а вот заголовки групп берутся из словаря и перерисовываются
+  // вместе с языком (см. applyLocales).
+  function renderCredits() {
+    const host = document.getElementById("creditsList");
+    if (!host) return;
+    const ext = (href, text) => `<a class="settings__credits-link" href="#" data-external="${href}">${text}</a>`;
+    const group = (title, rows) =>
+      `<div class="settings__credits-group"><div class="settings__credits-title">${title}</div>${rows}</div>`;
+    const row = (text) => `<div class="settings__credits-row">${text}</div>`;
+    host.innerHTML =
+      group(
+        t("settings.creditsApp"),
+        row(
+          `${ext("https://github.com/Halantar-git/open-stream-environment", "Open Stream Environment")} — GPL-3.0-or-later`,
+        ),
+      ) +
+      group(
+        t("settings.creditsFonts"),
+        row(
+          `Manrope, JetBrains Mono, Orbitron, Rajdhani, PT Sans Caption, IBM Plex Mono, Cinzel, Montserrat, Roboto, Roboto Condensed, Roboto Mono — ${ext("https://openfontlicense.org", "SIL OFL 1.1")}`,
+        ),
+      ) +
+      group(
+        t("settings.creditsSounds"),
+        row(
+          `${ext("https://freesound.org/people/roulettevision/sounds/420891/", "Wheel Spin")} — roulettevision, CC BY 3.0`,
+        ) +
+          row(
+            `${ext("https://freesound.org/people/LittleRobotSoundFactory/sounds/270333/", "Jingle Win")} — LittleRobotSoundFactory, CC BY 4.0`,
+          ) +
+          row(
+            `${ext("https://freesound.org/people/LittleRobotSoundFactory/sounds/270334/", "Jingle Lose")} — LittleRobotSoundFactory, CC BY 4.0`,
+          ) +
+          row(`${ext("https://freesound.org/people/Garuda1982/", "Buzzer")} — Garuda1982, CC0`),
+      );
+    host.querySelectorAll("[data-external]").forEach((el) => {
+      el.addEventListener("click", (event) => {
+        event.preventDefault();
+        window.desktop?.openExternal(el.dataset.external);
+      });
+    });
+  }
+  renderCredits();
+
   document.querySelectorAll("#languageSwitcher [data-lang]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const lang = btn.dataset.lang;
@@ -3888,6 +3933,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     helpPanel.refresh();
     const boostyBtn = document.getElementById("openBoostyBtn");
     if (boostyBtn) boostyBtn.innerHTML = `${ICONS.heart} ${t("boosty.support")}`;
+    renderCredits();
   }
 
   // Диагностика «бюджета сцены»: сколько анимированных 3D-виджетов (у каждого
