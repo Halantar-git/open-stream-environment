@@ -556,43 +556,43 @@ event loop). `[longrun]` попадает в лог только когда ес
 - **Наблюдаемость вместо догадок:** «почему отстал оверлей», «где мои настройки» и «не течёт ли память за эфир» решаются данными — телеметрия записи (`[atomic-write]`) и лаг event loop (`[perf]`) пишут строку только когда что-то реально происходило, след долгого прогона (`[longrun]`) хранит четыре часа образцов, отчёты о падениях и журнал восстановлений остаются на диске, `GET /healthz` отдаёт состояние машиночитаемо, а кнопка «Сохранить отчёт» собирает всё это в один файл без секретов для отправки в поддержку.
 
 ```mermaid
-graph TD
-    subgraph "Внешний мир"
-        Twitch[Twitch API / EventSub]
-        DA[DonationAlerts Centrifugo]
-        YT[YouTube Live API]
+flowchart TD
+    subgraph world["Внешний мир"]
+        Twitch["Twitch API / EventSub"]
+        DA["DonationAlerts Centrifugo"]
+        YT["YouTube Live API"]
     end
 
-    subgraph "Локальный Бэкенд (Rust / tokio + axum)"
-        Bus[Единая событийная шина]
-        DB[(Локальное хранилище\nснапшот JSON + append-only JSONL)]
-        Crypt[Шифрование секретов\nDPAPI / Keychain / libsecret]
-        CLI[Интерактивный CLI Контроллер]
-        Bot[Чат-бот: команды и таймеры]
+    subgraph backend["Локальный Бэкенд (Rust / tokio + axum)"]
+        Bus["Единая событийная шина"]
+        DB[("Локальное хранилище: снапшот JSON + append-only JSONL")]
+        Crypt["Шифрование секретов: DPAPI / Keychain / libsecret"]
+        CLI["Интерактивный CLI Контроллер"]
+        Bot["Чат-бот: команды и таймеры"]
     end
 
-    subgraph "Окна и Отображение (системный webview / OBS)"
-        Admin[Панель управления (WebView2) / Редактор Figma]
-        Remote[Мобильный пульт Web Remote / Stream Deck]
-        OBS[OBS Studio Browser Source]
+    subgraph ui["Окна и Отображение (системный webview / OBS)"]
+        Admin["Панель управления (WebView2) / Редактор Figma"]
+        Remote["Мобильный пульт Web Remote / Stream Deck"]
+        OBS["OBS Studio Browser Source"]
     end
 
     %% Связи внешних сервисов
-    Twitch -->|OAuth2 / WebSockets| Bus
-    DA -->|Centrifugo Stream| Bus
-    YT -->|Data API v3| Bus
+    Twitch -->|"OAuth2 / WebSockets"| Bus
+    DA -->|"Centrifugo Stream"| Bus
+    YT -->|"Data API v3"| Bus
 
     %% Связи бэкенда
     Bus <--> DB
     DB <--> Crypt
     CLI <--> Bus
-    Bus -->|chat_message| Bot
-    Bot -->|Helix chat/messages| Twitch
+    Bus -->|"chat_message"| Bot
+    Bot -->|"Helix chat/messages"| Twitch
 
     %% Связи отображения
-    Admin <-->|Локальный WebSocket /ws| Bus
-    Remote <-->|Адаптивный HTTP / WebSockets| Bus
-    Bus ==>|Единый URL 1920x1080 60FPS| OBS
+    Admin <-->|"Локальный WebSocket /ws"| Bus
+    Remote <-->|"Адаптивный HTTP / WebSockets"| Bus
+    Bus ==>|"Единый URL 1920x1080 60FPS"| OBS
 ```
 
 ## Доступ из сети
