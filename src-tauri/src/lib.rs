@@ -217,10 +217,11 @@ pub fn run() {
             );
 
             // Стартовая заставка: показывается, пока панель не готова, и не
-            // меньше `SPLASH_MIN_MS` — как `createSplashWindow` в `main.js`.
-            let splash = create_splash(app.handle(), port);
+            // меньше `SPLASH_MIN_MS` после того, как её страница загрузилась —
+            // как `createSplashWindow` в `main.js`.
+            let gate = Arc::new(Mutex::new(StartupGate::default()));
+            let splash = create_splash(app.handle(), port, Arc::clone(&gate));
             let has_splash = splash.is_some();
-            let splash_started = std::time::Instant::now();
 
             let builder = WebviewWindowBuilder::new(
                 app,
@@ -248,15 +249,13 @@ pub fn run() {
                     let _ = window.maximize();
                 }
                 if has_splash {
-                    let remaining = SPLASH_MIN_MS.saturating_sub(
-                        u64::try_from(splash_started.elapsed().as_millis()).unwrap_or(u64::MAX),
-                    );
-                    let window = window.clone();
-                    let app = app.clone();
-                    tauri::async_runtime::spawn(async move {
-                        tokio::time::sleep(std::time::Duration::from_millis(remaining)).await;
-                        finish_startup(&app, &window);
-                    });
+                    // Панель готова; показываем её, когда заставка отработает
+                    // минимум от загрузки своей страницы (см. `StartupGate`).
+                    {
+                        let mut state = gate.lock().unwrap_or_else(|error| error.into_inner());
+                        state.main_ready = true;
+                    }
+                    try_finish_startup(&app, &gate);
                 }
                 // Стартовая проверка обновления — после загрузки страницы, чтобы
                 // панель успела подписаться на `update:available`: раньше событие
@@ -548,16 +547,63 @@ fn recovery_notice(language: &str, events: &[crate::storage::integrity::Recovery
     }
 }
 
+/// Шлагбаум старта: панель показывается, когда её страница готова и заставка
+/// отработала минимум с момента, когда её собственная страница загрузилась.
+///
+/// Считать от создания окна нельзя: `splash.html` тянет внешние стили шрифта,
+/// они блокируют первую отрисовку, и CSS-анимация прогресс-бара стартует позже
+/// открытия окна — панель успевала появиться до её конца.
+#[derive(Default)]
+struct StartupGate {
+    /// Момент загрузки страницы заставки (`PageLoadEvent::Finished`).
+    splash_shown_at: Option<std::time::Instant>,
+    /// Страница панели готова.
+    main_ready: bool,
+    /// Показ панели уже запланирован — второй раз не планируем.
+    finished: bool,
+}
+
+/// Показать панель, когда оба условия [`StartupGate`] выполнены; иначе ждать
+/// второго сигнала. Идемпотентно: показ планируется ровно один раз.
+fn try_finish_startup(app: &tauri::AppHandle, gate: &Mutex<StartupGate>) {
+    let remaining = {
+        let mut state = gate.lock().unwrap_or_else(|error| error.into_inner());
+        if state.finished || !state.main_ready {
+            return;
+        }
+        let Some(shown_at) = state.splash_shown_at else {
+            return;
+        };
+        state.finished = true;
+        SPLASH_MIN_MS
+            .saturating_sub(u64::try_from(shown_at.elapsed().as_millis()).unwrap_or(u64::MAX))
+    };
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        if remaining > 0 {
+            tokio::time::sleep(std::time::Duration::from_millis(remaining)).await;
+        }
+        if let Some(main) = app.get_webview_window("main") {
+            finish_startup(&app, &main);
+        }
+    });
+}
+
 /// Показать стартовую заставку — как `createSplashWindow` в `main.js`:
 /// прозрачное окно без рамки поверх всего, `splash/splash.html` с версией.
 ///
 /// `None` — окно не создалось (тогда панель показывается сразу, без заставки).
-fn create_splash(app: &tauri::AppHandle, port: u16) -> Option<WebviewWindow> {
+fn create_splash(
+    app: &tauri::AppHandle,
+    port: u16,
+    gate: Arc<Mutex<StartupGate>>,
+) -> Option<WebviewWindow> {
     let url = format!(
         "http://127.0.0.1:{port}/splash/splash.html?version={}",
         env!("CARGO_PKG_VERSION")
     );
     let url = tauri::Url::parse(&url).ok()?;
+    let handle = app.clone();
     WebviewWindowBuilder::new(app, "splash", WebviewUrl::External(url))
         .title("Open Stream Environment")
         .inner_size(600.0, 400.0)
@@ -569,6 +615,21 @@ fn create_splash(app: &tauri::AppHandle, port: u16) -> Option<WebviewWindow> {
         .minimizable(false)
         .shadow(false)
         .center()
+        // Отсчёт минимума заставки — от загрузки её страницы, а не от создания
+        // окна: внешние стили шрифта задерживают первую отрисовку, и прогресс-бар
+        // стартует позже открытия окна.
+        .on_page_load(move |_window, payload| {
+            if payload.event() != PageLoadEvent::Finished {
+                return;
+            }
+            {
+                let mut state = gate.lock().unwrap_or_else(|error| error.into_inner());
+                if state.splash_shown_at.is_none() {
+                    state.splash_shown_at = Some(std::time::Instant::now());
+                }
+            }
+            try_finish_startup(&handle, &gate);
+        })
         .build()
         .ok()
 }
