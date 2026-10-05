@@ -4,12 +4,33 @@
   <img src="assets/logo/git_logo.png" alt="Open Stream Environment" />
 </p>
 
+<p align="center">
+  <a href="https://github.com/Halantar-git/open-stream-environment/releases"><img src="https://img.shields.io/github/v/release/Halantar-git/open-stream-environment?color=7ee0d6" alt="GitHub Release" /></a>
+  <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPLv3" /></a>
+  <a href="https://github.com/Halantar-git/open-stream-environment/actions/workflows/ci.yml"><img src="https://github.com/Halantar-git/open-stream-environment/actions/workflows/ci.yml/badge.svg" alt="Build Status" /></a>
+</p>
+
 Стрим-оверлей в стиле Material Design 3 + интуитивный визуальный редактор
 (в стиле drag-and-drop, аналогично механикам Figma) — перетаскивание, ресайз,
 добавление/удаление виджетов на лету, собранные на Tauri 2 (Rust) с системным webview. Оверлей отдаётся локальным сервером как обычная веб-страница —
 её нужно добавить в OBS как Browser Source.
 
 Текущая версия: **4.0.6**.
+
+## 🚀 Быстрый старт
+
+Для обычного использования собирать из исходников не нужно — берите готовую
+сборку.
+
+1. Скачайте установщик для своей системы на странице
+   [Releases](https://github.com/Halantar-git/open-stream-environment/releases)
+   (Windows — `.exe`/`.msi`, Linux — AppImage/deb/rpm, macOS — dmg).
+2. Запустите приложение — откроется панель управления.
+3. Добавьте оверлей в OBS: **Источники → + → Browser Source**, адрес
+   `http://localhost:8710/overlay/overlay.html`, разрешение 1920×1080, FPS источника 30.
+
+Готово — оверлей в эфире. Сборка из исходников и требования — в разделе
+«Установка и запуск».
 
 ## Что внутри
 
