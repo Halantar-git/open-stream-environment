@@ -10,6 +10,7 @@
     "type": "git",
     "url": "https://github.com/Halantar-git/open-stream-environment.git"
   },
+  "homepage": "https://ose-overlay.ru",
   "scripts": {
     "test": "jest",
     "lint": "eslint .",
