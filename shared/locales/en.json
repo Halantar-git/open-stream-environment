@@ -1186,10 +1186,11 @@
     },
     "quickstart": {
       "title": "Quick start",
-      "s1": "In OBS add a Browser Source and paste the overlay URL from the Editor toolbar.",
-      "s2": "In Settings → Twitch set at least your channel name (chat connects anonymously).",
-      "s3": "Optionally connect DonationAlerts, YouTube and OBS WebSocket in Settings.",
-      "s4": "Add and arrange widgets in the Editor — changes apply to the overlay live."
+      "s1": "In OBS add a Browser Source (Sources → + → Browser Source) and paste the overlay address http://localhost:8710/overlay/overlay.html. Resolution — 1920×1080, source FPS — 30.",
+      "s2": "Add a separate Browser Source for each screen (Start, BRB, Just Chatting, End, Wheel) — copy its URL with the button below the preview on the Scenes tab.",
+      "s3": "In Settings → Twitch set at least your channel name (chat connects anonymously); optionally connect DonationAlerts and YouTube.",
+      "s4": "To switch scenes and control the camera from the app, enable OBS WebSocket (see the “OBS WebSocket” section).",
+      "s5": "Add and arrange widgets in the Editor — changes apply to the overlay live."
     },
     "editor": {
       "title": "Editor",

@@ -45,7 +45,7 @@ const SECTIONS = [
     id: "quickstart",
     title: "help.quickstart.title",
     blocks: [
-      { type: "steps", items: ["help.quickstart.s1", "help.quickstart.s2", "help.quickstart.s3", "help.quickstart.s4"] },
+      { type: "steps", items: ["help.quickstart.s1", "help.quickstart.s2", "help.quickstart.s3", "help.quickstart.s4", "help.quickstart.s5"] },
     ],
   },
   {
