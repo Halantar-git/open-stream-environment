@@ -525,6 +525,77 @@
       },
     },
 
+    // WarDogs — тактический шутер про три ЧВК на Кавказе. Тема держится на
+    // трёх опознавательных цветах фракций (оливковый, синий, красный) поверх
+    // тёмного оливково-песочного «полевого» фона: панели со срезанным углом,
+    // скобки по краям и технический узкий шрифт — как боевой HUD, а не глянец.
+    wardogs: {
+      id: "wardogs",
+      name: "Wardogs",
+      builtin: true,
+      category: "wardogs",
+      dimension: "2d",
+      family: "wardogs",
+      borderRadius: "0px",
+      tokens: {
+        // Оливковый (#a6c344) — «свой»: фракция Manticore, цели, готовность.
+        "--md-primary": "#a6c344",
+        "--md-on-primary": "#1a2600",
+        "--md-primary-container": "#465e12",
+        "--md-on-primary-container": "#e2f2b0",
+
+        // Синий (#5a9fe0) — фракция Lonestar, инфо и второстепенные элементы.
+        "--md-secondary": "#5a9fe0",
+        "--md-on-secondary": "#001f33",
+        "--md-secondary-container": "#16456f",
+        "--md-on-secondary-container": "#cfe4ff",
+
+        // Красный (#e0553f) — фракция Valkyra, тревога и вражеские контакты.
+        "--md-tertiary": "#e0553f",
+        "--md-on-tertiary": "#3c0a04",
+        "--md-tertiary-container": "#7a1f12",
+        "--md-on-tertiary-container": "#ffd9d1",
+
+        "--md-error": "#ffb4ab",
+        "--md-on-error": "#690005",
+        "--md-error-container": "#93000a",
+        "--md-on-error-container": "#ffdad6",
+
+        // Тёмные оливково-песочные поверхности (полевой маскировочный фон).
+        "--md-surface-dim": "#0a0c08",
+        "--md-surface": "#10130d",
+        "--md-surface-bright": "#2b3026",
+        "--md-surface-container-lowest": "#050604",
+        "--md-surface-container-low": "#171b13",
+        "--md-surface-container": "#1d221a",
+        "--md-surface-container-high": "#252b20",
+        "--md-surface-container-highest": "#2e3528",
+
+        "--md-on-surface": "#e6e3d4",
+        "--md-on-surface-variant": "#b9bda8",
+        "--md-outline": "#7d8470",
+        "--md-outline-variant": "#3c4234",
+
+        // Rajdhani — технические заголовки, Roboto Condensed — текст,
+        // JetBrains Mono — числа и суммы (счётчик денег).
+        "--font-display": '"Rajdhani", "Segoe UI", sans-serif',
+        "--font-body": '"Roboto Condensed", "Segoe UI", sans-serif',
+        "--font-mono": '"JetBrains Mono", "Consolas", monospace',
+
+        // Панели со срезанным верхним правым углом и скобками по углам:
+        // оливковая рамка, ровное свечение, без размытия.
+        "--panel-radius": "0px",
+        "--panel-clip": "polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%)",
+        "--panel-decoration": "brackets2",
+        "--panel-glow": "0 0 14px rgba(166, 195, 68, 0.22), inset 0 0 24px rgba(166, 195, 68, 0.04)",
+        "--panel-bg": "rgba(16, 19, 13, 0.93)",
+        "--panel-blur": "0px",
+        "--panel-border": "1px solid rgba(166, 195, 68, 0.30)",
+        "--alert-enter-easing": "cubic-bezier(0.175, 0.885, 0.32, 1.2)",
+        "--alert-enter-duration": "300ms",
+      },
+    },
+
     teso: {
       id: "teso",
       name: "TESO",
