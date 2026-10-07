@@ -525,10 +525,10 @@
       },
     },
 
-    // WarDogs — тактический шутер про три ЧВК на Кавказе. Тема держится на
-    // трёх опознавательных цветах фракций (оливковый, синий, красный) поверх
-    // тёмного оливково-песочного «полевого» фона: панели со срезанным углом,
-    // скобки по краям и технический узкий шрифт — как боевой HUD, а не глянец.
+    // WarDogs — тактический шутер про три ЧВК на Кавказе. Тема снята с
+    // игрового HUD: золотисто-янтарный свет ключевого арта и логотипа как
+    // акцент, синий и красный — цвета враждующих фракций, а тёмные тёплые
+    // поверхности и тонкие прямоугольные панели повторяют строгий плоский HUD.
     wardogs: {
       id: "wardogs",
       name: "Wardogs",
@@ -538,43 +538,43 @@
       family: "wardogs",
       borderRadius: "0px",
       tokens: {
-        // Оливковый (#a6c344) — «свой»: фракция Manticore, цели, готовность.
-        "--md-primary": "#a6c344",
-        "--md-on-primary": "#1a2600",
-        "--md-primary-container": "#465e12",
-        "--md-on-primary-container": "#e2f2b0",
+        // Янтарное золото (#f0a92c) — золотой свет ключевого арта и денег.
+        "--md-primary": "#f0a92c",
+        "--md-on-primary": "#2a1c00",
+        "--md-primary-container": "#7a4d00",
+        "--md-on-primary-container": "#ffdfa6",
 
-        // Синий (#5a9fe0) — фракция Lonestar, инфо и второстепенные элементы.
-        "--md-secondary": "#5a9fe0",
-        "--md-on-secondary": "#001f33",
-        "--md-secondary-container": "#16456f",
-        "--md-on-secondary-container": "#cfe4ff",
+        // Синий фракции Lonestar (#3f83e6) — инфо и второстепенные элементы.
+        "--md-secondary": "#3f83e6",
+        "--md-on-secondary": "#001a33",
+        "--md-secondary-container": "#123f7a",
+        "--md-on-secondary-container": "#cfe0ff",
 
-        // Красный (#e0553f) — фракция Valkyra, тревога и вражеские контакты.
-        "--md-tertiary": "#e0553f",
-        "--md-on-tertiary": "#3c0a04",
-        "--md-tertiary-container": "#7a1f12",
-        "--md-on-tertiary-container": "#ffd9d1",
+        // Красный фракции Valkyra (#e0463a) — тревога и вражеские контакты.
+        "--md-tertiary": "#e0463a",
+        "--md-on-tertiary": "#3a0805",
+        "--md-tertiary-container": "#7a170f",
+        "--md-on-tertiary-container": "#ffd5d0",
 
         "--md-error": "#ffb4ab",
         "--md-on-error": "#690005",
         "--md-error-container": "#93000a",
         "--md-on-error-container": "#ffdad6",
 
-        // Тёмные оливково-песочные поверхности (полевой маскировочный фон).
-        "--md-surface-dim": "#0a0c08",
-        "--md-surface": "#10130d",
-        "--md-surface-bright": "#2b3026",
-        "--md-surface-container-lowest": "#050604",
-        "--md-surface-container-low": "#171b13",
-        "--md-surface-container": "#1d221a",
-        "--md-surface-container-high": "#252b20",
-        "--md-surface-container-highest": "#2e3528",
+        // Тёмные тёплые поверхности (сумеречные тени и подложки HUD).
+        "--md-surface-dim": "#0b0a08",
+        "--md-surface": "#12110e",
+        "--md-surface-bright": "#2c2a24",
+        "--md-surface-container-lowest": "#060504",
+        "--md-surface-container-low": "#191813",
+        "--md-surface-container": "#1f1d17",
+        "--md-surface-container-high": "#26241d",
+        "--md-surface-container-highest": "#2e2b23",
 
-        "--md-on-surface": "#e6e3d4",
-        "--md-on-surface-variant": "#b9bda8",
-        "--md-outline": "#7d8470",
-        "--md-outline-variant": "#3c4234",
+        "--md-on-surface": "#e8e5dd",
+        "--md-on-surface-variant": "#b6b3a7",
+        "--md-outline": "#7d7a6d",
+        "--md-outline-variant": "#3b3931",
 
         // Rajdhani — технические заголовки, Roboto Condensed — текст,
         // JetBrains Mono — числа и суммы (счётчик денег).
@@ -582,17 +582,17 @@
         "--font-body": '"Roboto Condensed", "Segoe UI", sans-serif',
         "--font-mono": '"JetBrains Mono", "Consolas", monospace',
 
-        // Панели со срезанным верхним правым углом и скобками по углам:
-        // оливковая рамка, ровное свечение, без размытия.
+        // Плоские прямоугольные панели с тонкой рамкой и скобками — как HUD
+        // игры: без скруглений, без размытия, едва заметное тёплое свечение.
         "--panel-radius": "0px",
-        "--panel-clip": "polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%)",
+        "--panel-clip": "none",
         "--panel-decoration": "brackets2",
-        "--panel-glow": "0 0 14px rgba(166, 195, 68, 0.22), inset 0 0 24px rgba(166, 195, 68, 0.04)",
-        "--panel-bg": "rgba(16, 19, 13, 0.93)",
+        "--panel-glow": "0 0 12px rgba(240, 169, 44, 0.18), inset 0 0 20px rgba(240, 169, 44, 0.03)",
+        "--panel-bg": "rgba(18, 17, 14, 0.88)",
         "--panel-blur": "0px",
-        "--panel-border": "1px solid rgba(166, 195, 68, 0.30)",
-        "--alert-enter-easing": "cubic-bezier(0.175, 0.885, 0.32, 1.2)",
-        "--alert-enter-duration": "300ms",
+        "--panel-border": "1px solid rgba(240, 169, 44, 0.26)",
+        "--alert-enter-easing": "cubic-bezier(0.2, 0.8, 0.2, 1)",
+        "--alert-enter-duration": "280ms",
       },
     },
 
