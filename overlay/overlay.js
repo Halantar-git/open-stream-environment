@@ -407,6 +407,7 @@
   manager.register("teso-holo-alert", OW.WidgetTesoHoloAlert);
   manager.register("cobra-chat", OW.WidgetCobraChat);
   manager.register("cobra-goal", OW.WidgetCobraGoal);
+  manager.register("wardogs-goal", OW.WidgetWardogsGoal);
   manager.register("cobra-holo-alert", OW.WidgetCobraHoloAlert);
   manager.register("cobra-shield", OW.WidgetCobraShield);
   manager.register("cobra-radar", OW.WidgetCobraRadar);

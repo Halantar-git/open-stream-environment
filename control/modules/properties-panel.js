@@ -189,7 +189,7 @@ export function initPropertiesPanel({
     const config = inst.config || {};
 
     let extraHtml = "";
-    if (inst.type === "goal" || inst.type === "grimhex-goal" || inst.type === "nuclear-goal" || inst.type === "cobra-goal" || inst.type === "md3-goal" || inst.type === "pixel-goal" || inst.type === "teso-goal") {
+    if (inst.type === "goal" || inst.type === "grimhex-goal" || inst.type === "nuclear-goal" || inst.type === "cobra-goal" || inst.type === "wardogs-goal" || inst.type === "md3-goal" || inst.type === "pixel-goal" || inst.type === "teso-goal") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.goalTitle")}</label><input type="text" id="pGoalTitle" value="${escapeAttr(state.goal.title || "")}"></div>
         <div class="properties__row">
@@ -396,7 +396,7 @@ export function initPropertiesPanel({
     });
     wireSwitch(propertiesEl.querySelector("#pVisible"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { visible: on } }));
 
-    if (inst.type === "goal" || inst.type === "grimhex-goal" || inst.type === "nuclear-goal" || inst.type === "cobra-goal" || inst.type === "md3-goal" || inst.type === "pixel-goal" || inst.type === "teso-goal") {
+    if (inst.type === "goal" || inst.type === "grimhex-goal" || inst.type === "nuclear-goal" || inst.type === "cobra-goal" || inst.type === "wardogs-goal" || inst.type === "md3-goal" || inst.type === "pixel-goal" || inst.type === "teso-goal") {
       propertiesEl.querySelector("#pGoalTitle").addEventListener("change", (e) => send(EVENT_TYPES.CMD_SET_GOAL, { title: e.target.value }));
       propertiesEl.querySelector("#pGoalCurrent").addEventListener("change", (e) => send(EVENT_TYPES.CMD_SET_GOAL, { current: Number(e.target.value) }));
       propertiesEl.querySelector("#pGoalTarget").addEventListener("change", (e) => send(EVENT_TYPES.CMD_SET_GOAL, { target: Number(e.target.value) }));

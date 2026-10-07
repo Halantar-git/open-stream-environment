@@ -1,5 +1,5 @@
 {
-  "sourceHash": "9533fc4b5db30812",
+  "sourceHash": "03721df0b5127597",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -675,6 +675,30 @@
         "showPercentage": false
       }
     },
+    "wardogs-goal": {
+      "type": "wardogs-goal",
+      "label": "Цель Wardogs",
+      "description": "Донат-цель как шкала загрузки из HUD WarDogs (только для темы Wardogs)",
+      "icon": "widgetWardogsGoal",
+      "services": [
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "wardogs",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 84,
+        "w": 32,
+        "h": 6
+      },
+      "minW": 16,
+      "minH": 4,
+      "defaultConfig": {
+        "showPercentage": false
+      }
+    },
     "cobra-holo-alert": {
       "type": "cobra-holo-alert",
       "label": "Голограмма Cobra",
@@ -947,6 +971,7 @@
     "cobra-shield",
     "cobra-holo-alert",
     "cobra-goal",
+    "wardogs-goal",
     "elite-sign",
     "nuclear",
     "nuclear-goal",

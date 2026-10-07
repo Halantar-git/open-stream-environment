@@ -1,5 +1,5 @@
 {
-  "sourceHash": "eadeb6530b3dca2d",
+  "sourceHash": "68b5a7303edc0dec",
   "builtinThemes": {
     "nebula": {
       "id": "nebula",
@@ -336,6 +336,7 @@
       "category": "wardogs",
       "dimension": "2d",
       "family": "wardogs",
+      "variant3d": "wardogs",
       "borderRadius": "0px",
       "tokens": {
         "--md-primary": "#f0a92c",
@@ -627,6 +628,10 @@
     {
       "id": "cobra-mk2",
       "name": "Cobra Mk II"
+    },
+    {
+      "id": "wardogs",
+      "name": "Wardogs"
     }
   ]
 }

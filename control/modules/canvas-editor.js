@@ -645,6 +645,21 @@ export function initCanvasEditor({
           <svg viewBox="0 0 200 60" preserveAspectRatio="xMidYMid meet" style="flex:1;width:100%;min-height:0;">${sectors}</svg>
         </div>`;
       }
+      case "wardogs-goal": {
+        const primary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#f0a92c";
+        const track = "rgba(255,255,255,0.10)";
+        const pct = state.goal && state.goal.target ? Math.min(100, Math.round((state.goal.current / state.goal.target) * 100)) : 0;
+        const segments = Array.from({ length: 10 }, (_, i) => {
+          const sx = 4 + i * 19.2;
+          const fill = Math.max(0, Math.min(1, (pct - i * 10) / 10));
+          return `<rect x="${sx.toFixed(1)}" y="24" width="17.2" height="18" fill="${track}"/>` +
+            (fill > 0.01 ? `<rect x="${sx.toFixed(1)}" y="24" width="${(17.2 * fill).toFixed(1)}" height="18" fill="${primary}"/>` : "");
+        }).join("");
+        return `<div class="wardogs-goal-preview" style="position:relative;height:100%;display:flex;flex-direction:column;justify-content:center;gap:4px;padding:4px;box-sizing:border-box;">
+          <div style="display:flex;justify-content:space-between;gap:10px;color:#e8e5dd;font-size:11px;"><span style="font-family:'Rajdhani','Segoe UI',sans-serif;text-transform:uppercase;letter-spacing:1.2px;">${escapeHtml(state.goal.title || t("preview.goalTitle"))}</span><span style="color:#b6b3a7;font-family:'JetBrains Mono','Consolas',monospace;"><b style="color:${primary};">${formatMoney(state.goal.current)}</b> / ${formatMoney(state.goal.target)}</span></div>
+          <svg viewBox="0 0 200 48" preserveAspectRatio="none" style="width:100%;height:26px;">${segments}</svg>
+        </div>`;
+      }
       case "cobra-holo-alert": {
         const orange = "#ff7605";
         return `<div class="cobra-holo-preview" style="position:relative;height:100%;display:flex;align-items:center;gap:8px;padding:6px 8px;box-sizing:border-box;">

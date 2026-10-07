@@ -536,6 +536,7 @@
       category: "wardogs",
       dimension: "2d",
       family: "wardogs",
+      variant3d: "wardogs",
       borderRadius: "0px",
       tokens: {
         // Янтарное золото (#f0a92c) — золотой свет ключевого арта и денег.
@@ -673,6 +674,7 @@
     { id: "pixel", name: "Pixel Perfect" },
     { id: "teso-seal", name: "TESO" },
     { id: "cobra-mk2", name: "Cobra Mk II" },
+    { id: "wardogs", name: "Wardogs" },
   ];
 
   const api = { BUILTIN_THEMES, THREE_D_STYLES };
