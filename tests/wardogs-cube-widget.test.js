@@ -146,10 +146,12 @@ describe("WidgetWardogsCube", () => {
 
       // Кадр при монтировании не считаем: интересует кадр алерта.
       w.element._ctx.drawImage.mockClear();
+      w.element._ctx.fillRect.mockClear();
       ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "follow" });
       raf.flush(1000);
-      // Каркаса нет: куб целиком собран из логотипа на шести гранях.
+      // Каркаса нет: куб плотный — у каждой из шести граней подложка и логотип.
       expect(w.element._ctx.stroke).not.toHaveBeenCalled();
+      expect(w.element._ctx.fillRect).toHaveBeenCalledTimes(6);
       expect(w.element._ctx.drawImage).toHaveBeenCalledTimes(6);
 
       w.unmount();

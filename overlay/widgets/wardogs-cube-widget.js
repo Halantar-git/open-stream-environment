@@ -18,7 +18,12 @@
 /*
   WidgetWardogsCube — rotating isometric cube for the Wardogs theme, built
   entirely from the emblem (assets/themes/wardogs/logo.png) decaled onto all six
-  faces in the emblem's own colours: no wireframe, the cube itself is the logo.
+  faces in the emblem's own colours, on solid faces — no wireframe.
+
+  Each face is filled with the theme's panel background before the emblem goes
+  on, so the cube is dense: nearer faces hide the farther ones. The fill is
+  lit by the face normal, otherwise a cube of identical panels would read as a
+  flat blob.
 
   Like the Pixel cube it is hidden while nothing is happening and appears on an
   alert, one alert at a time; donations also make it pop.
@@ -44,6 +49,40 @@
   const LOGO_PATH = "/assets/themes/wardogs/logo.png";
   const DEFAULT_ALERT_MS = 5000;
 
+  const PANEL_FALLBACK = [9, 9, 9]; // rgba(9, 9, 9, 0.90) из темы
+  const LIT_FALLBACK = [44, 42, 36]; // #2c2a24 (--md-surface-bright)
+
+  // Свет сверху-слева: грань тем светлее, чем сильнее её нормаль смотрит на
+  // источник. Направление задано в экранных координатах (как у проекции).
+  const LIGHT = (() => {
+    const v = [-0.35, 0.7, 0.62];
+    const len = Math.hypot(v[0], v[1], v[2]) || 1;
+    return [v[0] / len, v[1] / len, v[2] / len];
+  })();
+
+  // "rgb()", "rgba()" или "#hex" -> [r, g, b]; null, если не разобрать.
+  function toRgb(color) {
+    const text = String(color || "").trim();
+    const rgb = text.match(/^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/i);
+    if (rgb) return [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])];
+    const hex = text.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (!hex) return null;
+    const full = hex[1].length === 3
+      ? hex[1].split("").map((ch) => ch + ch).join("")
+      : hex[1];
+    return [
+      parseInt(full.slice(0, 2), 16),
+      parseInt(full.slice(2, 4), 16),
+      parseInt(full.slice(4, 6), 16),
+    ];
+  }
+
+  // Цвет грани между тенью и светом.
+  function mixColor(from, to, t) {
+    const channel = (i) => Math.round(from[i] + (to[i] - from[i]) * t);
+    return `rgb(${channel(0)}, ${channel(1)}, ${channel(2)})`;
+  }
+
   // The 6 cube faces for decaling the emblem: center + two in-plane tangent
   // vectors (face-local x/y axes). Front/back/left/right/top/bottom.
   const LOGO_FACES = [
@@ -60,6 +99,8 @@
       super(config, context);
       this.theme = (context && (context.theme || context.activeThemeId)) || "";
       this._logo = null; // source <img>, loaded once
+      this._shadow = PANEL_FALLBACK; // unlit face colour (panel background)
+      this._lit = LIT_FALLBACK; // fully lit face colour
       this._queue = []; // alerts waiting for their turn
       this._visibleUntil = 0; // while > now the cube is shown
       this._popUntil = 0; // active "pop" window (alert reaction)
@@ -71,6 +112,7 @@
       if (this.theme !== "wardogs") return;
 
       this._ensureLogo();
+      this._readFaceColors();
       this._applyPerspective();
       this.subscribe(this.context.EVENT_TYPES.ALERT, (alert) => this._queueAlert(alert));
       // Hidden until the first alert, like the Pixel cube.
@@ -143,6 +185,15 @@
       this._logo = img;
     }
 
+    // Faces are filled with the theme's panel background (shared with every
+    // Wardogs widget) and lit up to the bright surface; the panel colour is
+    // semi-transparent, which the dense cube cannot use, so alpha is dropped.
+    _readFaceColors() {
+      const read = this.context.readCssVar;
+      this._shadow = toRgb(read && read("--panel-bg")) || PANEL_FALLBACK;
+      this._lit = toRgb(read && read("--md-surface-bright")) || LIT_FALLBACK;
+    }
+
     // The emblem is drawn in its own colours (black shield, white wolf) exactly
     // as the game uses it, so it reads over whatever gameplay sits behind.
     _logoImage() {
@@ -199,30 +250,33 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, cw, ch);
 
-      // Emblem on every face, drawn back to front so near faces cover far ones.
+      // Every face is a solid panel with the emblem on it, drawn back to front
+      // so nearer faces cover the farther ones.
       const logo = this._logoImage();
-      if (logo) {
-        const h = 1; // face-local half-size; 1 fills the face (it spans -1..1)
-        const faces = LOGO_FACES.map((f) => {
-          const pc = project(f.c);
-          const pu = project(f.u);
-          const pv = project(f.v);
-          return {
-            a: size * pu.x,
-            b: -size * pu.y,
-            c: size * pv.x,
-            d: -size * pv.y,
-            e: cx + size * pc.x,
-            f: cy - size * pc.y,
-            depth: pc.z,
-          };
-        }).sort((p, q) => p.depth - q.depth);
+      const faces = LOGO_FACES.map((f) => {
+        const pc = project(f.c);
+        const pu = project(f.u);
+        const pv = project(f.v);
+        const light = clamp(pc.x * LIGHT[0] + pc.y * LIGHT[1] + pc.z * LIGHT[2], 0, 1);
+        return {
+          a: size * pu.x,
+          b: -size * pu.y,
+          c: size * pv.x,
+          d: -size * pv.y,
+          e: cx + size * pc.x,
+          f: cy - size * pc.y,
+          depth: pc.z,
+          fill: mixColor(this._shadow, this._lit, light),
+        };
+      }).sort((p, q) => p.depth - q.depth);
 
-        for (const face of faces) {
-          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-          ctx.transform(face.a, face.b, face.c, face.d, face.e, face.f);
-          ctx.drawImage(logo, -h, -h, 2 * h, 2 * h);
-        }
+      for (const face of faces) {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.transform(face.a, face.b, face.c, face.d, face.e, face.f);
+        // Face spans -1..1 in its own axes; the panel fills it, the emblem sits on top.
+        ctx.fillStyle = face.fill;
+        ctx.fillRect(-1, -1, 2, 2);
+        if (logo) ctx.drawImage(logo, -1, -1, 2, 2);
       }
     }
   }
