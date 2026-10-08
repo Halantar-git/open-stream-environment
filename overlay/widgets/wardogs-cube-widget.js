@@ -86,13 +86,15 @@
 
   // The 6 cube faces for decaling the emblem: center + two in-plane tangent
   // vectors (face-local x/y axes). Front/back/left/right/top/bottom.
+  // For the horizontal faces v sets the emblem's up: kept along the side faces'
+  // direction, otherwise the logo reads upside down on the top and bottom.
   const LOGO_FACES = [
     { c: [0, 0, -1], u: [1, 0, 0], v: [0, 1, 0] },   // front
     { c: [0, 0, 1],  u: [-1, 0, 0], v: [0, 1, 0] },  // back
     { c: [-1, 0, 0], u: [0, 0, 1],  v: [0, 1, 0] },  // left
     { c: [1, 0, 0],  u: [0, 0, -1], v: [0, 1, 0] },  // right
-    { c: [0, 1, 0],  u: [1, 0, 0],  v: [0, 0, -1] }, // top
-    { c: [0, -1, 0], u: [1, 0, 0],  v: [0, 0, 1] },  // bottom
+    { c: [0, 1, 0],  u: [1, 0, 0],  v: [0, 0, 1] },  // top
+    { c: [0, -1, 0], u: [1, 0, 0],  v: [0, 0, -1] }, // bottom
   ];
 
   class WidgetWardogsCube extends BaseWidget {
