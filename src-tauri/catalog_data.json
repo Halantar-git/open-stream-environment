@@ -1,5 +1,5 @@
 {
-  "sourceHash": "78ff3b0d201b5c57",
+  "sourceHash": "3b0f843733f5885d",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -747,6 +747,27 @@
       "minH": 8,
       "defaultConfig": {}
     },
+    "wardogs-cube": {
+      "type": "wardogs-cube",
+      "label": "Куб Wardogs",
+      "description": "Вращающийся каркасный куб с логотипом WarDogs (только для темы Wardogs)",
+      "icon": "widgetWardogsCube",
+      "dimension": "3d",
+      "theme": "wardogs",
+      "role": "sign",
+      "defaultGeometry": {
+        "x": 38,
+        "y": 6,
+        "w": 24,
+        "h": 16
+      },
+      "minW": 10,
+      "minH": 6,
+      "defaultConfig": {
+        "perspective": 0,
+        "motion": true
+      }
+    },
     "cobra-holo-alert": {
       "type": "cobra-holo-alert",
       "label": "Голограмма Cobra",
@@ -1020,6 +1041,7 @@
     "cobra-holo-alert",
     "cobra-goal",
     "wardogs-goal",
+    "wardogs-cube",
     "elite-sign",
     "nuclear",
     "nuclear-goal",

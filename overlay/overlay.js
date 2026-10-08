@@ -410,6 +410,7 @@
   manager.register("wardogs-goal", OW.WidgetWardogsGoal);
   manager.register("wardogs-chat", OW.WidgetWardogsChat);
   manager.register("wardogs-holo-alert", OW.WidgetWardogsHoloAlert);
+  manager.register("wardogs-cube", OW.WidgetWardogsCube);
   manager.register("cobra-holo-alert", OW.WidgetCobraHoloAlert);
   manager.register("cobra-shield", OW.WidgetCobraShield);
   manager.register("cobra-radar", OW.WidgetCobraRadar);

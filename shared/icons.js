@@ -67,6 +67,7 @@
     widgetWardogsGoal: `<svg viewBox="0 0 24 24" ${stroke}><rect x="3" y="9.5" width="18" height="5"/><path d="M7 9.5v5M11 9.5v5M15 9.5v5M19 9.5v5"/><path d="M5 12h6" stroke-width="3"/></svg>`,
     widgetWardogsChat: `<svg viewBox="0 0 24 24" ${stroke}><path d="M4 5h16v11H8l-4 4V5z"/><path d="M8 9h8M8 12h5"/></svg>`,
     widgetWardogsHoloAlert: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="12" r="9" stroke-dasharray="3 2.4"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/><path d="M12 3v2.4M12 18.6V21M3 12h2.4M18.6 12H21" opacity="0.7"/></svg>`,
+    widgetWardogsCube: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 2l8 4.5v9L12 20l-8-4.5v-9L12 2z"/><path d="M4 6.5L12 11l8-4.5M12 11v9"/><circle cx="12" cy="11" r="1.2" fill="currentColor" stroke="none"/></svg>`,
     widgetCobraHoloAlert: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="12" r="9"/><path d="M12 6.5l1.8 4.7 5 .8-3.7 3.4 1 5-4.1-2.4-4.1 2.4 1-5L5 12l5-.8 2-4.7z"/></svg>`,
     widgetCobraShield: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="12" r="8.5"/><path d="M12 6l1.6 4.2 4.4.7-3.2 3 .7 4.1-3.5-2-3.5 2 .7-4.1-3.2-3 4.4-.7L12 6z"/></svg>`,
     widgetCobraRadar: `<svg viewBox="0 0 24 24" ${stroke}><ellipse cx="12" cy="12" rx="9" ry="4.5"/><ellipse cx="12" cy="12" rx="6" ry="3"/><ellipse cx="12" cy="12" rx="3" ry="1.5"/><path d="M12 3v18M3 12h18"/><path d="M12 9.5l1.6 2.5-1.6-2.5z"/></svg>`,
