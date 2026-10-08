@@ -14,6 +14,7 @@
 //! интеграции ещё не подключены. Пометка стоит там, где поле появится.
 
 use std::collections::{HashMap, HashSet};
+use std::net::{IpAddr, Ipv4Addr};
 use std::sync::atomic::{AtomicBool, AtomicU16, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
@@ -1738,24 +1739,99 @@ pub fn configured_port(config: &Map<String, Value>) -> Option<u16> {
 
 /// Локальный адрес в сети для адреса пульта.
 ///
-/// В JS интерфейсы перебираются (`os.networkInterfaces`) с приоритетом
-/// физических и приватных; здесь берём адрес маршрута по умолчанию — его
-/// достаточно, чтобы телефон в той же сети открыл пульт, — а если маршрута нет,
-/// остаётся `127.0.0.1`.
+/// Как `buildRemoteUrl` в JS, перебираем сетевые интерфейсы
+/// (`os.networkInterfaces`) и выбираем адрес домашней сети: маршрут по умолчанию
+/// может указывать на VPN или туннель, и телефон в той же сети такой адрес не
+/// откроет. Если приватного адреса нет, остаётся адрес маршрута по умолчанию, а
+/// затем `127.0.0.1`.
 fn local_ip() -> String {
-    use std::net::UdpSocket;
-    // Ничего не отправляется: `connect` на UDP только выбирает маршрут и адрес.
-    if let Ok(socket) = UdpSocket::bind("0.0.0.0:0") {
-        if socket.connect("8.8.8.8:80").is_ok() {
-            if let Ok(address) = socket.local_addr() {
-                let ip = address.ip();
-                if !ip.is_loopback() {
-                    return ip.to_string();
-                }
-            }
-        }
+    if let Some(ip) = best_lan_ip() {
+        return ip.to_string();
+    }
+    if let Some(ip) = default_route_ip() {
+        return ip.to_string();
     }
     "127.0.0.1".to_string()
+}
+
+/// Лучший адрес домашней сети среди интерфейсов машины.
+fn best_lan_ip() -> Option<Ipv4Addr> {
+    let interfaces = if_addrs::get_if_addrs().ok()?;
+    let addresses: Vec<(String, Ipv4Addr)> = interfaces
+        .into_iter()
+        .filter_map(|interface| match interface.addr {
+            if_addrs::IfAddr::V4(v4) => Some((interface.name, v4.ip)),
+            if_addrs::IfAddr::V6(_) => None,
+        })
+        .collect();
+    select_lan_ip(&addresses)
+}
+
+/// Выбрать адрес домашней сети из пар «интерфейс, IPv4-адрес».
+///
+/// Отдельно от [`best_lan_ip`], чтобы порядок предпочтений можно было проверить
+/// без реальных интерфейсов машины.
+fn select_lan_ip(interfaces: &[(String, Ipv4Addr)]) -> Option<Ipv4Addr> {
+    interfaces
+        .iter()
+        .filter(|(_, ip)| ip.is_private())
+        .min_by_key(|(name, ip)| candidate_key(name, *ip))
+        .map(|(_, ip)| *ip)
+}
+
+/// Ключ приоритета адреса: чем меньше, тем раньше берётся интерфейс.
+///
+/// Виртуальный адаптер (VPN, туннель, Hyper-V, WSL, Docker) уводит телефон в
+/// чужую сеть, поэтому он всегда в конце — даже с привычным `192.168.*`. Дальше
+/// идёт «обычность» адреса для дома: `192.168.*` встречается чаще всего,
+/// за ним `10.*` и `172.16–31.*`; сам адрес замыкает ключ, чтобы при равных
+/// условиях выбор не зависел от порядка интерфейсов.
+fn candidate_key(interface: &str, ip: Ipv4Addr) -> (u8, u8, Ipv4Addr) {
+    let virtual_adapter = u8::from(looks_virtual(interface));
+    let range = match ip.octets() {
+        [192, 168, ..] => 0,
+        [10, ..] => 1,
+        [172, second, ..] if (16..=31).contains(&second) => 2,
+        _ => 3,
+    };
+    (virtual_adapter, range, ip)
+}
+
+/// Похоже ли имя интерфейса на виртуальный адаптер.
+fn looks_virtual(interface: &str) -> bool {
+    const MARKERS: [&str; 16] = [
+        "vpn",
+        "tun",
+        "tap",
+        "wireguard",
+        "wg",
+        "utun",
+        "hyper-v",
+        "vethernet",
+        "vmware",
+        "virtualbox",
+        "vbox",
+        "docker",
+        "wsl",
+        "tailscale",
+        "zerotier",
+        "openvpn",
+    ];
+    let name = interface.to_ascii_lowercase();
+    MARKERS.iter().any(|marker| name.contains(marker))
+}
+
+/// Адрес маршрута по умолчанию — запасной вариант, когда приватных адресов нет.
+fn default_route_ip() -> Option<IpAddr> {
+    use std::net::UdpSocket;
+    // Ничего не отправляется: `connect` на UDP только выбирает маршрут и адрес.
+    let socket = UdpSocket::bind("0.0.0.0:0").ok()?;
+    socket.connect("8.8.8.8:80").ok()?;
+    let ip = socket.local_addr().ok()?.ip();
+    if ip.is_loopback() || ip.is_unspecified() {
+        return None;
+    }
+    Some(ip)
 }
 
 /// Запустить фоновую задачу в рантайме Tauri — тот же способ, что у сервера.
@@ -3309,6 +3385,52 @@ mod tests {
 
         // Неизвестный id — null, как в JS.
         assert_eq!(diagnostics.replay_event(&json!("нет")), Value::Null);
+    }
+
+    /// Пары «интерфейс, адрес» для проверки выбора адреса пульта.
+    fn interfaces(list: &[(&str, &str)]) -> Vec<(String, Ipv4Addr)> {
+        list.iter()
+            .map(|(name, ip)| ((*name).to_string(), ip.parse().expect("адрес")))
+            .collect()
+    }
+
+    #[test]
+    fn the_remote_url_prefers_a_home_lan_address() {
+        // `192.168.*` привычнее всего и берётся раньше `10.*` и `172.16–31.*`.
+        let list = interfaces(&[
+            ("Ethernet", "10.0.0.5"),
+            ("Wi-Fi", "192.168.1.42"),
+            ("Другая сеть", "172.20.0.9"),
+        ]);
+        assert_eq!(select_lan_ip(&list), Some("192.168.1.42".parse().unwrap()));
+    }
+
+    #[test]
+    fn the_remote_url_skips_a_virtual_adapter_with_a_home_lan_address() {
+        // VPN мог бы перехватить `192.168.*`, но телефону нужна настоящая сеть.
+        let list = interfaces(&[
+            ("WireGuard Tunnel", "192.168.9.1"),
+            ("Ethernet", "10.1.2.3"),
+        ]);
+        assert_eq!(select_lan_ip(&list), Some("10.1.2.3".parse().unwrap()));
+    }
+
+    #[test]
+    fn the_remote_url_ignores_addresses_outside_home_networks() {
+        let list = interfaces(&[("Ethernet", "127.0.0.1"), ("Адаптер", "169.254.1.1")]);
+        assert_eq!(select_lan_ip(&list), None);
+    }
+
+    #[test]
+    fn the_remote_url_does_not_depend_on_interface_order() {
+        // Иначе адрес пульта менялся бы от запуска к запуску.
+        let forward = interfaces(&[("Ethernet", "192.168.0.9"), ("Wi-Fi", "192.168.0.5")]);
+        let backward = interfaces(&[("Wi-Fi", "192.168.0.5"), ("Ethernet", "192.168.0.9")]);
+        assert_eq!(select_lan_ip(&forward), select_lan_ip(&backward));
+        assert_eq!(
+            select_lan_ip(&forward),
+            Some("192.168.0.5".parse().unwrap())
+        );
     }
 
     #[test]

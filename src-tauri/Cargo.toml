@@ -60,6 +60,10 @@ futures-util = "0.3"
 reqwest = { version = "0.13", default-features = false, features = ["json", "native-tls"] }
 # Подпись пароля в OBS WebSocket v5: `base64(sha256(...))`, два прохода.
 sha2 = "0.10"
+# Перебор сетевых интерфейсов для адреса пульта: адрес маршрута по умолчанию
+# может оказаться VPN/туннелем, а телефону в той же сети нужен адрес домашней
+# сети. Крейт сам разбирает `getifaddrs`/`GetAdaptersAddresses`.
+if-addrs = "0.13"
 tauri-plugin-opener = "2.5.5"
 tauri-plugin-dialog = "2.7.3"
 tauri-plugin-fs = "2.5.2"
