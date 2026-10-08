@@ -112,7 +112,7 @@ afterEach(() => {
 });
 
 describe("WidgetWardogsCube", () => {
-  test("монтируется на wardogs и рисует каркас", () => {
+  test("монтируется на wardogs и отрисовывает кадр", () => {
     const ctx = makeContext("wardogs");
     const parent = makeEl("div");
     const w = new WidgetWardogsCube(cubeItem(), ctx);
@@ -122,7 +122,7 @@ describe("WidgetWardogsCube", () => {
     expect(raf.pending()).toBe(1); // 30 FPS loop
 
     raf.flush(1000); // one frame
-    expect(w.element._ctx.stroke).toHaveBeenCalled();
+    expect(w.element._ctx.clearRect).toHaveBeenCalled();
 
     w.unmount();
     expect(raf.pending()).toBe(0);
