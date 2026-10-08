@@ -665,6 +665,46 @@ export function initCanvasEditor({
           <svg viewBox="0 0 200 22" preserveAspectRatio="none" style="width:100%;height:22px;"><rect x="0.5" y="0.5" width="199" height="21" fill="none" stroke="rgba(220,220,220,0.45)"/>${stripes}</svg>
         </div>`;
       }
+      case "wardogs-chat": {
+        const text = (state.appearance.tokens && state.appearance.tokens["--md-on-surface"]) || "#e8e5dd";
+        const muted = (state.appearance.tokens && state.appearance.tokens["--md-on-surface-variant"]) || "#b6b3a7";
+        const primary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#f0a92c";
+        const rows = [
+          { user: "nova_viewer", message: t("preview.chat1") },
+          { user: "star_gazer", message: t("preview.chat2") },
+          { user: "orbit_fan", message: t("preview.chat3") },
+        ]
+          .map(
+            (m) =>
+              `<div class="wardogs-chat__row" style="display:flex;gap:7px;font-family:'Roboto Condensed','Segoe UI',sans-serif;font-size:14px;line-height:1.45;color:${escapeAttr(text)};">
+                <span style="color:${muted};font-family:'JetBrains Mono','Consolas',monospace;font-size:11px;">[12:00]</span>
+                <span style="color:${primary};font-weight:700">${escapeHtml(m.user)}</span>
+                <span style="color:${muted}">:</span>
+                <span style="color:${escapeAttr(text)}">${escapeHtml(m.message)}</span>
+              </div>`
+          )
+          .join("");
+        return `<div class="wardogs-chat" style="position:relative;height:100%;padding:12px 14px;box-sizing:border-box;display:flex;flex-direction:column;">
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;color:${escapeAttr(text)};font-family:'Roboto Condensed','Segoe UI',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:1.6px;font-size:13px;"><span style="width:7px;height:7px;background:${primary};box-shadow:0 0 6px ${primary};"></span><span>${escapeHtml(t("editor.chat"))}</span><span style="flex:1;height:5px;background:repeating-linear-gradient(90deg,${muted} 0 2px,transparent 2px 5px);opacity:0.45;"></span></div>
+          <div style="flex:1;min-height:0;overflow:hidden;margin-top:10px;display:flex;flex-direction:column;justify-content:flex-end;gap:7px;">${rows}</div>
+        </div>`;
+      }
+      case "wardogs-holo-alert": {
+        const primary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#f0a92c";
+        const text = (state.appearance.tokens && state.appearance.tokens["--md-on-surface"]) || "#e8e5dd";
+        const muted = (state.appearance.tokens && state.appearance.tokens["--md-on-surface-variant"]) || "#b6b3a7";
+        return `<div class="wardogs-holo-preview" style="position:relative;height:100%;display:flex;align-items:center;gap:10px;padding:6px 10px;box-sizing:border-box;">
+          <svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" style="flex-shrink:0;width:38px;height:38px;">
+            <circle cx="12" cy="12" r="10" fill="none" stroke="${primary}" stroke-width="1.4" stroke-dasharray="4 3"/>
+            <circle cx="12" cy="12" r="5.5" fill="${primary}" opacity="0.22"/>
+            <path d="M12 7.5l1.5 3.4 3.5.5-2.6 2.4.7 3.4-3.1-1.8-3.1 1.8.7-3.4-2.6-2.4 3.5-.5L12 7.5z" fill="${primary}"/>
+          </svg>
+          <div style="min-width:0;display:flex;flex-direction:column;gap:2px;">
+            <span style="font-family:'JetBrains Mono','Consolas',monospace;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:${muted};">WARD // ${escapeHtml(t("properties.testFollow"))}</span>
+            <span style="font-family:'Roboto Condensed','Segoe UI',sans-serif;font-size:15px;font-weight:700;color:${escapeAttr(text)};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">nova_viewer</span>
+          </div>
+        </div>`;
+      }
       case "cobra-holo-alert": {
         const orange = "#ff7605";
         return `<div class="cobra-holo-preview" style="position:relative;height:100%;display:flex;align-items:center;gap:8px;padding:6px 8px;box-sizing:border-box;">
