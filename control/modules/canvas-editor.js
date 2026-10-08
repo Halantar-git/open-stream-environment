@@ -822,8 +822,16 @@ export function initCanvasEditor({
         </div>`;
       }
       case "wardogs-cube": {
-        return `<div class="wardogs-cube-preview" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
-          <img src="/assets/themes/wardogs/logo.png" alt="" style="width:64%;height:64%;object-fit:contain;filter:invert(1) brightness(0.86);opacity:0.92;" />
+        const gray = (state.appearance.tokens && state.appearance.tokens["--panel-text"]) || "#dcdcdc";
+        return `<div class="wardogs-cube-preview" style="position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" style="width:76%;height:76%;">
+            <g fill="none" stroke="${gray}" stroke-linecap="square" stroke-linejoin="miter">
+              <path d="M50 52 L82 68 L82 36 L50 20 L50 52 Z" stroke-width="2"/>
+              <path d="M18 68 L50 84 L50 52 L18 36 L18 68 Z" stroke-width="1" opacity="0.4"/>
+              <path d="M50 52 L18 68 M82 68 L50 84 M82 36 L50 52 M50 20 L18 36" stroke-width="1" opacity="0.4"/>
+            </g>
+          </svg>
+          <img src="/assets/themes/wardogs/logo.png" alt="" style="position:absolute;width:36%;height:36%;object-fit:contain;filter:invert(1) brightness(0.86);opacity:0.92;" />
         </div>`;
       }
       case "pixel-cube": {

@@ -128,6 +128,37 @@ describe("WidgetWardogsCube", () => {
     expect(raf.pending()).toBe(0);
   });
 
+  test("рисует каркас куба, как в Pixel Perfect", () => {
+    const ctx = makeContext("wardogs");
+    const w = new WidgetWardogsCube(cubeItem(), ctx);
+    w.mount(makeEl("div"));
+
+    raf.flush(1000);
+    // Каркас — это обводка рёбер, а не только очистка холста.
+    expect(w.element._ctx.stroke).toHaveBeenCalled();
+
+    w.unmount();
+  });
+
+  test("накладывает логотип, когда картинка загружена", () => {
+    const originalImage = global.Image;
+    global.Image = function () {
+      return { src: "", complete: true, naturalWidth: 256 };
+    };
+    try {
+      const ctx = makeContext("wardogs");
+      const w = new WidgetWardogsCube(cubeItem(), ctx);
+      w.mount(makeEl("div"));
+
+      raf.flush(1000);
+      expect(w.element._ctx.drawImage).toHaveBeenCalled();
+
+      w.unmount();
+    } finally {
+      global.Image = originalImage;
+    }
+  });
+
   test("не запускает цикл на чужой теме", () => {
     const parent = makeEl("div");
     const w = new WidgetWardogsCube(cubeItem(), makeContext("pixel"));
