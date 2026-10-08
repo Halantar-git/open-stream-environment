@@ -25,7 +25,7 @@ function makeCtx2D() {
   const ctx = {
     createLinearGradient: jest.fn(() => gradient),
   };
-  ["setTransform", "clearRect", "save", "restore", "beginPath", "moveTo", "lineTo", "rect", "fill", "fillRect", "stroke", "clip"].forEach(
+  ["setTransform", "clearRect", "save", "restore", "beginPath", "moveTo", "lineTo", "rect", "fill", "fillRect", "strokeRect", "stroke", "clip"].forEach(
     (m) => (ctx[m] = jest.fn())
   );
   return ctx;

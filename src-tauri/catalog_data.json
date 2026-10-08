@@ -1,5 +1,5 @@
 {
-  "sourceHash": "03721df0b5127597",
+  "sourceHash": "6b913ce009b60d74",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -696,7 +696,7 @@
       "minW": 16,
       "minH": 4,
       "defaultConfig": {
-        "showPercentage": false
+        "showPercentage": true
       }
     },
     "cobra-holo-alert": {

@@ -438,7 +438,7 @@
       defaultGeometry: { x: 3, y: 84, w: 32, h: 6 },
       minW: 16,
       minH: 4,
-      defaultConfig: { showPercentage: false },
+      defaultConfig: { showPercentage: true },
     },
     "cobra-holo-alert": {
       type: "cobra-holo-alert",

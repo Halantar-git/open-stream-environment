@@ -647,17 +647,21 @@ export function initCanvasEditor({
       }
       case "wardogs-goal": {
         const primary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#f0a92c";
-        const track = "rgba(255,255,255,0.10)";
+        const onSurface = (state.appearance.tokens && state.appearance.tokens["--md-on-surface"]) || "#e8e5dd";
+        const track = "rgba(255,255,255,0.14)";
         const pct = state.goal && state.goal.target ? Math.min(100, Math.round((state.goal.current / state.goal.target) * 100)) : 0;
-        const segments = Array.from({ length: 10 }, (_, i) => {
-          const sx = 4 + i * 19.2;
-          const fill = Math.max(0, Math.min(1, (pct - i * 10) / 10));
-          return `<rect x="${sx.toFixed(1)}" y="24" width="17.2" height="18" fill="${track}"/>` +
-            (fill > 0.01 ? `<rect x="${sx.toFixed(1)}" y="24" width="${(17.2 * fill).toFixed(1)}" height="18" fill="${primary}"/>` : "");
+        const count = 52;
+        const pitch = 194 / count;
+        const stripes = Array.from({ length: count }, (_, i) => {
+          const sx = 3 + i * pitch;
+          const fill = Math.max(0, Math.min(1, (pct - i * (100 / count)) / (100 / count)));
+          const cw = pitch - 0.5;
+          return `<rect x="${sx.toFixed(2)}" y="5" width="${cw.toFixed(2)}" height="12" fill="${track}"/>` +
+            (fill > 0.01 ? `<rect x="${sx.toFixed(2)}" y="5" width="${(cw * fill).toFixed(2)}" height="12" fill="${primary}"/>` : "");
         }).join("");
-        return `<div class="wardogs-goal-preview" style="position:relative;height:100%;display:flex;flex-direction:column;justify-content:center;gap:4px;padding:4px;box-sizing:border-box;">
-          <div style="display:flex;justify-content:space-between;gap:10px;color:#e8e5dd;font-size:11px;"><span style="font-family:'Rajdhani','Segoe UI',sans-serif;text-transform:uppercase;letter-spacing:1.2px;">${escapeHtml(state.goal.title || t("preview.goalTitle"))}</span><span style="color:#b6b3a7;font-family:'JetBrains Mono','Consolas',monospace;"><b style="color:${primary};">${formatMoney(state.goal.current)}</b> / ${formatMoney(state.goal.target)}</span></div>
-          <svg viewBox="0 0 200 48" preserveAspectRatio="none" style="width:100%;height:26px;">${segments}</svg>
+        return `<div class="wardogs-goal-preview" style="position:relative;height:100%;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:6px 8px;box-sizing:border-box;">
+          <div style="display:flex;justify-content:space-between;gap:10px;color:${onSurface};font-size:11px;"><span style="font-family:'Roboto Condensed','Segoe UI',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;">${escapeHtml(state.goal.title || t("preview.goalTitle"))}</span><span style="color:#b6b3a7;font-family:'JetBrains Mono','Consolas',monospace;">${formatMoney(state.goal.current)} / ${formatMoney(state.goal.target)}<b style="color:${primary};"> [${pct}%]</b></span></div>
+          <svg viewBox="0 0 200 22" preserveAspectRatio="none" style="width:100%;height:22px;"><rect x="0.5" y="0.5" width="199" height="21" fill="none" stroke="#7d7a6d" stroke-opacity="0.55"/>${stripes}</svg>
         </div>`;
       }
       case "cobra-holo-alert": {

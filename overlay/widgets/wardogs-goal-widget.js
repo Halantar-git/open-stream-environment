@@ -16,19 +16,19 @@
  */
 
 /*
-  WidgetWardogsGoal — donation goal as the WARDOGS HUD progress/loading bar.
+  WidgetWardogsGoal — donation goal as the WARDOGS loading bar.
 
-  The game's HUD readouts are flat and squared: a dark track divided into
-  blocks, with a warm amber fill that grows toward a bright leading edge. This
-  widget reuses that language — a segmented bar, an amber fill with a sweeping
-  loading shimmer and a bright head line — and keeps the panel surface on the
-  theme's own tokens (panel-bg/border/radius/glow), like the Recent events
-  widget.
+  A thin framed bar made of dense vertical ticks: the empty part reads as faint
+  gray stripes, the filled part lights up to the theme accent, and the boundary
+  falls on a cell edge — like a game's "loading / compiling" readout. Above the
+  bar sits an uppercase title on the left and a bracketed percentage "[43%]" on
+  the right.
 
   The progress is driven only by the goal state (never by chat): the widget
-  subscribes to GOAL_UPDATE / LOCALES and runs a self-contained render loop.
-  It is bound to the Wardogs theme (see shared/themes.js) with a hard internal
-  gate — no canvas, loop or subscriptions on any other theme.
+  subscribes to GOAL_UPDATE / LOCALES and runs a self-contained render loop. It
+  is bound to the Wardogs theme (see shared/themes.js) with a hard internal
+  gate — no canvas, loop or subscriptions on any other theme. The panel surface
+  reuses the theme's panel tokens, like the Recent events widget.
 */
 (function (root, factory) {
   const BaseWidget =
@@ -50,16 +50,17 @@
   // still draws sensibly if the CSS variables are not applied yet.
   const FALLBACK = {
     primary: "#f0a92c",
-    primaryContainer: "#7a4d00",
     onSurface: "#e8e5dd",
     onSurfaceVariant: "#b6b3a7",
+    outline: "#7d7a6d",
   };
-  const TRACK = "rgba(255, 255, 255, 0.08)"; // empty bar
-  const DIVIDER = "rgba(0, 0, 0, 0.55)"; // segment separators over the fill
-  const SEGMENT_PX = 26; // one divider roughly every 26px → HUD-style blocks
+  const TRACK = "rgba(255, 255, 255, 0.12)"; // empty cell stripe
+  const CELL_PITCH = 7; // stripe every ~7px → the dense barcode look
+  const CELL_GAP = 1; // 1px gap between stripes
 
-  // The HUD uses a narrow technical sans for labels and a mono for numbers.
-  const FONT_DISPLAY = "'Rajdhani', 'Segoe UI', sans-serif";
+  // The reference uses a bold technical sans for the label and a mono for the
+  // numbers — the theme's own body/mono faces.
+  const FONT_DISPLAY = "'Roboto Condensed', 'Segoe UI', sans-serif";
   const FONT_MONO = "'JetBrains Mono', 'Consolas', monospace";
 
   const clamp = (v, min, max) => (v < min ? min : v > max ? max : v);
@@ -91,9 +92,9 @@
       const get = (name, fallback) => (read && read(name)) || fallback;
       return {
         primary: get("--md-primary", FALLBACK.primary),
-        primaryContainer: get("--md-primary-container", FALLBACK.primaryContainer),
         onSurface: get("--md-on-surface", FALLBACK.onSurface),
         onSurfaceVariant: get("--md-on-surface-variant", FALLBACK.onSurfaceVariant),
+        outline: get("--md-outline", FALLBACK.outline),
       };
     }
 
@@ -104,20 +105,20 @@
       this.layoutEl = document.createElement("div");
       this.layoutEl.className = "wardogs-goal";
       this.layoutEl.style.cssText =
-        "position:absolute;inset:0;display:flex;flex-direction:column;box-sizing:border-box;padding:12px 14px;";
+        "position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;box-sizing:border-box;padding:10px 14px;";
       this.element.appendChild(this.layoutEl);
 
-      // Title + amounts row, mirroring the game's cash readout.
+      // Title + amounts + "[43%]" row, mirroring the game's loading readout.
       this.contentEl = document.createElement("div");
       this.contentEl.className = "wardogs-goal__content";
       this.contentEl.style.cssText =
-        "display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-shrink:0;padding:0 2px;";
+        "display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-shrink:0;padding:0 2px;margin-bottom:7px;";
       this.layoutEl.appendChild(this.contentEl);
 
       // Bar area (canvas fills it).
       this.barWrap = document.createElement("div");
       this.barWrap.className = "wardogs-goal__bar";
-      this.barWrap.style.cssText = "position:relative;flex:1;min-height:0;margin-top:6px;";
+      this.barWrap.style.cssText = "position:relative;flex:0 0 auto;height:22px;min-height:0;";
       this.layoutEl.appendChild(this.barWrap);
 
       this.canvas = document.createElement("canvas");
@@ -211,28 +212,28 @@
       this._pct = pct;
 
       const pctStr = this.config.showPercentage
-        ? `<span style="color:${colors.primary};"> ${pct}%</span>`
+        ? `<span style="color:${colors.primary};font-weight:700;"> [${pct}%]</span>`
         : "";
 
       this.contentEl.innerHTML =
-        `<span style="color:${colors.onSurface};font-family:${FONT_DISPLAY};font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(goal.title || t("preview.goalTitle"))}</span>` +
-        `<span style="color:${colors.onSurfaceVariant};font-family:${FONT_MONO};font-size:12px;white-space:nowrap;"><b style="color:${colors.primary};">${formatMoney(goal.current)}</b> / ${formatMoney(goal.target)} ${escapeHtml(currencySymbol(goal.currency))}${pctStr}</span>`;
+        `<span style="color:${colors.onSurface};font-family:${FONT_DISPLAY};font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(goal.title || t("preview.goalTitle"))}</span>` +
+        `<span style="color:${colors.onSurfaceVariant};font-family:${FONT_MONO};font-size:12px;white-space:nowrap;">${formatMoney(goal.current)} / ${formatMoney(goal.target)} ${escapeHtml(currencySymbol(goal.currency))}${pctStr}</span>`;
     }
 
     // ---- rendering ----
 
     render() {
       if (this.theme !== "wardogs") return;
-      this._drawBarLayer(performance.now());
+      this._drawBarLayer();
     }
 
-    _drawBarLayer(now) {
+    _drawBarLayer() {
       const ctx = this.ctx;
       if (!ctx || !this.canvas) return;
 
       const colors = this._readColors();
       const cw = this.canvas.clientWidth || 300;
-      const ch = this.canvas.clientHeight || 40;
+      const ch = this.canvas.clientHeight || 22;
       const dpr = window.devicePixelRatio || 1;
 
       const bw = Math.max(1, Math.round(cw * dpr));
@@ -246,74 +247,42 @@
       ctx.clearRect(0, 0, cw, ch);
 
       // Smoothly approach the target progress on each donation.
-      this._displayPct += (this._pct - this._displayPct) * 0.08;
+      this._displayPct += (this._pct - this._displayPct) * 0.12;
+      if (Math.abs(this._pct - this._displayPct) < 0.05) this._displayPct = this._pct;
       const pct = clamp(this._displayPct, 0, 100);
 
-      const x = 0;
-      const y = 0;
-      const w = Math.max(1, cw);
-      const h = Math.max(1, ch);
-      const fillW = (w * pct) / 100;
-
-      // Empty track (flat, squared corners).
+      // Hairline frame around the whole bar.
       ctx.save();
-      ctx.fillStyle = TRACK;
-      ctx.beginPath();
-      ctx.rect(x, y, w, h);
-      ctx.fill();
-      ctx.restore();
-
-      if (fillW > 0.5) {
-        // Amber fill, darker at the tail and bright at the head, with a soft
-        // glow — the "loading" look of the HUD.
-        const grad = ctx.createLinearGradient(x, y, x + fillW, y);
-        grad.addColorStop(0, colors.primaryContainer);
-        grad.addColorStop(1, colors.primary);
-        ctx.save();
-        ctx.fillStyle = grad;
-        ctx.shadowColor = colors.primary;
-        ctx.shadowBlur = 10;
-        ctx.beginPath();
-        ctx.rect(x, y, fillW, h);
-        ctx.fill();
-        ctx.restore();
-
-        // A sweeping shimmer band inside the filled part (loading animation).
-        const period = 2200;
-        const phase = (now % period) / period;
-        const bandW = Math.max(24, fillW * 0.22);
-        const bandX = x + (fillW + bandW) * phase - bandW;
-        const band = ctx.createLinearGradient(bandX, y, bandX + bandW, y);
-        band.addColorStop(0, "rgba(255, 255, 255, 0)");
-        band.addColorStop(0.5, "rgba(255, 255, 255, 0.28)");
-        band.addColorStop(1, "rgba(255, 255, 255, 0)");
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(x, y, fillW, h);
-        ctx.clip();
-        ctx.fillStyle = band;
-        ctx.fillRect(bandX, y, bandW, h);
-        ctx.restore();
-
-        // Bright head line at the fill edge.
-        ctx.save();
-        ctx.fillStyle = colors.onSurface;
-        ctx.globalAlpha = 0.85;
-        ctx.fillRect(x + Math.max(0, fillW - 2), y, 2, h);
-        ctx.restore();
-      }
-
-      // Segment dividers across the whole bar (HUD-style blocks).
-      ctx.save();
-      ctx.strokeStyle = DIVIDER;
+      ctx.strokeStyle = colors.outline;
+      ctx.globalAlpha = 0.55;
       ctx.lineWidth = 1;
-      for (let sx = SEGMENT_PX; sx < w; sx += SEGMENT_PX) {
-        ctx.beginPath();
-        ctx.moveTo(Math.round(sx) + 0.5, y);
-        ctx.lineTo(Math.round(sx) + 0.5, y + h);
-        ctx.stroke();
-      }
+      ctx.strokeRect(0.5, 0.5, Math.max(1, cw - 1), Math.max(1, ch - 1));
       ctx.restore();
+
+      // Dense vertical stripes inside the frame; the filled cells light up.
+      const pad = 2;
+      const x = pad;
+      const y = pad;
+      const w = Math.max(1, cw - pad * 2);
+      const h = Math.max(1, ch - pad * 2);
+
+      const count = Math.max(1, Math.round((w + CELL_GAP) / (CELL_PITCH + CELL_GAP)));
+      const gap = count > 1 ? CELL_GAP : 0;
+      const cellW = Math.max(1, (w - gap * (count - 1)) / count);
+      const cellPct = 100 / count;
+
+      for (let i = 0; i < count; i++) {
+        const cx = x + i * (cellW + gap);
+        const fill = clamp((pct - i * cellPct) / cellPct, 0, 1);
+
+        ctx.fillStyle = TRACK;
+        ctx.fillRect(cx, y, cellW, h);
+
+        if (fill > 0.001) {
+          ctx.fillStyle = colors.primary;
+          ctx.fillRect(cx, y, Math.max(1, cellW * fill), h);
+        }
+      }
     }
   }
 
