@@ -16,15 +16,12 @@
  */
 
 /*
-  WidgetWardogsCube — rotating isometric cube for the Wardogs theme, drawn the
-  way the Pixel Perfect cube is: a depth-cued wireframe with the emblem
-  (assets/themes/wardogs/logo.png) decaled onto the faces in its own colours.
+  WidgetWardogsCube — rotating isometric cube for the Wardogs theme, built
+  entirely from the emblem (assets/themes/wardogs/logo.png) decaled onto all six
+  faces in the emblem's own colours: no wireframe, the cube itself is the logo.
 
   Like the Pixel cube it is hidden while nothing is happening and appears on an
-  alert, one alert at a time; donations also make it pop. The emblem is a shield,
-  so its corners are transparent — decals are drawn only on the faces that point
-  at the viewer, otherwise the gaps of the near faces would show the far ones
-  through them and the cube would read as a jumble.
+  alert, one alert at a time; donations also make it pop.
 */
 (function (root, factory) {
   const BaseWidget =
@@ -44,26 +41,11 @@
 
   const clamp = (v, min, max) => (v < min ? min : v > max ? max : v);
 
-  const GRAY = "#dcdcdc"; // monochrome gray wireframe, like the goal bar fill
   const LOGO_PATH = "/assets/themes/wardogs/logo.png";
   const DEFAULT_ALERT_MS = 5000;
 
-  // Cube vertices (half-size 1).
-  const VERTICES = [
-    [-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1],
-    [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1],
-  ];
-
-  // The 12 cube edges as pairs of vertex indices (bottom, top, verticals).
-  const EDGES = [
-    [0, 1], [1, 2], [2, 3], [3, 0],
-    [4, 5], [5, 6], [6, 7], [7, 4],
-    [0, 4], [1, 5], [2, 6], [3, 7],
-  ];
-
   // The 6 cube faces for decaling the emblem: center + two in-plane tangent
-  // vectors (face-local x/y axes). The center doubles as the outward normal, so
-  // it tells whether the face points at the viewer. Front/back/left/right/top/bottom.
+  // vectors (face-local x/y axes). Front/back/left/right/top/bottom.
   const LOGO_FACES = [
     { c: [0, 0, -1], u: [1, 0, 0], v: [0, 1, 0] },   // front
     { c: [0, 0, 1],  u: [-1, 0, 0], v: [0, 1, 0] },  // back
@@ -197,7 +179,7 @@
 
       const cx = cw / 2 + Math.sin(t * 0.6) * 4;
       const cy = ch / 2 + Math.cos(t * 0.5) * 3 + Math.sin(t * 1.4) * 2;
-      const size = Math.min(cw, ch) * 0.34 * scale;
+      const size = Math.min(cw, ch) * 0.3 * scale;
 
       // Freeze the spin when motion is off (a sign still breathing, not still).
       const angle = this.config.motion === false ? 0.6 : t * 0.7;
@@ -214,55 +196,13 @@
         return { x, y: y * cosT - z * sinT, z: y * sinT + z * cosT };
       };
 
-      const pts = VERTICES.map(project);
-
-      const edges = EDGES.map(([a, b]) => {
-        const pa = pts[a];
-        const pb = pts[b];
-        return {
-          x1: cx + pa.x * size,
-          y1: cy - pa.y * size,
-          x2: cx + pb.x * size,
-          y2: cy - pb.y * size,
-          depth: (pa.z + pb.z) / 2,
-        };
-      });
-
-      let minDepth = Infinity;
-      let maxDepth = -Infinity;
-      for (const e of edges) {
-        if (e.depth < minDepth) minDepth = e.depth;
-        if (e.depth > maxDepth) maxDepth = e.depth;
-      }
-      const span = maxDepth - minDepth || 1;
-
-      // Draw back-to-front so nearer edges sit on top of farther ones.
-      edges.sort((a, b) => a.depth - b.depth);
-
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, cw, ch);
 
-      ctx.strokeStyle = GRAY;
-      ctx.lineCap = "square";
-      ctx.lineJoin = "miter";
-
-      for (const e of edges) {
-        const d = clamp((e.depth - minDepth) / span, 0, 1); // 0 = back, 1 = front
-        // Front edges are thicker and brighter; back edges fade to 1px.
-        ctx.lineWidth = d > 0.55 ? 2 : 1;
-        ctx.globalAlpha = 0.3 + d * 0.7;
-        ctx.beginPath();
-        ctx.moveTo(e.x1, e.y1);
-        ctx.lineTo(e.x2, e.y2);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
-
-      // Emblem on the faces that point at the viewer, back to front. Culling the
-      // far faces keeps their transparent corners from showing through.
+      // Emblem on every face, drawn back to front so near faces cover far ones.
       const logo = this._logoImage();
       if (logo) {
-        const h = 0.55; // half-size in face-local units (face spans -1..1)
+        const h = 1; // face-local half-size; 1 fills the face (it spans -1..1)
         const faces = LOGO_FACES.map((f) => {
           const pc = project(f.c);
           const pu = project(f.u);
@@ -275,11 +215,8 @@
             e: cx + size * pc.x,
             f: cy - size * pc.y,
             depth: pc.z,
-            facing: pc.z, // +z points at the viewer
           };
-        })
-          .filter((face) => face.facing > 0.001)
-          .sort((p, q) => p.depth - q.depth);
+        }).sort((p, q) => p.depth - q.depth);
 
         for (const face of faces) {
           ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

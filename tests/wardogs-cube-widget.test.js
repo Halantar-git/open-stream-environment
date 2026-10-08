@@ -129,13 +129,12 @@ describe("WidgetWardogsCube", () => {
 
     raf.flush(1000); // one frame
     expect(w.element._ctx.clearRect).toHaveBeenCalled();
-    expect(w.element._ctx.stroke).toHaveBeenCalled();
 
     w.unmount();
     expect(raf.pending()).toBe(0);
   });
 
-  test("накладывает логотип, когда картинка загружена", () => {
+  test("накладывает логотип на все шесть граней", () => {
     const originalImage = global.Image;
     global.Image = function () {
       return { src: "", complete: true, naturalWidth: 256 };
@@ -145,9 +144,13 @@ describe("WidgetWardogsCube", () => {
       const w = new WidgetWardogsCube(cubeItem(), ctx);
       w.mount(makeEl("div"));
 
+      // Кадр при монтировании не считаем: интересует кадр алерта.
+      w.element._ctx.drawImage.mockClear();
       ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "follow" });
       raf.flush(1000);
-      expect(w.element._ctx.drawImage).toHaveBeenCalled();
+      // Каркаса нет: куб целиком собран из логотипа на шести гранях.
+      expect(w.element._ctx.stroke).not.toHaveBeenCalled();
+      expect(w.element._ctx.drawImage).toHaveBeenCalledTimes(6);
 
       w.unmount();
     } finally {
