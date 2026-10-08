@@ -16,19 +16,15 @@
  */
 
 /*
-  WidgetWardogsCube — rotating isometric wireframe cube with the WARDOGS emblem,
-  for the Wardogs theme.
+  WidgetWardogsCube — rotating isometric wireframe cube for the Wardogs theme.
 
-  Same construction as the Pixel Perfect cube: a transparent cube drawn only by
-  its edges, with depth cueing (front edges brighter and thicker than back
-  ones). Here the emblem (assets/themes/wardogs/logo.png) is decaled onto every
-  face and spins with the cube; the emblem's black parts are recoloured to the
-  theme accent on the fly, its white parts stay white, so the logo reads over a
-  dark overlay.
+  A transparent cube drawn only by its edges: no filled faces, just 1-2px gray
+  lines with depth cueing (front edges brighter and thicker than back edges).
+  The whole readout is monochrome gray, matching the goal bar.
 
-  Unlike the Pixel cube it is a sign: always visible, with a "motion" toggle
-  that freezes the rotation in the inspector. It still reacts to alerts like the
-  Pixel cube — a quick pop on every alert, a harder one on donations.
+  It is a sign: always visible, with a "motion" toggle that freezes the rotation
+  in the inspector. It reacts to alerts like the Pixel cube — a quick pop on
+  every alert, a harder one on donations.
 */
 (function (root, factory) {
   const BaseWidget =
@@ -48,8 +44,7 @@
 
   const clamp = (v, min, max) => (v < min ? min : v > max ? max : v);
 
-  const DEFAULT_ACCENT = "#f0a92c"; // --md-primary (wardogs)
-  const LOGO_PATH = "/assets/themes/wardogs/logo.png";
+  const EDGE = "#dcdcdc"; // monochrome gray, like the goal bar fill
 
   // Cube vertices (half-size 1).
   const VERTICES = [
@@ -64,24 +59,10 @@
     [0, 4], [1, 5], [2, 6], [3, 7],
   ];
 
-  // The 6 cube faces for decaling the emblem: center + two in-plane tangent
-  // vectors (face-local x/y axes). Front/back/left/right/top/bottom.
-  const LOGO_FACES = [
-    { c: [0, 0, -1], u: [1, 0, 0], v: [0, 1, 0] },   // front
-    { c: [0, 0, 1],  u: [-1, 0, 0], v: [0, 1, 0] },  // back
-    { c: [-1, 0, 0], u: [0, 0, 1],  v: [0, 1, 0] },  // left
-    { c: [1, 0, 0],  u: [0, 0, -1], v: [0, 1, 0] },  // right
-    { c: [0, 1, 0],  u: [1, 0, 0],  v: [0, 0, -1] }, // top
-    { c: [0, -1, 0], u: [1, 0, 0],  v: [0, 0, 1] },  // bottom
-  ];
-
   class WidgetWardogsCube extends BaseWidget {
     constructor(config, context) {
       super(config, context);
       this.theme = (context && (context.theme || context.activeThemeId)) || "";
-      this.accent = DEFAULT_ACCENT;
-      this._logo = null; // source <img>, loaded once
-      this._tinted = null; // recoloured offscreen canvas
       this._popUntil = 0; // active "pop" window (alert reaction)
       this._popAmp = 0; // pop strength (donations hit harder)
     }
@@ -90,8 +71,6 @@
       // HARD theme gate: no canvas, no loop, no events on a non-Wardogs theme.
       if (this.theme !== "wardogs") return;
 
-      this._readColors();
-      this._ensureLogo();
       this._applyPerspective();
       // React to alerts like the Pixel cube: a quick pop each time (donations
       // hit harder). The cube stays a visible sign — it is not alert-gated.
@@ -100,19 +79,12 @@
     }
 
     onUnmount() {
-      this._logo = null;
-      this._tinted = null;
       this._popUntil = 0;
       this._popAmp = 0;
     }
 
     onUpdate(prev, next) {
       if (prev.perspective !== next.perspective) this._applyPerspective();
-    }
-
-    _readColors() {
-      const read = this.context.readCssVar;
-      this.accent = (read && read("--md-primary")) || DEFAULT_ACCENT;
     }
 
     _applyPerspective() {
@@ -133,43 +105,6 @@
       if (!alert) return;
       this._popUntil = performance.now() + 450;
       this._popAmp = alert.kind === "donation" ? 0.16 : 0.08;
-    }
-
-    _ensureLogo() {
-      if (this._logo || typeof Image === "undefined") return;
-      const img = new Image();
-      img.src = LOGO_PATH;
-      this._logo = img;
-    }
-
-    // The emblem is black-on-transparent with white accents. To read over the
-    // dark overlay, black is recoloured to the theme accent and white stays
-    // white: screen() maps black→accent / white→white, then destination-in
-    // restores the original alpha so only the emblem shape survives. Cached.
-    _logoTinted() {
-      if (this._tinted) return this._tinted;
-      const img = this._logo;
-      if (!img || !img.complete || !img.naturalWidth) return null;
-      if (typeof document === "undefined" || !document.createElement) return null;
-
-      const size = img.naturalWidth || 256;
-      const canvas = document.createElement("canvas");
-      canvas.width = size;
-      canvas.height = size;
-      const g = canvas.getContext ? canvas.getContext("2d") : null;
-      if (!g) return null;
-
-      g.clearRect(0, 0, size, size);
-      g.drawImage(img, 0, 0, size, size);
-      g.globalCompositeOperation = "screen";
-      g.fillStyle = this.accent;
-      g.fillRect(0, 0, size, size);
-      g.globalCompositeOperation = "destination-in";
-      g.drawImage(img, 0, 0, size, size);
-      g.globalCompositeOperation = "source-over";
-
-      this._tinted = canvas;
-      return canvas;
     }
 
     render() {
@@ -199,6 +134,7 @@
         scale += this._popAmp * popGlow;
       }
       scale = clamp(scale, 0.8, 1.4);
+
       const cx = cw / 2 + Math.sin(t * 0.6) * 4;
       const cy = ch / 2 + Math.cos(t * 0.5) * 3 + Math.sin(t * 1.4) * 2;
       const size = Math.min(cw, ch) * 0.3 * scale;
@@ -246,36 +182,7 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, cw, ch);
 
-      // Emblem decaled onto every face (drawn first, edges frame it on top).
-      const logo = this._logoTinted();
-      if (logo) {
-        const h = 0.6; // half-size in face-local units (face spans -1..1)
-        const faces = LOGO_FACES.map((f) => {
-          const pc = project(f.c);
-          const pu = project(f.u);
-          const pv = project(f.v);
-          return {
-            a: size * pu.x,
-            b: -size * pu.y,
-            c: size * pv.x,
-            d: -size * pv.y,
-            e: cx + size * pc.x,
-            f: cy - size * pc.y,
-            depth: pc.z,
-          };
-        });
-        faces.sort((p, q) => p.depth - q.depth);
-
-        ctx.save();
-        for (const face of faces) {
-          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-          ctx.transform(face.a, face.b, face.c, face.d, face.e, face.f);
-          ctx.drawImage(logo, -h, -h, 2 * h, 2 * h);
-        }
-        ctx.restore();
-      }
-
-      ctx.strokeStyle = this.accent;
+      ctx.strokeStyle = EDGE;
       ctx.lineCap = "square";
       ctx.lineJoin = "miter";
 

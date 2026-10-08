@@ -471,7 +471,7 @@
     "wardogs-cube": {
       type: "wardogs-cube",
       label: "Куб Wardogs",
-      description: "Вращающийся каркасный куб с логотипом WarDogs (только для темы Wardogs)",
+      description: "Вращающийся серый каркасный куб (только для темы Wardogs)",
       icon: "widgetWardogsCube",
       dimension: "3d",
       theme: "wardogs",
