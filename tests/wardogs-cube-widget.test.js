@@ -136,6 +136,23 @@ describe("WidgetWardogsCube", () => {
     expect(raf.pending()).toBe(0);
     w.unmount();
   });
+
+  test("реагирует на алерты «попом» (сильнее на донат)", () => {
+    const ctx = makeContext("wardogs");
+    const parent = makeEl("div");
+    const w = new WidgetWardogsCube(cubeItem(), ctx);
+    w.mount(parent);
+
+    expect(w._popUntil).toBe(0);
+    ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "follow" });
+    expect(w._popUntil).toBeGreaterThan(0);
+    expect(w._popAmp).toBeCloseTo(0.08);
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "donation" });
+    expect(w._popAmp).toBeCloseTo(0.16);
+
+    w.unmount();
+  });
 });
 
 describe("WidgetManager — изоляция wardogs-cube", () => {

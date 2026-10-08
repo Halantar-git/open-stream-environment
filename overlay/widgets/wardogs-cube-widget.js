@@ -27,7 +27,8 @@
   dark overlay.
 
   Unlike the Pixel cube it is a sign: always visible, with a "motion" toggle
-  that freezes the rotation in the inspector.
+  that freezes the rotation in the inspector. It still reacts to alerts like the
+  Pixel cube — a quick pop on every alert, a harder one on donations.
 */
 (function (root, factory) {
   const BaseWidget =
@@ -81,6 +82,8 @@
       this.accent = DEFAULT_ACCENT;
       this._logo = null; // source <img>, loaded once
       this._tinted = null; // recoloured offscreen canvas
+      this._popUntil = 0; // active "pop" window (alert reaction)
+      this._popAmp = 0; // pop strength (donations hit harder)
     }
 
     onMount() {
@@ -90,12 +93,17 @@
       this._readColors();
       this._ensureLogo();
       this._applyPerspective();
+      // React to alerts like the Pixel cube: a quick pop each time (donations
+      // hit harder). The cube stays a visible sign — it is not alert-gated.
+      this.subscribe(this.context.EVENT_TYPES.ALERT, (alert) => this._onAlert(alert));
       this.startRenderLoop(30);
     }
 
     onUnmount() {
       this._logo = null;
       this._tinted = null;
+      this._popUntil = 0;
+      this._popAmp = 0;
     }
 
     onUpdate(prev, next) {
@@ -118,6 +126,13 @@
         this.element.style.transform = "";
         this.element.style.transformStyle = "";
       }
+    }
+
+    // A short scale pop on every alert; a donation pops noticeably harder.
+    _onAlert(alert) {
+      if (!alert) return;
+      this._popUntil = performance.now() + 450;
+      this._popAmp = alert.kind === "donation" ? 0.16 : 0.08;
     }
 
     _ensureLogo() {
@@ -176,7 +191,14 @@
       const now = performance.now();
       const t = now / 1000;
 
-      const scale = 1 + 0.03 * Math.sin(t * 1.7);
+      let scale = 1 + 0.03 * Math.sin(t * 1.7);
+      let popGlow = 0;
+      if (now < this._popUntil) {
+        const k = 1 - (this._popUntil - now) / 450; // 0..1 over the pop
+        popGlow = Math.sin(Math.PI * k);
+        scale += this._popAmp * popGlow;
+      }
+      scale = clamp(scale, 0.8, 1.4);
       const cx = cw / 2 + Math.sin(t * 0.6) * 4;
       const cy = ch / 2 + Math.cos(t * 0.5) * 3 + Math.sin(t * 1.4) * 2;
       const size = Math.min(cw, ch) * 0.3 * scale;
@@ -261,7 +283,7 @@
         const d = clamp((e.depth - minDepth) / span, 0, 1); // 0 = back, 1 = front
         // Front edges are thicker and brighter; back edges fade to 1px.
         ctx.lineWidth = d > 0.55 ? 2 : 1;
-        ctx.globalAlpha = 0.3 + d * 0.7;
+        ctx.globalAlpha = Math.min(1, 0.3 + d * 0.7 + popGlow * 0.35);
         ctx.beginPath();
         ctx.moveTo(e.x1, e.y1);
         ctx.lineTo(e.x2, e.y2);
