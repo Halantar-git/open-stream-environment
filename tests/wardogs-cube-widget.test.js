@@ -22,7 +22,7 @@ const WidgetManager = require("../overlay/widgets/widget-manager");
 
 function makeCtx2D() {
   const ctx = {};
-  ["setTransform", "transform", "clearRect", "save", "restore", "beginPath", "moveTo", "lineTo", "stroke", "drawImage", "fillRect"].forEach(
+  ["setTransform", "transform", "rotate", "clearRect", "save", "restore", "beginPath", "moveTo", "lineTo", "stroke", "drawImage", "fillRect"].forEach(
     (m) => (ctx[m] = jest.fn())
   );
   return ctx;
@@ -147,12 +147,15 @@ describe("WidgetWardogsCube", () => {
       // Кадр при монтировании не считаем: интересует кадр алерта.
       w.element._ctx.drawImage.mockClear();
       w.element._ctx.fillRect.mockClear();
+      w.element._ctx.rotate.mockClear();
       ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "follow" });
       raf.flush(1000);
       // Каркаса нет: куб плотный — у каждой из шести граней подложка и логотип.
       expect(w.element._ctx.stroke).not.toHaveBeenCalled();
       expect(w.element._ctx.fillRect).toHaveBeenCalledTimes(6);
       expect(w.element._ctx.drawImage).toHaveBeenCalledTimes(6);
+      // У верхней и нижней грани логотип доворачивается против спина.
+      expect(w.element._ctx.rotate).toHaveBeenCalledTimes(2);
 
       w.unmount();
     } finally {
