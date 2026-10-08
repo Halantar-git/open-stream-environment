@@ -160,6 +160,27 @@ describe("WidgetWardogsCube", () => {
     }
   });
 
+  test("куб вращается, а не плавает по холсту", () => {
+    const ctx = makeContext("wardogs");
+    const w = new WidgetWardogsCube(cubeItem(), ctx);
+    w.mount(makeEl("div"));
+    ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "follow" });
+
+    // Матрицы граней — это и есть поворот куба.
+    const faceTransforms = () => w.element._ctx.transform.mock.calls.map((call) => call[0]);
+
+    clock = 0;
+    raf.flush(0);
+    const before = faceTransforms();
+
+    w.element._ctx.transform.mockClear();
+    clock = 500;
+    raf.flush(500);
+    expect(faceTransforms()).not.toEqual(before);
+
+    w.unmount();
+  });
+
   test("не запускает цикл на чужой теме", () => {
     const parent = makeEl("div");
     const w = new WidgetWardogsCube(cubeItem(), makeContext("pixel"));

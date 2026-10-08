@@ -26,7 +26,8 @@
   flat blob.
 
   Like the Pixel cube it is hidden while nothing is happening and appears on an
-  alert, one alert at a time; donations also make it pop.
+  alert, one alert at a time; donations also make it pop. Between alerts it only
+  spins in place — no drift or breathing, so it stays put in the scene.
 */
 (function (root, factory) {
   const BaseWidget =
@@ -221,19 +222,19 @@
       const now = performance.now();
       const t = now / 1000;
 
-      let scale = 1 + 0.03 * Math.sin(t * 1.7);
+      let scale = 1;
       if (now < this._popUntil) {
         const k = 1 - (this._popUntil - now) / 450; // 0..1 over the pop
         scale += this._popAmp * Math.sin(Math.PI * k);
       }
       scale = clamp(scale, 0.8, 1.4);
 
-      const cx = cw / 2 + Math.sin(t * 0.6) * 4;
-      const cy = ch / 2 + Math.cos(t * 0.5) * 3 + Math.sin(t * 1.4) * 2;
+      const cx = cw / 2;
+      const cy = ch / 2;
       const size = Math.min(cw, ch) * 0.3 * scale;
 
-      // Freeze the spin when motion is off (a sign still breathing, not still).
-      const angle = this.config.motion === false ? 0.6 : t * 0.7;
+      // Спин всегда включён — куб только вращается, а не плавает по холсту.
+      const angle = t * 0.7;
       const cosA = Math.cos(angle);
       const sinA = Math.sin(angle);
       const tilt = -0.55;

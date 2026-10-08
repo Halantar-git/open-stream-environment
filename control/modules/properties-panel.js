@@ -37,8 +37,8 @@ function escapeHtml(s) {
 
 // Signs with a "Motion" switch in the inspector: it stops the widget from
 // drifting (sway, roll, spin) while its neon animation keeps playing. The TESO
-// seal and the Pixel cube are left out.
-const MOTION_TOGGLE_TYPES = ["grimhex", "musain", "nuclear", "cobra", "elite-sign", "md3-orb", "wardogs-cube"];
+// seal, the Pixel cube and the Wardogs cube are left out — they always spin.
+const MOTION_TOGGLE_TYPES = ["grimhex", "musain", "nuclear", "cobra", "elite-sign", "md3-orb"];
 
 export function initPropertiesPanel({
   state,
