@@ -1,5 +1,5 @@
 {
-  "sourceHash": "68b5a7303edc0dec",
+  "sourceHash": "b47e232239bf7aff",
   "builtinThemes": {
     "nebula": {
       "id": "nebula",
@@ -374,7 +374,7 @@
         "--panel-clip": "none",
         "--panel-decoration": "brackets2",
         "--panel-glow": "0 0 12px rgba(240, 169, 44, 0.18), inset 0 0 20px rgba(240, 169, 44, 0.03)",
-        "--panel-bg": "rgba(18, 17, 14, 0.88)",
+        "--panel-bg": "rgba(9, 9, 9, 0.90)",
         "--panel-blur": "0px",
         "--panel-border": "1px solid rgba(240, 169, 44, 0.26)",
         "--alert-enter-easing": "cubic-bezier(0.2, 0.8, 0.2, 1)",

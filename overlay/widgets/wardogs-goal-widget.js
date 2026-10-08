@@ -18,17 +18,19 @@
 /*
   WidgetWardogsGoal — donation goal as the WARDOGS loading bar.
 
-  A thin framed bar made of dense vertical ticks: the empty part reads as faint
-  gray stripes, the filled part lights up to the theme accent, and the boundary
-  falls on a cell edge — like a game's "loading / compiling" readout. Above the
-  bar sits an uppercase title on the left and a bracketed percentage "[43%]" on
-  the right.
+  A thin framed bar made of dense vertical ticks: the empty part reads as dim
+  gray stripes, the filled part lights up to light gray, and the boundary falls
+  on a cell edge — like a game's "loading / compiling" readout. Above the bar
+  sits an uppercase title on the left and a bracketed percentage "[43%]" on the
+  right. The whole readout is monochrome gray (the game's loading screen), not
+  the theme accent.
 
   The progress is driven only by the goal state (never by chat): the widget
   subscribes to GOAL_UPDATE / LOCALES and runs a self-contained render loop. It
   is bound to the Wardogs theme (see shared/themes.js) with a hard internal
   gate — no canvas, loop or subscriptions on any other theme. The panel surface
-  reuses the theme's panel tokens, like the Recent events widget.
+  comes from the theme's own panel tokens, so every Wardogs widget shares one
+  background.
 */
 (function (root, factory) {
   const BaseWidget =
@@ -46,22 +48,25 @@
 })(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
   "use strict";
 
-  // Fallbacks repeat the Wardogs theme tokens (shared/themes.js) so the widget
-  // still draws sensibly if the CSS variables are not applied yet.
-  const FALLBACK = {
-    primary: "#f0a92c",
-    onSurface: "#e8e5dd",
-    onSurfaceVariant: "#b6b3a7",
-    outline: "#7d7a6d",
-  };
-  const TRACK = "rgba(255, 255, 255, 0.12)"; // empty cell stripe
+  // Monochrome grays of the loading readout (the game's shader-compile screen):
+  // light filled cells on dim gray track, a hairline frame and gray labels.
+  const FILL = "#dcdcdc"; // filled cells
+  const TRACK = "rgba(255, 255, 255, 0.20)"; // empty cell stripes
+  const FRAME = "rgba(220, 220, 220, 0.45)"; // bar hairline
+  const TEXT = "#e2e2e2"; // title + "[43%]"
+  const MUTED = "#8f8f8f"; // amounts
+
   const CELL_PITCH = 7; // stripe every ~7px → the dense barcode look
   const CELL_GAP = 1; // 1px gap between stripes
 
-  // The reference uses a bold technical sans for the label and a mono for the
-  // numbers — the theme's own body/mono faces.
   const FONT_DISPLAY = "'Roboto Condensed', 'Segoe UI', sans-serif";
   const FONT_MONO = "'JetBrains Mono', 'Consolas', monospace";
+
+  // Fallbacks for the panel surface, used only before the theme CSS variables
+  // are applied (they mirror the Wardogs tokens in shared/themes.js).
+  const PANEL_BG = "rgba(10, 10, 10, 0.90)";
+  const PANEL_BORDER = "1px solid rgba(255, 255, 255, 0.16)";
+  const PANEL_GLOW = "0 8px 24px rgba(0, 0, 0, 0.5)";
 
   const clamp = (v, min, max) => (v < min ? min : v > max ? max : v);
 
@@ -83,19 +88,6 @@
     // The bar animates even though the root element is a <div> (2D).
     _isAnimated() {
       return true;
-    }
-
-    // Live theme colours so the widget follows the Wardogs palette (including
-    // a colour the streamer retuned in a custom theme based on it).
-    _readColors() {
-      const read = this.context.readCssVar;
-      const get = (name, fallback) => (read && read(name)) || fallback;
-      return {
-        primary: get("--md-primary", FALLBACK.primary),
-        onSurface: get("--md-on-surface", FALLBACK.onSurface),
-        onSurfaceVariant: get("--md-on-surface-variant", FALLBACK.onSurfaceVariant),
-        outline: get("--md-outline", FALLBACK.outline),
-      };
     }
 
     onMount() {
@@ -160,8 +152,8 @@
       if (prev.showBackground !== next.showBackground) this._applySurface();
     }
 
-    // Panel surface matching the Recent events widget: filled panel, border,
-    // radius and drop shadow/glow from the active theme. Cleared entirely when
+    // Panel surface from the theme's tokens, so the goal bar shares one
+    // background with every other Wardogs widget. Cleared entirely when
     // showBackground is false.
     _applySurface() {
       const read = this.context.readCssVar;
@@ -179,15 +171,15 @@
         return;
       }
 
-      const bg = (read && read("--panel-bg")) || "rgba(18, 17, 14, 0.88)";
+      const bg = (read && read("--panel-bg")) || PANEL_BG;
       const blur = (read && read("--panel-blur")) || "0px";
-      const border = (read && read("--panel-border")) || `1px solid ${FALLBACK.primary}`;
+      const border = (read && read("--panel-border")) || PANEL_BORDER;
       const radius = (read && read("--panel-radius")) || "0px";
       const clip = (read && read("--panel-clip")) || "none";
       const elev =
         (read && read("--elev-1")) ||
         "0 1px 3px rgba(0,0,0,0.55), 0 1px 2px rgba(0,0,0,0.35)";
-      const glow = (read && read("--panel-glow")) || "0 0 12px rgba(240, 169, 44, 0.18)";
+      const glow = (read && read("--panel-glow")) || PANEL_GLOW;
 
       // Set only backgroundColor so the scanline background-image from the HUD
       // decoration ([data-decoration]) can layer on top, like Recent events.
@@ -206,18 +198,15 @@
     _updateDom() {
       if (!this.contentEl) return;
       const { escapeHtml, formatMoney, currencySymbol, t, state } = this.context;
-      const colors = this._readColors();
       const goal = (state && state.goal) || {};
       const pct = goal.target ? Math.min(100, Math.round((goal.current / goal.target) * 100)) : 0;
       this._pct = pct;
 
-      const pctStr = this.config.showPercentage
-        ? `<span style="color:${colors.primary};font-weight:700;"> [${pct}%]</span>`
-        : "";
+      const pctStr = this.config.showPercentage ? `<b style="color:${TEXT};"> [${pct}%]</b>` : "";
 
       this.contentEl.innerHTML =
-        `<span style="color:${colors.onSurface};font-family:${FONT_DISPLAY};font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(goal.title || t("preview.goalTitle"))}</span>` +
-        `<span style="color:${colors.onSurfaceVariant};font-family:${FONT_MONO};font-size:12px;white-space:nowrap;">${formatMoney(goal.current)} / ${formatMoney(goal.target)} ${escapeHtml(currencySymbol(goal.currency))}${pctStr}</span>`;
+        `<span style="color:${TEXT};font-family:${FONT_DISPLAY};font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(goal.title || t("preview.goalTitle"))}</span>` +
+        `<span style="color:${MUTED};font-family:${FONT_MONO};font-size:12px;white-space:nowrap;">${formatMoney(goal.current)} / ${formatMoney(goal.target)} ${escapeHtml(currencySymbol(goal.currency))}${pctStr}</span>`;
     }
 
     // ---- rendering ----
@@ -231,7 +220,6 @@
       const ctx = this.ctx;
       if (!ctx || !this.canvas) return;
 
-      const colors = this._readColors();
       const cw = this.canvas.clientWidth || 300;
       const ch = this.canvas.clientHeight || 22;
       const dpr = window.devicePixelRatio || 1;
@@ -253,8 +241,7 @@
 
       // Hairline frame around the whole bar.
       ctx.save();
-      ctx.strokeStyle = colors.outline;
-      ctx.globalAlpha = 0.55;
+      ctx.strokeStyle = FRAME;
       ctx.lineWidth = 1;
       ctx.strokeRect(0.5, 0.5, Math.max(1, cw - 1), Math.max(1, ch - 1));
       ctx.restore();
@@ -279,7 +266,7 @@
         ctx.fillRect(cx, y, cellW, h);
 
         if (fill > 0.001) {
-          ctx.fillStyle = colors.primary;
+          ctx.fillStyle = FILL;
           ctx.fillRect(cx, y, Math.max(1, cellW * fill), h);
         }
       }
