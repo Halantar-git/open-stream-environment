@@ -18,17 +18,13 @@
 /*
   WidgetWardogsCube — rotating isometric cube for the Wardogs theme, drawn the
   way the Pixel Perfect cube is: a depth-cued wireframe with the emblem
-  (assets/themes/wardogs/logo.png) decaled onto the faces. The emblem's black
-  parts are recoloured to a monochrome gray on the fly (its white parts stay
-  white) so it reads over a dark overlay.
+  (assets/themes/wardogs/logo.png) decaled onto the faces in its own colours.
 
-  The emblem is a shield, so its corners are transparent. Decals are drawn only
-  on the faces that point at the viewer: otherwise the gaps of the near faces
-  would show the far ones through them and the cube would read as a jumble.
-
-  It is a sign: always visible, with a "motion" toggle that freezes the rotation
-  in the inspector. It reacts to alerts like the Pixel cube — a quick pop on
-  every alert, a harder one on donations.
+  Like the Pixel cube it is hidden while nothing is happening and appears on an
+  alert, one alert at a time; donations also make it pop. The emblem is a shield,
+  so its corners are transparent — decals are drawn only on the faces that point
+  at the viewer, otherwise the gaps of the near faces would show the far ones
+  through them and the cube would read as a jumble.
 */
 (function (root, factory) {
   const BaseWidget =
@@ -48,8 +44,9 @@
 
   const clamp = (v, min, max) => (v < min ? min : v > max ? max : v);
 
-  const GRAY = "#dcdcdc"; // monochrome gray, like the goal bar fill
+  const GRAY = "#dcdcdc"; // monochrome gray wireframe, like the goal bar fill
   const LOGO_PATH = "/assets/themes/wardogs/logo.png";
+  const DEFAULT_ALERT_MS = 5000;
 
   // Cube vertices (half-size 1).
   const VERTICES = [
@@ -81,7 +78,8 @@
       super(config, context);
       this.theme = (context && (context.theme || context.activeThemeId)) || "";
       this._logo = null; // source <img>, loaded once
-      this._tinted = null; // recoloured offscreen canvas
+      this._queue = []; // alerts waiting for their turn
+      this._visibleUntil = 0; // while > now the cube is shown
       this._popUntil = 0; // active "pop" window (alert reaction)
       this._popAmp = 0; // pop strength (donations hit harder)
     }
@@ -92,15 +90,16 @@
 
       this._ensureLogo();
       this._applyPerspective();
-      // React to alerts like the Pixel cube: a quick pop each time (donations
-      // hit harder). The cube stays a visible sign — it is not alert-gated.
-      this.subscribe(this.context.EVENT_TYPES.ALERT, (alert) => this._onAlert(alert));
+      this.subscribe(this.context.EVENT_TYPES.ALERT, (alert) => this._queueAlert(alert));
+      // Hidden until the first alert, like the Pixel cube.
+      this._setVisible(false);
       this.startRenderLoop(30);
     }
 
     onUnmount() {
       this._logo = null;
-      this._tinted = null;
+      this._queue = [];
+      this._visibleUntil = 0;
       this._popUntil = 0;
       this._popAmp = 0;
     }
@@ -122,11 +121,37 @@
       }
     }
 
-    // A short scale pop on every alert; a donation pops noticeably harder.
-    _onAlert(alert) {
+    // Alerts are shown one at a time, like the Pixel cube drains its icons, so
+    // they never overwrite each other. Only an alert brings the cube on screen.
+    _queueAlert(alert) {
       if (!alert) return;
+      this._queue.push(alert);
+      if (performance.now() >= this._visibleUntil) this._drain();
+    }
+
+    _drain() {
+      const alert = this._queue.shift();
+      if (!alert) {
+        this._visibleUntil = 0;
+        this._setVisible(false);
+        return;
+      }
+      const duration = alert.durationMs || DEFAULT_ALERT_MS;
+      this._visibleUntil = performance.now() + duration;
+      this._setVisible(true);
+      this._pop(alert.kind);
+      this.later(() => this._drain(), duration);
+    }
+
+    _setVisible(visible) {
+      if (this.element) this.element.style.opacity = visible ? "1" : "0";
+      this.setIdle(!visible);
+    }
+
+    // A short scale pop on every alert; a donation pops noticeably harder.
+    _pop(kind) {
       this._popUntil = performance.now() + 450;
-      this._popAmp = alert.kind === "donation" ? 0.16 : 0.08;
+      this._popAmp = kind === "donation" ? 0.16 : 0.08;
     }
 
     _ensureLogo() {
@@ -136,34 +161,12 @@
       this._logo = img;
     }
 
-    // The emblem is black-on-transparent with white accents. To read over the
-    // dark overlay, black is recoloured to the monochrome gray and white stays
-    // white: screen() maps black→gray / white→white, then destination-in
-    // restores the original alpha so only the emblem shape survives. Cached.
-    _logoTinted() {
-      if (this._tinted) return this._tinted;
+    // The emblem is drawn in its own colours (black shield, white wolf) exactly
+    // as the game uses it, so it reads over whatever gameplay sits behind.
+    _logoImage() {
       const img = this._logo;
       if (!img || !img.complete || !img.naturalWidth) return null;
-      if (typeof document === "undefined" || !document.createElement) return null;
-
-      const size = img.naturalWidth || 256;
-      const canvas = document.createElement("canvas");
-      canvas.width = size;
-      canvas.height = size;
-      const g = canvas.getContext ? canvas.getContext("2d") : null;
-      if (!g) return null;
-
-      g.clearRect(0, 0, size, size);
-      g.drawImage(img, 0, 0, size, size);
-      g.globalCompositeOperation = "screen";
-      g.fillStyle = GRAY;
-      g.fillRect(0, 0, size, size);
-      g.globalCompositeOperation = "destination-in";
-      g.drawImage(img, 0, 0, size, size);
-      g.globalCompositeOperation = "source-over";
-
-      this._tinted = canvas;
-      return canvas;
+      return img;
     }
 
     render() {
@@ -257,7 +260,7 @@
 
       // Emblem on the faces that point at the viewer, back to front. Culling the
       // far faces keeps their transparent corners from showing through.
-      const logo = this._logoTinted();
+      const logo = this._logoImage();
       if (logo) {
         const h = 0.55; // half-size in face-local units (face spans -1..1)
         const faces = LOGO_FACES.map((f) => {

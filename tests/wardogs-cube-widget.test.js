@@ -112,32 +112,27 @@ afterEach(() => {
 });
 
 describe("WidgetWardogsCube", () => {
-  test("монтируется на wardogs и отрисовывает кадр", () => {
+  test("скрыт до первого алерта и появляется на нём", () => {
     const ctx = makeContext("wardogs");
     const parent = makeEl("div");
     const w = new WidgetWardogsCube(cubeItem(), ctx);
 
     w.mount(parent);
     expect(w.element.tagName).toBe("CANVAS");
-    expect(raf.pending()).toBe(1); // 30 FPS loop
+    // Пока ничего не происходит — куба нет и цикл спит, как у Pixel.
+    expect(w.element.style.opacity).toBe("0");
+    expect(raf.pending()).toBe(0);
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "follow" });
+    expect(w.element.style.opacity).toBe("1");
+    expect(raf.pending()).toBe(1); // 20/30 FPS loop resumes
 
     raf.flush(1000); // one frame
     expect(w.element._ctx.clearRect).toHaveBeenCalled();
-
-    w.unmount();
-    expect(raf.pending()).toBe(0);
-  });
-
-  test("рисует каркас куба, как в Pixel Perfect", () => {
-    const ctx = makeContext("wardogs");
-    const w = new WidgetWardogsCube(cubeItem(), ctx);
-    w.mount(makeEl("div"));
-
-    raf.flush(1000);
-    // Каркас — это обводка рёбер, а не только очистка холста.
     expect(w.element._ctx.stroke).toHaveBeenCalled();
 
     w.unmount();
+    expect(raf.pending()).toBe(0);
   });
 
   test("накладывает логотип, когда картинка загружена", () => {
@@ -150,6 +145,7 @@ describe("WidgetWardogsCube", () => {
       const w = new WidgetWardogsCube(cubeItem(), ctx);
       w.mount(makeEl("div"));
 
+      ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "follow" });
       raf.flush(1000);
       expect(w.element._ctx.drawImage).toHaveBeenCalled();
 
@@ -179,6 +175,8 @@ describe("WidgetWardogsCube", () => {
     expect(w._popUntil).toBeGreaterThan(0);
     expect(w._popAmp).toBeCloseTo(0.08);
 
+    // Алерты идут по очереди: донатный всплывает, когда прошёл предыдущий.
+    clock = w._visibleUntil + 1;
     ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "donation" });
     expect(w._popAmp).toBeCloseTo(0.16);
 

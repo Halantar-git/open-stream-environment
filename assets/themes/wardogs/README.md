@@ -9,5 +9,5 @@ community-ассетов Steam:
 собственность Bulkhead/Team17 и используется как элемент оформления темы.
 
 Файл отдаётся сервером по пути `/assets/themes/wardogs/logo.png` и рисуется на
-гранях виджета «Куб Wardogs» (`overlay/widgets/wardogs-cube-widget.js`):
-чёрная часть эмблемы перекрашивается в серый, белая остаётся белой.
+гранях виджета «Куб Wardogs» (`overlay/widgets/wardogs-cube-widget.js`) в
+исходных цветах эмблемы. Куб, как и у темы Pixel, скрыт, пока не пришёл алерт.

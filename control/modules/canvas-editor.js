@@ -831,7 +831,7 @@ export function initCanvasEditor({
               <path d="M50 52 L18 68 M82 68 L50 84 M82 36 L50 52 M50 20 L18 36" stroke-width="1" opacity="0.4"/>
             </g>
           </svg>
-          <img src="/assets/themes/wardogs/logo.png" alt="" style="position:absolute;width:36%;height:36%;object-fit:contain;filter:invert(1) brightness(0.86);opacity:0.92;" />
+          <img src="/assets/themes/wardogs/logo.png" alt="" style="position:absolute;width:36%;height:36%;object-fit:contain;opacity:0.92;" />
         </div>`;
       }
       case "pixel-cube": {
