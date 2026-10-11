@@ -1151,4 +1151,4 @@ tests/                     — фронтовые Jest-тесты (бэкенд 
 Этот проект использует бесплатные аудиоматериалы с платформы Freesound.org (лицензия Creative Commons Attribution):
 * **Wheel Spin sound** — автор [roulettevision](https://freesound.org/people/roulettevision/), [звук 420891](https://freesound.org/people/roulettevision/sounds/420891/) (CC BY 3.0)
 * **Jingle_Win_00 & Jingle_Lose_01** — автор [LittleRobotSoundFactory](https://freesound.org/people/LittleRobotSoundFactory/), [звук 270333](https://freesound.org/people/LittleRobotSoundFactory/sounds/270333/) и [звук 270334](https://freesound.org/people/LittleRobotSoundFactory/sounds/270334/) (CC BY 4.0)
-* **Buzzer (звук уведомлений)** — автор [Garuda1982](https://freesound.org/people/Garuda1982/) (CC0)
+* **Buzzer (звук уведомлений)** — «alarm clock buzzer alarm beep», автор [Garuda1982](https://freesound.org/people/Garuda1982/), [звук 530172](https://freesound.org/people/Garuda1982/sounds/530172/) (CC0); в поставке — обрезанный фрагмент

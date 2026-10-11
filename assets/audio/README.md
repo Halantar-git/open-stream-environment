@@ -33,5 +33,7 @@
   [LittleRobotSoundFactory](https://freesound.org/people/LittleRobotSoundFactory/),
   [звук 270334](https://freesound.org/people/LittleRobotSoundFactory/sounds/270334/),
   **CC BY 4.0**.
-- `buzzer.wav` — автор
-  [Garuda1982](https://freesound.org/people/Garuda1982/), **CC0**.
+- `buzzer.wav` — «alarm clock buzzer alarm beep», автор
+  [Garuda1982](https://freesound.org/people/Garuda1982/),
+  [звук 530172](https://freesound.org/people/Garuda1982/sounds/530172/), **CC0**.
+  В поставке — обрезанный фрагмент исходной записи.
