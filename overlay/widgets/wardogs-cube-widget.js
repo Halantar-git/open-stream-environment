@@ -20,10 +20,9 @@
   entirely from the emblem (assets/themes/wardogs/logo.png) decaled onto all six
   faces in the emblem's own colours, on solid faces — no wireframe.
 
-  Each face is filled with the theme's panel background before the emblem goes
-  on, so the cube is dense: nearer faces hide the farther ones. The fill is
-  lit by the face normal, otherwise a cube of identical panels would read as a
-  flat blob.
+  Each face is black before the emblem goes on, so the cube is dense: nearer
+  faces hide the farther ones. The fill is lit by the face normal, otherwise a
+  cube of identical panels would read as a flat blob.
 
   Like the Pixel cube it is hidden while nothing is happening and appears on an
   alert, one alert at a time; donations also make it pop. Between alerts it only
@@ -50,8 +49,10 @@
   const LOGO_PATH = "/assets/themes/wardogs/logo.png";
   const DEFAULT_ALERT_MS = 5000;
 
-  const PANEL_FALLBACK = [9, 9, 9]; // rgba(9, 9, 9, 0.90) из темы
-  const LIT_FALLBACK = [44, 42, 36]; // #2c2a24 (--md-surface-bright)
+  // Подложка граней чёрная; свет лишь немного выделяет грани, иначе плотный куб
+  // читался бы плоским чёрным пятном.
+  const FACE_SHADOW = [0, 0, 0];
+  const FACE_LIT = [32, 32, 32];
 
   // Свет сверху-слева: грань тем светлее, чем сильнее её нормаль смотрит на
   // источник. Направление задано в экранных координатах (как у проекции).
@@ -60,23 +61,6 @@
     const len = Math.hypot(v[0], v[1], v[2]) || 1;
     return [v[0] / len, v[1] / len, v[2] / len];
   })();
-
-  // "rgb()", "rgba()" или "#hex" -> [r, g, b]; null, если не разобрать.
-  function toRgb(color) {
-    const text = String(color || "").trim();
-    const rgb = text.match(/^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/i);
-    if (rgb) return [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])];
-    const hex = text.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
-    if (!hex) return null;
-    const full = hex[1].length === 3
-      ? hex[1].split("").map((ch) => ch + ch).join("")
-      : hex[1];
-    return [
-      parseInt(full.slice(0, 2), 16),
-      parseInt(full.slice(2, 4), 16),
-      parseInt(full.slice(4, 6), 16),
-    ];
-  }
 
   // Цвет грани между тенью и светом.
   function mixColor(from, to, t) {
@@ -102,8 +86,8 @@
       super(config, context);
       this.theme = (context && (context.theme || context.activeThemeId)) || "";
       this._logo = null; // source <img>, loaded once
-      this._shadow = PANEL_FALLBACK; // unlit face colour (panel background)
-      this._lit = LIT_FALLBACK; // fully lit face colour
+      this._shadow = FACE_SHADOW; // цвет теневой грани (чёрный)
+      this._lit = FACE_LIT; // цвет освещённой грани
       this._queue = []; // alerts waiting for their turn
       this._visibleUntil = 0; // while > now the cube is shown
       this._popUntil = 0; // active "pop" window (alert reaction)
@@ -115,7 +99,6 @@
       if (this.theme !== "wardogs") return;
 
       this._ensureLogo();
-      this._readFaceColors();
       this._applyPerspective();
       this.subscribe(this.context.EVENT_TYPES.ALERT, (alert) => this._queueAlert(alert));
       // Hidden until the first alert, like the Pixel cube.
@@ -186,15 +169,6 @@
       const img = new Image();
       img.src = LOGO_PATH;
       this._logo = img;
-    }
-
-    // Faces are filled with the theme's panel background (shared with every
-    // Wardogs widget) and lit up to the bright surface; the panel colour is
-    // semi-transparent, which the dense cube cannot use, so alpha is dropped.
-    _readFaceColors() {
-      const read = this.context.readCssVar;
-      this._shadow = toRgb(read && read("--panel-bg")) || PANEL_FALLBACK;
-      this._lit = toRgb(read && read("--md-surface-bright")) || LIT_FALLBACK;
     }
 
     // The emblem is drawn in its own colours (black shield, white wolf) exactly
