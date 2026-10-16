@@ -85,16 +85,16 @@
   }
 
   // The 6 cube faces for decaling the emblem: center + two in-plane tangent
-  // vectors (face-local x/y axes). Front/back/left/right/top/bottom. The
-  // horizontal faces are marked: their axes lie differently, so the emblem gets
-  // a 180° turn there (see render).
+  // vectors (face-local x/y axes). Front/back/left/right/top/bottom. The emblem
+  // is drawn with a further 180° turn (see render), since these axes come from
+  // the symmetric Pixel icon and leave the emblem upside down.
   const LOGO_FACES = [
-    { c: [0, 0, -1], u: [1, 0, 0],  v: [0, 1, 0] },                  // front
-    { c: [0, 0, 1],  u: [-1, 0, 0], v: [0, 1, 0] },                  // back
-    { c: [-1, 0, 0], u: [0, 0, 1],  v: [0, 1, 0] },                  // left
-    { c: [1, 0, 0],  u: [0, 0, -1], v: [0, 1, 0] },                  // right
-    { c: [0, 1, 0],  u: [1, 0, 0],  v: [0, 0, -1], horizontal: true }, // top
-    { c: [0, -1, 0], u: [1, 0, 0],  v: [0, 0, -1], horizontal: true }, // bottom
+    { c: [0, 0, -1], u: [1, 0, 0],  v: [0, 1, 0] },  // front
+    { c: [0, 0, 1],  u: [-1, 0, 0], v: [0, 1, 0] },  // back
+    { c: [-1, 0, 0], u: [0, 0, 1],  v: [0, 1, 0] },  // left
+    { c: [1, 0, 0],  u: [0, 0, -1], v: [0, 1, 0] },  // right
+    { c: [0, 1, 0],  u: [1, 0, 0],  v: [0, 0, -1] }, // top
+    { c: [0, -1, 0], u: [1, 0, 0],  v: [0, 0, -1] }, // bottom
   ];
 
   class WidgetWardogsCube extends BaseWidget {
@@ -270,7 +270,6 @@
           f: cy - size * pc.y,
           depth: pc.z,
           fill: mixColor(this._shadow, this._lit, light),
-          horizontal: !!f.horizontal,
         };
       }).sort((p, q) => p.depth - q.depth);
 
@@ -281,10 +280,10 @@
         ctx.fillStyle = face.fill;
         ctx.fillRect(-1, -1, 2, 2);
         if (!logo) continue;
-        // Верх и низ — с разворотом на 180°: их оси лежат иначе, и без
-        // разворота эмблема встаёт вверх ногами. Куб крутится, и логотип
-        // поворачивается вместе с гранью, как на боковых.
-        if (face.horizontal) ctx.rotate(Math.PI);
+        // Эмблему разворачиваем на 180°: оси граней рассчитаны на симметричный
+        // значок Pixel, и без разворота лого встаёт вверх ногами. Логотип при
+        // этом лежит в плоскости грани и крутится вместе с кубом.
+        ctx.rotate(Math.PI);
         ctx.drawImage(logo, -1, -1, 2, 2);
       }
     }

@@ -154,8 +154,8 @@ describe("WidgetWardogsCube", () => {
       expect(w.element._ctx.stroke).not.toHaveBeenCalled();
       expect(w.element._ctx.fillRect).toHaveBeenCalledTimes(6);
       expect(w.element._ctx.drawImage).toHaveBeenCalledTimes(6);
-      // У верхней и нижней грани логотип развёрнут на 180°.
-      expect(w.element._ctx.rotate).toHaveBeenCalledTimes(2);
+      // Эмблема развёрнута на 180° на каждой из шести граней.
+      expect(w.element._ctx.rotate).toHaveBeenCalledTimes(6);
 
       w.unmount();
     } finally {
