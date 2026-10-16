@@ -85,10 +85,9 @@
   }
 
   // The 6 cube faces for decaling the emblem: center + two in-plane tangent
-  // vectors (face-local x/y axes). Front/back/left/right/top/bottom.
-  // The horizontal faces are marked: the cube spins around the vertical axis,
-  // which is their normal, so they turn in-plane and the emblem needs an extra
-  // turn to stay upright (see render).
+  // vectors (face-local x/y axes). Front/back/left/right/top/bottom. The
+  // horizontal faces are marked: their axes lie differently, so the emblem gets
+  // a 180° turn there (see render).
   const LOGO_FACES = [
     { c: [0, 0, -1], u: [1, 0, 0],  v: [0, 1, 0] },                  // front
     { c: [0, 0, 1],  u: [-1, 0, 0], v: [0, 1, 0] },                  // back
@@ -282,18 +281,11 @@
         ctx.fillStyle = face.fill;
         ctx.fillRect(-1, -1, 2, 2);
         if (!logo) continue;
-        if (face.horizontal) {
-          // Горизонтальная грань крутится вокруг своей нормали вместе с кубом,
-          // поэтому эмблему доворачиваем на угол спина — иначе она встаёт вверх
-          // ногами. Квадрат 0.7 после поворота остаётся в границах грани.
-          const h = 0.7;
-          ctx.save();
-          ctx.rotate(-angle);
-          ctx.drawImage(logo, -h, -h, 2 * h, 2 * h);
-          ctx.restore();
-        } else {
-          ctx.drawImage(logo, -1, -1, 2, 2);
-        }
+        // Верх и низ — с разворотом на 180°: их оси лежат иначе, и без
+        // разворота эмблема встаёт вверх ногами. Куб крутится, и логотип
+        // поворачивается вместе с гранью, как на боковых.
+        if (face.horizontal) ctx.rotate(Math.PI);
+        ctx.drawImage(logo, -1, -1, 2, 2);
       }
     }
   }
