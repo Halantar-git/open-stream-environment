@@ -78,4 +78,14 @@ describe("MicWidget: перспектива", () => {
     below._applyPerspective();
     expect(below.element.style.transform).toBe("");
   });
+
+  test("обновление конфига сразу применяет наклон", () => {
+    const w = new MicWidget({ type: "mic", config: { perspective: 0 } }, {});
+    w.element = { style: {} };
+
+    w.update({ type: "mic", config: { perspective: 50, perspectiveDirection: "right" } });
+    expect(w.element.style.transform).toBe(
+      "perspective(1200px) rotateY(7.5deg) rotateX(1.5deg)"
+    );
+  });
 });

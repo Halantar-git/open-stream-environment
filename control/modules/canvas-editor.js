@@ -144,6 +144,27 @@ export function initCanvasEditor({
     return fallback;
   }
 
+  // Тот же наклон, что у живого виджета: превью в редакторе должно показывать
+  // перспективу, иначе настройка выглядит неработающей.
+  function micPerspectiveStyle(config) {
+    const value = Math.max(0, Math.min(100, Number(config.perspective) || 0));
+    if (!value) return "";
+    const magnitude = value * 0.15;
+    const direction = config.perspectiveDirection || "left";
+    let ry = -magnitude;
+    let rx = magnitude * 0.2;
+    if (direction === "right") {
+      ry = magnitude;
+    } else if (direction === "up") {
+      ry = 0;
+      rx = magnitude;
+    } else if (direction === "down") {
+      ry = 0;
+      rx = -magnitude;
+    }
+    return `perspective(1200px) rotateY(${ry}deg) rotateX(${rx}deg)`;
+  }
+
   function buildBarsPreview({ width, height, opacity, color, barCount, gap }) {
     const n = Math.max(2, Math.round(barCount));
     const slotW = width / n;
@@ -332,20 +353,27 @@ export function initCanvasEditor({
         const lineWidth = Number(micCfg(config, "lineWidth", 2)) || 2;
         const width = 400;
         const height = 80;
-        if (mode === "equalizer") return buildEqualizerPreview({ width, height, opacity, barCount, gap });
-        if (mode === "bars") return buildBarsPreview({ width, height, opacity, color, barCount, gap });
-        if (mode === "ring") return buildRingPreview({ width, height, opacity, color, barCount, lineWidth });
-        const pts = [];
-        for (let x = 0; x <= width; x += 6) {
-          const y = height / 2 + Math.sin(x * 0.045) * 22 + Math.sin(x * 0.012) * 9;
-          pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+        let preview;
+        if (mode === "equalizer") preview = buildEqualizerPreview({ width, height, opacity, barCount, gap });
+        else if (mode === "bars") preview = buildBarsPreview({ width, height, opacity, color, barCount, gap });
+        else if (mode === "ring") preview = buildRingPreview({ width, height, opacity, color, barCount, lineWidth });
+        else {
+          const pts = [];
+          for (let x = 0; x <= width; x += 6) {
+            const y = height / 2 + Math.sin(x * 0.045) * 22 + Math.sin(x * 0.012) * 9;
+            pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+          }
+          const d = "M" + pts.join(" L");
+          preview = `<div class="widget-mic widget-mic--preview">
+            <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="width:100%;height:100%;opacity:${opacity}">
+              <path d="${d}" fill="none" stroke="${escapeAttr(color)}" stroke-width="${lineWidth}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+            </svg>
+          </div>`;
         }
-        const d = "M" + pts.join(" L");
-        return `<div class="widget-mic widget-mic--preview">
-          <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="width:100%;height:100%;opacity:${opacity}">
-            <path d="${d}" fill="none" stroke="${escapeAttr(color)}" stroke-width="${lineWidth}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
-          </svg>
-        </div>`;
+        const transform = micPerspectiveStyle(config);
+        return transform
+          ? `<div style="width:100%;height:100%;transform:${transform};transform-style:preserve-3d;">${preview}</div>`
+          : preview;
       }
       case "death": {
         const label = config.label || t("preview.death");
