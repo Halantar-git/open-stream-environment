@@ -655,15 +655,14 @@
       minH: 6,
       defaultConfig: { autoplay: true },
     },
-    // Стилизованный алерт Star Citizen: к нему привязана тема Grim HEX и
-    // собственные темы на её основе. Это не 3D-виджет — DOM и CSS-анимации.
+    // Стилизованный алерт Star Citizen доступен в любой теме: это отдельный
+    // виджет, а не часть 3D-набора Grim HEX. Это не 3D-виджет — DOM и CSS.
     "uec-transfer": {
       type: "uec-transfer",
       label: "UEC-перевод",
       description: "Входящая передача: канал, позывной и сумма — в стиле Star Citizen",
       icon: "widgetUecTransfer",
       services: ["twitchEvents", "donationAlerts", "donatex", "youtube"],
-      themes: ["grimhex", "custom"],
       defaultGeometry: { x: 25, y: 3, w: 50, h: 20 },
       minW: 30,
       minH: 14,

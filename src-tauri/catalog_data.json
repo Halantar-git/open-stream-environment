@@ -1,5 +1,5 @@
 {
-  "sourceHash": "f6d7b067d2859ced",
+  "sourceHash": "bab69d040c9009c8",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -1075,10 +1075,6 @@
         "donationAlerts",
         "donatex",
         "youtube"
-      ],
-      "themes": [
-        "grimhex",
-        "custom"
       ],
       "defaultGeometry": {
         "x": 25,
