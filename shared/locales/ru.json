@@ -240,6 +240,13 @@
     "alerts": "Алерты",
     "donationAlerts": "DonationAlerts",
     "daDesc": "Донаты автоматически увеличивают счётчик цели и запускают алерт.",
+    "donatex": "DonateX",
+    "donatexDesc": "Донаты через DonateX: алерт, цель, музыка и ответ ИИ-персонажа.",
+    "donatexToken": "External token",
+    "donatexTokenPlaceholder": "из DonateX → Настройки → API",
+    "donatexTokenHint": "Оставьте пустым, чтобы не менять сохранённый токен — поле никогда не заполняется им само.",
+    "donatexTokenSaved": "Токен сохранён",
+    "donatexTokenMissing": "Токен не задан",
     "openDaConsole": "Открыть donationalerts.com/application/clients",
     "connectDa": "Подключить DonationAlerts",
     "daVoiceEnabled": "Озвучка от DonationAlerts (голос сервиса)",
@@ -546,6 +553,14 @@
     "boostyResub": "{{user}} продлил подписку Boosty",
     "empty": "Пока пусто"
   },
+  "donatexAi": {
+    "defaultName": "Ассистент"
+  },
+  "music": {
+    "idle": "Музыка донатов",
+    "track": "Трек из доната",
+    "requester": "Заказал {{user}}"
+  },
   "widgets": {
     "alerts": "Алерты",
     "alertsDesc": "Всплывающие карточки: фоллоу, сабы, донаты",
@@ -557,6 +572,10 @@
     "recentDesc": "Список последних фоллоу / сабов / донатов",
     "custom": "Свой виджет",
     "customDesc": "Текст, картинка или свой HTML",
+    "donatex-ai": "ИИ-персонаж DonateX",
+    "donatex-aiDesc": "Реплика ИИ-персонажа DonateX с озвучкой; можно встроить и внешнюю ссылку",
+    "music": "Музыка донатов",
+    "musicDesc": "Трек, приложенный к донату: обложка, название, автор и прогресс",
     "stat": "Счётчик",
     "statDesc": "Фолловеры, подписчики или топ донат — плашкой",
     "social": "Соц. баннер",
@@ -847,6 +866,12 @@
   },
   "properties": {
     "goalTitle": "Название цели",
+    "donatexAiLink": "Ссылка на персонажа (iframe)",
+    "donatexAiAvatar": "Ссылка на аватар",
+    "donatexAiShowName": "Показывать имя персонажа",
+    "donatexAiHideDelay": "Скрыть через, мс",
+    "musicAutoplay": "Проигрывать трек",
+    "volume": "Громкость",
     "current": "Собрано",
     "target": "Цель",
     "currency": "Валюта",
@@ -943,6 +968,7 @@
     "twitchChat": "Twitch чат",
     "twitchEvents": "Twitch алерты",
     "donationAlerts": "DonationAlerts",
+    "donatex": "DonateX",
     "youtube": "YouTube",
     "connected": "подключено",
     "connecting": "подключение…",

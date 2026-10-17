@@ -240,6 +240,13 @@
     "alerts": "Alerts",
     "donationAlerts": "DonationAlerts",
     "daDesc": "Donations automatically increase the goal counter and trigger an alert.",
+    "donatex": "DonateX",
+    "donatexDesc": "Donations via DonateX: alert, goal, music and the AI character's reply.",
+    "donatexToken": "External token",
+    "donatexTokenPlaceholder": "from DonateX → Settings → API",
+    "donatexTokenHint": "Leave empty to keep the saved token — the field is never filled with it automatically.",
+    "donatexTokenSaved": "Token saved",
+    "donatexTokenMissing": "No token set",
     "openDaConsole": "Open donationalerts.com/application/clients",
     "connectDa": "Connect DonationAlerts",
     "daVoiceEnabled": "DonationAlerts voice-over (service voice)",
@@ -546,6 +553,14 @@
     "boostyResub": "{{user}} renewed Boosty subscription",
     "empty": "Empty"
   },
+  "donatexAi": {
+    "defaultName": "Assistant"
+  },
+  "music": {
+    "idle": "Donation music",
+    "track": "Donation track",
+    "requester": "Requested by {{user}}"
+  },
   "widgets": {
     "alerts": "Alerts",
     "alertsDesc": "Popup cards: follows, subs, donations",
@@ -557,6 +572,10 @@
     "recentDesc": "List of recent follows / subs / donations",
     "custom": "Custom widget",
     "customDesc": "Text, image or custom HTML",
+    "donatex-ai": "DonateX AI character",
+    "donatex-aiDesc": "DonateX AI character line with voice; a full external URL can be embedded too",
+    "music": "Donation music",
+    "musicDesc": "Track attached to a donation: cover art, title, requester and progress",
     "stat": "Counter",
     "statDesc": "Followers, subscribers or top donation as a badge",
     "social": "Social banner",
@@ -847,6 +866,12 @@
   },
   "properties": {
     "goalTitle": "Goal title",
+    "donatexAiLink": "Character link (iframe)",
+    "donatexAiAvatar": "Avatar link",
+    "donatexAiShowName": "Show character name",
+    "donatexAiHideDelay": "Hide after, ms",
+    "musicAutoplay": "Play the track",
+    "volume": "Volume",
     "current": "Raised",
     "target": "Goal",
     "currency": "Currency",
@@ -943,6 +968,7 @@
     "twitchChat": "Twitch chat",
     "twitchEvents": "Twitch alerts",
     "donationAlerts": "DonationAlerts",
+    "donatex": "DonateX",
     "youtube": "YouTube",
     "connected": "connected",
     "connecting": "connecting…",

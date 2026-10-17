@@ -26,6 +26,7 @@ use crate::alerts::{
     AlertQueue, AlertQueueOptions, ChangeFn, EnqueueMeta, EnqueueOutcome, PlayFn, Rules, TimerId,
 };
 use crate::integrations::chat_bot_control::{store_from_database, ChatBot};
+use crate::integrations::donatex::DonatexControl;
 use crate::integrations::donationalerts::{
     GetFn as DonationsGetFn, OAUTH_URL as DA_OAUTH_URL, SUBSCRIBE_URL as DA_SUBSCRIBE_URL,
     USER_URL as DA_USER_URL,
@@ -145,6 +146,8 @@ pub struct Diagnostics {
     twitch_events: TwitchEventsControl,
     /// Донаты DonationAlerts: Centrifugo, OAuth и подписка.
     donation_alerts: DonationAlertsControl,
+    /// Донаты DonateX: SignalR-хаб по external token.
+    donatex: DonatexControl,
     /// YouTube Live: поиск эфира и опрос чата.
     youtube: YoutubeLiveControl,
     /// Текущая сессия стрима (или `None`): её время — граница «этого стрима».
@@ -267,6 +270,11 @@ impl Diagnostics {
                 spawn_task(),
             )
         };
+        let donatex = DonatexControl::new(
+            Arc::new(crate::integrations::twitch_chat_socket::donatex_connect),
+            donatex_token(Arc::clone(&config)),
+            spawn_task(),
+        );
         let obs = {
             let config = Arc::clone(&config);
             let reader: Arc<dyn Fn() -> Value + Send + Sync> = Arc::new(move || {
@@ -361,6 +369,7 @@ impl Diagnostics {
             chat_bot,
             twitch_events,
             donation_alerts,
+            donatex,
             youtube,
             current_session: Arc::new(Mutex::new(None)),
             obs,
@@ -743,6 +752,18 @@ impl Diagnostics {
         };
         self.donation_alerts
             .restart(enabled, self.integration_emit());
+    }
+
+    /// Перезапустить DonateX по текущим настройкам.
+    pub fn restart_donatex(&self) {
+        let enabled = {
+            let config = self.config();
+            config
+                .get("donatex")
+                .map(|service| js_truthy(service.get("enabled")))
+                .unwrap_or(false)
+        };
+        self.donatex.restart(enabled, self.integration_emit());
     }
 
     /// Перезапустить OBS по текущим настройкам.
@@ -1252,6 +1273,7 @@ impl Diagnostics {
         self.restart_chat_bot();
         self.restart_twitch_events();
         self.restart_donation_alerts();
+        self.restart_donatex();
         self.restart_youtube();
         // Импорт мог принести раскладку с таймером (или убрать его).
         self.sync_longshot_activity();
@@ -1842,6 +1864,19 @@ fn spawn_task() -> SpawnFn {
     })
 }
 
+/// External token DonateX из настроек — читается при каждом подключении.
+fn donatex_token(config: Arc<Mutex<ConfigFile>>) -> Arc<dyn Fn() -> String + Send + Sync> {
+    Arc::new(move || {
+        config
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .get("donatex")
+            .and_then(|service| service.get("externalToken"))
+            .map(crate::state::js_string)
+            .unwrap_or_default()
+    })
+}
+
 /// Обновлятель токенов Twitch: один на интеграцию, как `createTokenRefresher` в JS.
 fn twitch_tokens(config: Arc<Mutex<ConfigFile>>) -> Tokens {
     let get_config = {
@@ -2393,6 +2428,10 @@ fn apply_bus_event(event: &Value, ctx: &BusContext) {
                 crate::state::config::set_goal(&mut config, &payload)
             };
             broadcast_clients(clients, event_types::GOAL_UPDATE, goal);
+        }
+        "donatex_ai_event" => {
+            // Ответ ИИ-персонажа DonateX — отдельному виджету, а не алертам.
+            broadcast_clients(clients, event_types::DONATEX_AI_EVENT, payload);
         }
         "camera_angle_changed" => {
             let active = payload

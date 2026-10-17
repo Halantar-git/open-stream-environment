@@ -179,6 +179,9 @@ const { EVENT_TYPES } = window.SharedEvents;
   const youtubeVideoIdInput = document.getElementById("youtubeVideoId");
   const twitchEnabledSwitch = document.getElementById("twitchEnabledSwitch");
   const donationAlertsEnabledSwitch = document.getElementById("donationAlertsEnabledSwitch");
+  const donatexEnabledSwitch = document.getElementById("donatexEnabledSwitch");
+  const donatexTokenInput = document.getElementById("donatexToken");
+  const donatexTokenStatusEl = document.getElementById("donatexTokenStatus");
   const youtubeEnabledSwitch = document.getElementById("youtubeEnabledSwitch");
   const obsEnabledSwitch = document.getElementById("obsEnabledSwitch");
   const obsHostInput = document.getElementById("obsHost");
@@ -444,7 +447,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   // ---- status FAB → jump to the matching settings card ----
   function onStatusClick(service) {
     const cardId =
-      ({ twitchChat: "settingsCardTwitch", twitchEvents: "settingsCardTwitch", donationAlerts: "settingsCardDonationAlerts", youtube: "settingsCardYoutube", obs: "settingsCardObs" })[service];
+      ({ twitchChat: "settingsCardTwitch", twitchEvents: "settingsCardTwitch", donationAlerts: "settingsCardDonationAlerts", donatex: "settingsCardDonatex", youtube: "settingsCardYoutube", obs: "settingsCardObs" })[service];
     switchView("settings");
     const card = cardId && document.getElementById(cardId);
     if (card) {
@@ -587,6 +590,14 @@ const { EVENT_TYPES } = window.SharedEvents;
     renderHudDisplays();
     renderChatHudDisplays();
     renderChatHudConfig();
+    // Токен DonateX поле не показывает никогда: только его наличие.
+    if (donatexTokenInput) donatexTokenInput.value = "";
+    if (donatexTokenStatusEl) {
+      donatexTokenStatusEl.textContent =
+        state.donatex && state.donatex.hasToken
+          ? t("settings.donatexTokenSaved")
+          : t("settings.donatexTokenMissing");
+    }
     twitchRedirectUriEl.textContent = `http://localhost:${port}/oauth/twitch/callback`;
     daRedirectUriEl.textContent = `http://localhost:${port}/oauth/donationalerts/callback`;
     youtubeRedirectUriEl.textContent = `http://localhost:${port}/oauth/youtube/callback`;
@@ -614,6 +625,16 @@ const { EVENT_TYPES } = window.SharedEvents;
   twitchChannelInput.addEventListener("change", () => {
     send(EVENT_TYPES.CMD_SET_APP_CONFIG, { twitchChannel: twitchChannelInput.value.trim() });
   });
+
+  if (donatexTokenInput) {
+    // Пустое поле — «не менять»: сохранённый токен обратно не показывается.
+    donatexTokenInput.addEventListener("change", () => {
+      const value = donatexTokenInput.value.trim();
+      if (!value) return;
+      send(EVENT_TYPES.CMD_SET_APP_CONFIG, { donatex: { externalToken: value } });
+      donatexTokenInput.value = "";
+    });
+  }
 
   savePortBtn.addEventListener("click", () => {
     const next = Number(appPortInput.value);
@@ -1672,11 +1693,12 @@ const { EVENT_TYPES } = window.SharedEvents;
   function syncIntegrationSwitches() {
     setSwitchState(twitchEnabledSwitch, state.twitchEnabled);
     setSwitchState(donationAlertsEnabledSwitch, state.donationAlertsEnabled);
+    setSwitchState(donatexEnabledSwitch, state.donatexEnabled);
     setSwitchState(youtubeEnabledSwitch, state.youtubeEnabled);
     setSwitchState(obsEnabledSwitch, state.obs ? !!state.obs.enabled : false);
   }
 
-  [[twitchEnabledSwitch, "twitch"], [donationAlertsEnabledSwitch, "donationAlerts"], [youtubeEnabledSwitch, "youtube"], [obsEnabledSwitch, "obs"]].forEach(([el, service]) => {
+  [[twitchEnabledSwitch, "twitch"], [donationAlertsEnabledSwitch, "donationAlerts"], [donatexEnabledSwitch, "donatex"], [youtubeEnabledSwitch, "youtube"], [obsEnabledSwitch, "obs"]].forEach(([el, service]) => {
     if (!el) return;
     el.addEventListener("click", () => {
       const on = !el.classList.contains("is-on");

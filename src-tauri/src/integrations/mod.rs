@@ -7,6 +7,7 @@
 pub mod chat_bot;
 pub mod chat_bot_control;
 pub mod chat_moderation;
+pub mod donatex;
 pub mod donationalerts;
 pub mod donationalerts_control;
 pub mod http;

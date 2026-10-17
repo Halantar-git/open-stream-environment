@@ -48,6 +48,7 @@ event_types! {
     CHAT_SENT => "chat_sent",
     RECENT_EVENT => "recent_event",
     GOAL_UPDATE => "goal_update",
+    DONATEX_AI_EVENT => "donatex_ai_event",
     CONNECTION_STATUS => "connection_status",
     THEME_UPDATE => "theme_update",
     THEME_DRAFT_PREVIEW => "theme_draft_preview",
@@ -184,10 +185,11 @@ event_types! {
 }
 
 /// Службы, состояние которых показывают чипы связи: `CONNECTION_SERVICES`.
-pub const CONNECTION_SERVICES: [&str; 5] = [
+pub const CONNECTION_SERVICES: [&str; 6] = [
     "twitchChat",
     "twitchEvents",
     "donationAlerts",
+    "donatex",
     "youtube",
     "obs",
 ];

@@ -1,0 +1,665 @@
+//! DonateX: донаты в реальном времени через SignalR.
+//!
+//! Порт `server/integrations/donatex.js`: публичный хаб
+//! `wss://donatex.gg/api/public-donations-hub` пушит донаты и обновления цели.
+//! Авторизация — «external token» из кабинета, он уходит в `access_token`.
+//! Протокол — SignalR JSON: кадры разделяются символом `0x1E`, рукопожатие
+//! `{"protocol":"json","version":1}`, keepalive-пинги `{"type":6}`.
+//!
+//! Разбор payload отделён от транспорта: [`donation_alert_from_payload`],
+//! [`goal_update_from_payload`] и [`ai_response_from_payload`] — чистые функции,
+//! их проверяют тесты без сети. Сокет живёт в [`DonatexControl`].
+
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+use serde_json::{json, Map, Value};
+use tokio::sync::oneshot;
+
+use crate::integrations::twitch_chat_control::{ConnectFn, EmitFn, SpawnFn};
+use crate::protocol::event_types;
+use crate::storage::history::{js_number_or_zero, number_value};
+
+/// Публичный хаб донатов DonateX.
+pub const HUB_URL: &str = "wss://donatex.gg/api/public-donations-hub";
+
+const RECONNECT_MS: u64 = 5_000;
+// Сервер шлёт пинг примерно раз в 15 секунд. Если трафика нет дольше этого
+// срока, соединение считается полуоткрытым и пересоздаётся.
+const WATCHDOG_MS: u64 = 45_000;
+
+/// Разделитель кадров SignalR JSON (0x1E).
+const RECORD_SEPARATOR: char = '\u{1e}';
+
+fn string_trimmed(value: Option<&Value>) -> String {
+    value
+        .filter(|value| crate::storage::history::js_truthy(Some(value)))
+        .map(crate::state::js_string)
+        .unwrap_or_default()
+        .trim()
+        .to_string()
+}
+
+/// Разобрать payload доната в алерт — как `donationAlertFromPayload` в JS.
+pub fn donation_alert_from_payload(payload: &Value) -> Value {
+    let username = string_trimmed(payload.get("username"));
+    let name = string_trimmed(payload.get("name"));
+    let user = if !username.is_empty() {
+        username
+    } else if !name.is_empty() {
+        name
+    } else {
+        "Аноним".to_string()
+    };
+
+    let currency = string_trimmed(payload.get("currency"));
+    let message = string_trimmed(payload.get("message"));
+    // Платная озвучка важнее обычной, как в JS (`paidVoice || voiceFilePath`).
+    let paid_voice = string_trimmed(payload.get("paidVoice"));
+    let voice = if !paid_voice.is_empty() {
+        paid_voice
+    } else {
+        string_trimmed(payload.get("voiceFilePath"))
+    };
+    let music_link = string_trimmed(payload.get("musicLink"));
+
+    let mut out = Map::new();
+    out.insert("kind".to_string(), Value::from("donation"));
+    out.insert("source".to_string(), Value::from("donatex"));
+    out.insert("user".to_string(), Value::from(user));
+    out.insert(
+        "amount".to_string(),
+        number_value(js_number_or_zero(payload.get("amount"))),
+    );
+    out.insert(
+        "currency".to_string(),
+        Value::from(if currency.is_empty() {
+            "RUB".to_string()
+        } else {
+            currency
+        }),
+    );
+    out.insert("message".to_string(), Value::from(message));
+    if !music_link.is_empty() {
+        out.insert("musicLink".to_string(), Value::from(music_link));
+    }
+    if !voice.is_empty() {
+        out.insert("voiceUrl".to_string(), Value::from(voice));
+    }
+    Value::Object(out)
+}
+
+/// Обновление цели из payload `GoalUpdated`.
+///
+/// Читает и новые поля (`currentAmount`/`goalAmount`), и старые
+/// (`current`/`target`); если суммы нет вовсе — обновлять нечего.
+pub fn goal_update_from_payload(payload: &Value) -> Option<Value> {
+    if !payload.is_object() {
+        return None;
+    }
+    let current = payload
+        .get("currentAmount")
+        .or_else(|| payload.get("current"));
+    let target = payload.get("goalAmount").or_else(|| payload.get("target"));
+    if current.is_none() && target.is_none() {
+        return None;
+    }
+
+    let mut out = Map::new();
+    out.insert(
+        "current".to_string(),
+        number_value(js_number_or_zero(current)),
+    );
+    if let Some(target) = target.filter(|value| crate::storage::history::js_truthy(Some(value))) {
+        out.insert(
+            "target".to_string(),
+            number_value(js_number_or_zero(Some(target))),
+        );
+    }
+    Some(Value::Object(out))
+}
+
+/// Ответ ИИ-персонажа из payload доната, если он есть.
+///
+/// `aiResponse` — текст реплики, `withAIResponse` — флаг включённости,
+/// `paidVoice`/`voiceFilePath` — озвучка (платная важнее).
+pub fn ai_response_from_payload(payload: &Value) -> Option<Value> {
+    if !payload.is_object() {
+        return None;
+    }
+    let ai_text = string_trimmed(payload.get("aiResponse"));
+    let with_ai = payload.get("withAIResponse") == Some(&Value::Bool(true));
+    if !with_ai && ai_text.is_empty() {
+        return None;
+    }
+
+    let paid_voice = string_trimmed(payload.get("paidVoice"));
+    let voice_file = string_trimmed(payload.get("voiceFilePath"));
+    let audio = if !paid_voice.is_empty() {
+        paid_voice
+    } else {
+        voice_file
+    };
+
+    Some(json!({
+        "characterName": "Ассистент",
+        "aiText": ai_text,
+        "aiAudio": audio,
+    }))
+}
+
+/// Одно подключение к DonateX за раз.
+pub struct DonatexControl {
+    connect: ConnectFn,
+    /// External token из настроек (`donatex.externalToken`).
+    get_token: Arc<dyn Fn() -> String + Send + Sync>,
+    spawn: SpawnFn,
+    stop: Mutex<Option<oneshot::Sender<()>>>,
+}
+
+impl DonatexControl {
+    pub fn new(
+        connect: ConnectFn,
+        get_token: Arc<dyn Fn() -> String + Send + Sync>,
+        spawn: SpawnFn,
+    ) -> Self {
+        Self {
+            connect,
+            get_token,
+            spawn,
+            stop: Mutex::new(None),
+        }
+    }
+
+    /// Переподключиться: закрыть прежнее соединение и, если служба включена,
+    /// поднять новое. События уходят в `emit`.
+    pub fn restart(&self, enabled: bool, emit: EmitFn) {
+        self.stop();
+        if !enabled {
+            emit(connection_status("disabled"));
+            return;
+        }
+
+        let (stop_tx, mut stop_rx) = oneshot::channel::<()>();
+        let connect = Arc::clone(&self.connect);
+        let get_token = Arc::clone(&self.get_token);
+        let emit = Arc::clone(&emit);
+
+        (self.spawn)(Box::pin(async move {
+            loop {
+                emit(connection_status("connecting"));
+
+                let token = get_token();
+                if token.trim().is_empty() {
+                    // Без external token подключаться некуда, повтор не поможет.
+                    emit(connection_status("not_configured"));
+                    return;
+                }
+
+                let url = format!("{HUB_URL}?access_token={}", encode_query(&token));
+                let Ok(mut transport) = connect(url).await else {
+                    emit(connection_status("error"));
+                    if sleep_or_stop(&mut stop_rx).await {
+                        return;
+                    }
+                    continue;
+                };
+
+                // Рукопожатие SignalR JSON (кадр завершается разделителем).
+                let handshake =
+                    format!("{{\"protocol\":\"json\",\"version\":1}}{RECORD_SEPARATOR}");
+                if transport.send(handshake).await.is_err() {
+                    emit(connection_status("error"));
+                    if sleep_or_stop(&mut stop_rx).await {
+                        return;
+                    }
+                    continue;
+                }
+
+                let mut buffer = String::new();
+                let mut handshake_done = false;
+                let mut connected = false;
+                'connection: loop {
+                    let incoming = tokio::select! {
+                        _ = &mut stop_rx => return,
+                        incoming = transport.recv() => incoming,
+                        _ = tokio::time::sleep(Duration::from_millis(WATCHDOG_MS)) => {
+                            // Тишина дольше watchdog: соединение полуоткрыто.
+                            break 'connection;
+                        }
+                    };
+
+                    let frame = match incoming {
+                        Ok(Some(frame)) => frame,
+                        Ok(None) | Err(_) => break 'connection,
+                    };
+                    buffer.push_str(&frame);
+
+                    while let Some(index) = buffer.find(RECORD_SEPARATOR) {
+                        let frame: String = buffer.drain(..=index).collect();
+                        let frame = frame.trim_end_matches(RECORD_SEPARATOR);
+                        if frame.is_empty() {
+                            continue;
+                        }
+                        let Ok(msg) = serde_json::from_str::<Value>(frame) else {
+                            continue;
+                        };
+
+                        if !handshake_done {
+                            handshake_done = true;
+                            if msg.get("error").is_some() {
+                                // Токен не принят: рукопожатие не состоялось.
+                                emit(connection_status("error"));
+                                break 'connection;
+                            }
+                            connected = true;
+                            emit(connection_status("connected"));
+                            continue;
+                        }
+
+                        match msg.get("type").and_then(Value::as_u64) {
+                            // Keepalive: отвечаем тем же типом.
+                            Some(6) => {
+                                let _ = transport
+                                    .send(format!("{{\"type\":6}}{RECORD_SEPARATOR}"))
+                                    .await;
+                                continue;
+                            }
+                            // Сервер закрывает соединение.
+                            Some(7) => break 'connection,
+                            _ => {}
+                        }
+
+                        if let Some(target) = msg.get("target").and_then(Value::as_str) {
+                            let payload = msg
+                                .get("arguments")
+                                .and_then(|args| args.get(0))
+                                .cloned()
+                                .unwrap_or(Value::Null);
+                            handle_invocation(target, &payload, &emit);
+                        }
+                    }
+                }
+
+                if connected {
+                    emit(connection_status("disconnected"));
+                }
+                if sleep_or_stop(&mut stop_rx).await {
+                    return;
+                }
+            }
+        }));
+
+        *self.lock() = Some(stop_tx);
+    }
+
+    /// Закрыть текущее соединение.
+    pub fn stop(&self) {
+        if let Some(stop) = self.lock().take() {
+            let _ = stop.send(());
+        }
+    }
+
+    fn lock(&self) -> std::sync::MutexGuard<'_, Option<oneshot::Sender<()>>> {
+        self.stop.lock().unwrap_or_else(|error| error.into_inner())
+    }
+}
+
+/// Разобрать invocation SignalR и отправить событие шины.
+fn handle_invocation(target: &str, payload: &Value, emit: &EmitFn) {
+    // Часть установок DonateX шлёт ответ ИИ отдельными целями.
+    if [
+        "AiAssistantGenerated",
+        "AiSpeech",
+        "AiResponse",
+        "AiGenerated",
+    ]
+    .contains(&target)
+    {
+        if let Some(ai) = ai_response_from_payload(payload) {
+            emit(bus_event("donatex_ai_event", ai));
+        }
+        return;
+    }
+
+    if target == "DonationCreated" || target == "DonationRerun" {
+        let alert = donation_alert_from_payload(payload);
+        emit(bus_event("alert", alert.clone()));
+
+        if let Some(ai) = ai_response_from_payload(payload) {
+            let mut event = ai;
+            if let Value::Object(map) = &mut event {
+                // Событие ИИ дополняется данными доната — виджету есть что показать.
+                map.insert(
+                    "user".to_string(),
+                    alert.get("user").cloned().unwrap_or(Value::Null),
+                );
+                map.insert(
+                    "amount".to_string(),
+                    alert.get("amount").cloned().unwrap_or(Value::Null),
+                );
+                map.insert(
+                    "currency".to_string(),
+                    alert.get("currency").cloned().unwrap_or(Value::Null),
+                );
+                map.insert(
+                    "message".to_string(),
+                    alert.get("message").cloned().unwrap_or(Value::Null),
+                );
+            }
+            emit(bus_event("donatex_ai_event", event));
+        }
+        return;
+    }
+
+    if target == "GoalUpdated" {
+        if let Some(update) = goal_update_from_payload(payload) {
+            emit(bus_event("goal_external_update", update));
+        }
+    }
+}
+
+/// Пауза перед повтором; `true` — пришла остановка.
+async fn sleep_or_stop(stop_rx: &mut oneshot::Receiver<()>) -> bool {
+    tokio::select! {
+        _ = tokio::time::sleep(Duration::from_millis(RECONNECT_MS)) => false,
+        _ = stop_rx => true,
+    }
+}
+
+/// Событие `connection_status` для службы донатов.
+fn connection_status(status: &str) -> Value {
+    json!({
+        "type": event_types::CONNECTION_STATUS,
+        "payload": { "service": "donatex", "status": status },
+    })
+}
+
+/// Событие шины в форме `bus.emit`.
+fn bus_event(kind: &str, payload: Value) -> Value {
+    json!({ "type": kind, "payload": payload })
+}
+
+/// `encodeURIComponent` для значения query-параметра.
+fn encode_query(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    for byte in value.bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(byte as char)
+            }
+            _ => out.push_str(&format!("%{byte:02X}")),
+        }
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::VecDeque;
+    use std::future::Future;
+    use std::pin::Pin;
+
+    use super::*;
+    use crate::integrations::twitch_chat::{ChatTransport, RecvFuture, SendFuture};
+
+    type BoxedTask = Pin<Box<dyn Future<Output = ()> + Send>>;
+
+    fn frame(value: &str) -> String {
+        format!("{value}{RECORD_SEPARATOR}")
+    }
+
+    struct FakeTransport {
+        incoming: VecDeque<String>,
+        sent: Arc<Mutex<Vec<String>>>,
+    }
+
+    impl ChatTransport for FakeTransport {
+        fn send(&mut self, line: String) -> SendFuture<'_> {
+            let sent = Arc::clone(&self.sent);
+            Box::pin(async move {
+                sent.lock().unwrap().push(line);
+                Ok(())
+            })
+        }
+
+        fn recv(&mut self) -> RecvFuture<'_> {
+            let next = self.incoming.pop_front();
+            Box::pin(async move { Ok(next) })
+        }
+    }
+
+    fn collector() -> (EmitFn, Arc<Mutex<Vec<Value>>>) {
+        let events = Arc::new(Mutex::new(Vec::new()));
+        let sink = Arc::clone(&events);
+        let emit: EmitFn = Arc::new(move |event| sink.lock().unwrap().push(event));
+        (emit, events)
+    }
+
+    fn playing_spawn() -> (SpawnFn, Arc<Mutex<Option<BoxedTask>>>) {
+        let cell: Arc<Mutex<Option<BoxedTask>>> = Arc::new(Mutex::new(None));
+        let store = Arc::clone(&cell);
+        let spawn: SpawnFn = Arc::new(move |task| *store.lock().unwrap() = Some(task));
+        (spawn, cell)
+    }
+
+    fn token(value: &'static str) -> Arc<dyn Fn() -> String + Send + Sync> {
+        Arc::new(move || value.to_string())
+    }
+
+    fn statuses(events: &Arc<Mutex<Vec<Value>>>) -> Vec<String> {
+        events
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|event| event["type"] == json!(event_types::CONNECTION_STATUS))
+            .map(|event| {
+                event["payload"]["status"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .to_string()
+            })
+            .collect()
+    }
+
+    fn control_with(
+        incoming: Vec<String>,
+        sent: Arc<Mutex<Vec<String>>>,
+    ) -> (DonatexControl, Arc<Mutex<Option<BoxedTask>>>) {
+        let connect: ConnectFn = Arc::new(move |_url| {
+            let sent = Arc::clone(&sent);
+            let incoming = incoming.clone();
+            Box::pin(async move {
+                Ok(Box::new(FakeTransport {
+                    incoming: incoming.into_iter().collect(),
+                    sent,
+                }) as Box<dyn ChatTransport>)
+            })
+        });
+        let (spawn, cell) = playing_spawn();
+        (DonatexControl::new(connect, token("tok"), spawn), cell)
+    }
+
+    #[test]
+    fn a_donation_becomes_an_alert_and_keeps_extra_fields() {
+        let alert = donation_alert_from_payload(&json!({
+            "username": "nick",
+            "amount": 250,
+            "currency": "RUB",
+            "message": "gg",
+            "musicLink": "https://example.com/track.mp3",
+            "voiceFilePath": "https://cdn.donatex.gg/voice.mp3",
+        }));
+        assert_eq!(alert["kind"], json!("donation"));
+        assert_eq!(alert["source"], json!("donatex"));
+        assert_eq!(alert["user"], json!("nick"));
+        assert_eq!(alert["amount"], json!(250));
+        assert_eq!(alert["currency"], json!("RUB"));
+        assert_eq!(alert["message"], json!("gg"));
+        assert_eq!(alert["musicLink"], json!("https://example.com/track.mp3"));
+        assert_eq!(alert["voiceUrl"], json!("https://cdn.donatex.gg/voice.mp3"));
+    }
+
+    #[test]
+    fn paid_voice_wins_and_the_anonymous_fallback_is_used() {
+        let alert = donation_alert_from_payload(&json!({
+            "amount": "10",
+            "voiceFilePath": "https://cdn.donatex.gg/default.mp3",
+            "paidVoice": "https://cdn.donatex.gg/paid.mp3",
+        }));
+        assert_eq!(alert["user"], json!("Аноним"));
+        assert_eq!(alert["amount"], json!(10));
+        assert_eq!(alert["currency"], json!("RUB"));
+        assert_eq!(alert["voiceUrl"], json!("https://cdn.donatex.gg/paid.mp3"));
+    }
+
+    #[test]
+    fn a_goal_frame_reads_new_and_legacy_fields() {
+        assert_eq!(
+            goal_update_from_payload(&json!({ "currentAmount": 1200, "goalAmount": 5000 })),
+            Some(json!({ "current": 1200, "target": 5000 }))
+        );
+        assert_eq!(
+            goal_update_from_payload(&json!({ "current": 40, "target": 100 })),
+            Some(json!({ "current": 40, "target": 100 }))
+        );
+        assert_eq!(goal_update_from_payload(&json!(null)), None);
+        assert_eq!(goal_update_from_payload(&json!({})), None);
+    }
+
+    #[test]
+    fn an_ai_answer_is_read_from_the_donation_payload() {
+        assert_eq!(
+            ai_response_from_payload(&json!({ "username": "nick" })),
+            None
+        );
+        assert_eq!(
+            ai_response_from_payload(&json!({ "withAIResponse": false, "aiResponse": "" })),
+            None
+        );
+        assert_eq!(
+            ai_response_from_payload(&json!({
+                "withAIResponse": true,
+                "aiResponse": "Привет, спасибо!",
+                "paidVoice": "https://cdn.donatex.gg/paid.mp3",
+            })),
+            Some(json!({
+                "characterName": "Ассистент",
+                "aiText": "Привет, спасибо!",
+                "aiAudio": "https://cdn.donatex.gg/paid.mp3",
+            }))
+        );
+        // Непустая строка сама по себе тоже включает ответ.
+        assert_eq!(
+            ai_response_from_payload(&json!({ "aiResponse": "Здорово!" })),
+            Some(json!({
+                "characterName": "Ассистент",
+                "aiText": "Здорово!",
+                "aiAudio": "",
+            }))
+        );
+    }
+
+    #[tokio::test]
+    async fn a_donation_frame_becomes_an_alert_and_an_ai_event() {
+        let sent = Arc::new(Mutex::new(Vec::new()));
+        let incoming = vec![
+            frame("{}"),
+            frame(
+                r#"{"type":1,"target":"DonationCreated","arguments":[{"username":"fan","amount":300,"currency":"RUB","message":"hi","aiResponse":"Спасибо!","paidVoice":"https://cdn.donatex.gg/v.mp3"}]}"#,
+            ),
+        ];
+        let (control, cell) = control_with(incoming, Arc::clone(&sent));
+        let (emit, events) = collector();
+
+        control.restart(true, emit);
+        let task = cell.lock().unwrap().take().expect("задача");
+        let _ = tokio::time::timeout(Duration::from_millis(200), task).await;
+
+        assert_eq!(
+            statuses(&events),
+            ["connecting", "connected", "disconnected"]
+        );
+
+        let events = events.lock().unwrap();
+        let alert = events
+            .iter()
+            .find(|event| event["type"] == json!("alert"))
+            .expect("алерт");
+        assert_eq!(alert["payload"]["amount"], json!(300));
+        assert_eq!(alert["payload"]["source"], json!("donatex"));
+
+        let ai = events
+            .iter()
+            .find(|event| event["type"] == json!("donatex_ai_event"))
+            .expect("ИИ-событие");
+        assert_eq!(ai["payload"]["aiText"], json!("Спасибо!"));
+        assert_eq!(ai["payload"]["user"], json!("fan"));
+        assert_eq!(
+            ai["payload"]["aiAudio"],
+            json!("https://cdn.donatex.gg/v.mp3")
+        );
+
+        // Рукопожатие ушло в сокет первым кадром.
+        let sent = sent.lock().unwrap();
+        assert!(sent[0].contains("\"protocol\":\"json\""));
+    }
+
+    #[tokio::test]
+    async fn a_goal_frame_becomes_a_goal_update() {
+        let sent = Arc::new(Mutex::new(Vec::new()));
+        let incoming = vec![
+            frame("{}"),
+            frame(
+                r#"{"type":1,"target":"GoalUpdated","arguments":[{"currentAmount":150,"goalAmount":1000}]}"#,
+            ),
+        ];
+        let (control, cell) = control_with(incoming, sent);
+        let (emit, events) = collector();
+
+        control.restart(true, emit);
+        let task = cell.lock().unwrap().take().expect("задача");
+        let _ = tokio::time::timeout(Duration::from_millis(200), task).await;
+
+        let events = events.lock().unwrap();
+        let goal = events
+            .iter()
+            .find(|event| event["type"] == json!("goal_external_update"))
+            .expect("цель");
+        assert_eq!(goal["payload"], json!({ "current": 150, "target": 1000 }));
+    }
+
+    #[tokio::test]
+    async fn without_a_token_nothing_connects() {
+        let connect: ConnectFn =
+            Arc::new(|_url| Box::pin(async { Err("нельзя".to_string()) }));
+        let (spawn, cell) = playing_spawn();
+        let control = DonatexControl::new(connect, token(""), spawn);
+        let (emit, events) = collector();
+
+        control.restart(true, emit);
+        let task = cell.lock().unwrap().take().expect("задача");
+        task.await;
+
+        assert_eq!(statuses(&events), ["connecting", "not_configured"]);
+    }
+
+    #[tokio::test]
+    async fn a_disabled_service_does_not_connect() {
+        let connect: ConnectFn =
+            Arc::new(|_url| Box::pin(async { Err("нельзя".to_string()) }));
+        let (spawn, cell) = playing_spawn();
+        let control = DonatexControl::new(connect, token("tok"), spawn);
+        let (emit, events) = collector();
+
+        control.restart(false, emit);
+
+        assert!(cell.lock().unwrap().is_none());
+        assert_eq!(statuses(&events), ["disabled"]);
+    }
+
+    #[test]
+    fn a_token_is_percent_encoded_for_the_query() {
+        assert_eq!(encode_query("a b+c/d="), "a%20b%2Bc%2Fd%3D");
+    }
+}

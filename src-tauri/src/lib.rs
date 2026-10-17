@@ -183,6 +183,8 @@ pub fn run() {
             diagnostics.restart_twitch_events();
             // Донаты DonationAlerts — своё соединение (Centrifugo).
             diagnostics.restart_donation_alerts();
+            // DonateX — отдельный SignalR-хаб по external token.
+            diagnostics.restart_donatex();
             // OBS WebSocket — сцена, камеры, фильтры.
             diagnostics.restart_obs();
             // YouTube Live — поиск эфира и опрос чата.

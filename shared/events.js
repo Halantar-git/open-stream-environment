@@ -33,6 +33,7 @@
     CHAT_SENT: "chat_sent", // { clientId, ok, messageId, error? } — server -> client confirmation of an outgoing chat message
     RECENT_EVENT: "recent_event",
     GOAL_UPDATE: "goal_update", // { current, target, title, currency }
+    DONATEX_AI_EVENT: "donatex_ai_event", // { characterName, aiText, aiAudio, user?, amount?, currency?, message? } — ответ ИИ-персонажа DonateX
     CONNECTION_STATUS: "connection_status", // { service, status }
     THEME_UPDATE: "theme_update", // { activeThemeId, enable3d, activeThemeId3d, tokens, themes }
     THEME_DRAFT_PREVIEW: "theme_draft_preview", // { tokens, customCss, themeId, name, clear? } — live draft for the theme preview window
@@ -170,7 +171,7 @@
     TERMINAL_FILTER: "terminal_filter", // { level } — server -> client: filter log levels
   };
 
-  const CONNECTION_SERVICES = ["twitchChat", "twitchEvents", "donationAlerts", "youtube", "obs"];
+  const CONNECTION_SERVICES = ["twitchChat", "twitchEvents", "donationAlerts", "donatex", "youtube", "obs"];
 
   const ALERT_DURATIONS_MS = {
     follow: 5000,

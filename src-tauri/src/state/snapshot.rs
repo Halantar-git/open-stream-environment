@@ -162,6 +162,24 @@ pub fn snapshot(config: &ConfigFile, db: &Database, runtime: &Runtime) -> Value 
         nested(config, "donationAlerts", "enabled"),
     );
     out.insert(
+        "donatexEnabled".to_string(),
+        nested(config, "donatex", "enabled"),
+    );
+    // Сам токен наверх не отдаём: панели достаточно знать, что он сохранён.
+    out.insert(
+        "donatex".to_string(),
+        json!({
+            "enabled": nested(config, "donatex", "enabled"),
+            "hasToken": !string_trim(
+                config
+                    .get("donatex")
+                    .and_then(|service| service.get("externalToken"))
+                    .unwrap_or(&Value::Null)
+            )
+            .is_empty(),
+        }),
+    );
+    out.insert(
         "youtubeEnabled".to_string(),
         nested(config, "youtube", "enabled"),
     );

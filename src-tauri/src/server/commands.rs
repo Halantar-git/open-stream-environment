@@ -254,6 +254,10 @@ pub fn handle_message(
                     diagnostics.restart_twitch_chat();
                     diagnostics.restart_chat_bot();
                 }
+                // Новый external token DonateX — новое подключение.
+                if payload.get("donatex").is_some() {
+                    diagnostics.restart_donatex();
+                }
             }
         }
         event_types::CMD_RESTART_INTEGRATION => {
@@ -266,6 +270,7 @@ pub fn handle_message(
                 Some("twitchChat") => diagnostics.restart_twitch_chat(),
                 Some("twitchEvents") => diagnostics.restart_twitch_events(),
                 Some("donationAlerts") => diagnostics.restart_donation_alerts(),
+                Some("donatex") => diagnostics.restart_donatex(),
                 Some("youtube") => diagnostics.restart_youtube(),
                 Some("obs") => diagnostics.restart_obs(),
                 _ => {}
@@ -997,6 +1002,7 @@ pub fn handle_message(
                     diagnostics.restart_twitch_events();
                 }
                 "donationAlerts" => diagnostics.restart_donation_alerts(),
+                "donatex" => diagnostics.restart_donatex(),
                 "youtube" => diagnostics.restart_youtube(),
                 "obs" => diagnostics.restart_obs(),
                 _ => {}

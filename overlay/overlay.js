@@ -430,6 +430,8 @@
   manager.register("pixel-chat", OW.WidgetPixelChat);
   manager.register("pixel-goal", OW.WidgetPixelGoal);
   manager.register("pixel-holo-alert", OW.WidgetPixelHoloAlert);
+  manager.register("donatex-ai", OW.DonatexAiWidget);
+  manager.register("music", OW.MusicWidget);
 
   // ---- socket ----
   function handleMessage(msg) {
@@ -515,6 +517,10 @@
       case EVENT_TYPES.GOAL_UPDATE:
         state.goal = msg.payload || state.goal;
         bus.emit(EVENT_TYPES.GOAL_UPDATE, msg.payload);
+        break;
+      case EVENT_TYPES.DONATEX_AI_EVENT:
+        // Ответ ИИ-персонажа DonateX — подписчику donatex-ai.
+        bus.emit(EVENT_TYPES.DONATEX_AI_EVENT, msg.payload);
         break;
       case EVENT_TYPES.LONGSHOT_UPDATE:
         state.longshot = (msg.payload && msg.payload.longshot) || state.longshot;

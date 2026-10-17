@@ -134,6 +134,20 @@ pub fn set_app_config(config: &mut ConfigFile, patch: &Value) {
         let port = if raw == 0.0 { 8710.0 } else { raw };
         config.set("port", number_value(port.clamp(1024.0, 65535.0)));
     }
+    if let Some(donatex) = patch.get("donatex") {
+        let mut service = section(config, "donatex");
+        if let Some(enabled) = donatex.get("enabled") {
+            service.insert("enabled".to_string(), Value::Bool(js_truthy(Some(enabled))));
+        }
+        // Пустое поле — «не менять»: токен вводится один раз и обратно не показывается.
+        if let Some(token) = donatex.get("externalToken") {
+            let text = js_string(token);
+            if !text.trim().is_empty() {
+                service.insert("externalToken".to_string(), Value::from(text.trim()));
+            }
+        }
+        config.set("donatex", Value::Object(service));
+    }
     config.save();
 }
 
@@ -666,6 +680,7 @@ pub fn set_integration_enabled(
     let key = match service {
         "twitch" => "twitch",
         "donationAlerts" => "donationAlerts",
+        "donatex" => "donatex",
         "youtube" => "youtube",
         "obs" => "obs",
         _ => return None,
@@ -990,12 +1005,20 @@ pub fn normalize_config(config: &mut ConfigFile) {
     );
 
     // Службы по умолчанию включены, если флага ещё нет.
-    for key in ["twitch", "donationAlerts", "youtube"] {
+    for key in ["twitch", "donationAlerts", "donatex", "youtube"] {
         let mut service = object_or_empty(config.get(key));
         if !service.contains_key("enabled") {
             service.insert("enabled".to_string(), Value::Bool(true));
             config.set(key, Value::Object(service));
         }
+    }
+
+    // External token DonateX — всегда строка, чтобы его можно было читать без
+    // проверок (отсутствие ключа значит «ещё не вводили»).
+    let mut donatex = object_or_empty(config.get("donatex"));
+    if !donatex.get("externalToken").is_some_and(Value::is_string) {
+        donatex.insert("externalToken".to_string(), Value::from(""));
+        config.set("donatex", Value::Object(donatex));
     }
 }
 
@@ -1053,6 +1076,7 @@ pub fn replace_config(
     for key in [
         "twitch",
         "donationAlerts",
+        "donatex",
         "youtube",
         "goal",
         "donationVoice",
@@ -1864,6 +1888,7 @@ mod tests {
                 "soundboard": { "enabled": false, "volume": 0.5, "queueMode": true, "sounds": [{ "id": "s1", "rewardTitle": "R" }] },
                 "streamdeck": { "icons": { "wheel": "media/w.png" } },
                 "obs": { "customCommands": "not-an-array" },
+                "donatex": { "enabled": false, "externalToken": "imported-token" },
             }),
         )
         .expect("импорт настроек");
@@ -1885,6 +1910,13 @@ mod tests {
             .is_some());
         // Невалидный массив -> прежний.
         assert_eq!(config.get("obs").unwrap()["customCommands"], json!([]));
+        // Настройки DonateX переезжают вместе с файлом, включая токен:
+        // иначе после импорта интеграция молча осталась бы без доступа.
+        assert_eq!(config.get("donatex").unwrap()["enabled"], json!(false));
+        assert_eq!(
+            config.get("donatex").unwrap()["externalToken"],
+            json!("imported-token")
+        );
         // Свои ключи не переносятся вместе с чужим файлом.
         assert_eq!(config.get("hud_edit_hotkey"), Some(&json!("Alt+H")));
         assert_eq!(config.get("remote_token"), Some(&json!("own-token")));

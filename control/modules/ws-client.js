@@ -33,7 +33,7 @@ export function initWsClient({ url, role, t, onMessage, onStatusClick, resolveUr
   let failures = 0;
 
   const STATUS_LABEL = (service) =>
-    ({ twitchChat: t("status.twitchChat"), twitchEvents: t("status.twitchEvents"), donationAlerts: t("status.donationAlerts"), youtube: t("status.youtube"), obs: "OBS" }[service] || service);
+    ({ twitchChat: t("status.twitchChat"), twitchEvents: t("status.twitchEvents"), donationAlerts: t("status.donationAlerts"), donatex: t("status.donatex"), youtube: t("status.youtube"), obs: "OBS" }[service] || service);
 
   const STATUS_TEXT = (status) =>
     ({ connected: t("status.connected"), connecting: t("status.connecting"), disconnected: t("status.disconnected"), error: t("status.error"), not_configured: t("status.notConfigured"), disabled: t("status.disabled") }[status] || status);
@@ -54,7 +54,7 @@ export function initWsClient({ url, role, t, onMessage, onStatusClick, resolveUr
   function renderStatusChips() {
     const container = el("statusFabList");
     if (!container) return;
-    const order = ["twitchChat", "twitchEvents", "donationAlerts", "youtube", "obs"];
+    const order = ["twitchChat", "twitchEvents", "donationAlerts", "donatex", "youtube", "obs"];
     container.innerHTML = order
       .map((service) => {
         const status = connectionStatus[service];
@@ -73,7 +73,7 @@ export function initWsClient({ url, role, t, onMessage, onStatusClick, resolveUr
   }
 
   function updateSettingsChips() {
-    ["twitchChat", "twitchEvents", "donationAlerts", "youtube", "obs"].forEach((service) => {
+    ["twitchChat", "twitchEvents", "donationAlerts", "donatex", "youtube", "obs"].forEach((service) => {
       const chip = el("chip-" + service);
       if (!chip) return;
       const status = connectionStatus[service];

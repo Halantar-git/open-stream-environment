@@ -79,6 +79,8 @@
     widgetPixelChat: `<svg viewBox="0 0 24 24" ${stroke}><rect x="3" y="5" width="18" height="13"/><path d="M8 9h8M8 12h5"/><path d="M3 5l3-1M21 5l-3-1"/></svg>`,
     widgetPixelGoal: `<svg viewBox="0 0 24 24" ${stroke}><rect x="3" y="11" width="18" height="4"/><path d="M5 11V8M8 11V8M11 11V8M14 11V8M17 11V8M20 11V8"/><path d="M6 15h9"/></svg>`,
     widgetPixelHoloAlert: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 3l2.2 4.2 4.6.6-3.4 3.2.8 4.6L12 13.4 7.8 15.6l.8-4.6L5.2 7.8l4.6-.6L12 3z"/><path d="M12 7v6"/></svg>`,
+    widgetDonatexAi: `<svg viewBox="0 0 24 24" ${stroke}><path d="M4 5h16v11H8l-4 4V5z"/><circle cx="10" cy="10" r="1.4" fill="currentColor" stroke="none"/><path d="M15 7.5l.8 1.7 1.7.8-1.7.8-.8 1.7-.8-1.7-1.7-.8 1.7-.8.8-1.7z" fill="currentColor" stroke="none"/></svg>`,
+    widgetMusic: `<svg viewBox="0 0 24 24" ${stroke}><path d="M9 18V6l9-2v11"/><circle cx="7" cy="18" r="2.4"/><circle cx="16" cy="15" r="2.4"/></svg>`,
     palette: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.9 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.7-1.6 1.6-1.6H16a4 4 0 0 0 4-4c0-4.4-3.6-8.2-8-8.2z"/><circle cx="7.5" cy="10.5" r="1.2" fill="currentColor"/><circle cx="11" cy="7" r="1.2" fill="currentColor"/><circle cx="15.5" cy="8" r="1.2" fill="currentColor"/></svg>`,
     download: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 4v11m0 0-4-4m4 4 4-4M5 18h14"/></svg>`,
     upload: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 20V9m0 0-4 4m4-4 4 4M5 4h14"/></svg>`,

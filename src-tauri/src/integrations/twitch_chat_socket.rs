@@ -60,6 +60,16 @@ pub fn donationalerts_connect(url: String) -> ConnectFuture {
     )
 }
 
+const DONATEX_ORIGIN: &str = "https://donatex.gg";
+
+/// Подключение к SignalR-хабу DonateX. Заголовки — как у браузера в JS-версии.
+pub fn donatex_connect(url: String) -> ConnectFuture {
+    websocket_connect_with_headers(
+        url,
+        vec![("Origin", DONATEX_ORIGIN), ("User-Agent", DA_USER_AGENT)],
+    )
+}
+
 /// Сокет чата: текстовые кадры — строки IRC, бинарные — тоже текст (Twitch
 /// всегда шлёт текст, но на всякий случай декодируем без потерь).
 struct WebSocketTransport {

@@ -37,6 +37,8 @@ export function createStateManager() {
     youtubeVideoId: "",
     twitchEnabled: true,
     donationAlertsEnabled: true,
+    donatexEnabled: true,
+    donatex: { enabled: true, hasToken: false },
     youtubeEnabled: true,
     notificationSound: true,
     notificationVolume: 0.8,
@@ -106,6 +108,8 @@ export function createStateManager() {
     state.youtubeVideoId = payload.youtubeVideoId;
     state.twitchEnabled = payload.twitchEnabled !== false;
     state.donationAlertsEnabled = payload.donationAlertsEnabled !== false;
+    state.donatexEnabled = payload.donatexEnabled !== false;
+    state.donatex = payload.donatex || state.donatex;
     state.youtubeEnabled = payload.youtubeEnabled !== false;
     state.notificationSound = payload.notificationSound !== false;
     state.notificationVolume = typeof payload.notificationVolume === "number" ? payload.notificationVolume : state.notificationVolume;

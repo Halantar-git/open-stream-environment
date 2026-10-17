@@ -1506,3 +1506,205 @@
 /* Pixel Perfect: chat stays on Roboto Condensed for readability while the
    rest of the UI uses the pixel frame font. */
 [data-theme="pixel"] .widget-chat__msg { font-family: "Roboto Condensed", "Segoe UI", sans-serif; }
+
+/* ---------- DonateX AI character ---------- */
+.widget-donatex-ai {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  color: var(--md-on-surface, #e8e5dd);
+  font-family: var(--font-body, "Segoe UI", sans-serif);
+}
+.widget-donatex-ai__frame-host,
+.widget-donatex-ai__frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.widget-donatex-ai__event {
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 6px;
+  box-sizing: border-box;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+.widget-donatex-ai.is-active .widget-donatex-ai__event {
+  opacity: 1;
+  transform: none;
+}
+.ai-avatar-box {
+  position: relative;
+  width: clamp(56px, 26%, 120px);
+  aspect-ratio: 1;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  border: 2px solid var(--md-primary, #00f0ff);
+  background: var(--panel-bg, rgba(10, 10, 12, 0.9));
+  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.25), 0 0 18px rgba(0, 0, 0, 0.35);
+}
+.ai-avatar-art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.ai-avatar-visual {
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(circle at 50% 45%, var(--md-primary, #00f0ff) 0 16%, transparent 17%),
+    radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.14) 0 44%, transparent 45%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.1), transparent 60%);
+}
+.widget-donatex-ai.is-active .ai-avatar-visual {
+  animation: donatex-ai-pulse 1.4s ease-in-out infinite;
+}
+.ai-dialog-bubble {
+  min-width: 0;
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: var(--panel-radius, 16px);
+  border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.16));
+  background: var(--panel-bg, rgba(10, 10, 12, 0.9));
+  box-shadow: var(--elev-1, 0 6px 20px rgba(0, 0, 0, 0.4));
+}
+.ai-speaker-name {
+  margin-bottom: 4px;
+  font-family: var(--font-display, "Segoe UI", sans-serif);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--md-primary, #00f0ff);
+}
+.ai-text-content {
+  font-size: clamp(13px, 2.2vh, 18px);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@keyframes donatex-ai-pulse {
+  0%, 100% { transform: scale(0.94); opacity: 0.75; }
+  50% { transform: scale(1.04); opacity: 1; }
+}
+
+/* ---------- DonateX music player ---------- */
+.widget-music {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  color: var(--md-on-surface, #e8e5dd);
+  font-family: var(--font-body, "Segoe UI", sans-serif);
+}
+.orbital {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 100%;
+  padding: 10px 14px;
+  box-sizing: border-box;
+  overflow: hidden;
+  border-radius: var(--panel-radius, 16px);
+  border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.16));
+  background: var(--panel-bg, rgba(10, 10, 12, 0.9));
+  box-shadow: var(--elev-1, 0 6px 20px rgba(0, 0, 0, 0.4));
+}
+.orbital__cover {
+  position: relative;
+  width: clamp(40px, 22%, 96px);
+  aspect-ratio: 1;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.1), transparent 70%);
+}
+.orbital__vinyl {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: repeating-radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.07) 0 2px, transparent 2px 5px);
+}
+.is-playing .orbital__vinyl {
+  animation: orbital-spin 6s linear infinite;
+}
+.orbital__note {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: var(--md-primary, #00f0ff);
+}
+.orbital__art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.orbital__meta {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.orbital__track {
+  overflow: hidden;
+  white-space: nowrap;
+  font-family: var(--font-display, "Segoe UI", sans-serif);
+  font-size: 15px;
+  font-weight: 700;
+}
+.orbital__track-inner {
+  display: inline-flex;
+  gap: 32px;
+}
+.orbital__track.is-marquee .orbital__track-inner {
+  animation: orbital-marquee 12s linear infinite;
+}
+.orbital__requester {
+  font-size: 12px;
+  color: var(--md-on-surface-variant, #b6b3a7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.orbital__timer {
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  color: var(--md-primary, #00f0ff);
+  white-space: nowrap;
+}
+.orbital__progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.orbital__progress-fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--md-primary, #00f0ff);
+  transition: width 300ms linear;
+}
+@keyframes orbital-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes orbital-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
