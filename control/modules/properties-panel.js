@@ -241,18 +241,20 @@ export function initPropertiesPanel({
           <button class="md-button md-button--text" id="pAddSocial" style="align-self:flex-start;margin-top:4px;">+ ${t("properties.addSocial")}</button>
         </div>`;
     } else if (inst.type === "grimhex-timer" || inst.type === "timer") {
-      // Источник всегда Longshot: заголовок фиксирован, редактируемых заметки и
-      // источника нет — только статус синхронизации и переключатели отображения.
+      // Источник выбирает сервер (Exectimer, затем Longshot): заголовок
+      // фиксирован, редактируемых заметки и источника нет — только статус
+      // синхронизации и переключатели отображения.
       const ls = state.longshot || null;
-      // Скрытый виджет не держит опрос Longshot — говорим об этом прямо,
+      // Скрытый виджет не держит опрос внешнего таймера — говорим об этом прямо,
       // иначе подсказка «ещё нет данных» выглядела бы как поломка.
+      const lsSource = ls && ls.source === "exectimer" ? "Exectimer" : ls && ls.source === "longshot" ? "Longshot" : "—";
       const lsStatus =
         raw.visible === false
           ? t("properties.timerRemoteHidden")
           : !ls
             ? t("properties.timerRemotePending")
             : ls.ok
-              ? t("properties.timerRemoteOk")
+              ? t("properties.timerRemoteOk", { source: lsSource })
               : t("properties.timerRemoteError", { error: ls.error || "—" });
       extraHtml = `
         <div class="properties__hint">${escapeHtml(lsStatus)}</div>

@@ -12,6 +12,7 @@
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex, OnceLock};
+use std::time::Duration;
 
 use serde_json::{json, Value};
 
@@ -31,14 +32,21 @@ fn client() -> &'static reqwest::Client {
     CLIENT.get_or_init(reqwest::Client::new)
 }
 
-/// GET JSON без авторизации — конфиг Longshot (таймер Executive Hangar).
+/// GET JSON без авторизации — таймер Executive Hangar (Exectimer, затем
+/// Longshot).
 ///
 /// Сбой сети и разбора возвращается текстом: вызывающему важно лишь, что анкер
-/// не обновился (он сохранит прежний и оставит признак ошибки).
+/// не обновился (он сохранит прежний и оставит признак ошибки). Таймаут
+/// ограничен: недоступный Longshot не должен подвешивать всё обновление.
 pub fn fetch_json(url: &str) -> FetchFuture {
     let url = url.to_string();
     Box::pin(async move {
-        match client().get(&url).send().await {
+        match client()
+            .get(&url)
+            .timeout(Duration::from_secs(15))
+            .send()
+            .await
+        {
             Ok(response) => match response.json::<Value>().await {
                 Ok(body) => Ok(body),
                 Err(error) => Err(error.to_string()),

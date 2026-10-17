@@ -1,11 +1,14 @@
-//! Синхронизация таймеров Longshot (Executive Hangar).
+//! Синхронизация таймеров Executive Hangar.
 //!
-//! Порт `server/longshot-sync.js`. Живой анкер цикла берётся из API Longshot
-//! (`api-longshot.longshotrelay.com/api/hangar-config`, с кэш-бастером `?v=`),
-//! статический `timers.longshotrelay.com/timer-config.json` — только запасной
-//! путь (он отстаёт на недели). Оверлею нужны анкер и длительности; саму
-//! математику цикла считает `hangar-cycle` на фронте, поэтому сбой загрузки
-//! деградирует мягко.
+//! Порт `server/longshot-sync.js`, дополненный вторым публичным источником.
+//! Основной — `exectimer.com/timer-state.json`: тот же таймер, что показывает
+//! сайт, с анкером и настройками LED (24 мин на зажигание, 12 — на гашение,
+//! 5 мин блэкаута). Longshot (`api-longshot…`, затем статический `timers…`)
+//! остался запасным: его API бывает недоступен, но если оживёт, таймер
+//! продолжит работать без обновления приложения.
+//!
+//! Оверлею нужны анкер и длительности; саму математику цикла считает
+//! `hangar-cycle` на фронте, поэтому сбой загрузки деградирует мягко.
 //!
 //! `fetch` инжектируется, поэтому разбор и пути ошибки/фолбэка проверяются без
 //! сети. Опрос ленивый: пока видимого таймера в раскладке нет, в сеть не ходим.
@@ -21,9 +24,11 @@ use serde_json::{json, Map, Value};
 
 use crate::storage::history::{js_number, js_truthy, number_value};
 
-/// Живой источник конфига.
+/// Основной источник: тот же таймер, что показывает exectimer.com.
+pub const EXECTIMER_URL: &str = "https://exectimer.com/timer-state.json";
+/// Живой источник конфига Longshot (теперь запасной).
 pub const API_URL: &str = "https://api-longshot.longshotrelay.com/api/hangar-config";
-/// Запасной статический конфиг.
+/// Запасной статический конфиг Longshot.
 pub const FALLBACK_URL: &str = "https://timers.longshotrelay.com/timer-config.json";
 /// Как часто тянем конфиг, если не сказано иное.
 pub const DEFAULT_INTERVAL_MS: i64 = 5 * 60 * 1000;
@@ -54,6 +59,7 @@ pub fn empty_snapshot() -> Value {
         "remoteUpdatedAt": "",
         "fetchedAt": 0,
         "error": "",
+        "source": "",
     })
 }
 
@@ -162,6 +168,104 @@ pub fn map_config(json: &Value) -> Option<Value> {
     );
     mapped.insert("fetchedAt".to_string(), Value::Null);
     mapped.insert("error".to_string(), Value::from(""));
+    mapped.insert("source".to_string(), Value::from("longshot"));
+    Some(Value::Object(mapped))
+}
+
+/// Нормализовать `timer-state.json` с exectimer.com; `None` — таймер не запущен
+/// или полей не хватает.
+///
+/// Сайт отдаёт начало цикла в `startTime` (мс) и длительности LED в минутах:
+/// `powerUpDuration` — сколько горит один огонь в красной фазе, `powerDownDuration` —
+/// в зелёной, `cooldownDuration` — блэкаут. Пять огней дают полные длительности
+/// фаз, поэтому отдельные `redMinutes`/`greenMinutes` здесь не нужны.
+pub fn map_exectimer(json: &Value) -> Option<Value> {
+    // Остановленный таймер на сайте означает «ещё не запущен». Это не сбой
+    // источника: отдаём пустой, но валидный снимок, чтобы виджет честно
+    // показал «не работает», а не держал старый анкер.
+    let running = match json.get("isRunning") {
+        Some(Value::Bool(value)) => *value,
+        _ => return None,
+    };
+    if !running {
+        let mut mapped = Map::new();
+        mapped.insert("ok".to_string(), Value::Bool(true));
+        mapped.insert("operational".to_string(), Value::Bool(false));
+        mapped.insert("anchorAt".to_string(), Value::from(""));
+        mapped.insert("updateMessage".to_string(), Value::from(""));
+        mapped.insert("phases".to_string(), Value::Null);
+        mapped.insert("lightIntervals".to_string(), Value::Null);
+        mapped.insert("remoteUpdatedAt".to_string(), Value::from(""));
+        mapped.insert("fetchedAt".to_string(), Value::Null);
+        mapped.insert("error".to_string(), Value::from(""));
+        mapped.insert("source".to_string(), Value::from("exectimer"));
+        return Some(Value::Object(mapped));
+    }
+    let start_ms = json.get("startTime").and_then(Value::as_f64)?;
+    if !start_ms.is_finite() || start_ms <= 0.0 {
+        return None;
+    }
+    let anchor = chrono::DateTime::from_timestamp_millis(start_ms as i64)?;
+    let anchor_at = anchor.to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
+
+    // Настроек может не быть — тогда берём штатные 24/12/5 минут.
+    let settings = json.get("adminSettings").unwrap_or(&Value::Null);
+    let minutes = |value: Option<&Value>, fallback: f64| -> f64 {
+        let rounded = js_number(value).round();
+        if rounded.is_finite() && rounded > 0.0 {
+            rounded
+        } else {
+            fallback
+        }
+    };
+    let power_up = minutes(settings.get("powerUpDuration"), 24.0);
+    let power_down = minutes(settings.get("powerDownDuration"), 12.0);
+    let cooldown = minutes(settings.get("cooldownDuration"), 5.0);
+
+    const LIGHTS: f64 = 5.0;
+    let red = power_up * 60.0 * LIGHTS;
+    let green = power_down * 60.0 * LIGHTS;
+    let black = cooldown * 60.0;
+
+    let remote_updated_at = json
+        .get("lastUpdateTimeString")
+        .map(to_utc_iso)
+        .filter(|value| !value.is_empty())
+        .or_else(|| {
+            json.get("lastUpdateTime")
+                .and_then(Value::as_f64)
+                .and_then(|ms| chrono::DateTime::from_timestamp_millis(ms as i64))
+                .map(|date| date.to_rfc3339_opts(chrono::SecondsFormat::Millis, true))
+        })
+        .unwrap_or_default();
+
+    let mut mapped = Map::new();
+    mapped.insert("ok".to_string(), Value::Bool(true));
+    mapped.insert("operational".to_string(), Value::Bool(true));
+    mapped.insert("anchorAt".to_string(), Value::from(anchor_at));
+    mapped.insert("updateMessage".to_string(), Value::from(""));
+    mapped.insert(
+        "phases".to_string(),
+        json!({
+            "redSec": number_value(red),
+            "greenSec": number_value(green),
+            "blackSec": number_value(black),
+        }),
+    );
+    mapped.insert(
+        "lightIntervals".to_string(),
+        json!({
+            "redStepSec": number_value(power_up * 60.0),
+            "greenStepSec": number_value(power_down * 60.0),
+        }),
+    );
+    mapped.insert(
+        "remoteUpdatedAt".to_string(),
+        Value::from(remote_updated_at),
+    );
+    mapped.insert("fetchedAt".to_string(), Value::Null);
+    mapped.insert("error".to_string(), Value::from(""));
+    mapped.insert("source".to_string(), Value::from("exectimer"));
     Some(Value::Object(mapped))
 }
 
@@ -171,10 +275,23 @@ pub fn with_cache_buster(url: &str, now_ms: i64) -> String {
     format!("{url}{separator}v={now_ms}")
 }
 
+/// Как разбирать ответ источника.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SourceFormat {
+    Longshot,
+    Exectimer,
+}
+
+/// Адрес источника и его формат: один и тот же цикл сайты отдают по-разному.
+struct Source {
+    url: String,
+    format: SourceFormat,
+}
+
 /// Ленивая синхронизация с инжектируемым загрузчиком.
 pub struct LongshotSync {
-    url: String,
-    fallback_url: Option<String>,
+    /// Источники в порядке приоритета: первый удачный и выигрывает.
+    sources: Vec<Source>,
     interval_ms: i64,
     fetch: Option<FetchFn>,
     on_update: Option<UpdateFn>,
@@ -190,11 +307,26 @@ impl Default for LongshotSync {
 }
 
 impl LongshotSync {
-    /// Синхронизация с живым API и запасным статическим адресом.
+    /// Синхронизация с живым API и запасными адресами.
     pub fn new() -> Self {
         Self {
-            url: API_URL.to_string(),
-            fallback_url: Some(FALLBACK_URL.to_string()),
+            // Exectimer — первым: Longshot в последнее время не отвечает, и
+            // ждать его таймаут на каждом обновлении незачем. Если основной
+            // источник упадёт, старые адреса Longshot всё ещё в списке.
+            sources: vec![
+                Source {
+                    url: EXECTIMER_URL.to_string(),
+                    format: SourceFormat::Exectimer,
+                },
+                Source {
+                    url: API_URL.to_string(),
+                    format: SourceFormat::Longshot,
+                },
+                Source {
+                    url: FALLBACK_URL.to_string(),
+                    format: SourceFormat::Longshot,
+                },
+            ],
             interval_ms: DEFAULT_INTERVAL_MS,
             fetch: None,
             on_update: None,
@@ -210,8 +342,16 @@ impl LongshotSync {
     }
 
     pub fn with_urls(mut self, url: &str, fallback_url: Option<String>) -> Self {
-        self.url = url.to_string();
-        self.fallback_url = fallback_url;
+        self.sources = vec![Source {
+            url: url.to_string(),
+            format: SourceFormat::Longshot,
+        }];
+        if let Some(fallback) = fallback_url {
+            self.sources.push(Source {
+                url: fallback,
+                format: SourceFormat::Longshot,
+            });
+        }
         self
     }
 
@@ -272,25 +412,14 @@ impl LongshotSync {
 
         let mut mapped = None;
         let mut error = None;
-        match self.load_one(&fetch, &self.url).await {
-            Ok(value) => mapped = Some(value),
-            Err(message) => error = Some(message),
-        }
-        if mapped.is_none() {
-            if let Some(fallback) = self.fallback_url.clone() {
-                if fallback != self.url {
-                    match self.load_one(&fetch, &fallback).await {
-                        Ok(value) => {
-                            mapped = Some(value);
-                            error = None;
-                        }
-                        Err(message) => {
-                            if error.is_none() {
-                                error = Some(message);
-                            }
-                        }
-                    }
+        for source in &self.sources {
+            match self.load_one(&fetch, source).await {
+                Ok(value) => {
+                    mapped = Some(value);
+                    error = None;
+                    break;
                 }
+                Err(message) => error = Some(message),
             }
         }
 
@@ -318,10 +447,14 @@ impl LongshotSync {
         self.finish(result)
     }
 
-    async fn load_one(&self, fetch: &FetchFn, target: &str) -> Result<Value, String> {
-        let url = with_cache_buster(target, (self.now)());
+    async fn load_one(&self, fetch: &FetchFn, source: &Source) -> Result<Value, String> {
+        let url = with_cache_buster(&source.url, (self.now)());
         let json = fetch(&url).await?;
-        map_config(&json).ok_or_else(|| "unexpected payload".to_string())
+        let mapped = match source.format {
+            SourceFormat::Longshot => map_config(&json),
+            SourceFormat::Exectimer => map_exectimer(&json),
+        };
+        mapped.ok_or_else(|| "unexpected payload".to_string())
     }
 
     fn finish(&self, snapshot: Value) -> Value {
@@ -356,6 +489,20 @@ mod tests {
                 "lightIntervals": { "redTurnGreenMinutes": 24, "greenTurnOffMinutes": 12 },
                 "updateMessage": "Timer updated for Alpha 4.10 LIVE",
                 "updatedAt": "2026-09-11 04:39:29",
+            }
+        })
+    }
+
+    fn exectimer_sample() -> Value {
+        json!({
+            "startTime": 1_791_910_178_233_i64,
+            "isRunning": true,
+            "lastUpdateTime": 1_791_915_938_233_i64,
+            "lastUpdateTimeString": "2026-10-13T18:25:38.233Z",
+            "adminSettings": {
+                "powerUpDuration": 24,
+                "powerDownDuration": 12,
+                "cooldownDuration": 5.005833333333333
             }
         })
     }
@@ -412,6 +559,83 @@ mod tests {
         );
     }
 
+    #[test]
+    fn map_exectimer_reads_the_led_settings() {
+        let mapped = map_exectimer(&exectimer_sample()).expect("разобран");
+        assert_eq!(mapped["ok"], json!(true));
+        assert_eq!(mapped["operational"], json!(true));
+        assert_eq!(mapped["anchorAt"], json!("2026-10-13T16:49:38.233Z"));
+        assert_eq!(
+            mapped["phases"],
+            json!({ "redSec": 7200, "greenSec": 3600, "blackSec": 300 })
+        );
+        assert_eq!(
+            mapped["lightIntervals"],
+            json!({ "redStepSec": 1440, "greenStepSec": 720 })
+        );
+        assert_eq!(mapped["remoteUpdatedAt"], json!("2026-10-13T18:25:38.233Z"));
+        assert_eq!(mapped["source"], json!("exectimer"));
+    }
+
+    #[test]
+    fn map_exectimer_falls_back_to_default_durations() {
+        let mapped = map_exectimer(&json!({
+            "isRunning": true,
+            "startTime": 1_791_910_178_233_i64
+        }))
+        .expect("разобран без настроек");
+        assert_eq!(
+            mapped["phases"],
+            json!({ "redSec": 7200, "greenSec": 3600, "blackSec": 300 })
+        );
+        assert_eq!(
+            mapped["lightIntervals"],
+            json!({ "redStepSec": 1440, "greenStepSec": 720 })
+        );
+    }
+
+    #[test]
+    fn map_exectimer_marks_a_stopped_timer_as_not_operational() {
+        let mut stopped = exectimer_sample();
+        stopped["isRunning"] = json!(false);
+        let mapped = map_exectimer(&stopped).expect("ответ источника валиден");
+        assert_eq!(mapped["ok"], json!(true));
+        assert_eq!(mapped["operational"], json!(false));
+        assert_eq!(mapped["anchorAt"], json!(""));
+
+        assert!(map_exectimer(&Value::Null).is_none());
+        assert!(map_exectimer(&json!({})).is_none());
+        assert!(map_exectimer(&json!({ "isRunning": true })).is_none());
+    }
+
+    #[tokio::test]
+    async fn refresh_prefers_exectimer_and_skips_longshot() {
+        let seen = Arc::new(Mutex::new(Vec::new()));
+        let fetch: FetchFn = {
+            let seen = seen.clone();
+            Arc::new(move |url: &str| {
+                let url = url.to_string();
+                let seen = seen.clone();
+                Box::pin(async move {
+                    seen.lock().unwrap().push(url.clone());
+                    if url.starts_with(EXECTIMER_URL) {
+                        Ok(exectimer_sample())
+                    } else {
+                        Ok(sample())
+                    }
+                })
+            })
+        };
+        let sync = LongshotSync::new().with_fetch(fetch);
+
+        let snapshot = sync.refresh().await;
+        assert_eq!(snapshot["ok"], json!(true));
+        assert_eq!(snapshot["source"], json!("exectimer"));
+        let seen = seen.lock().unwrap();
+        assert_eq!(seen.len(), 1);
+        assert!(seen[0].starts_with(EXECTIMER_URL));
+    }
+
     #[tokio::test]
     async fn refresh_takes_the_api_with_a_cache_buster_and_notifies() {
         let seen = Arc::new(Mutex::new(Vec::new()));
@@ -425,15 +649,18 @@ mod tests {
 
         let snapshot = sync.refresh().await;
         assert_eq!(snapshot["ok"], json!(true));
+        assert_eq!(snapshot["source"], json!("longshot"));
         let seen = seen.lock().unwrap();
-        assert!(seen[0].starts_with(API_URL));
-        assert!(seen[0].contains("v="));
+        // Exectimer отдал чужой формат — идём дальше по списку.
+        assert!(seen[0].starts_with(EXECTIMER_URL));
+        assert!(seen[1].starts_with(API_URL));
+        assert!(seen[1].contains("v="));
         assert_eq!(sync.get()["phases"]["redSec"], json!(7200));
         assert_eq!(updates.lock().unwrap().len(), 1);
     }
 
     #[tokio::test]
-    async fn a_failing_api_falls_back_to_the_static_url() {
+    async fn a_failing_source_falls_through_to_the_next() {
         let seen = Arc::new(Mutex::new(Vec::new()));
         let fetch: FetchFn = {
             let seen = seen.clone();
@@ -454,8 +681,9 @@ mod tests {
         let snapshot = sync.refresh().await;
         assert_eq!(snapshot["ok"], json!(true));
         let seen = seen.lock().unwrap();
-        assert!(seen[0].starts_with(API_URL));
-        assert!(seen[1].starts_with(FALLBACK_URL));
+        assert!(seen[0].starts_with(EXECTIMER_URL));
+        assert!(seen[1].starts_with(API_URL));
+        assert!(seen[2].starts_with(FALLBACK_URL));
         assert_eq!(
             snapshot["phases"],
             json!({ "redSec": 7200, "greenSec": 3600, "blackSec": 300 })
