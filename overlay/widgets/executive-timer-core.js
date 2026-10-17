@@ -68,6 +68,8 @@
     onMount() {
       if (this.requiredTheme && this.theme !== this.requiredTheme) return;
 
+      this._applyPerspective();
+
       this.host = document.createElement("div");
       this.host.className = "exec-timer";
       this.element.appendChild(this.host);
@@ -87,6 +89,37 @@
 
     onUnmount() {
       this.host = null;
+    }
+
+    onUpdate(prev, next) {
+      if (prev.perspective !== next.perspective || prev.perspectiveDirection !== next.perspectiveDirection) {
+        this._applyPerspective();
+      }
+    }
+
+    // Тот же наклон, что у 3D-целей и чата: сила 0–100 и направление.
+    _applyPerspective() {
+      const v = Math.max(0, Math.min(100, Number(this.config.perspective) || 0));
+      if (v > 0) {
+        const magnitude = v * 0.15; // 0 .. 15deg
+        const direction = this.config.perspectiveDirection || "left";
+        let ry = -magnitude;
+        let rx = magnitude * 0.2;
+        if (direction === "right") {
+          ry = magnitude;
+        } else if (direction === "up") {
+          ry = 0;
+          rx = magnitude;
+        } else if (direction === "down") {
+          ry = 0;
+          rx = -magnitude;
+        }
+        this.element.style.transform = `perspective(1200px) rotateY(${ry}deg) rotateX(${rx}deg)`;
+        this.element.style.transformStyle = "preserve-3d";
+      } else {
+        this.element.style.transform = "";
+        this.element.style.transformStyle = "";
+      }
     }
 
     _tick() {

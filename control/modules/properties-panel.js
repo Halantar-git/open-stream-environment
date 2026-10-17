@@ -251,7 +251,7 @@ export function initPropertiesPanel({
     } else if (inst.type === "grimhex-timer" || inst.type === "timer") {
       // Источник выбирает сервер (Exectimer, затем Longshot): заголовок
       // фиксирован, редактируемых заметки и источника нет — только статус
-      // синхронизации и переключатели отображения.
+      // синхронизации, наклон и переключатели отображения.
       const ls = state.longshot || null;
       // Скрытый виджет не держит опрос внешнего таймера — говорим об этом прямо,
       // иначе подсказка «ещё нет данных» выглядела бы как поломка.
@@ -269,7 +269,16 @@ export function initPropertiesPanel({
         <button class="md-button md-button--tonal" id="pTimerRefresh">${t("properties.timerRefresh")}</button>
         <div class="properties__toggle-row"><label>${t("properties.timerShowLights")}</label>${switchHtml("pTimerShowLights", config.showLights !== false)}</div>
         <div class="properties__toggle-row"><label>${t("properties.timerShowCycle")}</label>${switchHtml("pTimerShowCycle", config.showCycle !== false)}</div>
-        <div class="properties__toggle-row"><label>${t("properties.timerShowTelemetry")}</label>${switchHtml("pTimerShowTelemetry", config.showTelemetry !== false)}</div>`;
+        <div class="properties__toggle-row"><label>${t("properties.timerShowTelemetry")}</label>${switchHtml("pTimerShowTelemetry", config.showTelemetry !== false)}</div>
+        <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>
+        <div class="md-field"><label>${t("properties.perspectiveDirection")}</label>
+          <select id="pPerspectiveDirection">
+            <option value="left" ${(config.perspectiveDirection || "left") === "left" ? "selected" : ""}>${t("properties.perspectiveLeft")}</option>
+            <option value="right" ${config.perspectiveDirection === "right" ? "selected" : ""}>${t("properties.perspectiveRight")}</option>
+            <option value="up" ${config.perspectiveDirection === "up" ? "selected" : ""}>${t("properties.perspectiveUp")}</option>
+            <option value="down" ${config.perspectiveDirection === "down" ? "selected" : ""}>${t("properties.perspectiveDown")}</option>
+          </select>
+        </div>`;
     } else if (inst.type === "mic") {
       // Настройки отображения — на самом виджете (fallback на глобальные).
       const micDef = (key, fallback) => {
@@ -490,6 +499,19 @@ export function initPropertiesPanel({
       wireSwitch(propertiesEl.querySelector("#pTimerShowTelemetry"), (on) => patchTimer({ showTelemetry: on }));
       const refreshBtn = propertiesEl.querySelector("#pTimerRefresh");
       if (refreshBtn) refreshBtn.addEventListener("click", () => send(EVENT_TYPES.CMD_REFRESH_LONGSHOT, {}));
+      const perspective = propertiesEl.querySelector("#pPerspective");
+      if (perspective) {
+        perspective.addEventListener("input", (e) => {
+          const value = Number(e.target.value);
+          const label = propertiesEl.querySelector("#pPerspectiveValue");
+          if (label) label.textContent = String(value);
+          send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { perspective: value } } });
+        });
+      }
+      const perspectiveDirection = propertiesEl.querySelector("#pPerspectiveDirection");
+      if (perspectiveDirection) {
+        perspectiveDirection.addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { perspectiveDirection: e.target.value } } }));
+      }
     } else if (inst.type === "mic") {
       // Настройки отображения пишем в конфиг виджета (per-widget).
       const setMic = (key, value) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { [key]: value } } });

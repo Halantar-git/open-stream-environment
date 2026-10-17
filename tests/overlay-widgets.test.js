@@ -294,6 +294,36 @@ describe("overlay widgets", () => {
     w.unmount();
   });
 
+  test("оба варианта таймера слушаются настройки перспективы", () => {
+    const ctx = makeContext({ state: { longshot: longshotAt(Date.now() - 60_000) } });
+    const { w } = mountWidget(TimerWidget, ctx, {
+      type: "timer",
+      config: { perspective: 50 },
+    });
+    expect(w.element.style.transform).toContain("rotateY(-7.5deg)");
+
+    w.update({ config: { perspectiveDirection: "right" } });
+    expect(w.element.style.transform).toContain("rotateY(7.5deg)");
+
+    w.update({ config: { perspectiveDirection: "up" } });
+    expect(w.element.style.transform).toContain("rotateX(7.5deg)");
+
+    w.unmount();
+
+    // 3D-вариант наследует то же ядро и тот же наклон.
+    const grimctx = makeContext({
+      theme: "grimhex",
+      state: { longshot: longshotAt(Date.now() - 60_000) },
+    });
+    const { w: grim } = mountWidget(GrimHexTimerWidget, grimctx, {
+      type: "grimhex-timer",
+      config: { perspective: 20, perspectiveDirection: "down" },
+    });
+    expect(grim.element.style.transform).toContain("rotateX(-3deg)");
+    expect(grim.element.style.transformStyle).toBe("preserve-3d");
+    grim.unmount();
+  });
+
   test("TimerWidget берёт анкер из снимка Longshot без служебного сообщения", () => {
     const ctx = makeContext({ state: { longshot: longshotAt(Date.now() - 60_000) } });
     const { w } = mountWidget(TimerWidget, ctx, { type: "timer" });
