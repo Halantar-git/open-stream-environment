@@ -153,10 +153,14 @@ describe("WidgetUecTransfer", () => {
     expect(w.element.classList.contains("is-compact")).toBe(false);
     expect(w.element.classList.contains("is-expanded")).toBe(true);
     expect(w.nameEl.textContent).not.toBe("bob_the_pilot");
+    // Текст сообщения тоже появляется «шифром», а не сразу читаемым.
+    expect(w.messageEl.textContent).not.toBe("на корабль");
 
-    // По одному символу за тик — тринадцати тиков хватает на этот ник.
+    // По одному символу за тик — тринадцати тиков хватает на этот ник, а
+    // сообщение укладывается в те же полсекунды.
     jest.advanceTimersByTime(600);
     expect(w.nameEl.textContent).toBe("bob_the_pilot");
+    expect(w.messageEl.textContent).toBe("на корабль");
     expect(w.panelEl.classList.contains("is-decoded")).toBe(true);
 
     w.unmount();

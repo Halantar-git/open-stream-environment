@@ -47,6 +47,7 @@
   // референсе: успеваешь прочитать, но она не мешает раскрытию.
   const COMPACT_MS = 1400;
   const DECODE_TICK_MS = 38;
+  const MESSAGE_TICKS = 18;
   const DEFAULT_DURATION_MS = 9000;
 
   // Символы для «шифра»: цифры и знаки читаются как служебный код, а не как
@@ -108,6 +109,8 @@
       this._hideId = null;
       this._compactId = null;
       this._decodeId = null;
+      this._messageDecodeId = null;
+      this._messageText = "";
       this._duration = DEFAULT_DURATION_MS;
     }
 
@@ -196,6 +199,7 @@
 
     onUnmount() {
       this._clearDecode();
+      this._clearMessageDecode();
       if (this._hideId != null) this.clearTimer(this._hideId);
       if (this._compactId != null) this.clearTimer(this._compactId);
       this._hideId = null;
@@ -234,6 +238,7 @@
     showNext() {
       this.current = null;
       this._clearDecode();
+      this._clearMessageDecode();
       if (this._compactId != null) {
         this.clearTimer(this._compactId);
         this._compactId = null;
@@ -267,6 +272,7 @@
       this.element.classList.remove("is-compact");
       this.element.classList.add("is-expanded");
       this._startDecode(this.currentName());
+      if (this.config.showMessage !== false) this._startMessageDecode(this._messageText);
     }
 
     // ---- content ----
@@ -304,6 +310,7 @@
           ? String(alert.message || "").trim()
           : "";
       if (this.messageEl) {
+        this._messageText = message;
         this.messageEl.textContent = message || this.t("uec.emptyLog");
         this.messageEl.classList.toggle("is-empty", !message);
       }
@@ -355,6 +362,38 @@
         this._decodeId = null;
       }
       if (this.panelEl) this.panelEl.classList.remove("is-decoded");
+    }
+
+    // Текст сообщения расшифровывается вместе с ником, но чуть медленнее:
+    // длинная строка не должна проскакивать за один кадр, поэтому за тик
+    // открывается сразу несколько символов и весь лог читается примерно
+    // за те же полсекунды, что и позывной.
+    _startMessageDecode(text) {
+      this._clearMessageDecode();
+      const chars = Array.from(String(text || ""));
+      if (!chars.length) return;
+
+      const perTick = Math.max(1, Math.ceil(chars.length / MESSAGE_TICKS));
+      let revealed = 0;
+      this.messageEl.classList.add("is-decoding");
+      this.messageEl.textContent = this._scramble(chars, 0);
+      this._messageDecodeId = this.every(() => {
+        revealed += perTick;
+        if (revealed >= chars.length) {
+          this.messageEl.textContent = chars.join("");
+          this._clearMessageDecode();
+          return;
+        }
+        this.messageEl.textContent = this._scramble(chars, revealed);
+      }, DECODE_TICK_MS);
+    }
+
+    _clearMessageDecode() {
+      if (this._messageDecodeId != null) {
+        this.clearTimer(this._messageDecodeId);
+        this._messageDecodeId = null;
+      }
+      if (this.messageEl) this.messageEl.classList.remove("is-decoding");
     }
 
     _scramble(chars, revealed) {

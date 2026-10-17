@@ -1985,6 +1985,12 @@
   text-overflow: ellipsis;
 }
 
+/* Пока строка расшифровывается, она подсвечена, как нестабильный сигнал. */
+.uec-transfer__message.is-decoding {
+  color: #9fe9ff;
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.35);
+}
+
 .uec-transfer__message.is-empty {
   opacity: 0.35;
 }
