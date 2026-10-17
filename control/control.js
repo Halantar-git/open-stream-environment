@@ -3116,7 +3116,6 @@ const { EVENT_TYPES } = window.SharedEvents;
     return false;
   };
 
-  copySceneUrlBtn.textContent = t("scenes.copyUrl");
   copySceneUrlBtn.addEventListener("click", async () => {
     const ok = await copyText(sceneUrl(state.activeSceneId));
     if (!ok) return;
@@ -3124,8 +3123,9 @@ const { EVENT_TYPES } = window.SharedEvents;
     setTimeout(() => (copySceneUrlBtn.textContent = t("scenes.copyUrl")), 1400);
   });
 
+  // Подписи кнопок берутся из data-i18n: до прихода словарей t() вернул бы
+  // сам ключ, и кнопка осталась бы с текстом вида common.copy.
   document.querySelectorAll("[data-copy]").forEach((btn) => {
-    btn.textContent = t("common.copy");
     btn.addEventListener("click", async () => {
       const target = document.getElementById(btn.dataset.copy);
       const ok = await copyText(target.textContent);
@@ -3136,7 +3136,6 @@ const { EVENT_TYPES } = window.SharedEvents;
   });
 
   obsUrlLabel.textContent = overlayUrl;
-  copyUrlBtn.textContent = t("editor.copyUrl");
   copyUrlBtn.addEventListener("click", async () => {
     const ok = await copyText(overlayUrl);
     if (!ok) return;
@@ -3145,7 +3144,6 @@ const { EVENT_TYPES } = window.SharedEvents;
   });
 
   if (copyOverlayUrlBtn) {
-    copyOverlayUrlBtn.textContent = t("common.copy");
     copyOverlayUrlBtn.addEventListener("click", async () => {
       const url = appOverlayUrlInput ? appOverlayUrlInput.value : overlayUrl;
       const ok = await copyText(url);
