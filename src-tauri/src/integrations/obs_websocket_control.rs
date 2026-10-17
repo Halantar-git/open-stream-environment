@@ -15,7 +15,7 @@
 //! `debug_log`) — шина и файл для журнала уже подключены, а записи этого
 //! модуля добавятся следом; на работу это не влияет.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -32,6 +32,9 @@ use crate::storage::history::{js_number_or_zero, js_truthy};
 
 const RECONNECT_MS: u64 = 3_000;
 const REQUEST_TIMEOUT_MS: u64 = 10_000;
+/// Свой `requestId` для списка сцен: ответ на него не ждёт вызывающий,
+/// а сразу обновляет кэш (см. `handle_message`).
+const SCENE_LIST_REQUEST_ID: &str = "ose-scene-list";
 
 /// Сколько ждать ответа на запрос.
 type Pending = Arc<Mutex<HashMap<String, oneshot::Sender<Result<Value, String>>>>>;
@@ -45,6 +48,10 @@ struct Session {
     next_id: Arc<AtomicU64>,
     /// Куда уходят события шины (`camera_angle_changed` и подобные).
     emit: EmitFn,
+    /// Имена сцен, полученные от OBS при подключении и по `SceneListChanged`.
+    /// Нужны для синхронной проверки: есть ли сцена заставки, прежде чем
+    /// откладывать переход до `video_splash_ended`.
+    scenes: Arc<Mutex<HashSet<String>>>,
 }
 
 /// Клиент OBS WebSocket.
@@ -99,6 +106,7 @@ impl ObsClient {
             connected: Arc::new(AtomicBool::new(false)),
             next_id: Arc::new(AtomicU64::new(1)),
             emit: Arc::clone(&emit),
+            scenes: Arc::new(Mutex::new(HashSet::new())),
         };
         *self.lock(&self.session) = Some(session.clone());
 
@@ -125,6 +133,22 @@ impl ObsClient {
         self.lock(&self.session)
             .as_ref()
             .map(|session| session.connected.load(Ordering::SeqCst))
+            .unwrap_or(false)
+    }
+
+    /// Есть ли сцена с таким именем в подключённой OBS.
+    ///
+    /// Список кэшируется: `scene_set` — синхронная функция, а ждать ответа OBS
+    /// в ней нельзя. Пока список не пришёл, честно отвечаем `false`: лучше
+    /// переключить сцену напрямую, чем отложить переход и зависнуть.
+    pub fn has_scene(&self, scene_name: &str) -> bool {
+        let scenes = self
+            .lock(&self.session)
+            .as_ref()
+            .filter(|session| session.connected.load(Ordering::SeqCst))
+            .map(|session| Arc::clone(&session.scenes));
+        scenes
+            .map(|scenes| self.lock(&scenes).contains(scene_name))
             .unwrap_or(false)
     }
 
@@ -478,6 +502,13 @@ async fn run(
         };
 
         session.connected.store(false, Ordering::SeqCst);
+        // Список сцен относится к прежнему подключению: после реконнекта
+        // запросим его заново, иначе решения принимались бы по устаревшим данным.
+        session
+            .scenes
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .clear();
         if clean {
             emit(connection_status("disconnected"));
         }
@@ -505,6 +536,29 @@ async fn handle_message(
         Some(2) => {
             session.connected.store(true, Ordering::SeqCst);
             emit(connection_status("connected"));
+            // Список сцен нужен до первого перехода: без него нельзя понять,
+            // есть ли в OBS сцена заставки. Ответ придёт отдельным кадром op 7
+            // и попадёт в кэш по своему `requestId`.
+            let frame = request_frame(
+                "GetSceneList",
+                &serde_json::json!({}),
+                SCENE_LIST_REQUEST_ID,
+            );
+            let _ = transport.send(format!("{frame}")).await;
+        }
+        Some(5) => {
+            // Сцены добавили или удалили — кэш должен совпадать с OBS, иначе
+            // переход снова либо зависнет, либо зря пропустит заставку.
+            let Some(d) = msg.get("d") else {
+                return;
+            };
+            if d.get("eventType").and_then(Value::as_str) == Some("SceneListChanged") {
+                let names = scene_names(d.get("eventData"));
+                *session
+                    .scenes
+                    .lock()
+                    .unwrap_or_else(|error| error.into_inner()) = names;
+            }
         }
         Some(7) => {
             let Some(d) = msg.get("d") else {
@@ -514,6 +568,16 @@ async fn handle_message(
                 .get("requestId")
                 .map(crate::state::js_string)
                 .unwrap_or_default();
+            // Ответ на служебный запрос списка сцен: обновляем кэш и не ищем
+            // ожидающего — его нет.
+            if request_id == SCENE_LIST_REQUEST_ID {
+                let names = scene_names(d.get("responseData"));
+                *session
+                    .scenes
+                    .lock()
+                    .unwrap_or_else(|error| error.into_inner()) = names;
+                return;
+            }
             let Some(waiting) = session
                 .pending
                 .lock()
@@ -549,6 +613,29 @@ async fn handle_message(
         }
         _ => {}
     }
+}
+
+/// Имена сцен из `GetSceneList`/`SceneListChanged`.
+///
+/// OBS отдаёт объекты `{ sceneName, sceneIndex }`, но в старых сборках
+/// встречается и массив строк — принимаем обе формы.
+fn scene_names(data: Option<&Value>) -> HashSet<String> {
+    data.and_then(|data| data.get("scenes"))
+        .and_then(Value::as_array)
+        .map(|scenes| {
+            scenes
+                .iter()
+                .filter_map(|scene| match scene {
+                    Value::String(name) => Some(name.clone()),
+                    Value::Object(_) => scene
+                        .get("sceneName")
+                        .map(crate::state::js_string)
+                        .filter(|name| !name.is_empty()),
+                    _ => None,
+                })
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 /// Пауза перед повтором; `true` — пришла остановка.
@@ -592,12 +679,24 @@ mod tests {
             if let Ok(frame) = serde_json::from_str::<Value>(&line) {
                 if frame.get("op").and_then(Value::as_u64) == Some(6) {
                     let id = frame["d"]["requestId"].clone();
+                    // На служебный запрос списка сцен отвечаем как настоящая OBS:
+                    // имена придут объектами с `sceneName`.
+                    let response_data = if frame["d"]["requestType"] == json!("GetSceneList") {
+                        json!({
+                            "scenes": [
+                                { "sceneName": "Main", "sceneIndex": 0 },
+                                { "sceneName": "Opening", "sceneIndex": 1 },
+                            ],
+                        })
+                    } else {
+                        json!({ "ok": 1 })
+                    };
                     let response = json!({
                         "op": 7,
                         "d": {
                             "requestId": id,
                             "requestStatus": { "result": true },
-                            "responseData": { "ok": 1 },
+                            "responseData": response_data,
                         },
                     });
                     self.incoming.push_back(response.to_string());
@@ -699,6 +798,49 @@ mod tests {
                 .count(),
             1
         );
+    }
+
+    #[tokio::test]
+    async fn the_scene_list_from_obs_is_cached() {
+        let client = Arc::new(ObsClient::new(
+            fake_connect(Arc::new(Mutex::new(Vec::new()))),
+            real_spawn(),
+            obs_config(),
+        ));
+        let (emit, _events) = collector();
+        client.restart(true, emit);
+        assert!(wait_connected(&client).await, "OBS должен подключиться");
+
+        // Список приходит отдельным ответом уже после `Identified`.
+        for _ in 0..200 {
+            if client.has_scene("Opening") {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+        assert!(client.has_scene("Main"));
+        assert!(client.has_scene("Opening"));
+        assert!(!client.has_scene("Нет-такой"));
+
+        client.stop();
+    }
+
+    #[test]
+    fn scene_list_accepts_objects_and_plain_names() {
+        let objects = json!({
+            "scenes": [{ "sceneName": "Main" }, { "sceneName": "" }, { "other": 1 }],
+        });
+        assert_eq!(
+            scene_names(Some(&objects)),
+            HashSet::from(["Main".to_string()])
+        );
+
+        let names = json!({ "scenes": ["Main", "Opening"] });
+        assert_eq!(
+            scene_names(Some(&names)),
+            HashSet::from(["Main".to_string(), "Opening".to_string()])
+        );
+        assert!(scene_names(None).is_empty());
     }
 
     #[tokio::test]

@@ -174,7 +174,11 @@ fn scene_set(diagnostics: &Diagnostics, payload: &Value) {
 
     let obs = diagnostics.obs();
     let obs_connected = obs.is_connected();
-    if !splash_scene.is_empty() && obs_connected && !video_scene.is_empty() {
+    // Заставка живёт в отдельной сцене OBS. Если её там нет (или список сцен ещё
+    // не получен), откладывать переход нельзя: `video_splash_ended` не придёт,
+    // и OBS останется на сцене заставки навсегда. Лучше переключиться сразу.
+    let video_scene_ready = obs_connected && !video_scene.is_empty() && obs.has_scene(&video_scene);
+    if !splash_scene.is_empty() && video_scene_ready {
         let title = scenes
             .get(splash_scene.as_str())
             .and_then(|scene| scene.get("title"))
@@ -203,6 +207,12 @@ fn scene_set(diagnostics: &Diagnostics, payload: &Value) {
             })),
         );
     } else if obs_connected && !scene_name.is_empty() {
+        if !splash_scene.is_empty() && !video_scene.is_empty() {
+            diagnostics.logger("server").warn(
+                "splash scene missing in OBS — switching directly",
+                Some(&json!({ "scene": scene, "videoScene": video_scene })),
+            );
+        }
         obs.switch_scene(&scene_name);
     }
 
