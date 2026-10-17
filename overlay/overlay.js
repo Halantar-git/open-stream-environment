@@ -398,6 +398,7 @@
   manager.register("grimhex-timer", OW.GrimHexTimerWidget);
   manager.register("mic", OW.MicWidget);
   manager.register("death", OW.DeathWidget);
+  manager.register("webcam", OW.WebcamWidget);
   manager.register("soundboard", OW.SoundboardWidget);
   manager.register("custom", OW.CustomWidget);
   manager.register("grimhex", OW.WidgetGrimHex);

@@ -382,6 +382,37 @@ export function initPropertiesPanel({
       extraHtml = `
         <div class="md-field"><label>${t("properties.deathLabel")}</label><input type="text" id="pDeathLabel" value="${escapeAttr(config.label || "")}"></div>
         <div class="md-field"><label>${t("properties.deathColor")}</label><input type="color" id="pDeathColor" value="${escapeAttr(config.color || "#ff4d4d")}"></div>`;
+    } else if (inst.type === "webcam") {
+      // Рамка ничего не захватывает: камера — отдельный источник OBS. Подсказка
+      // в инспекторе говорит об этом прямо, иначе легко ждать видео внутри
+      // виджета и решить, что он сломан.
+      const themePrimary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#c6b8ff";
+      const label = config.label == null ? "LIVE" : config.label;
+      const position = config.labelPosition || "top-left";
+      extraHtml = `
+        <div class="md-field"><label>${t("properties.webcamLabel")}</label><input type="text" id="pWebcamLabel" value="${escapeAttr(label)}" placeholder="LIVE"></div>
+        <div class="properties__toggle-row"><label>${t("properties.webcamShowLabel")}</label>${switchHtml("pWebcamShowLabel", config.showLabel !== false)}</div>
+        <div class="md-field"><label>${t("properties.webcamLabelPosition")}</label>
+          <select id="pWebcamLabelPosition">
+            <option value="top-left" ${position === "top-left" ? "selected" : ""}>${t("properties.webcamPosTopLeft")}</option>
+            <option value="top-right" ${position === "top-right" ? "selected" : ""}>${t("properties.webcamPosTopRight")}</option>
+            <option value="bottom-left" ${position === "bottom-left" ? "selected" : ""}>${t("properties.webcamPosBottomLeft")}</option>
+            <option value="bottom-right" ${position === "bottom-right" ? "selected" : ""}>${t("properties.webcamPosBottomRight")}</option>
+          </select>
+        </div>
+        <div class="properties__toggle-row"><label>${t("properties.webcamShowBorder")}</label>${switchHtml("pWebcamShowBorder", config.showBorder !== false)}</div>
+        <div class="properties__toggle-row"><label>${t("properties.webcamShowCorners")}</label>${switchHtml("pWebcamShowCorners", config.showCorners !== false)}</div>
+        <div class="properties__toggle-row"><label>${t("properties.webcamShowBackground")}</label>${switchHtml("pWebcamShowBackground", !!config.showBackground)}</div>
+        <div class="properties__toggle-row"><label>${t("properties.webcamShowVignette")}</label>${switchHtml("pWebcamShowVignette", !!config.showVignette)}</div>
+        <div class="md-field"><label>${t("properties.webcamThickness")}: <span id="pWebcamThicknessValue">${config.thickness ?? 4}</span> px</label><input type="range" id="pWebcamThickness" min="1" max="16" step="1" value="${config.thickness ?? 4}"></div>
+        <div class="md-field"><label>${t("properties.webcamRadius")}: <span id="pWebcamRadiusValue">${config.radius ?? 16}</span> px</label><input type="range" id="pWebcamRadius" min="0" max="64" step="1" value="${config.radius ?? 16}"></div>
+        <div class="md-field"><label>${t("properties.webcamColor")}</label>
+          <div class="properties__color-row">
+            <input type="color" id="pWebcamColor" value="${escapeAttr(config.color || themePrimary)}">
+            <button class="md-button md-button--text" id="pWebcamColorReset">${t("properties.webcamColorAuto")}</button>
+          </div>
+        </div>
+        <p class="properties__hint">${t("properties.webcamHint")}</p>`;
     } else if (inst.type === "soundboard") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.soundboardPopupDuration")}</label><input type="number" id="pSoundboardPopupDuration" min="1000" max="15000" step="100" value="${config.popupDurationMs || 4600}"></div>
@@ -575,6 +606,31 @@ export function initPropertiesPanel({
     } else if (inst.type === "death") {
       propertiesEl.querySelector("#pDeathLabel").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { label: e.target.value } } }));
       propertiesEl.querySelector("#pDeathColor").addEventListener("input", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { color: e.target.value } } }));
+    } else if (inst.type === "webcam") {
+      const patchWebcam = (configPatch) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: configPatch } });
+      propertiesEl.querySelector("#pWebcamLabel").addEventListener("change", (e) => patchWebcam({ label: e.target.value }));
+      wireSwitch(propertiesEl.querySelector("#pWebcamShowLabel"), (on) => patchWebcam({ showLabel: on }));
+      propertiesEl.querySelector("#pWebcamLabelPosition").addEventListener("change", (e) => patchWebcam({ labelPosition: e.target.value }));
+      wireSwitch(propertiesEl.querySelector("#pWebcamShowBorder"), (on) => patchWebcam({ showBorder: on }));
+      wireSwitch(propertiesEl.querySelector("#pWebcamShowCorners"), (on) => patchWebcam({ showCorners: on }));
+      wireSwitch(propertiesEl.querySelector("#pWebcamShowBackground"), (on) => patchWebcam({ showBackground: on }));
+      wireSwitch(propertiesEl.querySelector("#pWebcamShowVignette"), (on) => patchWebcam({ showVignette: on }));
+      const thickness = propertiesEl.querySelector("#pWebcamThickness");
+      thickness.addEventListener("input", (e) => {
+        const value = Number(e.target.value);
+        const label = propertiesEl.querySelector("#pWebcamThicknessValue");
+        if (label) label.textContent = String(value);
+        patchWebcam({ thickness: value });
+      });
+      const radius = propertiesEl.querySelector("#pWebcamRadius");
+      radius.addEventListener("input", (e) => {
+        const value = Number(e.target.value);
+        const label = propertiesEl.querySelector("#pWebcamRadiusValue");
+        if (label) label.textContent = String(value);
+        patchWebcam({ radius: value });
+      });
+      propertiesEl.querySelector("#pWebcamColor").addEventListener("input", (e) => patchWebcam({ color: e.target.value }));
+      propertiesEl.querySelector("#pWebcamColorReset").addEventListener("click", () => patchWebcam({ color: "" }));
     } else if (inst.type === "soundboard") {
       propertiesEl.querySelector("#pSoundboardPopupDuration").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { popupDurationMs: Number(e.target.value) || 4600 } } }));
       propertiesEl.querySelector("#pSoundboardImageSize").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { imageSize: Math.max(40, Number(e.target.value) || 200) } } }));

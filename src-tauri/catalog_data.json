@@ -1,5 +1,5 @@
 {
-  "sourceHash": "7ac9c685c0ea75ab",
+  "sourceHash": "039f1fc6f316cbab",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -183,6 +183,32 @@
       "minH": 3,
       "defaultConfig": {
         "perspective": 0
+      }
+    },
+    "webcam": {
+      "type": "webcam",
+      "label": "Рамка веб-камеры",
+      "description": "Декоративная рамка под камеру из OBS: уголки, бейдж и акцент темы",
+      "icon": "widgetWebcam",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 60,
+        "w": 24,
+        "h": 24
+      },
+      "minW": 8,
+      "minH": 8,
+      "defaultConfig": {
+        "label": "LIVE",
+        "showLabel": true,
+        "labelPosition": "top-left",
+        "showBorder": true,
+        "showCorners": true,
+        "showBackground": false,
+        "showVignette": false,
+        "color": "",
+        "thickness": 4,
+        "radius": 16
       }
     },
     "death": {

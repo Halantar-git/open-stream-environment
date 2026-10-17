@@ -380,6 +380,28 @@ export function initCanvasEditor({
         const color = config.color || "#ff4d4d";
         return `<div class="widget-death"><div class="widget-death__label">${escapeHtml(label)}</div><div class="widget-death__value" style="color:${escapeAttr(color)}">${state.deathCount ?? 0}</div></div>`;
       }
+      case "webcam": {
+        // Превью повторяет DOM-структуру оверлея, чтобы рамка на канвасе и в
+        // эфире совпадала; цвет по умолчанию берётся из токена активной темы.
+        const accent = /^(#[0-9a-f]{3,8}|var\(--[a-z0-9-]+\))$/i.test(String(config.color || "").trim())
+          ? String(config.color).trim()
+          : "var(--md-primary)";
+        const thickness = Math.max(1, Math.min(16, Number(config.thickness) || 4));
+        const radius = Math.max(0, Math.min(64, Number(config.radius) || 0));
+        const label = String(config.label == null ? "LIVE" : config.label).trim();
+        const showLabel = config.showLabel !== false && label.length > 0;
+        const position = ["top-left", "top-right", "bottom-left", "bottom-right"].includes(config.labelPosition) ? config.labelPosition : "top-left";
+        const corners = config.showCorners !== false
+          ? ["tl", "tr", "bl", "br"].map((corner) => `<span class="widget-webcam__corner" data-corner="${corner}"></span>`).join("")
+          : "";
+        return `<div class="widget-webcam" style="--webcam-accent:${escapeAttr(accent)};--webcam-thickness:${thickness}px;--webcam-radius:${radius}px;">
+          ${config.showBackground ? `<div class="widget-webcam__backdrop"></div>` : ""}
+          ${config.showBorder !== false ? `<div class="widget-webcam__frame"></div>` : ""}
+          ${corners}
+          ${showLabel ? `<div class="widget-webcam__label" data-pos="${escapeAttr(position)}"><span class="widget-webcam__dot"></span><span class="widget-webcam__label-text">${escapeHtml(label)}</span></div>` : ""}
+          ${config.showVignette ? `<div class="widget-webcam__vignette"></div>` : ""}
+        </div>`;
+      }
       case "soundboard": {
         return `<div class="widget-soundboard"><div class="widget-soundboard__placeholder">🔊 ${escapeHtml(t("widgets.soundboard"))}</div></div>`;
       }
