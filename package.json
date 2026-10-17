@@ -21,6 +21,7 @@
     "tauri:build": "tauri build"
   },
   "dependencies": {
+    "repomix": "^1.18.1",
     "ws": "^8.18.0"
   },
   "devDependencies": {
