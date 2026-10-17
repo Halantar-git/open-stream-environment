@@ -21,11 +21,19 @@ const WidgetUecTransfer = require("../overlay/widgets/uec-transfer-widget");
 
 function makeEl(tag) {
   const classSet = new Set();
+  const styleProps = {};
   const el = {
     tagName: (tag || "div").toUpperCase(),
     className: "",
     dataset: {},
-    style: {},
+    style: {
+      setProperty(key, value) {
+        styleProps[key] = value;
+      },
+      getPropertyValue(key) {
+        return styleProps[key] || "";
+      },
+    },
     innerHTML: "",
     textContent: "",
     parentNode: null,
@@ -135,7 +143,8 @@ describe("WidgetUecTransfer", () => {
     expect(w.chipEl.textContent).toBe("uec.chipDonation");
     expect(w.creditLabelEl.textContent).toBe("uec.credited");
     expect(w.amountEl.textContent).toBe("+150 ₽");
-    expect(w.messageEl.textContent).toBe("на корабль");
+    // Текст сообщения тоже стартует «шифром», как и ник.
+    expect(w.messageEl.textContent).not.toBe("на корабль");
     // Ник ещё не раскрыт: это должен быть «шифр», а не готовое имя.
     expect(w.nameEl.textContent).not.toBe("bob_the_pilot");
 
@@ -217,5 +226,27 @@ describe("WidgetUecTransfer", () => {
     expect(w.amountEl.style.display).toBe("none");
 
     w.unmount();
+  });
+
+  test("сумма доната красится по tier'ам, как в TESO-алерте", () => {
+    const cases = [
+      [150, "#ffffff"],
+      [250, "#2dc50e"],
+      [450, "#3a92ff"],
+      [650, "#a02dc5"],
+      [850, "#e5a823"],
+      [1000, "#ee6a00"],
+    ];
+
+    cases.forEach(([amount, color]) => {
+      const ctx = makeContext();
+      const w = new WidgetUecTransfer(item(), ctx);
+      w.mount(makeEl("div"));
+
+      ctx.bus.emit(EVENT_TYPES.ALERT, donation({ amount }));
+      expect(w.asideEl.style.getPropertyValue("--uec-amount-color")).toBe(color);
+
+      w.unmount();
+    });
   });
 });

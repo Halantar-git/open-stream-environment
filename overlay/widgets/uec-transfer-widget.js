@@ -91,6 +91,18 @@
   // а не пустую строку с одиноким курсором.
   const NAME_FALLBACK = "uec.anonymous";
 
+  // Палитра качества донатов — та же, что у TESO-алерта: сумма красится по
+  // tier'ам, чтобы крупный донат было видно с первого взгляда.
+  function donationQualityColor(amount) {
+    const a = Number(amount) || 0;
+    if (a < 200) return "#ffffff"; // White (Trash)
+    if (a < 400) return "#2dc50e"; // Green (Fine)
+    if (a < 600) return "#3a92ff"; // Blue (Superior)
+    if (a < 800) return "#a02dc5"; // Purple (Epic)
+    if (a < 1000) return "#e5a823"; // Gold (Legendary)
+    return "#ee6a00"; // Orange (Mythic)
+  }
+
   function div(className) {
     const el = document.createElement("div");
     el.className = className;
@@ -114,6 +126,7 @@
       this._decodeId = null;
       this._messageDecodeId = null;
       this._messageText = "";
+      this._messageDecoded = false;
       this._duration = DEFAULT_DURATION_MS;
     }
 
@@ -174,6 +187,7 @@
       main.appendChild(messageRow);
 
       const aside = div("uec-transfer__aside");
+      this.asideEl = aside;
       this.creditLabelEl = span("uec-transfer__credit-label");
       this.amountEl = span("uec-transfer__amount");
       this.decodedLabelEl = span("uec-transfer__decoded");
@@ -242,6 +256,8 @@
       this.current = null;
       this._clearDecode();
       this._clearMessageDecode();
+      this._messageDecoded = false;
+      this._resetHeight();
       if (this._compactId != null) {
         this.clearTimer(this._compactId);
         this._compactId = null;
@@ -276,6 +292,7 @@
       this.element.classList.add("is-expanded");
       this._startDecode(this.currentName());
       if (this.config.showMessage !== false) this._startMessageDecode(this._messageText);
+      this._fitHeight();
     }
 
     // ---- content ----
@@ -286,7 +303,7 @@
 
       // Пока панель не раскрыта, ник стоит «зашифрованным» — так компактная
       // плашка не выдаёт содержимое раньше времени.
-      this.nameEl.textContent = this._scramble(this.currentName(), 0);
+      this.nameEl.textContent = this._scramble(Array.from(this.currentName()), 0);
     }
 
     // Подписи и сумма не зависят от фазы дешифровки, поэтому их можно
@@ -314,8 +331,18 @@
           : "";
       if (this.messageEl) {
         this._messageText = message;
-        this.messageEl.textContent = message || this.t("uec.emptyLog");
+        // Сообщение тоже стартует шифром: смена языка или настроек не должна
+        // раскрывать его раньше дешифровки.
+        this.messageEl.textContent = message
+          ? this._messageDecoded
+            ? message
+            : this._scramble(Array.from(message), 0)
+          : this.t("uec.emptyLog");
         this.messageEl.classList.toggle("is-empty", !message);
+      }
+
+      if (this.asideEl && typeof this.asideEl.style.setProperty === "function") {
+        this.asideEl.style.setProperty("--uec-amount-color", this.amountColor(kind, alert.amount));
       }
     }
 
@@ -333,6 +360,13 @@
       if (amount <= 0) return "";
       if (alert.kind === "cheer") return `+${formatMoney(amount)} ${this.t("uec.bits")}`;
       return `+${formatMoney(amount)} ${symbol(alert.currency || "RUB")}`.trim();
+    }
+
+    // Донат красится по tier'ам (как в TESO), cheer — третичным акцентом темы.
+    amountColor(kind, amount) {
+      if (kind === "donation") return donationQualityColor(amount);
+      if (kind === "cheer") return "var(--md-tertiary, #ff3860)";
+      return "var(--md-primary, #00f0ff)";
     }
 
     // ---- decode animation ----
@@ -376,6 +410,7 @@
       const chars = Array.from(String(text || ""));
       if (!chars.length) return;
 
+      this._messageDecoded = false;
       const perTick = Math.max(1, Math.ceil(chars.length / MESSAGE_TICKS));
       let revealed = 0;
       this.messageEl.classList.add("is-decoding");
@@ -384,7 +419,11 @@
         revealed += perTick;
         if (revealed >= chars.length) {
           this.messageEl.textContent = chars.join("");
+          this._messageDecoded = true;
           this._clearMessageDecode();
+          // После расшифровки ширина строк может измениться — подгоняем панель
+          // ещё раз, чтобы текст не оказался обрезанным.
+          this._fitHeight();
           return;
         }
         this.messageEl.textContent = this._scramble(chars, revealed);
@@ -407,6 +446,38 @@
         else out += SCRAMBLE[Math.floor(Math.random() * SCRAMBLE.length)];
       }
       return out;
+    }
+
+    // ---- panel height ----
+
+    // Сбрасываем высоту к геометрии виджета: она могла быть растянута под
+    // длинный текст предыдущего алерта.
+    _resetHeight() {
+      if (this.element) this.element.style.height = this.geometry.h + "%";
+    }
+
+    // Панель растёт под сообщение, но не бесконечно: длинный текст больше не
+    // обрезается, а высота ограничена разумным потолком.
+    _fitHeight() {
+      if (!this.element || !this.frameEl || !this.panelEl) return;
+      this.element.style.height = this.geometry.h + "%";
+      const base = this.element.clientHeight || 0;
+      if (!base) return;
+
+      const frameHeight = this.frameEl.style.height;
+      const panelHeight = this.panelEl.style.height;
+      const panelOverflow = this.panelEl.style.overflow;
+      this.frameEl.style.height = "auto";
+      this.panelEl.style.height = "auto";
+      this.panelEl.style.overflow = "visible";
+      const needed = this.panelEl.offsetHeight || 0;
+      this.frameEl.style.height = frameHeight;
+      this.panelEl.style.height = panelHeight;
+      this.panelEl.style.overflow = panelOverflow;
+
+      if (!needed) return;
+      const cap = Math.max(360, base);
+      this.element.style.height = Math.min(Math.max(base, needed + 2), cap) + "px";
     }
 
     // ---- small DOM helpers ----

@@ -30,6 +30,18 @@
 
 import { el } from "./dom.js";
 
+// Тот же tier-цвет донатов, что у TESO- и UEC-виджетов: сумма красится по
+// размеру доната, а не по акценту темы.
+function donationQualityColor(amount) {
+  const a = Number(amount) || 0;
+  if (a < 200) return "#ffffff";
+  if (a < 400) return "#2dc50e";
+  if (a < 600) return "#3a92ff";
+  if (a < 800) return "#a02dc5";
+  if (a < 1000) return "#e5a823";
+  return "#ee6a00";
+}
+
 export function initCanvasEditor({
   state,
   t,
@@ -493,6 +505,7 @@ export function initCanvasEditor({
         const panelClip = tokens["--panel-clip"] || "none";
         const panelGlow = tokens["--panel-glow"] || "0 0 15px rgba(0, 240, 255, 0.3)";
         const channel = escapeHtml(config.channel || t("uec.channel"));
+        const amountColor = donationQualityColor(250);
         return `<div class="uec-transfer-preview" style="position:relative;height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;padding:8px 12px;background-color:${panelBg};border:${panelBorder};border-radius:${panelRadius};clip-path:${panelClip};box-shadow:${panelGlow};font-family:'Orbitron','Segoe UI',sans-serif;">
           <div style="display:flex;align-items:center;gap:6px;color:${cyan};font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;white-space:nowrap;">
             <svg viewBox="0 0 24 24" style="width:12px;height:12px;flex-shrink:0;color:${cyan};"><path d="M12 2.4l8.2 4.7v9.8L12 21.6l-8.2-4.7V7.1L12 2.4z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M12 6.2l4.9 2.8v5.9L12 17.8l-4.9-2.9V9L12 6.2z" fill="none" stroke="currentColor" stroke-width="0.9"/></svg>
@@ -509,7 +522,7 @@ export function initCanvasEditor({
             </div>
             <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;border-left:1px solid color-mix(in srgb, ${cyan} 20%, transparent);padding-left:10px;flex-shrink:0;">
               <span style="font-size:7px;letter-spacing:1.2px;color:${cyan};text-transform:uppercase;">${escapeHtml(t("uec.credited"))}</span>
-              <span style="font-size:16px;color:${cyan};white-space:nowrap;">+${formatMoney(250)} ${currencySymbol("RUB")}</span>
+              <span style="font-size:16px;color:${amountColor};white-space:nowrap;">+${formatMoney(250)} ${currencySymbol("RUB")}</span>
               <span style="font-size:7px;letter-spacing:1.2px;color:${muted};text-transform:uppercase;">${escapeHtml(t("uec.decoded"))}</span>
             </div>
           </div>

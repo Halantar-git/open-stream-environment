@@ -2046,12 +2046,14 @@
 }
 
 .uec-transfer__message {
+  flex: 1 1 auto;
+  min-width: 0;
   color: var(--md-on-surface-variant, #8ab4d0);
-  font-size: 0.84em;
+  font-size: 1em;
+  line-height: 1.35;
   letter-spacing: 0.03em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* Пока строка расшифровывается, она подсвечена, как нестабильный сигнал. */
@@ -2069,6 +2071,7 @@
 }
 
 .uec-transfer__aside {
+  --uec-amount-color: var(--md-primary, #00f0ff);
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -2096,8 +2099,8 @@
   font-size: 2.2em;
   font-weight: 700;
   line-height: 1;
-  color: var(--md-primary, #00f0ff);
-  text-shadow: 0 0 18px color-mix(in srgb, var(--md-primary, #00f0ff) 35%, transparent);
+  color: var(--uec-amount-color);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--uec-amount-color) 35%, transparent);
   white-space: nowrap;
 }
 
