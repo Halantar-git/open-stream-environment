@@ -334,7 +334,12 @@ const { EVENT_TYPES } = window.SharedEvents;
     return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
   function escapeAttr(s) { return String(s).replace(/"/g, "&quot;"); }
-  function formatMoney(n) { return Number(n || 0).toLocaleString("ru-RU"); }
+  // Локаль берём из интерфейса, иначе после переключения на EN суммы в
+  // истории и тостах продолжают группироваться по-русски.
+  function formatMoney(n) {
+    const locale = window.I18n && window.I18n.getLang() === "ru" ? "ru-RU" : "en-US";
+    return Number(n || 0).toLocaleString(locale);
+  }
   const CURRENCY_SYMBOLS = { RUB: "₽", USD: "$", EUR: "€", UAH: "₴", KZT: "₸", GBP: "£" };
   function currencySymbol(code) { return CURRENCY_SYMBOLS[String(code || "").toUpperCase()] || code || ""; }
   function alertToastTitle(kind, event) {

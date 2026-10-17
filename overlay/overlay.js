@@ -77,8 +77,11 @@
   let connectionStatus = {};
 
   // ---- pure utils ----
+  // Суммы идут в локали интерфейса: в английском оверлее разделитель тысяч —
+  // запятая, а не пробел, иначе числа выглядят чужими для зрителя.
   function formatMoney(n) {
-    return Number(n || 0).toLocaleString("ru-RU");
+    const locale = window.I18n && window.I18n.getLang() === "ru" ? "ru-RU" : "en-US";
+    return Number(n || 0).toLocaleString(locale);
   }
   const CURRENCY_SYMBOLS = { RUB: "₽", USD: "$", EUR: "€", UAH: "₴", KZT: "₸", GBP: "£" };
   function currencySymbol(code) {
