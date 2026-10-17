@@ -919,6 +919,8 @@
 /* ---------- Webcam frame (decorative, no video capture) ---------- */
 .widget-webcam {
   --webcam-accent: var(--md-primary);
+  /* Точка LIVE всегда красная: это сигнал «в эфире», а не акцент темы. */
+  --webcam-live: #ff4d4d;
   --webcam-thickness: 4px;
   --webcam-radius: 16px;
   position: relative;
@@ -1043,7 +1045,8 @@
   height: clamp(5px, 1.2cqw, 9px);
   flex-shrink: 0;
   border-radius: 50%;
-  background: var(--webcam-accent);
+  background: var(--webcam-live);
+  box-shadow: 0 0 6px var(--webcam-live);
   animation: webcam-live 2s ease-in-out infinite;
 }
 .widget-webcam__vignette {
