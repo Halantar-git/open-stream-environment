@@ -76,6 +76,7 @@
     onMount() {
       if (this.theme !== "pixel") return;
 
+      this._applyPerspective();
       this._readColors();
 
       this.layoutEl = document.createElement("div");
@@ -133,6 +134,22 @@
     onUpdate(prev, next) {
       if (prev.showPercentage !== next.showPercentage) this._updateDom();
       if (prev.showBackground !== next.showBackground) this._applySurface();
+      if (prev.perspective !== next.perspective) this._applyPerspective();
+    }
+
+    // Perspective tilt (0-100) from the widget inspector — the same transform
+    // the themed 3D chat and sign widgets use.
+    _applyPerspective() {
+      const v = Math.max(0, Math.min(100, Number(this.config.perspective) || 0));
+      if (v > 0) {
+        const ry = -(v * 0.15); // 0 .. -15deg
+        const rx = v * 0.03; // 0 .. 3deg
+        this.element.style.transform = `perspective(1200px) rotateY(${ry}deg) rotateX(${rx}deg)`;
+        this.element.style.transformStyle = "preserve-3d";
+      } else {
+        this.element.style.transform = "";
+        this.element.style.transformStyle = "";
+      }
     }
 
     _readColors() {

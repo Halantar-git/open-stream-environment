@@ -94,6 +94,8 @@
       // HARD theme gate: no canvas, no loop, no events on a non-Wardogs theme.
       if (this.theme !== "wardogs") return;
 
+      this._applyPerspective();
+
       this.layoutEl = document.createElement("div");
       this.layoutEl.className = "wardogs-goal";
       this.layoutEl.style.cssText =
@@ -150,6 +152,22 @@
     onUpdate(prev, next) {
       if (prev.showPercentage !== next.showPercentage) this._updateDom();
       if (prev.showBackground !== next.showBackground) this._applySurface();
+      if (prev.perspective !== next.perspective) this._applyPerspective();
+    }
+
+    // Perspective tilt (0-100) from the widget inspector — the same transform
+    // the themed 3D chat and sign widgets use.
+    _applyPerspective() {
+      const v = Math.max(0, Math.min(100, Number(this.config.perspective) || 0));
+      if (v > 0) {
+        const ry = -(v * 0.15); // 0 .. -15deg
+        const rx = v * 0.03; // 0 .. 3deg
+        this.element.style.transform = `perspective(1200px) rotateY(${ry}deg) rotateX(${rx}deg)`;
+        this.element.style.transformStyle = "preserve-3d";
+      } else {
+        this.element.style.transform = "";
+        this.element.style.transformStyle = "";
+      }
     }
 
     // Panel surface from the theme's tokens, so the goal bar shares one

@@ -198,7 +198,8 @@ export function initPropertiesPanel({
         </div>
         <div class="md-field"><label>${t("properties.currency")}</label><input type="text" id="pGoalCurrency" value="${escapeAttr(state.goal.currency || "")}"></div>
         <div class="properties__toggle-row"><label>${t("properties.showPercent")}</label>${switchHtml("pShowPercent", !!config.showPercentage)}</div>
-        <div class="properties__toggle-row"><label>${t("properties.showBackground")}</label>${switchHtml("pShowBackground", config.showBackground !== false)}</div>`;
+        <div class="properties__toggle-row"><label>${t("properties.showBackground")}</label>${switchHtml("pShowBackground", config.showBackground !== false)}</div>
+        ${inst.type === "goal" ? "" : `<div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>`}`;
     } else if (inst.type === "chat") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.maxMessages")}</label><input type="number" id="pMaxMessages" min="1" max="20" value="${config.maxMessages || 8}"></div>
@@ -419,6 +420,16 @@ export function initPropertiesPanel({
       propertiesEl.querySelector("#pGoalCurrency").addEventListener("change", (e) => send(EVENT_TYPES.CMD_SET_GOAL, { currency: e.target.value }));
       wireSwitch(propertiesEl.querySelector("#pShowPercent"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showPercentage: on } } }));
       wireSwitch(propertiesEl.querySelector("#pShowBackground"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showBackground: on } } }));
+      // Наклон есть только у 3D-целей: у обычной «goal» ползунка нет.
+      const perspective = propertiesEl.querySelector("#pPerspective");
+      if (perspective) {
+        perspective.addEventListener("input", (e) => {
+          const value = Number(e.target.value);
+          const label = propertiesEl.querySelector("#pPerspectiveValue");
+          if (label) label.textContent = String(value);
+          send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { perspective: value } } });
+        });
+      }
     } else if (inst.type === "chat") {
       propertiesEl.querySelector("#pMaxMessages").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { maxMessages: Number(e.target.value) } } }));
       wireSwitch(propertiesEl.querySelector("#pShowBadges"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showBadges: on } } }));

@@ -144,6 +144,24 @@ describe("WidgetGrimHexGoal", () => {
     expect(raf.pending()).toBe(0);
   });
 
+  test("наклоняется по настройке perspective и сбрасывается в ноль", () => {
+    const w = new WidgetGrimHexGoal(
+      item({ config: { perspective: 50 } }),
+      makeContext("grimhex")
+    );
+    w.mount(makeEl("div"));
+
+    expect(w.element.style.transform).toContain("perspective(1200px)");
+    expect(w.element.style.transform).toContain("rotateY(-7.5deg)");
+    expect(w.element.style.transformStyle).toBe("preserve-3d");
+
+    w.update({ config: { perspective: 0 } });
+    expect(w.element.style.transform).toBe("");
+    expect(w.element.style.transformStyle).toBe("");
+
+    w.unmount();
+  });
+
   test("не инициализируется на чужой теме (уровень виджета)", () => {
     const parent = makeEl("div");
     const w = new WidgetGrimHexGoal(item(), makeContext("nebula"));
