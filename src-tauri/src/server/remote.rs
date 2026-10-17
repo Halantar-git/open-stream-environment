@@ -460,3 +460,114 @@ fn broadcast_giveaway(diagnostics: &Diagnostics, giveaway: &Value) {
 fn now_ms() -> i64 {
     chrono::Utc::now().timestamp_millis()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::storage::paths::Storage;
+    use axum::extract::ws::Message;
+    use std::fs;
+    use std::path::PathBuf;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::time::Duration;
+    use tokio::sync::mpsc;
+
+    /// Диагностика во временном каталоге и слушатель рассылки.
+    struct Fixture {
+        dir: PathBuf,
+        diagnostics: Diagnostics,
+    }
+
+    impl Fixture {
+        fn new(label: &str) -> Self {
+            static COUNTER: AtomicUsize = AtomicUsize::new(0);
+            let index = COUNTER.fetch_add(1, Ordering::SeqCst);
+            let dir = std::env::temp_dir()
+                .join(format!("ose-remote-{}-{label}-{index}", std::process::id()));
+            let _ = fs::remove_dir_all(&dir);
+            fs::create_dir_all(&dir).expect("временный каталог должен создаваться");
+            fs::write(dir.join("config.example.json"), "{\n  \"port\": 8710\n}\n")
+                .expect("шаблон должен записываться");
+            let mut diagnostics =
+                Diagnostics::open(Storage::beside_sources(dir.clone())).expect("диагностика");
+            diagnostics.normalize();
+            Self { dir, diagnostics }
+        }
+
+        fn listen(&self) -> mpsc::UnboundedReceiver<Message> {
+            let (sender, receiver) = mpsc::unbounded_channel();
+            self.diagnostics
+                .clients()
+                .add("scene".to_string(), false, sender);
+            receiver
+        }
+
+        fn switch(&self, scene: &str) -> i64 {
+            handle(
+                &self.diagnostics,
+                &json!({ "action": "SCENE_SET", "payload": { "scene": scene } }),
+            );
+            self.diagnostics
+                .runtime()
+                .scene_started_at()
+                .expect("момент активации записан")
+        }
+    }
+
+    impl Drop for Fixture {
+        fn drop(&mut self) {
+            fs::remove_dir_all(&self.dir).ok();
+        }
+    }
+
+    fn frame(receiver: &mut mpsc::UnboundedReceiver<Message>) -> Value {
+        match receiver.try_recv().expect("кадр должен быть") {
+            Message::Text(text) => serde_json::from_str(text.as_str()).expect("кадр — JSON"),
+            other => panic!("ожидался текст, пришло {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_scene_switch_gives_the_overlay_a_start_moment() {
+        let fixture = Fixture::new("scene-set");
+        let mut receiver = fixture.listen();
+
+        let before = now_ms();
+        let started_at = fixture.switch("brb");
+        let after = now_ms();
+
+        // Оверлей запускает отсчёт именно от этой метки, поэтому она должна
+        // совпадать с моментом переключения и с тем, что ушло в кадр.
+        assert!(started_at >= before && started_at <= after);
+
+        let frame = frame(&mut receiver);
+        assert_eq!(frame["type"], json!(event_types::REMOTE_ACTION));
+        assert_eq!(frame["payload"]["action"], json!("SCENE_SET"));
+        assert_eq!(frame["payload"]["payload"]["scene"], json!("brb"));
+        assert_eq!(frame["payload"]["payload"]["startedAt"], json!(started_at));
+
+        assert_eq!(fixture.diagnostics.runtime().active_scene(), "brb");
+        assert_eq!(
+            fixture.diagnostics.runtime().scene_started_at(),
+            Some(started_at)
+        );
+    }
+
+    #[test]
+    fn switching_to_the_same_scene_restarts_the_countdown() {
+        let fixture = Fixture::new("same-scene");
+        let first = fixture.switch("start");
+        std::thread::sleep(Duration::from_millis(5));
+        let second = fixture.switch("start");
+
+        // Вернуться на ту же сцену — значит начать её заново, как в Electron-версии.
+        assert!(second > first, "{second} должно быть позже {first}");
+    }
+
+    #[test]
+    fn an_empty_scene_falls_back_to_main() {
+        let fixture = Fixture::new("main-fallback");
+        fixture.switch("");
+        assert_eq!(fixture.diagnostics.runtime().active_scene(), "main");
+    }
+}
