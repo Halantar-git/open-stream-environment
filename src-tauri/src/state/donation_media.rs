@@ -78,9 +78,12 @@ fn normalize_rule(rule: &Value) -> Option<Value> {
         duration.clamp(MIN_DURATION_MS, MAX_DURATION_MS).round()
     };
     let min_amount = js_number_or_zero(rule.get("minAmount")).max(0.0);
+    let currency = text(rule.get("currency")).to_uppercase();
+    let currency = currency.chars().take(3).collect::<String>();
     Some(json!({
         "id": id,
         "minAmount": (min_amount * 100.0).round() / 100.0,
+        "currency": currency,
         "audioFile": text(rule.get("audioFile")),
         "imageFile": text(rule.get("imageFile")),
         "videoFile": text(rule.get("videoFile")),
@@ -111,11 +114,14 @@ pub fn set_config(config: &mut ConfigFile, patch: &Value) -> Value {
     normalized
 }
 
-/// Правило, которое срабатывает на сумму: самое высокое из подходящих.
-pub fn match_rule(section: &Value, amount: f64) -> Option<Value> {
+/// Правило, которое срабатывает на сумму в валюте: самое высокое из подходящих.
+///
+/// Пустая валюта в правиле — «любая»; иначе валюта доната должна совпасть.
+pub fn match_rule(section: &Value, amount: f64, currency: &str) -> Option<Value> {
     if section.get("enabled") == Some(&Value::Bool(false)) {
         return None;
     }
+    let donation_currency = currency.trim().to_uppercase();
     let volume = section
         .get("volume")
         .map(|value| js_number_or_zero(Some(value)).clamp(0.0, 1.0))
@@ -124,6 +130,10 @@ pub fn match_rule(section: &Value, amount: f64) -> Option<Value> {
     let mut best: Option<(&Value, f64)> = None;
     for rule in rules {
         if !has_media(rule) {
+            continue;
+        }
+        let rule_currency = text(rule.get("currency")).to_uppercase();
+        if !rule_currency.is_empty() && rule_currency != donation_currency {
             continue;
         }
         let min_amount = js_number_or_zero(rule.get("minAmount")).max(0.0);
@@ -148,7 +158,8 @@ pub fn alert_payload(config: &ConfigFile, alert: &Value) -> Option<Value> {
         return None;
     }
     let amount = js_number_or_zero(alert.get("amount"));
-    let mut payload = match_rule(&Value::Object(section(config)), amount)?;
+    let currency = text(alert.get("currency"));
+    let mut payload = match_rule(&Value::Object(section(config)), amount, &currency)?;
     if let Value::Object(map) = &mut payload {
         map.insert(
             "user".to_string(),
@@ -177,11 +188,19 @@ pub fn test_payload(config: &ConfigFile, rule_id: &str) -> Option<Value> {
         .iter()
         .find(|rule| text(rule.get("id")) == rule_id && has_media(rule))?;
     let min_amount = js_number_or_zero(rule.get("minAmount")).max(0.0);
+    let currency = text(rule.get("currency"));
     let mut payload = media_payload(rule, volume);
     if let Value::Object(map) = &mut payload {
         map.insert("user".to_string(), Value::from("Тест"));
         map.insert("amount".to_string(), json!(min_amount));
-        map.insert("currency".to_string(), Value::from("RUB"));
+        map.insert(
+            "currency".to_string(),
+            Value::from(if currency.is_empty() {
+                "RUB"
+            } else {
+                currency.as_str()
+            }),
+        );
     }
     Some(payload)
 }
@@ -314,22 +333,22 @@ mod tests {
             { "id": "empty", "minAmount": 5000 },
         ]));
 
-        let small = match_rule(&section, 150.0).expect("малое правило");
+        let small = match_rule(&section, 150.0, "RUB").expect("малое правило");
         assert_eq!(small["ruleId"], json!("small"));
         assert_eq!(small["volume"], json!(0.5));
 
-        let big = match_rule(&section, 1000.0).expect("большое правило");
+        let big = match_rule(&section, 1000.0, "RUB").expect("большое правило");
         assert_eq!(big["ruleId"], json!("big"));
 
         // Правило без файлов не срабатывает — даже когда его порог выше всех.
         assert_eq!(
-            match_rule(&section, 5000.0).unwrap()["ruleId"],
+            match_rule(&section, 5000.0, "RUB").unwrap()["ruleId"],
             json!("big")
         );
         let only_empty = section_with(json!([{ "id": "empty", "minAmount": 0 }]));
-        assert!(match_rule(&only_empty, 5000.0).is_none());
+        assert!(match_rule(&only_empty, 5000.0, "RUB").is_none());
         // Ниже самого низкого порога — тоже.
-        assert!(match_rule(&section, 50.0).is_none());
+        assert!(match_rule(&section, 50.0, "RUB").is_none());
     }
 
     #[test]
@@ -339,7 +358,45 @@ mod tests {
             "volume": 0.8,
             "rules": [{ "id": "a", "minAmount": 1, "videoFile": "a.mp4" }],
         });
-        assert!(match_rule(&section, 100.0).is_none());
+        assert!(match_rule(&section, 100.0, "RUB").is_none());
+    }
+
+    #[test]
+    fn a_rule_matches_only_its_currency_or_any_currency() {
+        let section = section_with(json!([
+            { "id": "rub", "minAmount": 100, "currency": "rub", "audioFile": "a.mp3" },
+            { "id": "usd", "minAmount": 100, "currency": "usd", "imageFile": "b.png" },
+            { "id": "any", "minAmount": 50, "audioFile": "c.mp3" },
+        ]));
+
+        assert_eq!(
+            match_rule(&section, 100.0, "RUB").unwrap()["ruleId"],
+            json!("rub")
+        );
+        assert_eq!(
+            match_rule(&section, 100.0, "USD").unwrap()["ruleId"],
+            json!("usd")
+        );
+        // Своей валюты нет — остаётся правило «любая валюта».
+        assert_eq!(
+            match_rule(&section, 100.0, "EUR").unwrap()["ruleId"],
+            json!("any")
+        );
+        // Незнакомая валюта доната не подходит под RUB/USD, но подходит под «любую».
+        assert_eq!(
+            match_rule(&section, 100.0, "").unwrap()["ruleId"],
+            json!("any")
+        );
+        // Ниже порога любого подходящего правила.
+        assert!(match_rule(&section, 10.0, "RUB").is_none());
+    }
+
+    #[test]
+    fn normalization_uppercases_the_currency() {
+        let normalized = normalize_section(&json!({
+            "rules": [{ "id": "r", "minAmount": 10, "currency": " usd ", "audioFile": "a.mp3" }],
+        }));
+        assert_eq!(normalized["rules"][0]["currency"], json!("USD"));
     }
 
     #[test]

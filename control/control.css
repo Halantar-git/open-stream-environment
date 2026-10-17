@@ -1579,12 +1579,13 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 
 .donation-media-item {
   display: grid;
-  grid-template-columns: 90px minmax(130px, 1fr) minmax(130px, 1fr) minmax(130px, 1fr) 80px auto auto;
+  grid-template-columns: 90px 82px minmax(130px, 1fr) minmax(130px, 1fr) minmax(130px, 1fr) 80px auto auto;
   gap: 8px;
   align-items: center;
 }
 
-.donation-media-item input {
+.donation-media-item input,
+.donation-media-item select {
   min-width: 0;
   padding: 8px 10px;
   border: 1px solid var(--md-outline-variant);

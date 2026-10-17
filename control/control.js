@@ -1524,6 +1524,35 @@ const { EVENT_TYPES } = window.SharedEvents;
       updateDonationMediaRule(rule.id, { minAmount: Math.max(0, Number(amount.value) || 0) })
     );
 
+    const currency = document.createElement("select");
+    currency.className = "dm-currency";
+    currency.title = t("settings.donationMediaCurrency");
+    const currencyOptions = [
+      ["", t("settings.donationMediaAnyCurrency")],
+      ["RUB", "RUB"],
+      ["USD", "USD"],
+      ["EUR", "EUR"],
+      ["UAH", "UAH"],
+      ["KZT", "KZT"],
+      ["GBP", "GBP"],
+    ];
+    const currentCurrency = String(rule.currency || "").toUpperCase();
+    // Валюта из старого/импортированного правила может быть вне списка —
+    // показываем её отдельной опцией, чтобы выбор не потерялся.
+    if (currentCurrency && !currencyOptions.some(([value]) => value === currentCurrency)) {
+      currencyOptions.push([currentCurrency, currentCurrency]);
+    }
+    currencyOptions.forEach(([value, label]) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      currency.appendChild(option);
+    });
+    currency.value = currentCurrency;
+    currency.addEventListener("change", () =>
+      updateDonationMediaRule(rule.id, { currency: currency.value })
+    );
+
     const audio = makeSoundFileInput(rule.audioFile || "", "media/...mp3", "audio", (v) =>
       updateDonationMediaRule(rule.id, { audioFile: v })
     );
@@ -1562,7 +1591,7 @@ const { EVENT_TYPES } = window.SharedEvents;
       sendDonationMediaConfig({ rules });
     });
 
-    row.append(amount, audio, image, video, duration, test, remove);
+    row.append(amount, currency, audio, image, video, duration, test, remove);
     return row;
   }
 
