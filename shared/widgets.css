@@ -1975,7 +1975,9 @@
 }
 
 .uec-transfer__body {
-  flex: 1;
+  /* auto, а не 0: иначе в режиме измерения (панель с height:auto) тело
+     схлопывается в ноль и длинный текст не учитывается в высоте. */
+  flex: 1 1 auto;
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

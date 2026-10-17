@@ -296,6 +296,19 @@ describe("WidgetUecTransfer", () => {
     expect(fallback.decodeTickMs()).toBe(76);
   });
 
+  test("длинный текст доната не обрезается виджетом", () => {
+    const long =
+      "Спасибо за поддержку канала и за уютную атмосферу на каждом стриме! Твой вклад очень важен, он помогает каналу расти и развиваться дальше. Желаю тебе удачи, вдохновения, здоровья и как можно больше позитивных эмоций!";
+    const ctx = makeContext();
+    const w = new WidgetUecTransfer(item(), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, donation({ message: long }));
+    expect(w._messageText).toBe(long);
+
+    w.unmount();
+  });
+
   test("длинное сообщение растит панель до низа экрана", () => {
     const hadWindow = "window" in global;
     const prevWindow = global.window;
