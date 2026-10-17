@@ -158,6 +158,8 @@
         color: "",
         thickness: 4,
         radius: 16,
+        perspective: 0,
+        perspectiveDirection: "left",
       },
     },
     death: {

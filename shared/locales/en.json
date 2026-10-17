@@ -1323,7 +1323,7 @@
       "p1": "Every widget has its own settings in the inspector on the right. For the UEC transfer you can set the header channel, display duration, decode step (ms per character), and toggle the amount and message. Long text makes the panel grow by itself, up to the bottom of the screen.",
       "p2": "The UEC transfer shows event details: for a follow — that the contact is being watched, for a sub — the tier, for a gift — the number of gifted subs and the tier. The donation amount is coloured by tier, like in the TESO alert.",
       "p3": "The microphone visualizer has modes (sine, bars, ring, equalizer), colour, opacity, gain and noise gate. The equalizer mode uses its own green-yellow-red palette.",
-      "p4": "The microphone visualizer, 3D goals and the Executive Hangar timer support perspective: tilt strength 0–100 and direction — left, right, up or down. The tilt is visible both in the overlay and in the editor preview.",
+      "p4": "The microphone visualizer, webcam frame, 3D goals and the Executive Hangar timer have perspective: tilt strength 0–100 and a direction — left, right, up or down. The tilt is visible both in the overlay and in the editor preview.",
       "p5": "Microphone settings are split in two: display (mode, color, opacity, perspective) is per widget, while the device, echo cancellation and noise suppression are global because the microphone is opened once.",
       "p6": "The webcam frame is decoration only: corners, a thin border and a LIVE badge in the current theme color. It does not capture video — an OBS browser source has no camera access. Add the camera as a separate OBS source and place the frame above or below it."
     },

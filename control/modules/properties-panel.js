@@ -412,6 +412,15 @@ export function initPropertiesPanel({
             <button class="md-button md-button--text" id="pWebcamColorReset">${t("properties.webcamColorAuto")}</button>
           </div>
         </div>
+        <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>
+        <div class="md-field"><label>${t("properties.perspectiveDirection")}</label>
+          <select id="pPerspectiveDirection">
+            <option value="left" ${(config.perspectiveDirection || "left") === "left" ? "selected" : ""}>${t("properties.perspectiveLeft")}</option>
+            <option value="right" ${config.perspectiveDirection === "right" ? "selected" : ""}>${t("properties.perspectiveRight")}</option>
+            <option value="up" ${config.perspectiveDirection === "up" ? "selected" : ""}>${t("properties.perspectiveUp")}</option>
+            <option value="down" ${config.perspectiveDirection === "down" ? "selected" : ""}>${t("properties.perspectiveDown")}</option>
+          </select>
+        </div>
         <p class="properties__hint">${t("properties.webcamHint")}</p>`;
     } else if (inst.type === "soundboard") {
       extraHtml = `
@@ -631,6 +640,13 @@ export function initPropertiesPanel({
       });
       propertiesEl.querySelector("#pWebcamColor").addEventListener("input", (e) => patchWebcam({ color: e.target.value }));
       propertiesEl.querySelector("#pWebcamColorReset").addEventListener("click", () => patchWebcam({ color: "" }));
+      propertiesEl.querySelector("#pPerspective").addEventListener("input", (e) => {
+        const value = Number(e.target.value);
+        const label = propertiesEl.querySelector("#pPerspectiveValue");
+        if (label) label.textContent = String(value);
+        patchWebcam({ perspective: value });
+      });
+      propertiesEl.querySelector("#pPerspectiveDirection").addEventListener("change", (e) => patchWebcam({ perspectiveDirection: e.target.value }));
     } else if (inst.type === "soundboard") {
       propertiesEl.querySelector("#pSoundboardPopupDuration").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { popupDurationMs: Number(e.target.value) || 4600 } } }));
       propertiesEl.querySelector("#pSoundboardImageSize").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { imageSize: Math.max(40, Number(e.target.value) || 200) } } }));

@@ -394,13 +394,17 @@ export function initCanvasEditor({
         const corners = config.showCorners !== false
           ? ["tl", "tr", "bl", "br"].map((corner) => `<span class="widget-webcam__corner" data-corner="${corner}"></span>`).join("")
           : "";
-        return `<div class="widget-webcam" style="--webcam-accent:${escapeAttr(accent)};--webcam-thickness:${thickness}px;--webcam-radius:${radius}px;">
+        const html = `<div class="widget-webcam" style="--webcam-accent:${escapeAttr(accent)};--webcam-thickness:${thickness}px;--webcam-radius:${radius}px;">
           ${config.showBackground ? `<div class="widget-webcam__backdrop"></div>` : ""}
           ${config.showBorder !== false ? `<div class="widget-webcam__frame"></div>` : ""}
           ${corners}
           ${showLabel ? `<div class="widget-webcam__label" data-pos="${escapeAttr(position)}"><span class="widget-webcam__dot"></span><span class="widget-webcam__label-text">${escapeHtml(label)}</span></div>` : ""}
           ${config.showVignette ? `<div class="widget-webcam__vignette"></div>` : ""}
         </div>`;
+        const transform = micPerspectiveStyle(config);
+        return transform
+          ? `<div style="width:100%;height:100%;transform:${transform};transform-style:preserve-3d;">${html}</div>`
+          : html;
       }
       case "soundboard": {
         return `<div class="widget-soundboard"><div class="widget-soundboard__placeholder">🔊 ${escapeHtml(t("widgets.soundboard"))}</div></div>`;

@@ -186,6 +186,28 @@ describe("WebcamWidget", () => {
     expect(w.host.style.values["--webcam-radius"]).toBe("0px");
   });
 
+  test("перспектива наклоняет виджет и учитывает направление", () => {
+    const w = mount({ perspective: 50, perspectiveDirection: "left" });
+    expect(w.element.style.transform).toContain("perspective(1200px)");
+    expect(w.element.style.transform).toContain("rotateY(-7.5deg)");
+    expect(w.element.style.transform).toContain("rotateX(1.5deg)");
+    expect(w.element.style.transformStyle).toBe("preserve-3d");
+
+    w.update({ config: { perspectiveDirection: "right" } });
+    expect(w.element.style.transform).toContain("rotateY(7.5deg)");
+
+    w.update({ config: { perspectiveDirection: "up" } });
+    expect(w.element.style.transform).toContain("rotateY(0deg)");
+    expect(w.element.style.transform).toContain("rotateX(7.5deg)");
+
+    w.update({ config: { perspectiveDirection: "down" } });
+    expect(w.element.style.transform).toContain("rotateX(-7.5deg)");
+
+    w.update({ config: { perspective: 0 } });
+    expect(w.element.style.transform).toBe("");
+    expect(w.element.style.transformStyle).toBe("");
+  });
+
   test("unmount снимает виджет с канваса", () => {
     const w = mount();
     const parent = w.element.parentNode;

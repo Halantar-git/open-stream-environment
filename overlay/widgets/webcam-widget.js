@@ -58,6 +58,40 @@
       this.host = document.createElement("div");
       this.host.className = "widget-webcam";
       this.element.appendChild(this.host);
+      this._applyPerspective();
+    }
+
+    onUpdate(prev, next) {
+      if (prev.perspective !== next.perspective || prev.perspectiveDirection !== next.perspectiveDirection) {
+        this._applyPerspective();
+      }
+    }
+
+    // Тот же наклон, что у микрофона, 3D-целей и таймера: сила 0–100 и
+    // направление. Наклоняем сам element, чтобы геометрия и рамка вращались
+    // вместе, а не разъезжались относительно друг друга.
+    _applyPerspective() {
+      const value = clamp(num(this.config.perspective, 0), 0, 100);
+      if (value <= 0) {
+        this.element.style.transform = "";
+        this.element.style.transformStyle = "";
+        return;
+      }
+      const magnitude = value * 0.15;
+      const direction = this.config.perspectiveDirection || "left";
+      let rotateY = -magnitude;
+      let rotateX = magnitude * 0.2;
+      if (direction === "right") {
+        rotateY = magnitude;
+      } else if (direction === "up") {
+        rotateY = 0;
+        rotateX = magnitude;
+      } else if (direction === "down") {
+        rotateY = 0;
+        rotateX = -magnitude;
+      }
+      this.element.style.transform = `perspective(1200px) rotateY(${rotateY}deg) rotateX(${rotateX}deg)`;
+      this.element.style.transformStyle = "preserve-3d";
     }
 
     render() {
