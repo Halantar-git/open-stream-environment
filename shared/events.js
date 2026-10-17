@@ -65,7 +65,9 @@
     DONATION_MEDIA_PLAY: "donation_media_play", // { ruleId, user, amount, currency, audioFile, imageFile, videoFile, durationMs, volume } — донат-медиа // { soundId, title, user, audioFile, imageFile, videoFile }
     VIDEO_SPLASH_PLAY: "video_splash_play", // { mediaFile, scene, nextScene } — server -> overlay: play intro/brb/outro splash
     MIC_AUDIO_DATA: "mic_audio_data", // { level, wave, freq } — mic bridge (control -> server -> overlay)
-    CAMERA_VIDEO_FRAME: "camera_video_frame", // { blob } — кадр камеры из моста; событие шины, не провод (binary -> overlay)
+    CAMERA_STREAM_CONFIG: "camera_stream_config", // { codec, width, height, fps, bitrate } — decoder config for the camera bridge
+    CAMERA_DECODE_FAILED: "camera_decode_failed", // { reason } — overlay could not decode H.264; control falls back to JPEG
+    CAMERA_VIDEO_FRAME: "camera_video_frame", // { blob } or { h264, keyframe, timestamp, data } — кадр камеры; событие шины, не провод
     HUD_EDIT_MODE: "hud_edit_mode", // { enabled } — game HUD overlay entered/left direct-edit mode
     HUD_HOTKEY_UPDATE: "hud_hotkey_update", // { hotkey } — current HUD toggle hotkey (after save)
     HUD_DISPLAY_UPDATE: "hud_display_update", // { displayId } — selected monitor for the HUD overlay
@@ -151,6 +153,7 @@
     CMD_DELETE_POLL_PRESET: "cmd_delete_poll_preset", // { id }
     CMD_SET_MIC_CONFIG: "cmd_set_mic_config", // { config }
     CMD_SET_CAMERA_CONFIG: "cmd_set_camera_config", // { config }
+    CMD_CAMERA_DECODE_FAILED: "cmd_camera_decode_failed", // { reason } — overlay -> server -> control
     CMD_REFRESH_LONGSHOT: "cmd_refresh_longshot", // {} — fetch the Longshot timers config now
     CMD_SET_LANGUAGE: "cmd_set_language", // { lang }
     CMD_SET_YOUTUBE_VIDEO_ID: "cmd_set_youtube_video_id", // { videoId }

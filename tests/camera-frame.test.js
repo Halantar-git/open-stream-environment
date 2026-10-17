@@ -87,3 +87,45 @@ describe("shared/camera-frame", () => {
     expect(CameraFrame.isFrame(oversized)).toBe(false);
   });
 });
+
+describe("shared/camera-frame: H.264", () => {
+  const chunk = new Uint8Array([0x00, 0x00, 0x00, 0x01, 0x67, 0x42]);
+
+  test("encodeH264 упаковывает ключевой кадр, timestamp и данные", () => {
+    const encoded = CameraFrame.encodeH264(chunk, { keyframe: true, timestamp: 123456 });
+
+    expect(CameraFrame.isH264Frame(encoded)).toBe(true);
+    expect(CameraFrame.isFrame(encoded)).toBe(false);
+
+    const decoded = CameraFrame.decodeH264(encoded);
+    expect(decoded.h264).toBe(true);
+    expect(decoded.keyframe).toBe(true);
+    expect(decoded.timestamp).toBe(123456);
+    expect(Array.from(decoded.data)).toEqual(Array.from(chunk));
+  });
+
+  test("дельта-чанк не помечается ключевым", () => {
+    const decoded = CameraFrame.decodeH264(CameraFrame.encodeH264(chunk, { keyframe: false, timestamp: 7 }));
+    expect(decoded.keyframe).toBe(false);
+    expect(decoded.timestamp).toBe(7);
+  });
+
+  test("H.264-детектор отсекает чужую магию и пустые данные", () => {
+    expect(CameraFrame.isH264Frame(null)).toBe(false);
+    expect(CameraFrame.isH264Frame(new Uint8Array(0))).toBe(false);
+
+    const jpegFrame = CameraFrame.encode(jpeg());
+    expect(CameraFrame.isH264Frame(jpegFrame)).toBe(false);
+    expect(CameraFrame.decodeH264(jpegFrame)).toBeNull();
+  });
+
+  test("слишком большой H.264-чанк не кодируется и не принимается", () => {
+    const oversized = new Uint8Array(CameraFrame.H264_MAX_FRAME_LEN);
+    expect(CameraFrame.encodeH264(oversized)).toBeNull();
+
+    const frame = new Uint8Array(CameraFrame.H264_MAX_FRAME_LEN + 1);
+    frame[0] = CameraFrame.H264_MAGIC0;
+    frame[1] = CameraFrame.H264_MAGIC1;
+    expect(CameraFrame.isH264Frame(frame)).toBe(false);
+  });
+});

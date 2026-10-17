@@ -1139,6 +1139,15 @@ pub fn handle_message(
                 json!({ "config": config }),
             );
         }
+        event_types::CAMERA_STREAM_CONFIG => {
+            // Конфиг H.264-декодера: панель -> сервер -> оверлеи.
+            broadcast(diagnostics, event_types::CAMERA_STREAM_CONFIG, payload);
+        }
+        event_types::CMD_CAMERA_DECODE_FAILED => {
+            // Один из оверлеев не смог декодировать H.264 — панель
+            // переключится на JPEG для всех.
+            broadcast(diagnostics, event_types::CAMERA_DECODE_FAILED, payload);
+        }
 
         _ => {}
     }

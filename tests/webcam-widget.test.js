@@ -91,6 +91,7 @@ function makeContext() {
     t: (key) => key,
     escapeHtml: (s) => String(s),
     escapeAttr: (s) => String(s),
+    send: jest.fn(),
   };
 }
 
@@ -217,6 +218,123 @@ describe("WebcamWidget", () => {
 
     w.update({ config: { mirror: false } });
     expect(w.videoCanvas.style.transform).toBe("");
+  });
+
+  test("H.264: конфиг создаёт декодер, ключевой чанк уходит в decode", () => {
+    const originalDecoder = global.VideoDecoder;
+    const originalChunk = global.EncodedVideoChunk;
+    const decoded = [];
+    global.VideoDecoder = class {
+      constructor(init) {
+        this.init = init;
+        this.state = "unconfigured";
+      }
+      configure(config) {
+        this.config = config;
+        this.state = "configured";
+      }
+      decode(chunk) {
+        decoded.push(chunk);
+      }
+      close() {
+        this.state = "closed";
+      }
+    };
+    global.EncodedVideoChunk = class {
+      constructor(init) {
+        Object.assign(this, init);
+      }
+    };
+
+    try {
+      const w = mount({ source: "camera" });
+      w.context.bus.emit(EVENT_TYPES.CAMERA_STREAM_CONFIG, {
+        codec: "avc1.64002A",
+        width: 960,
+        height: 540,
+      });
+
+      expect(w.videoDecoder).toBeTruthy();
+      expect(w.videoDecoder.config.codec).toBe("avc1.64002A");
+      expect(w.videoDecoder.config.codedWidth).toBe(960);
+
+      w.context.bus.emit(EVENT_TYPES.CAMERA_VIDEO_FRAME, {
+        h264: true,
+        keyframe: true,
+        timestamp: 42,
+        data: new Uint8Array([1, 2, 3]),
+      });
+
+      expect(decoded).toHaveLength(1);
+      expect(decoded[0].type).toBe("key");
+      expect(decoded[0].timestamp).toBe(42);
+    } finally {
+      if (originalDecoder === undefined) delete global.VideoDecoder;
+      else global.VideoDecoder = originalDecoder;
+      if (originalChunk === undefined) delete global.EncodedVideoChunk;
+      else global.EncodedVideoChunk = originalChunk;
+    }
+  });
+
+  test("H.264: повторный тот же конфиг не пересоздаёт декодер", () => {
+    const originalDecoder = global.VideoDecoder;
+    const originalChunk = global.EncodedVideoChunk;
+    let created = 0;
+    global.VideoDecoder = class {
+      constructor() {
+        created += 1;
+        this.state = "unconfigured";
+      }
+      configure() {
+        this.state = "configured";
+      }
+      decode() {}
+      close() {
+        this.state = "closed";
+      }
+    };
+    global.EncodedVideoChunk = class {};
+
+    try {
+      const w = mount({ source: "camera" });
+      const config = { codec: "avc1.64002A", width: 960, height: 540 };
+      w.context.bus.emit(EVENT_TYPES.CAMERA_STREAM_CONFIG, config);
+      w.context.bus.emit(EVENT_TYPES.CAMERA_STREAM_CONFIG, { ...config });
+
+      expect(created).toBe(1);
+    } finally {
+      if (originalDecoder === undefined) delete global.VideoDecoder;
+      else global.VideoDecoder = originalDecoder;
+      if (originalChunk === undefined) delete global.EncodedVideoChunk;
+      else global.EncodedVideoChunk = originalChunk;
+    }
+  });
+
+  test("H.264: без VideoDecoder оверлей просит JPEG", () => {
+    const originalDecoder = global.VideoDecoder;
+    const originalChunk = global.EncodedVideoChunk;
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    delete global.VideoDecoder;
+    delete global.EncodedVideoChunk;
+
+    try {
+      const w = mount({ source: "camera" });
+      w.context.bus.emit(EVENT_TYPES.CAMERA_STREAM_CONFIG, {
+        codec: "avc1.64002A",
+        width: 960,
+        height: 540,
+      });
+
+      expect(w.context.send).toHaveBeenCalledWith(EVENT_TYPES.CMD_CAMERA_DECODE_FAILED, {
+        reason: "no-video-decoder",
+      });
+    } finally {
+      warn.mockRestore();
+      if (originalDecoder === undefined) delete global.VideoDecoder;
+      else global.VideoDecoder = originalDecoder;
+      if (originalChunk === undefined) delete global.EncodedVideoChunk;
+      else global.EncodedVideoChunk = originalChunk;
+    }
   });
 
   test("кадр из моста рисуется и скрывает заглушку", () => {

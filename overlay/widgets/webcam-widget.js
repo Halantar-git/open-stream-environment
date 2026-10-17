@@ -68,10 +68,16 @@
       this.emptyEl = null;
       this._decoding = false;
       this._hasFrame = false;
+      this.videoDecoder = null;
+      this._streamConfig = null;
+      this._reportedDecodeFailure = false;
 
       const { EVENT_TYPES } = this.context;
       if (EVENT_TYPES && EVENT_TYPES.CAMERA_VIDEO_FRAME) {
         this.subscribe(EVENT_TYPES.CAMERA_VIDEO_FRAME, (payload) => this._onFrame(payload));
+      }
+      if (EVENT_TYPES && EVENT_TYPES.CAMERA_STREAM_CONFIG) {
+        this.subscribe(EVENT_TYPES.CAMERA_STREAM_CONFIG, (payload) => this._onStreamConfig(payload));
       }
       this._applyPerspective();
     }
@@ -85,6 +91,7 @@
     onUnmount() {
       // Декодирование, начатое до удаления виджета, должно молча завершиться:
       // ссылки на canvas к этому моменту уже нет.
+      this._closeDecoder();
       this._decoding = false;
       this.videoCanvas = null;
       this.emptyEl = null;
@@ -141,11 +148,16 @@
       if (this.videoCanvas) {
         this.videoCanvas.style.transform = cfg.mirror ? "scaleX(-1)" : "";
       }
+      if (!camera) this._closeDecoder();
     }
 
     // Кадр приходит Blob'ом (JPEG). Декодируем через Image: это работает и в
     // system webview, и в CEF OBS, и не требует createImageBitmap.
     _onFrame(payload) {
+      if (payload && payload.h264) {
+        this._onH264Chunk(payload);
+        return;
+      }
       const blob = payload && payload.blob;
       if (!blob || this._decoding || !this.videoCanvas) return;
       if (typeof Image === "undefined" || typeof URL === "undefined" || !URL.createObjectURL) return;
@@ -171,7 +183,125 @@
       img.src = url;
     }
 
+    // Конфиг H.264-декодера приходит от панели перед ключевым кадром. Панель
+    // повторяет его на каждом ключевом кадре, поэтому декодер пересоздаём
+    // только когда сменились кодек или разрешение — иначе поток дёргался бы
+    // каждые две секунды.
+    _onStreamConfig(payload) {
+      const cfg = payload || {};
+      const codec = String(cfg.codec || "").toLowerCase();
+      if (this.config.source !== "camera" || !codec.startsWith("avc1")) {
+        this._streamConfig = cfg;
+        this._closeDecoder();
+        return;
+      }
+      const prev = this._streamConfig || {};
+      const same =
+        prev.codec === cfg.codec &&
+        Number(prev.width) === Number(cfg.width) &&
+        Number(prev.height) === Number(cfg.height);
+      this._streamConfig = cfg;
+      if (same && this.videoDecoder && this.videoDecoder.state === "configured") return;
+      // Новый поток — можно снова сообщить о неудаче, если она повторится.
+      this._reportedDecodeFailure = false;
+      this._initDecoder(cfg);
+    }
+
+    _initDecoder(cfg) {
+      this._closeDecoder();
+      if (typeof VideoDecoder === "undefined" || typeof EncodedVideoChunk === "undefined") {
+        this._reportDecodeFailure("no-video-decoder");
+        return;
+      }
+      const width = Math.max(2, Math.round(Number(cfg.width) || 0));
+      const height = Math.max(2, Math.round(Number(cfg.height) || 0));
+      if (!width || !height) return;
+
+      const decoder = new VideoDecoder({
+        output: (frame) => this._onVideoFrame(frame),
+        error: (error) => this._reportDecodeFailure("decode-error", error),
+      });
+      try {
+        // Annex B: SPS/PPS уже есть в ключевом кадре, description не нужен.
+        decoder.configure({
+          codec: cfg.codec,
+          codedWidth: width,
+          codedHeight: height,
+          optimizeForLatency: true,
+        });
+      } catch (error) {
+        this._reportDecodeFailure("configure", error);
+        return;
+      }
+      this.videoDecoder = decoder;
+    }
+
+    _onH264Chunk(payload) {
+      const decoder = this.videoDecoder;
+      if (!decoder || decoder.state !== "configured" || !payload || !payload.data) return;
+      try {
+        decoder.decode(
+          new EncodedVideoChunk({
+            type: payload.keyframe ? "key" : "delta",
+            timestamp: Math.max(0, Math.round(Number(payload.timestamp) || 0)),
+            data: payload.data,
+          })
+        );
+      } catch (error) {
+        this._reportDecodeFailure("decode", error);
+      }
+    }
+
+    _onVideoFrame(frame) {
+      try {
+        if (!this.videoCanvas || !this.videoCanvas.isConnected) return;
+        this._drawImageLike(
+          frame,
+          frame.displayWidth || frame.codedWidth || 0,
+          frame.displayHeight || frame.codedHeight || 0
+        );
+        this._hasFrame = true;
+        if (this.emptyEl) {
+          this.emptyEl.style.display = "none";
+          this.emptyEl = null;
+        }
+      } finally {
+        if (frame && typeof frame.close === "function") frame.close();
+      }
+    }
+
+    // Оверлей не смог декодировать H.264: сообщаем панели, она перейдёт
+    // на JPEG. Повторно на тот же поток не жалуемся.
+    _reportDecodeFailure(reason, error) {
+      this._closeDecoder();
+      if (this._reportedDecodeFailure) return;
+      this._reportedDecodeFailure = true;
+      if (typeof console !== "undefined") {
+        console.warn("[webcam] H.264 decode failed:", reason, error || "");
+      }
+      const send = this.context.send;
+      const types = this.context.EVENT_TYPES;
+      if (typeof send === "function" && types && types.CMD_CAMERA_DECODE_FAILED) {
+        send(types.CMD_CAMERA_DECODE_FAILED, { reason: String(reason || "unknown") });
+      }
+    }
+
+    _closeDecoder() {
+      if (this.videoDecoder) {
+        try {
+          this.videoDecoder.close();
+        } catch (_) {
+          /* decoder already closed */
+        }
+        this.videoDecoder = null;
+      }
+    }
+
     _drawFrame(img) {
+      this._drawImageLike(img, img.naturalWidth || img.width || 0, img.naturalHeight || img.height || 0);
+    }
+
+    _drawImageLike(source, imageWidth, imageHeight) {
       const canvas = this.videoCanvas;
       if (!canvas || typeof canvas.getContext !== "function") return;
       const ctx = canvas.getContext("2d");
@@ -186,8 +316,6 @@
       if (canvas.height !== height) canvas.height = height;
       ctx.clearRect(0, 0, width, height);
 
-      const imageWidth = img.naturalWidth || img.width || 0;
-      const imageHeight = img.naturalHeight || img.height || 0;
       if (!imageWidth || !imageHeight) return;
 
       // cover — заполнить рамку с обрезкой, contain — вписать целиком.
@@ -197,7 +325,7 @@
         : Math.min(width / imageWidth, height / imageHeight);
       const drawWidth = imageWidth * scale;
       const drawHeight = imageHeight * scale;
-      ctx.drawImage(img, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
+      ctx.drawImage(source, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
     }
 
     // Тот же наклон, что у микрофона, 3D-целей и таймера: сила 0–100 и

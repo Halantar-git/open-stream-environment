@@ -15,10 +15,14 @@
 
 /// Магия кадра: первый байт.
 pub const MAGIC0: u8 = 0x43;
-/// Магия кадра: второй байт.
+/// Магия JPEG-кадра: второй байт ('M').
 pub const MAGIC1: u8 = 0x4d;
-/// Заголовок: две магии.
+/// Магия H.264-чанка: второй байт ('H').
+pub const H264_MAGIC1: u8 = 0x48;
+/// Заголовок JPEG-кадра: две магии.
 pub const HEADER_LEN: usize = 2;
+/// Заголовок H.264-чанка: магия (2) + флаги (1) + timestamp (8).
+pub const H264_HEADER_LEN: usize = 11;
 /// Максимальный размер кадра: 4 МБ.
 pub const MAX_FRAME_LEN: usize = 4 * 1024 * 1024;
 
@@ -30,6 +34,17 @@ pub fn is_frame(data: &[u8]) -> bool {
         && data[1] == MAGIC1
         && data[HEADER_LEN] == 0xff
         && data[HEADER_LEN + 1] == 0xd8
+}
+
+/// H.264-чанк из WebCodecs: магия и разумная длина.
+///
+/// Содержимое не разбирается: серверу достаточно отличить чанк от JPEG и
+/// микрокадра и переслать его оверлею как есть.
+pub fn is_h264_frame(data: &[u8]) -> bool {
+    data.len() > H264_HEADER_LEN
+        && data.len() <= MAX_FRAME_LEN
+        && data[0] == MAGIC0
+        && data[1] == H264_MAGIC1
 }
 
 #[cfg(test)]
@@ -78,5 +93,31 @@ mod tests {
         assert!(!is_frame(&frame(&payload)));
         payload.truncate(MAX_FRAME_LEN - HEADER_LEN);
         assert!(is_frame(&frame(&payload)));
+    }
+
+    #[test]
+    fn an_h264_chunk_is_recognized() {
+        let mut chunk = vec![MAGIC0, H264_MAGIC1, 0x01];
+        chunk.extend_from_slice(&[0u8; 8]); // timestamp
+        chunk.extend_from_slice(&[0x00, 0x00, 0x00, 0x01, 0x67]);
+        assert!(is_h264_frame(&chunk));
+        // Чанк не должен считаться JPEG-кадром.
+        assert!(!is_frame(&chunk));
+    }
+
+    #[test]
+    fn an_h264_chunk_needs_a_payload() {
+        let mut header_only = vec![MAGIC0, H264_MAGIC1];
+        header_only.resize(H264_HEADER_LEN, 0);
+        assert!(!is_h264_frame(&header_only));
+    }
+
+    #[test]
+    fn an_h264_chunk_is_bounded() {
+        let oversized = vec![0u8; MAX_FRAME_LEN + 1];
+        let mut chunk = oversized;
+        chunk[0] = MAGIC0;
+        chunk[1] = H264_MAGIC1;
+        assert!(!is_h264_frame(&chunk));
     }
 }

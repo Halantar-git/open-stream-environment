@@ -205,6 +205,7 @@
     currencySymbol,
     resolveMediaUrl,
     readCssVar,
+    send,
     theme: "nebula",
     threeDWidgets: [],
   };
@@ -541,6 +542,9 @@
       case EVENT_TYPES.MIC_AUDIO_DATA:
         state.remoteMicData = msg.payload || null;
         break;
+      case EVENT_TYPES.CAMERA_STREAM_CONFIG:
+        bus.emit(EVENT_TYPES.CAMERA_STREAM_CONFIG, msg.payload || {});
+        break;
       case EVENT_TYPES.LOCALES:
         if (window.I18n) {
           window.I18n.setLocales(msg.payload && msg.payload.locales);
@@ -567,6 +571,11 @@
       if (typeof ev.data !== "string") {
         // Кадры камеры и микрофона идут одним бинарным каналом и различаются
         // магией. Камеру отдаём виджету событием, микрофон кладём в state.
+        const h264 = window.CameraFrame && window.CameraFrame.decodeH264(ev.data);
+        if (h264) {
+          bus.emit(EVENT_TYPES.CAMERA_VIDEO_FRAME, h264);
+          return;
+        }
         const camera = window.CameraFrame && window.CameraFrame.decode(ev.data);
         if (camera) {
           bus.emit(EVENT_TYPES.CAMERA_VIDEO_FRAME, camera);

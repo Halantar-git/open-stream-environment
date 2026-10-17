@@ -117,6 +117,8 @@ pub fn default_data() -> Map<String, Value> {
             "width": 960,
             "fps": 12,
             "quality": 0.6,
+            "codec": "auto",
+            "bitrateKbps": 4000,
         }),
     );
     // Накопительные предупреждения автомодерации чата: userId → число варнов.
@@ -770,6 +772,17 @@ impl Database {
                 60.0
             )),
             "quality": num(clamp(raw_number(raw.get("quality"), 0.6), 0.2, 0.95)),
+            // "auto" — H.264, если браузер и железо его умеют, иначе JPEG.
+            "codec": match raw.get("codec").and_then(Value::as_str) {
+                Some("h264") => "h264",
+                Some("jpeg") => "jpeg",
+                _ => "auto",
+            },
+            "bitrateKbps": num(clamp(
+                coerced_number(raw.get("bitrateKbps"), 4000.0).round(),
+                500.0,
+                20000.0
+            )),
         })
     }
 
@@ -1694,12 +1707,16 @@ mod tests {
         assert_eq!(defaults["width"], json!(960));
         assert_eq!(defaults["fps"], json!(12));
         assert_eq!(defaults["quality"], json!(0.6));
+        assert_eq!(defaults["codec"], json!("auto"));
+        assert_eq!(defaults["bitrateKbps"], json!(4000));
 
         let saved = db.save_camera_config(Some(&json!({
             "deviceId": "cam-1",
             "width": 5000,
             "fps": 120,
             "quality": 2,
+            "codec": "h264",
+            "bitrateKbps": 50000,
         })));
         assert_eq!(saved["deviceId"], json!("cam-1"));
 
@@ -1709,15 +1726,18 @@ mod tests {
         assert_eq!(normalized["width"], json!(1920));
         assert_eq!(normalized["fps"], json!(60));
         assert_eq!(normalized["quality"], json!(0.95));
+        assert_eq!(normalized["codec"], json!("h264"));
+        assert_eq!(normalized["bitrateKbps"], json!(20000));
 
         // Мусор откатывается к умолчаниям, отрицательный fps — к нижней границе.
         db.set_path(
             "overlay_camera_config",
-            json!({ "width": "мусор", "fps": -5 }),
+            json!({ "width": "мусор", "fps": -5, "codec": "чужое" }),
         );
         let fallback = db.camera_config();
         assert_eq!(fallback["width"], json!(960));
         assert_eq!(fallback["fps"], json!(1));
+        assert_eq!(fallback["codec"], json!("auto"));
     }
 
     #[test]

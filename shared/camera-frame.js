@@ -20,15 +20,23 @@
 
   Камера захватывается панелью управления: странице оверлея в OBS Browser
   Source браузер не выдаёт камеру (та же причина, по которой микрофон
-  захватывает панель). Готовый JPEG идёт по тому же бинарному каналу, что и
-  микрокадры, — без base64 и JSON:
+  захватывает панель). Кадры идут по тому же бинарному каналу, что и
+  микрокадры, — без base64 и JSON, двумя форматами:
 
-    байт 0    магия 'C' (0x43)
-    байт 1    магия 'M' (0x4D)
-    байты 2.. JPEG целиком
+    * JPEG — запасной путь:
+        байт 0    магия 'C' (0x43)
+        байт 1    магия 'M' (0x4D)
+        байты 2.. JPEG целиком
 
-  Кадр переменной длины, поэтому сервер проверяет магию, маркер начала JPEG и
-  верхнюю границу размера, но само изображение не разбирает.
+    * H.264-чанк из WebCodecs:
+        байт 0      магия 'C' (0x43)
+        байт 1      магия 'H' (0x48)
+        байт 2      флаги (бит 0 — ключевой кадр)
+        байты 3..10 timestamp, микросекунды, little-endian u64
+        байты 11..  чанк Annex B
+
+  Длина переменная, поэтому сервер проверяет магию и верхнюю границу размера,
+  но само изображение не разбирает.
 */
 
 (function (root, factory) {
@@ -44,6 +52,13 @@
   const MAGIC0 = 0x43; // 'C'
   const MAGIC1 = 0x4d; // 'M'
   const HEADER_LEN = 2;
+  // H.264-чанк идёт тем же каналом, но с другой магией: оверлей различает
+  // JPEG-кадр и сжатый чанк до того, как трогать данные.
+  const H264_MAGIC0 = 0x43; // 'C'
+  const H264_MAGIC1 = 0x48; // 'H'
+  const H264_HEADER_LEN = 11; // магия (2) + флаги (1) + timestamp µs (8)
+  const H264_KEYFRAME = 0x01;
+  const H264_MAX_FRAME_LEN = 4 * 1024 * 1024;
   // Ограничение защищает шину от случайно гигантского кадра: 4 МБ с запасом
   // покрывают 1920×1080 при высоком качестве.
   const MAX_FRAME_LEN = 4 * 1024 * 1024;
@@ -82,6 +97,45 @@
     );
   }
 
+  function encodeH264(chunk, options) {
+    const bytes = asBytes(chunk);
+    if (!bytes || !bytes.length) return null;
+    const keyframe = !!(options && options.keyframe);
+    const timestamp = Math.max(0, Math.round(Number(options && options.timestamp) || 0));
+    if (bytes.length + H264_HEADER_LEN > H264_MAX_FRAME_LEN) return null;
+
+    const out = new Uint8Array(H264_HEADER_LEN + bytes.length);
+    out[0] = H264_MAGIC0;
+    out[1] = H264_MAGIC1;
+    out[2] = keyframe ? H264_KEYFRAME : 0;
+    new DataView(out.buffer).setBigUint64(3, BigInt(timestamp), true);
+    out.set(bytes, H264_HEADER_LEN);
+    return out;
+  }
+
+  function isH264Frame(data) {
+    const bytes = asBytes(data);
+    if (!bytes) return false;
+    return (
+      bytes.length > H264_HEADER_LEN &&
+      bytes.length <= H264_MAX_FRAME_LEN &&
+      bytes[0] === H264_MAGIC0 &&
+      bytes[1] === H264_MAGIC1
+    );
+  }
+
+  function decodeH264(data) {
+    if (!isH264Frame(data)) return null;
+    const bytes = asBytes(data);
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    return {
+      h264: true,
+      keyframe: (bytes[2] & H264_KEYFRAME) !== 0,
+      timestamp: Number(view.getBigUint64(3, true)),
+      data: bytes.subarray(H264_HEADER_LEN),
+    };
+  }
+
   // Отдаём готовый Blob: оверлей декодирует его браузерными средствами
   // (`Image` / `createImageBitmap`), не собирая base64.
   function decode(data) {
@@ -90,5 +144,21 @@
     return { blob: new Blob([bytes.subarray(HEADER_LEN)], { type: "image/jpeg" }) };
   }
 
-  return { MAGIC0, MAGIC1, HEADER_LEN, MAX_FRAME_LEN, encode, isFrame, decode };
+  return {
+    MAGIC0,
+    MAGIC1,
+    HEADER_LEN,
+    MAX_FRAME_LEN,
+    H264_MAGIC0,
+    H264_MAGIC1,
+    H264_HEADER_LEN,
+    H264_KEYFRAME,
+    H264_MAX_FRAME_LEN,
+    encode,
+    isFrame,
+    decode,
+    encodeH264,
+    isH264Frame,
+    decodeH264,
+  };
 });

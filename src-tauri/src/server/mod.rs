@@ -388,7 +388,10 @@ async fn handle_socket(mut socket: WebSocket, bus: Bus, role: String, external: 
                         bus.diagnostics
                             .clients()
                             .broadcast_binary_to_role("overlay", data.to_vec());
-                    } else if role == "control" && crate::camera_frame::is_frame(&data) {
+                    } else if role == "control"
+                        && (crate::camera_frame::is_frame(&data)
+                            || crate::camera_frame::is_h264_frame(&data))
+                    {
                         // Кадры камеры шлёт только панель: оверлею нечего
                         // отправлять на шину, а размер кадра куда больше
                         // микрокадра.

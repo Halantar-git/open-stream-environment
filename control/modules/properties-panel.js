@@ -184,7 +184,8 @@ export function initPropertiesPanel({
         ? (raw.config && raw.config.visualizer_mode) || (state.micConfig && state.micConfig.visualizer_mode) || ""
         : "";
     const webcamSource = type === "webcam" ? (raw.config && raw.config.source) || "frame" : "";
-    const sig = `${raw.id}|${raw.type}|${type}|${micMode}|${webcamSource}|${(state.micDevices || []).length}|${(state.cameraDevices || []).length}`;
+    const cameraCodec = type === "webcam" ? (state.cameraConfig && state.cameraConfig.codec) || "auto" : "";
+    const sig = `${raw.id}|${raw.type}|${type}|${micMode}|${webcamSource}|${cameraCodec}|${(state.micDevices || []).length}|${(state.cameraDevices || []).length}`;
     if (!force && sig === lastSig && propertiesEl.contains(document.activeElement)) return;
     lastSig = sig;
     const def = WIDGET_TYPES[type] || {};
@@ -408,6 +409,8 @@ export function initPropertiesPanel({
         .join("");
       const fps = Math.round(Number(cameraCfg.fps) || 12);
       const quality = Math.round((Number(cameraCfg.quality) || 0.6) * 100);
+      const codecMode = cameraCfg.codec || "auto";
+      const bitrateKbps = Math.round(Number(cameraCfg.bitrateKbps) || 4000);
       const captureHtml =
         source === "camera"
           ? `
@@ -420,7 +423,19 @@ export function initPropertiesPanel({
         </div>
         <div class="md-field"><label>${t("properties.webcamWidth")}</label><select id="pCameraWidth">${widthOptions}</select></div>
         <div class="md-field"><label>${t("properties.webcamFps")}: <span id="pCameraFpsValue">${fps}</span></label><input type="range" id="pCameraFps" min="1" max="60" step="1" value="${fps}"></div>
-        <div class="md-field"><label>${t("properties.webcamQuality")}: <span id="pCameraQualityValue">${quality}%</span></label><input type="range" id="pCameraQuality" min="20" max="95" step="5" value="${quality}"></div>
+        <div class="md-field"><label>${t("properties.webcamCodec")}</label>
+          <select id="pCameraCodec">
+            <option value="auto" ${codecMode === "auto" ? "selected" : ""}>${t("properties.webcamCodecAuto")}</option>
+            <option value="h264" ${codecMode === "h264" ? "selected" : ""}>${t("properties.webcamCodecH264")}</option>
+            <option value="jpeg" ${codecMode === "jpeg" ? "selected" : ""}>${t("properties.webcamCodecJpeg")}</option>
+          </select>
+        </div>
+        ${codecMode !== "jpeg"
+            ? `<div class="md-field"><label>${t("properties.webcamBitrate")}: <span id="pCameraBitrateValue">${(bitrateKbps / 1000).toFixed(1)}</span> Mbps</label><input type="range" id="pCameraBitrate" min="500" max="20000" step="500" value="${bitrateKbps}"></div>`
+            : ""}
+        ${codecMode !== "h264"
+            ? `<div class="md-field"><label>${t("properties.webcamQuality")}: <span id="pCameraQualityValue">${quality}%</span></label><input type="range" id="pCameraQuality" min="20" max="95" step="5" value="${quality}"></div>`
+            : ""}
         <div class="properties__toggle-row"><label>${t("properties.webcamMirror")}</label>${switchHtml("pWebcamMirror", !!config.mirror)}</div>
         <div class="md-field"><label>${t("properties.webcamFit")}</label>
           <select id="pWebcamFit">
@@ -699,6 +714,17 @@ export function initPropertiesPanel({
       if (cameraDeviceRefresh) cameraDeviceRefresh.addEventListener("click", () => refreshCameraDevices());
       const cameraWidth = propertiesEl.querySelector("#pCameraWidth");
       if (cameraWidth) cameraWidth.addEventListener("change", (e) => sendCameraCaptureConfig({ width: Number(e.target.value) }));
+      const cameraCodec = propertiesEl.querySelector("#pCameraCodec");
+      if (cameraCodec) cameraCodec.addEventListener("change", (e) => sendCameraCaptureConfig({ codec: e.target.value }));
+      const cameraBitrate = propertiesEl.querySelector("#pCameraBitrate");
+      if (cameraBitrate) {
+        cameraBitrate.addEventListener("input", (e) => {
+          const value = Number(e.target.value);
+          const label = propertiesEl.querySelector("#pCameraBitrateValue");
+          if (label) label.textContent = (value / 1000).toFixed(1);
+          sendCameraCaptureConfig({ bitrateKbps: value });
+        });
+      }
       const cameraFps = propertiesEl.querySelector("#pCameraFps");
       if (cameraFps) {
         cameraFps.addEventListener("input", (e) => {

@@ -4087,6 +4087,10 @@ const { EVENT_TYPES } = window.SharedEvents;
         cameraBridge.applyConfig();
         propertiesPanel.render();
         break;
+      case EVENT_TYPES.CAMERA_DECODE_FAILED:
+        // Один из оверлеев не смог разобрать H.264 — переходим на JPEG для всех.
+        cameraBridge._fallbackToJpeg("overlay-decode");
+        break;
       case EVENT_TYPES.GOAL_UPDATE:
         state.goal = msg.payload;
         canvasEditor.renderCanvas();
@@ -4365,15 +4369,16 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   // ---- camera bridge ---------------------------------------------------
   // Та же причина, что у микрофона: странице оверлея в OBS Browser Source
-  // браузер не выдаёт камеру. Панель захватывает видео, кодирует кадры в JPEG
-  // и отправляет их бинарно; сервер пересылает оверлею, где виджет рисует их
-  // на canvas. Параметры захвата глобальные: камера открывается один раз,
-  // сколько бы виджетов её ни показывало.
+  // браузер не выдаёт камеру. Панель захватывает видео и отправляет кадры
+  // бинарно; сервер пересылает оверлею, где виджет рисует их на canvas.
+  // Параметры захвата глобальные: камера открывается один раз, сколько бы
+  // виджетов её ни показывало.
   //
-  // 60 FPS — верхняя граница, но не гарантия: тик пропускается, пока кодируется
-  // предыдущий кадр, поэтому фактическая частота сама опускается до той, что
-  // тянет камера и процессор при выбранной ширине и качестве.
-  const CAMERA_MIN_INTERVAL_MS = 16;
+  // Основной путь — WebCodecs H.264: кадр уходит энкодеру без canvas-readback,
+  // чанки получаются в разы легче JPEG. Если браузер/железо не умеют H.264,
+  // панель сама переходит на JPEG — тот же путь, что был раньше.
+  const CAMERA_MIN_INTERVAL_MS = 16; // потолок 60 FPS
+  const CAMERA_KEYFRAME_INTERVAL_SEC = 2;
   const cameraCapture = createCaptureGeneration();
   const cameraBridge = {
     running: false,
@@ -4384,6 +4389,17 @@ const { EVENT_TYPES } = window.SharedEvents;
     timer: null,
     encoding: false,
     deviceId: "",
+    captureWidth: 0,
+    pipelineStarted: false,
+    pipelineGeneration: 0,
+    codecMode: "",
+    forceJpeg: false,
+    encoder: null,
+    encoderCodec: "",
+    encoderWidth: 0,
+    encoderHeight: 0,
+    keyCounter: 0,
+    reconfigTimer: null,
 
     start() {
       if (this.running) return;
@@ -4420,9 +4436,14 @@ const { EVENT_TYPES } = window.SharedEvents;
           this.canvas = canvas;
           this.ctx = ctx;
           this.deviceId = (state.cameraConfig && state.cameraConfig.deviceId) || "";
-          video.onloadedmetadata = () => video.play().catch(() => {});
-          video.play().catch(() => {});
-          this._startTimer();
+          this.captureWidth = clamp(Math.round(Number((state.cameraConfig || {}).width) || 960), 320, 1920);
+          this.pipelineStarted = false;
+          const begin = () => {
+            video.play().catch(() => {});
+            this._beginPipeline(video);
+          };
+          video.onloadedmetadata = begin;
+          if (video.videoWidth) begin();
         })
         .catch((err) => {
           // Отказ устаревшего запроса ничего не говорит о текущем захвате.
@@ -4435,7 +4456,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     _constraints() {
       const cfg = state.cameraConfig || {};
       const width = clamp(Math.round(Number(cfg.width) || 960), 320, 1920);
-      const fps = clamp(Math.round(Number(cfg.fps) || 12), 1, 60);
+      const fps = this._fps();
       const video = {
         width: { ideal: width },
         height: { ideal: Math.round((width * 9) / 16) },
@@ -4445,19 +4466,176 @@ const { EVENT_TYPES } = window.SharedEvents;
       return video;
     },
 
+    _fps() {
+      return clamp(Math.round(Number((state.cameraConfig || {}).fps) || 12), 1, 60);
+    },
+
+    _bitrate() {
+      return clamp(Math.round(Number((state.cameraConfig || {}).bitrateKbps) || 4000), 500, 20000) * 1000;
+    },
+
+    _keyFrameInterval() {
+      return Math.max(1, Math.round(this._fps() * CAMERA_KEYFRAME_INTERVAL_SEC));
+    },
+
     _startTimer() {
       if (this.timer) clearInterval(this.timer);
-      const fps = clamp(Math.round(Number((state.cameraConfig || {}).fps) || 12), 1, 60);
-      this.timer = setInterval(() => this.tick(), Math.max(CAMERA_MIN_INTERVAL_MS, Math.round(1000 / fps)));
+      this.timer = setInterval(() => this.tick(), Math.max(CAMERA_MIN_INTERVAL_MS, Math.round(1000 / this._fps())));
+    },
+
+    // Решает, чем кодировать текущий поток: H.264 через WebCodecs или JPEG.
+    _beginPipeline(video) {
+      if (!this.running || this.pipelineStarted) return;
+      // Поздний колбэк от уже заменённого потока не должен запускать конвейер.
+      if (this.video !== video) return;
+      // Метаданные ещё не пришли — запустимся из onloadedmetadata.
+      if (!video.videoWidth || !video.videoHeight) return;
+      this.pipelineStarted = true;
+      const generation = ++this.pipelineGeneration;
+      this.keyCounter = 0;
+      const mode = (state.cameraConfig || {}).codec || "auto";
+      this.codecMode = mode;
+      const wantH264 = mode !== "jpeg" && !this.forceJpeg && typeof window.VideoEncoder === "function";
+      if (!wantH264) {
+        this._closeEncoder();
+        send(EVENT_TYPES.CAMERA_STREAM_CONFIG, { codec: "jpeg" });
+        this._startTimer();
+        return;
+      }
+      this._configureEncoder(video, generation).then((ok) => {
+        if (!this.running || this.video !== video || generation !== this.pipelineGeneration) return;
+        if (!ok) {
+          this.forceJpeg = true;
+          send(EVENT_TYPES.CAMERA_STREAM_CONFIG, { codec: "jpeg" });
+        }
+        this._startTimer();
+      });
+    },
+
+    _encoderCandidates() {
+      // Level 4.2 покрывает 1080p60, 4.0 — 1080p30; дальше — более старые
+      // профили на случай, если конкретный энкодер знает только их.
+      return ["avc1.64002A", "avc1.640028", "avc1.4D0028", "avc1.42E028", "avc1.42E01E"];
+    },
+
+    async _configureEncoder(video, generation) {
+      const Encoder = window.VideoEncoder;
+      if (!Encoder || !video.videoWidth || !video.videoHeight) return false;
+      const width = video.videoWidth;
+      const height = video.videoHeight;
+      for (const codec of this._encoderCandidates()) {
+        const config = {
+          codec,
+          width,
+          height,
+          bitrate: this._bitrate(),
+          framerate: this._fps(),
+          latencyMode: "realtime",
+          hardwareAcceleration: "prefer-hardware",
+          // Annex B: SPS/PPS лежат прямо в ключевом кадре, отдельный
+          // description для декодера не нужен.
+          avc: { format: "annexb" },
+        };
+        let support;
+        try {
+          support = await Encoder.isConfigSupported(config);
+        } catch (_) {
+          continue;
+        }
+        if (!support || !support.supported) continue;
+        if (!this.running || this.video !== video || generation !== this.pipelineGeneration) return false;
+        let encoder;
+        try {
+          encoder = new Encoder({
+            output: (chunk) => {
+              if (this.encoder === encoder) this._onChunk(chunk);
+            },
+            error: (error) => {
+              // Ошибка от уже заменённого/закрытого энкодера не должна
+              // ронять текущий поток.
+              if (this.encoder !== encoder) return;
+              console.warn("[camera-bridge] H.264 encoder error:", (error && error.message) || error);
+              this._fallbackToJpeg("encoder-error");
+            },
+          });
+          encoder.configure(support.config || config);
+        } catch (error) {
+          console.warn("[camera-bridge] H.264 encoder setup failed:", (error && error.message) || error);
+          continue;
+        }
+        this.encoder = encoder;
+        this.encoderCodec = codec;
+        this.encoderWidth = width;
+        this.encoderHeight = height;
+        this.keyCounter = 0;
+        this._sendStreamConfig();
+        return true;
+      }
+      return false;
+    },
+
+    _encoderSettings() {
+      return {
+        codec: this.encoderCodec,
+        width: this.encoderWidth,
+        height: this.encoderHeight,
+        bitrate: this._bitrate(),
+        framerate: this._fps(),
+        latencyMode: "realtime",
+        hardwareAcceleration: "prefer-hardware",
+        avc: { format: "annexb" },
+      };
+    },
+
+    _sendStreamConfig() {
+      send(EVENT_TYPES.CAMERA_STREAM_CONFIG, {
+        codec: this.encoderCodec,
+        width: this.encoderWidth,
+        height: this.encoderHeight,
+        fps: this._fps(),
+        bitrate: this._bitrate(),
+      });
+    },
+
+    _onChunk(chunk) {
+      if (!this.running || !chunk) return;
+      const bytes = new Uint8Array(chunk.byteLength);
+      chunk.copyTo(bytes);
+      const keyframe = chunk.type === "key";
+      // Конфиг — перед ключевым кадром: поздно подключившийся оверлей
+      // получает его раньше первого чанка (порядок в сокете сохраняется).
+      if (keyframe) this._sendStreamConfig();
+      const frame = CameraFrame ? CameraFrame.encodeH264(bytes, { keyframe, timestamp: chunk.timestamp }) : null;
+      if (frame) sendBinary(frame);
     },
 
     tick() {
       const { video, canvas, ctx } = this;
-      if (!this.running || this.encoding || !video || !canvas || !ctx) return;
+      if (!this.running || !video) return;
       // Скрытую панель не пропускаем: её часто держат в трее или сворачивают,
       // а камера в этот момент должна продолжать идти в оверлей.
       if (video.readyState < 2 || !video.videoWidth || !video.videoHeight) return;
 
+      if (this.encoder) {
+        if (this.encoder.state !== "configured") return;
+        // Очередь энкодера — индикатор того, что он не успевает: кадр
+        // пропускаем, но не копим задержку.
+        if (this.encoder.encodeQueueSize > 2) return;
+        const keyFrame = this.keyCounter <= 0;
+        const frame = new window.VideoFrame(video, { timestamp: Math.round(performance.now() * 1000) });
+        try {
+          this.encoder.encode(frame, { keyFrame });
+        } catch (error) {
+          console.warn("[camera-bridge] H.264 encode failed:", (error && error.message) || error);
+          this._fallbackToJpeg("encode-error");
+        } finally {
+          frame.close();
+        }
+        this.keyCounter = keyFrame ? this._keyFrameInterval() : this.keyCounter - 1;
+        return;
+      }
+
+      if (this.encoding || !canvas || !ctx) return;
       const cfg = state.cameraConfig || {};
       const width = clamp(Math.round(Number(cfg.width) || 960), 320, 1920);
       const height = Math.max(2, Math.round((width * video.videoHeight) / video.videoWidth));
@@ -4489,28 +4667,107 @@ const { EVENT_TYPES } = window.SharedEvents;
       );
     },
 
-    // Настройки поменялись: смена устройства требует нового потока, остальное
-    // (ширина, FPS, качество) подхватывается на лету.
+    // H.264 недоступен: закрываем энкодер и просим оверлеи перейти на JPEG.
+    _fallbackToJpeg(reason) {
+      if (!this.running) return;
+      if (this.forceJpeg && !this.encoder) return;
+      this.forceJpeg = true;
+      console.warn("[camera-bridge] H.264 disabled, using JPEG:", reason || "unknown");
+      this._closeEncoder();
+      send(EVENT_TYPES.CAMERA_STREAM_CONFIG, { codec: "jpeg" });
+    },
+
+    _closeEncoder() {
+      if (this.encoder) {
+        try {
+          this.encoder.close();
+        } catch (_) {
+          /* encoder already closed */
+        }
+        this.encoder = null;
+      }
+      this.encoderCodec = "";
+      this.encoderWidth = 0;
+      this.encoderHeight = 0;
+    },
+
+    _restartPipeline() {
+      if (this.timer) {
+        clearInterval(this.timer);
+        this.timer = null;
+      }
+      if (this.reconfigTimer) {
+        clearTimeout(this.reconfigTimer);
+        this.reconfigTimer = null;
+      }
+      this._closeEncoder();
+      this.encoding = false;
+      this.pipelineStarted = false;
+      this.keyCounter = 0;
+      if (this.video) this._beginPipeline(this.video);
+    },
+
+    _reconfigureEncoderSoon() {
+      if (!this.encoder) return;
+      if (this.reconfigTimer) clearTimeout(this.reconfigTimer);
+      // Слайдеры шлют input на каждое движение: перестраиваем энкодер после
+      // паузы, а не дёргаем его 60 раз в секунду.
+      this.reconfigTimer = setTimeout(() => {
+        this.reconfigTimer = null;
+        this._reconfigureEncoder();
+      }, 250);
+    },
+
+    _reconfigureEncoder() {
+      if (!this.encoder || this.encoder.state !== "configured") return;
+      try {
+        this.encoder.configure(this._encoderSettings());
+        this.keyCounter = 0;
+        this._sendStreamConfig();
+      } catch (error) {
+        console.warn("[camera-bridge] H.264 reconfigure failed:", (error && error.message) || error);
+        this._fallbackToJpeg("reconfigure");
+      }
+    },
+
+    // Настройки поменялись: смена устройства или ширины требует нового потока,
+    // смена кодека — перезапуска конвейера, FPS/битрейт — на лету.
     applyConfig() {
       if (!this.running) return;
-      const deviceId = (state.cameraConfig && state.cameraConfig.deviceId) || "";
-      if (deviceId !== this.deviceId) {
+      const cfg = state.cameraConfig || {};
+      const deviceId = cfg.deviceId || "";
+      const width = clamp(Math.round(Number(cfg.width) || 960), 320, 1920);
+      const mode = cfg.codec || "auto";
+      if (deviceId !== this.deviceId || width !== this.captureWidth) {
         this.stop();
         this.start();
         return;
       }
+      if (mode !== this.codecMode) {
+        // Пользователь сменил кодек — пробуем H.264 заново, даже если он уже падал.
+        this.codecMode = mode;
+        this.forceJpeg = false;
+        this._restartPipeline();
+        return;
+      }
+      if (this.encoder) this._reconfigureEncoderSoon();
       this._startTimer();
     },
 
     stop() {
       this.running = false;
       cameraCapture.invalidate();
+      this.pipelineGeneration += 1;
+      this.pipelineStarted = false;
       if (this.timer) { clearInterval(this.timer); this.timer = null; }
+      if (this.reconfigTimer) { clearTimeout(this.reconfigTimer); this.reconfigTimer = null; }
+      this._closeEncoder();
       if (this.stream) { this.stream.getTracks().forEach((track) => track.stop()); this.stream = null; }
       if (this.video) { this.video.srcObject = null; this.video = null; }
       this.canvas = null;
       this.ctx = null;
       this.encoding = false;
+      this.keyCounter = 0;
     },
   };
 
