@@ -296,7 +296,9 @@
       this.element.classList.add("is-expanded");
       this._startDecode(this.currentName());
       if (this.config.showMessage !== false) this._startMessageDecode(this._messageText);
-      this._fitHeight();
+      // Меряем сразу по полному тексту: пока он зашифрован, ширина символов
+      // другая, и панель могла получиться ниже финальной.
+      this._fitHeight(true);
     }
 
     // ---- content ----
@@ -498,11 +500,18 @@
 
     // Панель растёт под сообщение, но не бесконечно: длинный текст больше не
     // обрезается, а высота ограничена разумным потолком.
-    _fitHeight() {
+    _fitHeight(usePlainMessage = false) {
       if (!this.element || !this.frameEl || !this.panelEl) return;
       this.element.style.height = this.geometry.h + "%";
       const base = this.element.clientHeight || 0;
       if (!base) return;
+
+      // На время замера подменяем «шифр» на финальный текст: так высота
+      // считается по тому, сколько места он займёт после дешифровки.
+      const shownMessage = this.messageEl ? this.messageEl.textContent : "";
+      if (usePlainMessage && this.messageEl && this._messageText) {
+        this.messageEl.textContent = this._messageText;
+      }
 
       const frameHeight = this.frameEl.style.height;
       const panelHeight = this.panelEl.style.height;
@@ -514,6 +523,9 @@
       this.frameEl.style.height = frameHeight;
       this.panelEl.style.height = panelHeight;
       this.panelEl.style.overflow = panelOverflow;
+      if (this.messageEl && usePlainMessage) {
+        this.messageEl.textContent = shownMessage;
+      }
 
       if (!needed) return;
       // Растём до низа экрана, а не до фиксированного потолка: длинное

@@ -309,6 +309,32 @@ describe("WidgetUecTransfer", () => {
     w.unmount();
   });
 
+  test("высота считается по полному тексту, пока он ещё зашифрован", () => {
+    const hadWindow = "window" in global;
+    const prevWindow = global.window;
+    global.window = { innerHeight: 1080 };
+
+    const w = new WidgetUecTransfer(item({ y: 0 }), makeContext());
+    w.mount(makeEl("div"));
+    w.element.clientHeight = 50;
+    w._messageText = "на корабль";
+    w.messageEl.textContent = "########";
+
+    Object.defineProperty(w.panelEl, "offsetHeight", {
+      configurable: true,
+      get: () => (w.messageEl.textContent === "на корабль" ? 800 : 100),
+    });
+
+    w._fitHeight(true);
+    expect(w.element.style.height).toBe("802px");
+    // Для показа текст возвращается к «шифру».
+    expect(w.messageEl.textContent).toBe("########");
+
+    w.unmount();
+    if (hadWindow) global.window = prevWindow;
+    else delete global.window;
+  });
+
   test("длинное сообщение растит панель до низа экрана", () => {
     const hadWindow = "window" in global;
     const prevWindow = global.window;
