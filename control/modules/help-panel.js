@@ -88,6 +88,17 @@ const SECTIONS = [
     ],
   },
   {
+    id: "widgets",
+    title: "help.widgets.title",
+    blocks: [
+      { type: "p", key: "help.widgets.p1" },
+      { type: "p", key: "help.widgets.p2" },
+      { type: "p", key: "help.widgets.p3" },
+      { type: "p", key: "help.widgets.p4" },
+      { type: "p", key: "help.widgets.p5" },
+    ],
+  },
+  {
     id: "presets",
     title: "help.presets.title",
     blocks: [
