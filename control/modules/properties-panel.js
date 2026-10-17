@@ -54,6 +54,8 @@ export function initPropertiesPanel({
   round1,
   sendMicCaptureConfig,
   refreshMicDevices,
+  sendCameraCaptureConfig,
+  refreshCameraDevices,
 }) {
   const propertiesSection = el("propertiesSection");
   const propertiesTitle = el("propertiesTitle");
@@ -181,7 +183,8 @@ export function initPropertiesPanel({
       type === "mic"
         ? (raw.config && raw.config.visualizer_mode) || (state.micConfig && state.micConfig.visualizer_mode) || ""
         : "";
-    const sig = `${raw.id}|${raw.type}|${type}|${micMode}|${(state.micDevices || []).length}`;
+    const webcamSource = type === "webcam" ? (raw.config && raw.config.source) || "frame" : "";
+    const sig = `${raw.id}|${raw.type}|${type}|${micMode}|${webcamSource}|${(state.micDevices || []).length}|${(state.cameraDevices || []).length}`;
     if (!force && sig === lastSig && propertiesEl.contains(document.activeElement)) return;
     lastSig = sig;
     const def = WIDGET_TYPES[type] || {};
@@ -383,13 +386,56 @@ export function initPropertiesPanel({
         <div class="md-field"><label>${t("properties.deathLabel")}</label><input type="text" id="pDeathLabel" value="${escapeAttr(config.label || "")}"></div>
         <div class="md-field"><label>${t("properties.deathColor")}</label><input type="color" id="pDeathColor" value="${escapeAttr(config.color || "#ff4d4d")}"></div>`;
     } else if (inst.type === "webcam") {
-      // Рамка ничего не захватывает: камера — отдельный источник OBS. Подсказка
-      // в инспекторе говорит об этом прямо, иначе легко ждать видео внутри
-      // виджета и решить, что он сломан.
+      // «Рамка» ничего не захватывает: камера — отдельный источник OBS.
+      // «Живое видео» тянет кадры из моста панели. Подсказка в инспекторе
+      // объясняет разницу, иначе легко решить, что виджет сломан.
       const themePrimary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#c6b8ff";
       const label = config.label == null ? "LIVE" : config.label;
       const position = config.labelPosition || "top-left";
+      const source = config.source === "camera" ? "camera" : "frame";
+      const cameraCfg = state.cameraConfig || {};
+      const devices = Array.isArray(state.cameraDevices) ? state.cameraDevices : [];
+      const deviceId = cameraCfg.deviceId || "";
+      const deviceOptions = [
+        `<option value="" ${deviceId ? "" : "selected"}>${t("properties.webcamDeviceDefault")}</option>`,
+        ...devices.map(
+          (d) => `<option value="${escapeAttr(d.deviceId)}" ${deviceId === d.deviceId ? "selected" : ""}>${escapeHtml(d.label)}</option>`
+        ),
+      ].join("");
+      const widths = [320, 480, 640, 960, 1280, 1920];
+      const widthOptions = widths
+        .map((w) => `<option value="${w}" ${Number(cameraCfg.width) === w ? "selected" : ""}>${w} px</option>`)
+        .join("");
+      const fps = Math.round(Number(cameraCfg.fps) || 12);
+      const quality = Math.round((Number(cameraCfg.quality) || 0.6) * 100);
+      const captureHtml =
+        source === "camera"
+          ? `
+        <div class="inspector__title" style="margin-top:10px;">${t("properties.webcamCapture")}</div>
+        <div class="md-field"><label>${t("properties.webcamDevice")}</label>
+          <div class="properties__row">
+            <select id="pCameraDevice">${deviceOptions}</select>
+            <button class="md-button md-button--text" id="pCameraDeviceRefresh" title="${t("properties.webcamDeviceRefresh")}">↻</button>
+          </div>
+        </div>
+        <div class="md-field"><label>${t("properties.webcamWidth")}</label><select id="pCameraWidth">${widthOptions}</select></div>
+        <div class="md-field"><label>${t("properties.webcamFps")}: <span id="pCameraFpsValue">${fps}</span></label><input type="range" id="pCameraFps" min="1" max="30" step="1" value="${fps}"></div>
+        <div class="md-field"><label>${t("properties.webcamQuality")}: <span id="pCameraQualityValue">${quality}%</span></label><input type="range" id="pCameraQuality" min="20" max="95" step="5" value="${quality}"></div>
+        <div class="properties__toggle-row"><label>${t("properties.webcamMirror")}</label>${switchHtml("pWebcamMirror", !!config.mirror)}</div>
+        <div class="md-field"><label>${t("properties.webcamFit")}</label>
+          <select id="pWebcamFit">
+            <option value="cover" ${(config.fit || "cover") === "cover" ? "selected" : ""}>${t("properties.webcamFitCover")}</option>
+            <option value="contain" ${config.fit === "contain" ? "selected" : ""}>${t("properties.webcamFitContain")}</option>
+          </select>
+        </div>`
+          : "";
       extraHtml = `
+        <div class="md-field"><label>${t("properties.webcamSource")}</label>
+          <select id="pWebcamSource">
+            <option value="frame" ${source === "frame" ? "selected" : ""}>${t("properties.webcamSourceFrame")}</option>
+            <option value="camera" ${source === "camera" ? "selected" : ""}>${t("properties.webcamSourceCamera")}</option>
+          </select>
+        </div>
         <div class="md-field"><label>${t("properties.webcamLabel")}</label><input type="text" id="pWebcamLabel" value="${escapeAttr(label)}" placeholder="LIVE"></div>
         <div class="properties__toggle-row"><label>${t("properties.webcamShowLabel")}</label>${switchHtml("pWebcamShowLabel", config.showLabel !== false)}</div>
         <div class="md-field"><label>${t("properties.webcamLabelPosition")}</label>
@@ -412,6 +458,7 @@ export function initPropertiesPanel({
             <button class="md-button md-button--text" id="pWebcamColorReset">${t("properties.webcamColorAuto")}</button>
           </div>
         </div>
+        ${captureHtml}
         <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>
         <div class="md-field"><label>${t("properties.perspectiveDirection")}</label>
           <select id="pPerspectiveDirection">
@@ -617,6 +664,10 @@ export function initPropertiesPanel({
       propertiesEl.querySelector("#pDeathColor").addEventListener("input", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { color: e.target.value } } }));
     } else if (inst.type === "webcam") {
       const patchWebcam = (configPatch) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: configPatch } });
+      propertiesEl.querySelector("#pWebcamSource").addEventListener("change", (e) => {
+        patchWebcam({ source: e.target.value });
+        if (e.target.value === "camera" && typeof refreshCameraDevices === "function") refreshCameraDevices();
+      });
       propertiesEl.querySelector("#pWebcamLabel").addEventListener("change", (e) => patchWebcam({ label: e.target.value }));
       wireSwitch(propertiesEl.querySelector("#pWebcamShowLabel"), (on) => patchWebcam({ showLabel: on }));
       propertiesEl.querySelector("#pWebcamLabelPosition").addEventListener("change", (e) => patchWebcam({ labelPosition: e.target.value }));
@@ -640,6 +691,35 @@ export function initPropertiesPanel({
       });
       propertiesEl.querySelector("#pWebcamColor").addEventListener("input", (e) => patchWebcam({ color: e.target.value }));
       propertiesEl.querySelector("#pWebcamColorReset").addEventListener("click", () => patchWebcam({ color: "" }));
+      const cameraDevice = propertiesEl.querySelector("#pCameraDevice");
+      if (cameraDevice) {
+        cameraDevice.addEventListener("change", (e) => sendCameraCaptureConfig({ deviceId: e.target.value }));
+      }
+      const cameraDeviceRefresh = propertiesEl.querySelector("#pCameraDeviceRefresh");
+      if (cameraDeviceRefresh) cameraDeviceRefresh.addEventListener("click", () => refreshCameraDevices());
+      const cameraWidth = propertiesEl.querySelector("#pCameraWidth");
+      if (cameraWidth) cameraWidth.addEventListener("change", (e) => sendCameraCaptureConfig({ width: Number(e.target.value) }));
+      const cameraFps = propertiesEl.querySelector("#pCameraFps");
+      if (cameraFps) {
+        cameraFps.addEventListener("input", (e) => {
+          const value = Number(e.target.value);
+          const label = propertiesEl.querySelector("#pCameraFpsValue");
+          if (label) label.textContent = String(value);
+          sendCameraCaptureConfig({ fps: value });
+        });
+      }
+      const cameraQuality = propertiesEl.querySelector("#pCameraQuality");
+      if (cameraQuality) {
+        cameraQuality.addEventListener("input", (e) => {
+          const value = Number(e.target.value);
+          const label = propertiesEl.querySelector("#pCameraQualityValue");
+          if (label) label.textContent = `${value}%`;
+          sendCameraCaptureConfig({ quality: value / 100 });
+        });
+      }
+      wireSwitch(propertiesEl.querySelector("#pWebcamMirror"), (on) => patchWebcam({ mirror: on }));
+      const fit = propertiesEl.querySelector("#pWebcamFit");
+      if (fit) fit.addEventListener("change", (e) => patchWebcam({ fit: e.target.value }));
       propertiesEl.querySelector("#pPerspective").addEventListener("input", (e) => {
         const value = Number(e.target.value);
         const label = propertiesEl.querySelector("#pPerspectiveValue");

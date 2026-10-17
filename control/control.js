@@ -34,6 +34,7 @@ import { initCanvasEditor } from "./modules/canvas-editor.js";
 
 const { EVENT_TYPES } = window.SharedEvents;
   const MicFrame = window.MicFrame;
+  const CameraFrame = window.CameraFrame;
   const { ICONS } = window.SharedIcons;
   const { safeCssColor, createCaptureGeneration } = window.ControlGuards;
   const { WIDGET_TYPES, widgetsForTheme, themeAllowsWidget, replacedBy3d, widgetRole, resolveTypeForTheme, isAnimatedWidget } = window.WidgetCatalog;
@@ -2661,6 +2662,28 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (val) val.textContent = `${pct}%`;
   }
 
+  // ---- camera capture settings (shared by every webcam widget) ----
+  function sendCameraCaptureConfig(patch) {
+    state.cameraConfig = { ...state.cameraConfig, ...patch };
+    send(EVENT_TYPES.CMD_SET_CAMERA_CONFIG, { config: state.cameraConfig });
+    cameraBridge.applyConfig();
+  }
+
+  // Список камер — для выпадающего списка в инспекторе.
+  function refreshCameraDevices() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+    navigator.mediaDevices
+      .enumerateDevices()
+      .then((devices) => {
+        state.cameraDevices = devices
+          .filter((d) => d.kind === "videoinput")
+          .map((d, i) => ({ deviceId: d.deviceId, label: d.label || t("properties.webcamDeviceFallback", { n: i + 1 }) }));
+        propertiesPanel.invalidate();
+        propertiesPanel.render();
+      })
+      .catch(() => {});
+  }
+
   // ---- properties panel (extracted module) ----
   const propertiesPanel = initPropertiesPanel({
     state,
@@ -2676,12 +2699,16 @@ const { EVENT_TYPES } = window.SharedEvents;
     round1,
     sendMicCaptureConfig,
     refreshMicDevices,
+    sendCameraCaptureConfig,
+    refreshCameraDevices,
   });
 
   if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
     navigator.mediaDevices.addEventListener("devicechange", refreshMicDevices);
+    navigator.mediaDevices.addEventListener("devicechange", refreshCameraDevices);
   }
   refreshMicDevices();
+  refreshCameraDevices();
 
   // ---- canvas editor (extracted module) ----
   const canvasEditor = initCanvasEditor({
@@ -3899,6 +3926,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         if (!pollPanelEl.hidden) renderPollPanels();
         selectScene(state.activeSceneId);
         syncMicBridge();
+        syncCameraBridge();
         break;
       case EVENT_TYPES.LAYOUT_UPDATE:
         handleLayoutUpdate(msg.payload.layout || []);
@@ -4054,6 +4082,11 @@ const { EVENT_TYPES } = window.SharedEvents;
         canvasEditor.renderCanvas();
         propertiesPanel.render();
         break;
+      case EVENT_TYPES.OVERLAY_CAMERA_CONFIG:
+        state.cameraConfig = (msg.payload && msg.payload.config) || state.cameraConfig;
+        cameraBridge.applyConfig();
+        propertiesPanel.render();
+        break;
       case EVENT_TYPES.GOAL_UPDATE:
         state.goal = msg.payload;
         canvasEditor.renderCanvas();
@@ -4201,6 +4234,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     propertiesPanel.render();
     renderSceneBudget();
     syncMicBridge();
+    syncCameraBridge();
   }
 
   // ---- microphone bridge ----------------------------------------------
@@ -4327,6 +4361,161 @@ const { EVENT_TYPES } = window.SharedEvents;
     const hasMic = Array.isArray(state.layout) && state.layout.some((w) => w.type === "mic");
     if (hasMic) micBridge.start();
     else micBridge.stop();
+  }
+
+  // ---- camera bridge ---------------------------------------------------
+  // Та же причина, что у микрофона: странице оверлея в OBS Browser Source
+  // браузер не выдаёт камеру. Панель захватывает видео, кодирует кадры в JPEG
+  // и отправляет их бинарно; сервер пересылает оверлею, где виджет рисует их
+  // на canvas. Параметры захвата глобальные: камера открывается один раз,
+  // сколько бы виджетов её ни показывало.
+  const CAMERA_MIN_INTERVAL_MS = 33; // потолок 30 FPS, даже если попросили больше
+  const cameraCapture = createCaptureGeneration();
+  const cameraBridge = {
+    running: false,
+    stream: null,
+    video: null,
+    canvas: null,
+    ctx: null,
+    timer: null,
+    encoding: false,
+    deviceId: "",
+
+    start() {
+      if (this.running) return;
+      this.running = true;
+      const generation = cameraCapture.begin();
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.warn("[camera-bridge] getUserMedia unavailable in the control panel");
+        this.running = false;
+        return;
+      }
+      navigator.mediaDevices
+        .getUserMedia({ video: this._constraints() })
+        .then((stream) => {
+          // Поток пришёл после stop()/restart: отпускаем, иначе камера
+          // останется захваченной — stop() про этот поток уже не знает.
+          if (!this.running || cameraCapture.isStale(generation)) {
+            stream.getTracks().forEach((track) => track.stop());
+            return;
+          }
+          const video = document.createElement("video");
+          video.muted = true;
+          video.playsInline = true;
+          video.autoplay = true;
+          video.srcObject = stream;
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            stream.getTracks().forEach((track) => track.stop());
+            this.running = false;
+            return;
+          }
+          this.stream = stream;
+          this.video = video;
+          this.canvas = canvas;
+          this.ctx = ctx;
+          this.deviceId = (state.cameraConfig && state.cameraConfig.deviceId) || "";
+          video.onloadedmetadata = () => video.play().catch(() => {});
+          video.play().catch(() => {});
+          this._startTimer();
+        })
+        .catch((err) => {
+          // Отказ устаревшего запроса ничего не говорит о текущем захвате.
+          if (cameraCapture.isStale(generation)) return;
+          this.running = false;
+          console.warn("[camera-bridge] camera unavailable:", (err && err.name) || "unknown");
+        });
+    },
+
+    _constraints() {
+      const cfg = state.cameraConfig || {};
+      const width = clamp(Math.round(Number(cfg.width) || 960), 320, 1920);
+      const fps = clamp(Math.round(Number(cfg.fps) || 12), 1, 30);
+      const video = {
+        width: { ideal: width },
+        height: { ideal: Math.round((width * 9) / 16) },
+        frameRate: { ideal: fps, max: fps },
+      };
+      if (cfg.deviceId) video.deviceId = { exact: cfg.deviceId };
+      return video;
+    },
+
+    _startTimer() {
+      if (this.timer) clearInterval(this.timer);
+      const fps = clamp(Math.round(Number((state.cameraConfig || {}).fps) || 12), 1, 30);
+      this.timer = setInterval(() => this.tick(), Math.max(CAMERA_MIN_INTERVAL_MS, Math.round(1000 / fps)));
+    },
+
+    tick() {
+      const { video, canvas, ctx } = this;
+      if (!this.running || this.encoding || !video || !canvas || !ctx) return;
+      // Скрытую панель не пропускаем: её часто держат в трее или сворачивают,
+      // а камера в этот момент должна продолжать идти в оверлей.
+      if (video.readyState < 2 || !video.videoWidth || !video.videoHeight) return;
+
+      const cfg = state.cameraConfig || {};
+      const width = clamp(Math.round(Number(cfg.width) || 960), 320, 1920);
+      const height = Math.max(2, Math.round((width * video.videoHeight) / video.videoWidth));
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+      }
+      ctx.drawImage(video, 0, 0, width, height);
+
+      // toBlob асинхронный: пока кадр кодируется, следующий тик пропускаем —
+      // иначе колбэки копятся быстрее, чем успевает JPEG-энкодер.
+      const quality = clamp(Number(cfg.quality) || 0.6, 0.2, 0.95);
+      this.encoding = true;
+      canvas.toBlob(
+        (blob) => {
+          this.encoding = false;
+          if (!this.running || !blob) return;
+          blob
+            .arrayBuffer()
+            .then((buffer) => {
+              if (!this.running) return;
+              const frame = CameraFrame ? CameraFrame.encode(new Uint8Array(buffer)) : null;
+              if (frame) sendBinary(frame);
+            })
+            .catch(() => {});
+        },
+        "image/jpeg",
+        quality
+      );
+    },
+
+    // Настройки поменялись: смена устройства требует нового потока, остальное
+    // (ширина, FPS, качество) подхватывается на лету.
+    applyConfig() {
+      if (!this.running) return;
+      const deviceId = (state.cameraConfig && state.cameraConfig.deviceId) || "";
+      if (deviceId !== this.deviceId) {
+        this.stop();
+        this.start();
+        return;
+      }
+      this._startTimer();
+    },
+
+    stop() {
+      this.running = false;
+      cameraCapture.invalidate();
+      if (this.timer) { clearInterval(this.timer); this.timer = null; }
+      if (this.stream) { this.stream.getTracks().forEach((track) => track.stop()); this.stream = null; }
+      if (this.video) { this.video.srcObject = null; this.video = null; }
+      this.canvas = null;
+      this.ctx = null;
+      this.encoding = false;
+    },
+  };
+
+  function syncCameraBridge() {
+    const hasCamera =
+      Array.isArray(state.layout) &&
+      state.layout.some((w) => w.type === "webcam" && w.config && w.config.source === "camera");
+    if (hasCamera) cameraBridge.start();
+    else cameraBridge.stop();
   }
 
   // ---- auto-updates ----

@@ -16,13 +16,18 @@
  */
 
 /*
-  Webcam frame widget — decoration only.
+  Webcam frame widget.
 
-  Видео с камеры сюда не попадает намеренно: страница оверлея живёт в OBS
-  Browser Source, а тому браузер не выдаёт доступ к камере (та же причина,
-  по которой микрофон захватывает панель управления, а не оверлей). Камеру
-  добавляют в OBS отдельным источником, а этот виджет рисует рамку поверх или
-  под ней: прозрачный центр, акцентные уголки и бейдж.
+  Два режима:
+
+    * "frame" — только оформление. Видео не захватывается: страница оверлея
+      живёт в OBS Browser Source, а тому браузер не выдаёт камеру (та же
+      причина, по которой микрофон захватывает панель управления). Камеру
+      добавляют в OBS отдельным источником, рамку кладут поверх или под ней.
+
+    * "camera" — живое видео из моста. Панель управления захватывает камеру и
+      шлёт JPEG-кадры по бинарному каналу, сервер пересылает их оверлею, а
+      виджет рисует их на canvas внутри той же рамки.
 */
 (function (root, factory) {
   const BaseWidget =
@@ -58,6 +63,16 @@
       this.host = document.createElement("div");
       this.host.className = "widget-webcam";
       this.element.appendChild(this.host);
+
+      this.videoCanvas = null;
+      this.emptyEl = null;
+      this._decoding = false;
+      this._hasFrame = false;
+
+      const { EVENT_TYPES } = this.context;
+      if (EVENT_TYPES && EVENT_TYPES.CAMERA_VIDEO_FRAME) {
+        this.subscribe(EVENT_TYPES.CAMERA_VIDEO_FRAME, (payload) => this._onFrame(payload));
+      }
       this._applyPerspective();
     }
 
@@ -65,6 +80,124 @@
       if (prev.perspective !== next.perspective || prev.perspectiveDirection !== next.perspectiveDirection) {
         this._applyPerspective();
       }
+    }
+
+    onUnmount() {
+      // Декодирование, начатое до удаления виджета, должно молча завершиться:
+      // ссылки на canvas к этому моменту уже нет.
+      this._decoding = false;
+      this.videoCanvas = null;
+      this.emptyEl = null;
+      this.host = null;
+    }
+
+    render() {
+      const { escapeHtml, escapeAttr, t } = this.context;
+      const cfg = this.config;
+      const camera = cfg.source === "camera";
+
+      const accent = SAFE_ACCENT.test(String(cfg.color || "").trim()) ? String(cfg.color).trim() : "var(--md-primary)";
+      const thickness = clamp(Math.round(num(cfg.thickness, 4)), 1, 16);
+      const radius = clamp(Math.round(num(cfg.radius, 16)), 0, 64);
+      const position = LABEL_POSITIONS.includes(cfg.labelPosition) ? cfg.labelPosition : "top-left";
+      const label = String(cfg.label == null ? "LIVE" : cfg.label).trim();
+      const showLabel = cfg.showLabel !== false && label.length > 0;
+
+      this.host.style.setProperty("--webcam-accent", accent);
+      this.host.style.setProperty("--webcam-thickness", `${thickness}px`);
+      this.host.style.setProperty("--webcam-radius", `${radius}px`);
+
+      const parts = [];
+      if (cfg.showBackground) parts.push(`<div class="widget-webcam__backdrop"></div>`);
+      if (camera) {
+        const noSignal = this._hasFrame ? "" : `<div class="widget-webcam__empty">${escapeHtml(t("webcam.noSignal"))}</div>`;
+        parts.push(
+          `<div class="widget-webcam__video-wrap" data-fit="${escapeAttr(cfg.fit === "contain" ? "contain" : "cover")}">` +
+            `<canvas class="widget-webcam__video"></canvas>` +
+            noSignal +
+            `</div>`
+        );
+      }
+      if (cfg.showBorder !== false) parts.push(`<div class="widget-webcam__frame"></div>`);
+      if (cfg.showCorners !== false) {
+        parts.push(...CORNERS.map((corner) => `<span class="widget-webcam__corner" data-corner="${corner}"></span>`));
+      }
+      if (showLabel) {
+        parts.push(
+          `<div class="widget-webcam__label" data-pos="${escapeAttr(position)}">` +
+            `<span class="widget-webcam__dot"></span>` +
+            `<span class="widget-webcam__label-text">${escapeHtml(label)}</span>` +
+            `</div>`
+        );
+      }
+      if (cfg.showVignette) parts.push(`<div class="widget-webcam__vignette"></div>`);
+
+      this.host.innerHTML = parts.join("");
+
+      // Ссылки на canvas после перерисовки новые: кадр нарисуется на
+      // следующем тике моста (≤ 83 мс при 12 FPS).
+      this.videoCanvas = camera ? this.host.querySelector(".widget-webcam__video") : null;
+      this.emptyEl = camera ? this.host.querySelector(".widget-webcam__empty") : null;
+      if (this.videoCanvas) {
+        this.videoCanvas.style.transform = cfg.mirror ? "scaleX(-1)" : "";
+      }
+    }
+
+    // Кадр приходит Blob'ом (JPEG). Декодируем через Image: это работает и в
+    // system webview, и в CEF OBS, и не требует createImageBitmap.
+    _onFrame(payload) {
+      const blob = payload && payload.blob;
+      if (!blob || this._decoding || !this.videoCanvas) return;
+      if (typeof Image === "undefined" || typeof URL === "undefined" || !URL.createObjectURL) return;
+
+      this._decoding = true;
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        this._decoding = false;
+        URL.revokeObjectURL(url);
+        if (!this.videoCanvas || !this.videoCanvas.isConnected) return;
+        this._drawFrame(img);
+        this._hasFrame = true;
+        if (this.emptyEl) {
+          this.emptyEl.style.display = "none";
+          this.emptyEl = null;
+        }
+      };
+      img.onerror = () => {
+        this._decoding = false;
+        URL.revokeObjectURL(url);
+      };
+      img.src = url;
+    }
+
+    _drawFrame(img) {
+      const canvas = this.videoCanvas;
+      if (!canvas || typeof canvas.getContext !== "function") return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      const cssWidth = canvas.clientWidth || (this.host && this.host.clientWidth) || 1;
+      const cssHeight = canvas.clientHeight || (this.host && this.host.clientHeight) || 1;
+      const dpr = (typeof window !== "undefined" && window.devicePixelRatio) || 1;
+      const width = Math.max(1, Math.round(cssWidth * dpr));
+      const height = Math.max(1, Math.round(cssHeight * dpr));
+      if (canvas.width !== width) canvas.width = width;
+      if (canvas.height !== height) canvas.height = height;
+      ctx.clearRect(0, 0, width, height);
+
+      const imageWidth = img.naturalWidth || img.width || 0;
+      const imageHeight = img.naturalHeight || img.height || 0;
+      if (!imageWidth || !imageHeight) return;
+
+      // cover — заполнить рамку с обрезкой, contain — вписать целиком.
+      const cover = this.config.fit !== "contain";
+      const scale = cover
+        ? Math.max(width / imageWidth, height / imageHeight)
+        : Math.min(width / imageWidth, height / imageHeight);
+      const drawWidth = imageWidth * scale;
+      const drawHeight = imageHeight * scale;
+      ctx.drawImage(img, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
     }
 
     // Тот же наклон, что у микрофона, 3D-целей и таймера: сила 0–100 и
@@ -92,40 +225,6 @@
       }
       this.element.style.transform = `perspective(1200px) rotateY(${rotateY}deg) rotateX(${rotateX}deg)`;
       this.element.style.transformStyle = "preserve-3d";
-    }
-
-    render() {
-      const { escapeHtml, escapeAttr } = this.context;
-      const cfg = this.config;
-
-      const accent = SAFE_ACCENT.test(String(cfg.color || "").trim()) ? String(cfg.color).trim() : "var(--md-primary)";
-      const thickness = clamp(Math.round(num(cfg.thickness, 4)), 1, 16);
-      const radius = clamp(Math.round(num(cfg.radius, 16)), 0, 64);
-      const position = LABEL_POSITIONS.includes(cfg.labelPosition) ? cfg.labelPosition : "top-left";
-      const label = String(cfg.label == null ? "LIVE" : cfg.label).trim();
-      const showLabel = cfg.showLabel !== false && label.length > 0;
-
-      this.host.style.setProperty("--webcam-accent", accent);
-      this.host.style.setProperty("--webcam-thickness", `${thickness}px`);
-      this.host.style.setProperty("--webcam-radius", `${radius}px`);
-
-      const parts = [];
-      if (cfg.showBackground) parts.push(`<div class="widget-webcam__backdrop"></div>`);
-      if (cfg.showBorder !== false) parts.push(`<div class="widget-webcam__frame"></div>`);
-      if (cfg.showCorners !== false) {
-        parts.push(...CORNERS.map((corner) => `<span class="widget-webcam__corner" data-corner="${corner}"></span>`));
-      }
-      if (showLabel) {
-        parts.push(
-          `<div class="widget-webcam__label" data-pos="${escapeAttr(position)}">` +
-            `<span class="widget-webcam__dot"></span>` +
-            `<span class="widget-webcam__label-text">${escapeHtml(label)}</span>` +
-            `</div>`
-        );
-      }
-      if (cfg.showVignette) parts.push(`<div class="widget-webcam__vignette"></div>`);
-
-      this.host.innerHTML = parts.join("");
     }
   }
 

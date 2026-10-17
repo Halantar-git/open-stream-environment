@@ -565,6 +565,13 @@
     ws.binaryType = "arraybuffer";
     ws.onmessage = (ev) => {
       if (typeof ev.data !== "string") {
+        // Кадры камеры и микрофона идут одним бинарным каналом и различаются
+        // магией. Камеру отдаём виджету событием, микрофон кладём в state.
+        const camera = window.CameraFrame && window.CameraFrame.decode(ev.data);
+        if (camera) {
+          bus.emit(EVENT_TYPES.CAMERA_VIDEO_FRAME, camera);
+          return;
+        }
         const frame = window.MicFrame && window.MicFrame.decode(ev.data);
         if (frame) state.remoteMicData = frame;
         return;

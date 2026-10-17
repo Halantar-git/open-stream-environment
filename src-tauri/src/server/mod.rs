@@ -351,6 +351,7 @@ async fn handle_socket(mut socket: WebSocket, bus: Bus, role: String, external: 
                 database.wheel_speed_config(),
             ),
             (event_types::OVERLAY_MIC_CONFIG, database.mic_config()),
+            (event_types::OVERLAY_CAMERA_CONFIG, database.camera_config()),
         ] {
             send_frame(&mut socket, kind, json!({ "config": config })).await;
         }
@@ -384,6 +385,13 @@ async fn handle_socket(mut socket: WebSocket, bus: Bus, role: String, external: 
                 // не разбирая FFT-данные.
                 Some(Ok(Message::Binary(data))) => {
                     if crate::audio::frame::is_frame(&data) {
+                        bus.diagnostics
+                            .clients()
+                            .broadcast_binary_to_role("overlay", data.to_vec());
+                    } else if role == "control" && crate::camera_frame::is_frame(&data) {
+                        // Кадры камеры шлёт только панель: оверлею нечего
+                        // отправлять на шину, а размер кадра куда больше
+                        // микрокадра.
                         bus.diagnostics
                             .clients()
                             .broadcast_binary_to_role("overlay", data.to_vec());

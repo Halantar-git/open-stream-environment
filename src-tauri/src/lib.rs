@@ -8,6 +8,7 @@
 
 pub mod alerts;
 pub mod audio;
+pub mod camera_frame;
 pub mod catalog;
 pub mod desktop;
 pub mod diagnostics;
@@ -64,12 +65,12 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
-        // Разрешение на микрофон: панель считает звук сама (Web Audio), и в Electron
-        // выдача была автоматической (`setPermissionRequestHandler` — только audio).
-        // Камеру (её роль играет OBS) и прочие виды не выдаём.
+        // Разрешение на микрофон и камеру: панель захватывает их сама (Web Audio
+        // и getUserMedia) и передаёт данные оверлею по мосту — странице в OBS
+        // Browser Source браузер доступ к устройствам не даёт. В Electron выдача
+        // была автоматической; прочие виды по-прежнему не выдаём.
         .on_permission_request(|_webview, kind| match kind {
-            PermissionKind::Microphone => PermissionResponse::Allow,
-            PermissionKind::Camera => PermissionResponse::Deny,
+            PermissionKind::Microphone | PermissionKind::Camera => PermissionResponse::Allow,
             _ => PermissionResponse::Default,
         })
         // Состояние окон (позиция, размер, развёрнутость) переживает перезапуск.

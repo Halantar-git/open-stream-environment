@@ -632,7 +632,7 @@
     "mic": "Microphone visualizer",
     "micDesc": "Animated sound wave",
     "webcam": "Webcam frame",
-    "webcamDesc": "Decorative frame around an OBS camera source: corners, badge and theme accent",
+    "webcamDesc": "Camera frame: decoration only or live video through the control panel",
     "death": "Death Counter",
     "deathDesc": "Big death counter for challenge streams",
     "soundboard": "Soundboard",
@@ -995,13 +995,32 @@
     "webcamRadius": "Corner radius",
     "webcamColor": "Frame color",
     "webcamColorAuto": "Auto (theme)",
-    "webcamHint": "The frame does not capture video: add the camera as a separate OBS source and place the frame above or below it.",
+    "webcamHint": "In Frame only mode the camera is a separate OBS source. In Live video mode the control panel captures the camera and sends frames to the overlay — the OBS browser source itself has no camera access.",
+    "webcamSource": "Video source",
+    "webcamSourceFrame": "Frame only",
+    "webcamSourceCamera": "Live video from the panel",
+    "webcamMirror": "Mirror video",
+    "webcamFit": "Frame fit",
+    "webcamFitCover": "Fill and crop",
+    "webcamFitContain": "Fit whole frame",
+    "webcamCapture": "Camera capture",
+    "webcamDevice": "Device",
+    "webcamDeviceDefault": "Default camera",
+    "webcamDeviceFallback": "Camera {{n}}",
+    "webcamDeviceRefresh": "Refresh device list",
+    "webcamWidth": "Frame width",
+    "webcamFps": "Frames per second",
+    "webcamQuality": "JPEG quality",
     "soundboardPopupDuration": "Popup duration, ms",
     "soundboardImageSize": "Image size, px",
     "soundboardShowImage": "Show image/GIF",
     "soundboardShowText": "Show caption",
     "soundboardShowBackground": "Popup background",
     "soundboardShowBorder": "Popup border"
+  },
+  "webcam": {
+    "noSignal": "No camera signal",
+    "previewLive": "Live camera video"
   },
   "preview": {
     "goalTitle": "Goal",
@@ -1325,7 +1344,7 @@
       "p3": "The microphone visualizer has modes (sine, bars, ring, equalizer), colour, opacity, gain and noise gate. The equalizer mode uses its own green-yellow-red palette.",
       "p4": "The microphone visualizer, webcam frame, 3D goals and the Executive Hangar timer have perspective: tilt strength 0–100 and a direction — left, right, up or down. The tilt is visible both in the overlay and in the editor preview.",
       "p5": "Microphone settings are split in two: display (mode, color, opacity, perspective) is per widget, while the device, echo cancellation and noise suppression are global because the microphone is opened once.",
-      "p6": "The webcam frame is decoration only: corners, a thin border and a LIVE badge in the current theme color. It does not capture video — an OBS browser source has no camera access. Add the camera as a separate OBS source and place the frame above or below it."
+      "p6": "The webcam frame has two modes. Frame only is decoration: corners, a thin border and a LIVE badge in the current theme color; the camera is a separate OBS source. Live video from the panel makes the control panel capture the camera and send JPEG frames to the overlay; device, frame width, FPS and quality are configurable, plus mirror and fit. The OBS browser source itself has no camera access."
     },
     "presets": {
       "title": "Layout presets",

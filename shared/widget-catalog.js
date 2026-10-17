@@ -142,12 +142,13 @@
     webcam: {
       type: "webcam",
       label: "Рамка веб-камеры",
-      description: "Декоративная рамка под камеру из OBS: уголки, бейдж и акцент темы",
+      description: "Рамка для камеры: оформление или живое видео через панель управления",
       icon: "widgetWebcam",
       defaultGeometry: { x: 3, y: 60, w: 24, h: 24 },
       minW: 8,
       minH: 8,
       defaultConfig: {
+        source: "frame",
         label: "LIVE",
         showLabel: true,
         labelPosition: "top-left",
@@ -155,6 +156,8 @@
         showCorners: true,
         showBackground: false,
         showVignette: false,
+        mirror: false,
+        fit: "cover",
         color: "",
         thickness: 4,
         radius: 16,

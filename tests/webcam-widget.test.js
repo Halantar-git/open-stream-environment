@@ -62,7 +62,17 @@ function makeEl(tag) {
     remove() {
       if (this.parentNode) this.parentNode.removeChild(this);
     },
-    querySelector() {
+    querySelector(selector) {
+      // Виджет после render() берёт canvas и заглушку через querySelector;
+      // мок отдаёт стабильные элементы, чтобы проверять зеркало и "нет сигнала".
+      if (selector === ".widget-webcam__video") {
+        if (!this._videoCanvas) this._videoCanvas = makeEl("canvas");
+        return this._videoCanvas;
+      }
+      if (selector === ".widget-webcam__empty") {
+        if (!this._emptyEl) this._emptyEl = makeEl("div");
+        return this._emptyEl;
+      }
       return null;
     },
     getContext() {
@@ -78,6 +88,7 @@ function makeContext() {
   return {
     bus: new EventBus(),
     EVENT_TYPES,
+    t: (key) => key,
     escapeHtml: (s) => String(s),
     escapeAttr: (s) => String(s),
   };
@@ -184,6 +195,62 @@ describe("WebcamWidget", () => {
     const w = mount({ thickness: 999, radius: -10 });
     expect(w.host.style.values["--webcam-thickness"]).toBe("16px");
     expect(w.host.style.values["--webcam-radius"]).toBe("0px");
+  });
+
+  test("в режиме камеры рисует видео-слой и заглушку", () => {
+    const w = mount({ source: "camera", fit: "contain" });
+
+    expect(w.host.innerHTML).toContain("widget-webcam__video-wrap");
+    expect(w.host.innerHTML).toContain("widget-webcam__video");
+    expect(w.host.innerHTML).toContain('data-fit="contain"');
+    expect(w.host.innerHTML).toContain("webcam.noSignal");
+  });
+
+  test("в режиме рамки видео-слоя нет", () => {
+    const w = mount({ source: "frame" });
+    expect(w.host.innerHTML).not.toContain("widget-webcam__video-wrap");
+  });
+
+  test("зеркало применяется к canvas и снимается при обновлении", () => {
+    const w = mount({ source: "camera", mirror: true });
+    expect(w.videoCanvas.style.transform).toBe("scaleX(-1)");
+
+    w.update({ config: { mirror: false } });
+    expect(w.videoCanvas.style.transform).toBe("");
+  });
+
+  test("кадр из моста рисуется и скрывает заглушку", () => {
+    const originalImage = global.Image;
+    const originalURL = global.URL;
+    const revoke = jest.fn();
+    global.URL = { createObjectURL: () => "blob:frame", revokeObjectURL: revoke };
+    global.Image = class {
+      set src(value) {
+        this._src = value;
+        if (this.onload) this.onload();
+      }
+      get src() {
+        return this._src;
+      }
+      get naturalWidth() {
+        return 640;
+      }
+      get naturalHeight() {
+        return 360;
+      }
+    };
+
+    try {
+      const w = mount({ source: "camera" });
+      w.context.bus.emit(EVENT_TYPES.CAMERA_VIDEO_FRAME, { blob: {} });
+
+      expect(w._hasFrame).toBe(true);
+      expect(w.emptyEl).toBeNull();
+      expect(revoke).toHaveBeenCalledWith("blob:frame");
+    } finally {
+      global.Image = originalImage;
+      global.URL = originalURL;
+    }
   });
 
   test("перспектива наклоняет виджет и учитывает направление", () => {

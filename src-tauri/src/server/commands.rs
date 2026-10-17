@@ -1129,6 +1129,16 @@ pub fn handle_message(
                 json!({ "config": config }),
             );
         }
+        event_types::CMD_SET_CAMERA_CONFIG => {
+            let config = diagnostics
+                .database()
+                .save_camera_config(payload.get("config"));
+            broadcast(
+                diagnostics,
+                event_types::OVERLAY_CAMERA_CONFIG,
+                json!({ "config": config }),
+            );
+        }
 
         _ => {}
     }
@@ -1419,6 +1429,20 @@ mod tests {
             message["payload"]["config"]["visualizer_mode"],
             json!("sine")
         );
+
+        // Камера: частичная запись тоже сохраняет остальные поля.
+        handle(
+            &fixture.diagnostics,
+            None,
+            &json!({
+                "type": event_types::CMD_SET_CAMERA_CONFIG,
+                "payload": { "config": { "fps": 20 } },
+            }),
+        );
+        let message = frame(&mut receiver);
+        assert_eq!(message["type"], json!(event_types::OVERLAY_CAMERA_CONFIG));
+        assert_eq!(message["payload"]["config"]["fps"], json!(20));
+        assert_eq!(message["payload"]["config"]["width"], json!(960));
 
         handle(
             &fixture.diagnostics,

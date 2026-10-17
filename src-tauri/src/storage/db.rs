@@ -109,6 +109,16 @@ pub fn default_data() -> Map<String, Value> {
             "autoGainControl": true,
         }),
     );
+    // Камера для моста в панель: устройство и параметры JPEG-кадров.
+    data.insert(
+        "overlay_camera_config".to_string(),
+        json!({
+            "deviceId": "",
+            "width": 960,
+            "fps": 12,
+            "quality": 0.6,
+        }),
+    );
     // Накопительные предупреждения автомодерации чата: userId → число варнов.
     data.insert("moderation_warns".to_string(), json!({}));
     // Язык интерфейса ("en" | "ru").
@@ -741,6 +751,31 @@ impl Database {
     pub fn save_mic_config(&self, config: Option<&Value>) -> Value {
         let next = merge(self.mic_config(), config);
         self.set_path("overlay_mic_config", next.clone());
+        next
+    }
+
+    pub fn camera_config(&self) -> Value {
+        let raw = self.get("overlay_camera_config").unwrap_or(Value::Null);
+        json!({
+            "deviceId": string_or(raw.get("deviceId"), ""),
+            // Ширина кадра: 320…1920, как в панели свойств.
+            "width": num(clamp(
+                coerced_number(raw.get("width"), 960.0).round(),
+                320.0,
+                1920.0
+            )),
+            "fps": num(clamp(
+                coerced_number(raw.get("fps"), 12.0).round(),
+                1.0,
+                30.0
+            )),
+            "quality": num(clamp(raw_number(raw.get("quality"), 0.6), 0.2, 0.95)),
+        })
+    }
+
+    pub fn save_camera_config(&self, config: Option<&Value>) -> Value {
+        let next = merge(self.camera_config(), config);
+        self.set_path("overlay_camera_config", next.clone());
         next
     }
 
@@ -1647,6 +1682,42 @@ mod tests {
         );
         assert_eq!(db.mic_config()["visualizer_mode"], json!("sine"));
         assert_eq!(db.mic_config()["freqScale"], json!("linear"));
+    }
+
+    #[test]
+    fn camera_config_defaults_and_normalizes_on_read() {
+        let dir = TempDir::new("camera");
+        let db = dir.open();
+
+        let defaults = db.camera_config();
+        assert_eq!(defaults["deviceId"], json!(""));
+        assert_eq!(defaults["width"], json!(960));
+        assert_eq!(defaults["fps"], json!(12));
+        assert_eq!(defaults["quality"], json!(0.6));
+
+        let saved = db.save_camera_config(Some(&json!({
+            "deviceId": "cam-1",
+            "width": 5000,
+            "fps": 60,
+            "quality": 2,
+        })));
+        assert_eq!(saved["deviceId"], json!("cam-1"));
+
+        // Запись не зажимает значения (как у микрофона), а чтение — зажимает.
+        let normalized = db.camera_config();
+        assert_eq!(normalized["deviceId"], json!("cam-1"));
+        assert_eq!(normalized["width"], json!(1920));
+        assert_eq!(normalized["fps"], json!(30));
+        assert_eq!(normalized["quality"], json!(0.95));
+
+        // Мусор откатывается к умолчаниям, отрицательный fps — к нижней границе.
+        db.set_path(
+            "overlay_camera_config",
+            json!({ "width": "мусор", "fps": -5 }),
+        );
+        let fallback = db.camera_config();
+        assert_eq!(fallback["width"], json!(960));
+        assert_eq!(fallback["fps"], json!(1));
     }
 
     #[test]
