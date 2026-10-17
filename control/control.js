@@ -636,6 +636,14 @@ const { EVENT_TYPES } = window.SharedEvents;
     });
   }
 
+  // Ссылки ведут в браузер: webview панели не должен уходить со страницы.
+  document.querySelectorAll("#settingsCardDonatex [data-external]").forEach((el) => {
+    el.addEventListener("click", (event) => {
+      event.preventDefault();
+      window.desktop?.openExternal(el.dataset.external);
+    });
+  });
+
   savePortBtn.addEventListener("click", () => {
     const next = Number(appPortInput.value);
     if (!next || next < 1024 || next > 65535) return;

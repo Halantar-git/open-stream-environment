@@ -54,10 +54,11 @@ pub fn donation_alert_from_payload(payload: &Value) -> Value {
 
     let currency = string_trimmed(payload.get("currency"));
     let message = string_trimmed(payload.get("message"));
-    // Платная озвучка важнее обычной, как в JS (`paidVoice || voiceFilePath`).
-    let paid_voice = string_trimmed(payload.get("paidVoice"));
-    let voice = if !paid_voice.is_empty() {
-        paid_voice
+    // Записанное голосовое сообщение важнее TTS. `paidVoice` — это название
+    // платного голоса, а не ссылка, поэтому в audio его больше не кладём.
+    let voice_message = string_trimmed(payload.get("voiceMessagePath"));
+    let voice = if !voice_message.is_empty() {
+        voice_message
     } else {
         string_trimmed(payload.get("voiceFilePath"))
     };
@@ -122,7 +123,9 @@ pub fn goal_update_from_payload(payload: &Value) -> Option<Value> {
 /// Ответ ИИ-персонажа из payload доната, если он есть.
 ///
 /// `aiResponse` — текст реплики, `withAIResponse` — флаг включённости,
-/// `paidVoice`/`voiceFilePath` — озвучка (платная важнее).
+/// `aiResponseVoiceFilePath` — озвучка именно ИИ. Раньше голос лежал в общем
+/// `paidVoice`, но в текущем API это платная озвучка доната, поэтому её
+/// больше не подставляем: иначе персонаж говорил бы голосом зрителя.
 pub fn ai_response_from_payload(payload: &Value) -> Option<Value> {
     if !payload.is_object() {
         return None;
@@ -133,13 +136,7 @@ pub fn ai_response_from_payload(payload: &Value) -> Option<Value> {
         return None;
     }
 
-    let paid_voice = string_trimmed(payload.get("paidVoice"));
-    let voice_file = string_trimmed(payload.get("voiceFilePath"));
-    let audio = if !paid_voice.is_empty() {
-        paid_voice
-    } else {
-        voice_file
-    };
+    let audio = string_trimmed(payload.get("aiResponseVoiceFilePath"));
 
     Some(json!({
         "characterName": "Ассистент",
@@ -501,16 +498,33 @@ mod tests {
     }
 
     #[test]
-    fn paid_voice_wins_and_the_anonymous_fallback_is_used() {
+    fn a_voice_message_wins_and_the_anonymous_fallback_is_used() {
         let alert = donation_alert_from_payload(&json!({
             "amount": "10",
             "voiceFilePath": "https://cdn.donatex.gg/default.mp3",
-            "paidVoice": "https://cdn.donatex.gg/paid.mp3",
+            "voiceMessagePath": "https://cdn.donatex.gg/recorded.mp3",
         }));
         assert_eq!(alert["user"], json!("Аноним"));
         assert_eq!(alert["amount"], json!(10));
         assert_eq!(alert["currency"], json!("RUB"));
-        assert_eq!(alert["voiceUrl"], json!("https://cdn.donatex.gg/paid.mp3"));
+        assert_eq!(
+            alert["voiceUrl"],
+            json!("https://cdn.donatex.gg/recorded.mp3")
+        );
+    }
+
+    #[test]
+    fn a_paid_voice_name_is_not_played_as_a_url() {
+        let alert = donation_alert_from_payload(&json!({
+            "amount": 10,
+            "voiceFilePath": "https://cdn.donatex.gg/default.mp3",
+            "paidVoice": "Альбина",
+        }));
+        // `paidVoice` в текущем API — название голоса, а не ссылка на файл.
+        assert_eq!(
+            alert["voiceUrl"],
+            json!("https://cdn.donatex.gg/default.mp3")
+        );
     }
 
     #[test]
@@ -541,17 +555,23 @@ mod tests {
             ai_response_from_payload(&json!({
                 "withAIResponse": true,
                 "aiResponse": "Привет, спасибо!",
+                "aiResponseVoiceFilePath": "https://cdn.donatex.gg/ai.mp3",
                 "paidVoice": "https://cdn.donatex.gg/paid.mp3",
+                "voiceFilePath": "https://cdn.donatex.gg/voice.mp3",
             })),
             Some(json!({
                 "characterName": "Ассистент",
                 "aiText": "Привет, спасибо!",
-                "aiAudio": "https://cdn.donatex.gg/paid.mp3",
+                "aiAudio": "https://cdn.donatex.gg/ai.mp3",
             }))
         );
-        // Непустая строка сама по себе тоже включает ответ.
+        // Платная озвучка и голос доната — не голос ИИ.
         assert_eq!(
-            ai_response_from_payload(&json!({ "aiResponse": "Здорово!" })),
+            ai_response_from_payload(&json!({
+                "aiResponse": "Здорово!",
+                "paidVoice": "https://cdn.donatex.gg/paid.mp3",
+                "voiceFilePath": "https://cdn.donatex.gg/voice.mp3",
+            })),
             Some(json!({
                 "characterName": "Ассистент",
                 "aiText": "Здорово!",
@@ -566,7 +586,7 @@ mod tests {
         let incoming = vec![
             frame("{}"),
             frame(
-                r#"{"type":1,"target":"DonationCreated","arguments":[{"username":"fan","amount":300,"currency":"RUB","message":"hi","aiResponse":"Спасибо!","paidVoice":"https://cdn.donatex.gg/v.mp3"}]}"#,
+                r#"{"type":1,"target":"DonationCreated","arguments":[{"username":"fan","amount":300,"currency":"RUB","message":"hi","aiResponse":"Спасибо!","aiResponseVoiceFilePath":"https://cdn.donatex.gg/v.mp3"}]}"#,
             ),
         ];
         let (control, cell) = control_with(incoming, Arc::clone(&sent));
