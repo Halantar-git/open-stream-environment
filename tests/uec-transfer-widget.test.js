@@ -224,6 +224,23 @@ describe("WidgetUecTransfer", () => {
     expect(w.chipEl.textContent).toBe("uec.chipFollow");
     expect(w.creditLabelEl.textContent).toBe("uec.registered");
     expect(w.amountEl.style.display).toBe("none");
+    expect(w.messageLabelEl.textContent).toBe("uec.details");
+    expect(w._messageText).toBe("uec.detailFollow");
+
+    w.unmount();
+  });
+
+  test("sub и gift_sub показывают уровень и количество", () => {
+    const w = new WidgetUecTransfer(item(), makeContext());
+
+    expect(w.tierLabel("1000")).toBe("1");
+    expect(w.tierLabel("3000")).toBe("3");
+    expect(w.tierLabel("Prime")).toBe("Prime");
+    expect(w.tierLabel("")).toBe("1");
+
+    expect(w.detailText({ kind: "sub", tier: "2000" })).toBe("uec.detailSub");
+    expect(w.detailText({ kind: "gift_sub", count: 5, tier: "1000" })).toBe("uec.detailGift");
+    expect(w.detailText({ kind: "follow" })).toBe("uec.detailFollow");
 
     w.unmount();
   });

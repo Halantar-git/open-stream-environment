@@ -327,25 +327,53 @@
         this.creditLabelEl.style.display = showAmount ? "" : "none";
       }
 
-      const message =
-        alert.kind === "donation" || alert.kind === "cheer" || alert.kind === "reward"
-          ? String(alert.message || "").trim()
-          : "";
+      // Сообщение есть у донатов, cheers и наград; у follow/sub/gift вместо
+      // него показываем служебные сведения о событии.
+      const infoKind = kind === "follow" || kind === "sub" || kind === "gift_sub";
+      const message = !infoKind && (kind === "donation" || kind === "cheer" || kind === "reward")
+        ? String(alert.message || "").trim()
+        : "";
+      const text = infoKind ? this.detailText(alert) : message;
+      if (this.messageLabelEl) {
+        this.messageLabelEl.textContent = this.t(infoKind ? "uec.details" : "uec.commLog");
+      }
       if (this.messageEl) {
-        this._messageText = message;
-        // Сообщение тоже стартует шифром: смена языка или настроек не должна
+        this._messageText = text;
+        // Текст тоже стартует шифром: смена языка или настроек не должна
         // раскрывать его раньше дешифровки.
-        this.messageEl.textContent = message
+        this.messageEl.textContent = text
           ? this._messageDecoded
-            ? message
-            : this._scramble(Array.from(message), 0)
+            ? text
+            : this._scramble(Array.from(text), 0)
           : this.t("uec.emptyLog");
-        this.messageEl.classList.toggle("is-empty", !message);
+        this.messageEl.classList.toggle("is-empty", !text);
       }
 
       if (this.asideEl && typeof this.asideEl.style.setProperty === "function") {
         this.asideEl.style.setProperty("--uec-amount-color", this.amountColor(kind, alert.amount));
       }
+    }
+
+    // Сведения о неденежных событиях: уровень подписки и количество подарков.
+    detailText(alert) {
+      const kind = alert.kind || "";
+      if (kind === "follow") return this.t("uec.detailFollow");
+      if (kind === "sub") return this.t("uec.detailSub", { tier: this.tierLabel(alert.tier) });
+      if (kind === "gift_sub") {
+        return this.t("uec.detailGift", {
+          count: Math.max(1, Number(alert.count) || 1),
+          tier: this.tierLabel(alert.tier),
+        });
+      }
+      return "";
+    }
+
+    // Twitch отдаёт уровень как 1000/2000/3000; показываем привычную цифру.
+    tierLabel(tier) {
+      const raw = String(tier || "").trim();
+      if (!raw) return "1";
+      const match = raw.match(/^(\d+)000$/);
+      return match ? match[1] : raw;
     }
 
     currentName() {
