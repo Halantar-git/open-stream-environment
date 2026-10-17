@@ -1,5 +1,5 @@
 {
-  "sourceHash": "d3ae5e7a4488986c",
+  "sourceHash": "f6d7b067d2859ced",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -1063,6 +1063,35 @@
       "minH": 6,
       "defaultConfig": {
         "autoplay": true
+      }
+    },
+    "uec-transfer": {
+      "type": "uec-transfer",
+      "label": "UEC-перевод",
+      "description": "Входящая передача: канал, позывной и сумма — в стиле Star Citizen",
+      "icon": "widgetUecTransfer",
+      "services": [
+        "twitchEvents",
+        "donationAlerts",
+        "donatex",
+        "youtube"
+      ],
+      "themes": [
+        "grimhex",
+        "custom"
+      ],
+      "defaultGeometry": {
+        "x": 25,
+        "y": 3,
+        "w": 50,
+        "h": 20
+      },
+      "minW": 30,
+      "minH": 14,
+      "defaultConfig": {
+        "showAmount": true,
+        "showMessage": true,
+        "durationMs": 9000
       }
     }
   },

@@ -1,0 +1,380 @@
+/*
+ * Copyright (C) 2026  Halantar
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://gnu.org>.
+ */
+
+/*
+  UEC transfer alert ("Входящая передача").
+
+  A Star Citizen HUD-style alert for the Grim HEX theme: a compact strip
+  ("ВХОДЯЩЕЕ СООБЩЕНИЕ") slides in first, the panel then expands to show the
+  channel, the callsign and — for donations — the transferred amount. The
+  callsign is scrambled and decoded character by character, like a signal
+  being decrypted.
+
+  The widget is DOM-only: phases are driven by tracked `later()`/`every()`
+  timers, so no rAF loop is needed and the scene budget stays low.
+*/
+(function (root, factory) {
+  const BaseWidget =
+    typeof module !== "undefined" && module.exports
+      ? require("./base-widget")
+      : root.OSEWidgets && root.OSEWidgets.BaseWidget;
+  const WidgetUecTransfer = factory(BaseWidget);
+
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = WidgetUecTransfer;
+  } else {
+    root.OSEWidgets = root.OSEWidgets || {};
+    root.OSEWidgets.WidgetUecTransfer = WidgetUecTransfer;
+  }
+})(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
+  "use strict";
+
+  // Компактная плашка держится чуть больше секунды — как «входящий вызов» в
+  // референсе: успеваешь прочитать, но она не мешает раскрытию.
+  const COMPACT_MS = 1400;
+  const DECODE_TICK_MS = 38;
+  const DEFAULT_DURATION_MS = 9000;
+
+  // Символы для «шифра»: цифры и знаки читаются как служебный код, а не как
+  // случайный текст. Буквы оставлены латинскими, чтобы ник не превращался в
+  // кашу из кириллицы.
+  const SCRAMBLE = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ#=+*/<>";
+
+  const BADGE =
+    '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+    '<path d="M12 2.4l8.2 4.7v9.8L12 21.6l-8.2-4.7V7.1L12 2.4z" fill="none" stroke="currentColor" stroke-width="1.2"/>' +
+    '<path d="M12 6.2l4.9 2.8v5.9L12 17.8l-4.9-2.9V9L12 6.2z" fill="none" stroke="currentColor" stroke-width="0.9"/>' +
+    '<path d="M12 9.4l2.2 1.3v2.6L12 14.6l-2.2-1.3v-2.6L12 9.4z" fill="currentColor" stroke="none"/>' +
+    "</svg>";
+
+  const CHIP_KEYS = {
+    donation: "uec.chipDonation",
+    cheer: "uec.chipCheer",
+    follow: "uec.chipFollow",
+    sub: "uec.chipSub",
+    gift_sub: "uec.chipSub",
+    reward: "uec.chipReward",
+    wheel_start: "uec.chipSystem",
+    wheel_winner: "uec.chipSystem",
+  };
+
+  const CREDIT_KEYS = {
+    donation: "uec.credited",
+    cheer: "uec.credited",
+    follow: "uec.registered",
+    sub: "uec.activated",
+    gift_sub: "uec.activated",
+    reward: "uec.received",
+    wheel_start: "uec.processed",
+    wheel_winner: "uec.processed",
+  };
+
+  // Ник может прийти пустым (например у колеса) — подставляем служебную строку,
+  // а не пустую строку с одиноким курсором.
+  const NAME_FALLBACK = "uec.anonymous";
+
+  function div(className) {
+    const el = document.createElement("div");
+    el.className = className;
+    return el;
+  }
+
+  function span(className) {
+    const el = document.createElement("span");
+    el.className = className;
+    return el;
+  }
+
+  class WidgetUecTransfer extends BaseWidget {
+    constructor(config, context) {
+      super(config, context);
+
+      this.queue = [];
+      this.current = null;
+      this._hideId = null;
+      this._compactId = null;
+      this._decodeId = null;
+      this._duration = DEFAULT_DURATION_MS;
+    }
+
+    onMount() {
+      this.element.classList.add("uec-transfer");
+      this.element.style.opacity = "0";
+      this.element.style.pointerEvents = "none";
+
+      this.compactEl = div("uec-transfer__compact");
+      this.compactBadgeEl = span("uec-transfer__badge uec-transfer__badge--compact");
+      this.compactBadgeEl.innerHTML = BADGE;
+      this.compactTextEl = span("uec-transfer__compact-text");
+      this.compactTextEl.textContent = this.t("uec.incoming");
+      this.compactDotsEl = span("uec-transfer__dots");
+      for (let i = 0; i < 3; i++) this.compactDotsEl.appendChild(span("uec-transfer__dot"));
+      this.compactEl.appendChild(this.compactBadgeEl);
+      this.compactEl.appendChild(this.compactTextEl);
+      this.compactEl.appendChild(this.compactDotsEl);
+      this.compactEl.appendChild(this._buildSignal());
+      this.element.appendChild(this.compactEl);
+
+      this.frameEl = div("uec-transfer__frame");
+      this.panelEl = div("uec-transfer__panel");
+
+      const head = div("uec-transfer__head");
+      const headBadge = span("uec-transfer__badge");
+      headBadge.innerHTML = BADGE;
+      this.titleEl = span("uec-transfer__title");
+      this.titleEl.textContent = this.t("uec.transmission");
+      this.separatorEl = span("uec-transfer__separator");
+      this.separatorEl.textContent = "·";
+      this.channelEl = span("uec-transfer__channel");
+      this.chipEl = span("uec-transfer__chip");
+      head.appendChild(headBadge);
+      head.appendChild(this.titleEl);
+      head.appendChild(this.separatorEl);
+      head.appendChild(this.channelEl);
+      head.appendChild(this._buildSignal());
+      head.appendChild(this.chipEl);
+      this.panelEl.appendChild(head);
+
+      const body = div("uec-transfer__body");
+
+      const main = div("uec-transfer__main");
+      this.callsignLabelEl = span("uec-transfer__label");
+      this.callsignLabelEl.textContent = this.t("uec.callsign");
+      const nameRow = div("uec-transfer__name-row");
+      this.nameEl = span("uec-transfer__name");
+      nameRow.appendChild(this.nameEl);
+      const messageRow = div("uec-transfer__message-row");
+      this.messageLabelEl = span("uec-transfer__label uec-transfer__label--muted");
+      this.messageLabelEl.textContent = this.t("uec.commLog");
+      this.messageEl = span("uec-transfer__message");
+      messageRow.appendChild(this.messageLabelEl);
+      messageRow.appendChild(this.messageEl);
+      main.appendChild(this.callsignLabelEl);
+      main.appendChild(nameRow);
+      main.appendChild(messageRow);
+
+      const aside = div("uec-transfer__aside");
+      this.creditLabelEl = span("uec-transfer__credit-label");
+      this.amountEl = span("uec-transfer__amount");
+      this.decodedLabelEl = span("uec-transfer__decoded");
+      this.decodedLabelEl.textContent = this.t("uec.decoded");
+      aside.appendChild(this.creditLabelEl);
+      aside.appendChild(this.amountEl);
+      aside.appendChild(this.decodedLabelEl);
+
+      body.appendChild(main);
+      body.appendChild(aside);
+      this.panelEl.appendChild(body);
+
+      this.frameEl.appendChild(this.panelEl);
+      this.element.appendChild(this.frameEl);
+
+      this.applyConfig();
+      this.subscribe(this.context.EVENT_TYPES.ALERT, (alert) => this.queueAlert(alert));
+      // Смена языка приходит отдельным кадром: статичные подписи нужно
+      // перерисовать, иначе они останутся на прежнем языке до нового алерта.
+      this.subscribe(this.context.EVENT_TYPES.LOCALES, () => this.applyConfig());
+    }
+
+    onUpdate() {
+      this.applyConfig();
+    }
+
+    onUnmount() {
+      this._clearDecode();
+      if (this._hideId != null) this.clearTimer(this._hideId);
+      if (this._compactId != null) this.clearTimer(this._compactId);
+      this._hideId = null;
+      this._compactId = null;
+      this.queue = [];
+      this.current = null;
+    }
+
+    // ---- config ----
+
+    applyConfig() {
+      const channel = String(this.config.channel || "").trim() || this.t("uec.channel");
+      if (this.channelEl) this.channelEl.textContent = channel;
+      if (this.compactTextEl) this.compactTextEl.textContent = this.t("uec.incoming");
+      if (this.titleEl) this.titleEl.textContent = this.t("uec.transmission");
+      if (this.callsignLabelEl) this.callsignLabelEl.textContent = this.t("uec.callsign");
+      if (this.messageLabelEl) this.messageLabelEl.textContent = this.t("uec.commLog");
+      if (this.decodedLabelEl) this.decodedLabelEl.textContent = this.t("uec.decoded");
+      if (this.panelEl) this.panelEl.classList.toggle("is-no-message", this.config.showMessage === false);
+      if (this.current) this.renderLabels(this.current);
+    }
+
+    t(key, params) {
+      const context = this.context || {};
+      return typeof context.t === "function" ? context.t(key, params) : key;
+    }
+
+    // ---- queue ----
+
+    queueAlert(alert) {
+      if (!alert) return;
+      this.queue.push(alert);
+      if (!this.current) this.showNext();
+    }
+
+    showNext() {
+      this.current = null;
+      this._clearDecode();
+      if (this._compactId != null) {
+        this.clearTimer(this._compactId);
+        this._compactId = null;
+      }
+      this.element.classList.remove("is-active", "is-compact", "is-expanded");
+      this.element.style.opacity = "0";
+
+      const alert = this.queue.shift();
+      if (!alert) return;
+
+      this.current = alert;
+      this.renderContent(alert);
+      this.element.style.opacity = "1";
+      this.element.classList.add("is-active", "is-compact");
+
+      this._compactId = this.later(() => {
+        this._compactId = null;
+        this._expand();
+      }, COMPACT_MS);
+
+      const duration = Number(alert.durationMs) || Number(this.config.durationMs) || DEFAULT_DURATION_MS;
+      this._duration = Math.max(1500, Math.min(60000, duration));
+      this._hideId = this.later(() => {
+        this._hideId = null;
+        this.showNext();
+      }, this._duration);
+    }
+
+    _expand() {
+      if (!this.current) return;
+      this.element.classList.remove("is-compact");
+      this.element.classList.add("is-expanded");
+      this._startDecode(this.currentName());
+    }
+
+    // ---- content ----
+
+    renderContent(alert) {
+      if (!this.chipEl) return;
+      this.renderLabels(alert);
+
+      // Пока панель не раскрыта, ник стоит «зашифрованным» — так компактная
+      // плашка не выдаёт содержимое раньше времени.
+      this.nameEl.textContent = this._scramble(this.currentName(), 0);
+    }
+
+    // Подписи и сумма не зависят от фазы дешифровки, поэтому их можно
+    // перерисовывать отдельно при смене языка или настроек.
+    renderLabels(alert) {
+      const kind = alert.kind || "";
+      this.chipEl.textContent = this.t(CHIP_KEYS[kind] || "uec.chipSystem");
+      if (this.creditLabelEl) {
+        this.creditLabelEl.textContent = this.t(CREDIT_KEYS[kind] || "uec.processed");
+      }
+
+      const amount = this.amountText(alert);
+      const showAmount = this.config.showAmount !== false && amount;
+      if (this.amountEl) {
+        this.amountEl.textContent = showAmount ? amount : "";
+        this.amountEl.style.display = showAmount ? "" : "none";
+      }
+      if (this.creditLabelEl) {
+        this.creditLabelEl.style.display = showAmount ? "" : "none";
+      }
+
+      const message =
+        alert.kind === "donation" || alert.kind === "cheer" || alert.kind === "reward"
+          ? String(alert.message || "").trim()
+          : "";
+      if (this.messageEl) {
+        this.messageEl.textContent = message || this.t("uec.emptyLog");
+        this.messageEl.classList.toggle("is-empty", !message);
+      }
+    }
+
+    currentName() {
+      const alert = this.current || {};
+      const user = String(alert.user || "").trim();
+      return user || this.t(NAME_FALLBACK);
+    }
+
+    amountText(alert) {
+      const context = this.context || {};
+      const formatMoney = typeof context.formatMoney === "function" ? context.formatMoney : (n) => String(n);
+      const symbol = typeof context.currencySymbol === "function" ? context.currencySymbol : () => "";
+      const amount = Number(alert.amount) || 0;
+      if (amount <= 0) return "";
+      if (alert.kind === "cheer") return `+${formatMoney(amount)} ${this.t("uec.bits")}`;
+      return `+${formatMoney(amount)} ${symbol(alert.currency || "RUB")}`.trim();
+    }
+
+    // ---- decode animation ----
+
+    _startDecode(text) {
+      this._clearDecode();
+      const chars = Array.from(String(text || ""));
+      if (!chars.length) {
+        this.nameEl.textContent = "";
+        return;
+      }
+
+      let revealed = 0;
+      this.nameEl.textContent = this._scramble(chars, 0);
+      this._decodeId = this.every(() => {
+        revealed += 1;
+        if (revealed >= chars.length) {
+          this.nameEl.textContent = chars.join("");
+          this._clearDecode();
+          this.panelEl.classList.add("is-decoded");
+          return;
+        }
+        this.nameEl.textContent = this._scramble(chars, revealed);
+      }, DECODE_TICK_MS);
+    }
+
+    _clearDecode() {
+      if (this._decodeId != null) {
+        this.clearTimer(this._decodeId);
+        this._decodeId = null;
+      }
+      if (this.panelEl) this.panelEl.classList.remove("is-decoded");
+    }
+
+    _scramble(chars, revealed) {
+      let out = "";
+      for (let i = 0; i < chars.length; i++) {
+        const ch = chars[i];
+        if (i < revealed || ch === " ") out += ch;
+        else out += SCRAMBLE[Math.floor(Math.random() * SCRAMBLE.length)];
+      }
+      return out;
+    }
+
+    // ---- small DOM helpers ----
+
+    _buildSignal() {
+      const signal = span("uec-transfer__signal");
+      for (let i = 0; i < 5; i++) signal.appendChild(span("uec-transfer__bar"));
+      return signal;
+    }
+  }
+
+  return WidgetUecTransfer;
+});

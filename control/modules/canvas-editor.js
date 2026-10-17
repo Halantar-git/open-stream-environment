@@ -482,6 +482,33 @@ export function initCanvasEditor({
           </div>
         </div>`;
       }
+      case "uec-transfer": {
+        const cyan = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#00f0ff";
+        const text = (state.appearance.tokens && state.appearance.tokens["--md-on-surface"]) || "#eafcff";
+        const muted = (state.appearance.tokens && state.appearance.tokens["--md-on-surface-variant"]) || "#8ab4d0";
+        const channel = escapeHtml(config.channel || t("uec.channel"));
+        return `<div class="uec-transfer-preview" style="position:relative;height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;padding:8px 12px;background:linear-gradient(180deg,rgba(6,21,29,0.97),rgba(2,8,13,0.96));border:1px solid ${cyan};clip-path:polygon(14px 0,calc(100% - 6px) 0,100% 6px,100% calc(100% - 14px),calc(100% - 14px) 100%,6px 100%,0 calc(100% - 6px),0 14px);font-family:'Orbitron','Segoe UI',sans-serif;">
+          <div style="display:flex;align-items:center;gap:6px;color:${cyan};font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;white-space:nowrap;">
+            <svg viewBox="0 0 24 24" style="width:12px;height:12px;flex-shrink:0;color:${cyan};"><path d="M12 2.4l8.2 4.7v9.8L12 21.6l-8.2-4.7V7.1L12 2.4z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M12 6.2l4.9 2.8v5.9L12 17.8l-4.9-2.9V9L12 6.2z" fill="none" stroke="currentColor" stroke-width="0.9"/></svg>
+            <span>${escapeHtml(t("uec.transmission"))}</span>
+            <span style="opacity:.5">·</span>
+            <span style="color:${text};overflow:hidden;text-overflow:ellipsis;">${channel}</span>
+            <span style="margin-left:auto;border:1px solid ${cyan};padding:2px 6px;color:${text};">${escapeHtml(t("uec.chipDonation"))}</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:0;">
+            <div style="min-width:0;display:flex;flex-direction:column;gap:2px;border-left:2px solid ${cyan};padding-left:6px;">
+              <span style="font-size:7px;letter-spacing:1.4px;color:${muted};text-transform:uppercase;">${escapeHtml(t("uec.callsign"))}</span>
+              <span style="font-size:16px;color:${text};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">star_gazer</span>
+              <span style="font-size:7px;color:${muted};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t("uec.commLog"))} · ${escapeHtml(t("uec.emptyLog"))}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;border-left:1px solid rgba(0,240,255,0.2);padding-left:10px;flex-shrink:0;">
+              <span style="font-size:7px;letter-spacing:1.2px;color:#39ff88;text-transform:uppercase;">${escapeHtml(t("uec.credited"))}</span>
+              <span style="font-size:16px;color:#39ff88;white-space:nowrap;">+${formatMoney(250)} ${currencySymbol("RUB")}</span>
+              <span style="font-size:7px;letter-spacing:1.2px;color:${muted};text-transform:uppercase;">${escapeHtml(t("uec.decoded"))}</span>
+            </div>
+          </div>
+        </div>`;
+      }
       case "grimhex-radar": {
         const cyan = "#00f0ff";
         return `<div class="grimhex-radar-preview" style="position:relative;height:100%;display:flex;align-items:center;justify-content:center;padding:4px;box-sizing:border-box;">

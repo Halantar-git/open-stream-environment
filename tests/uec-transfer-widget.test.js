@@ -1,0 +1,217 @@
+/*
+ * Copyright (C) 2026  Halantar
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://gnu.org>.
+ */
+
+const EventBus = require("../overlay/event-bus");
+const { EVENT_TYPES } = require("../shared/events");
+const WidgetUecTransfer = require("../overlay/widgets/uec-transfer-widget");
+
+function makeEl(tag) {
+  const classSet = new Set();
+  const el = {
+    tagName: (tag || "div").toUpperCase(),
+    className: "",
+    dataset: {},
+    style: {},
+    innerHTML: "",
+    textContent: "",
+    parentNode: null,
+    children: [],
+    classList: {
+      add: (...c) => c.forEach((x) => classSet.add(x)),
+      remove: (...c) => c.forEach((x) => classSet.delete(x)),
+      toggle: (c, f) => {
+        const on = f === undefined ? !classSet.has(c) : f;
+        if (on) classSet.add(c);
+        else classSet.delete(c);
+        return on;
+      },
+      contains: (c) => classSet.has(c),
+    },
+    appendChild(c) {
+      c.parentNode = this;
+      this.children.push(c);
+      return c;
+    },
+    removeChild(c) {
+      const i = this.children.indexOf(c);
+      if (i >= 0) this.children.splice(i, 1);
+      c.parentNode = null;
+      return c;
+    },
+  };
+  return el;
+}
+
+function makeContext(overrides = {}) {
+  return {
+    bus: new EventBus(),
+    EVENT_TYPES,
+    theme: "grimhex",
+    t: (key) => key,
+    formatMoney: (n) => String(n),
+    currencySymbol: () => "₽",
+    ...overrides,
+  };
+}
+
+function item(overrides = {}) {
+  return {
+    id: "u",
+    type: "uec-transfer",
+    x: 25,
+    y: 3,
+    w: 50,
+    h: 20,
+    z: 0,
+    visible: true,
+    config: {},
+    renderType: "2d",
+    ...overrides,
+  };
+}
+
+function donation(overrides = {}) {
+  return {
+    kind: "donation",
+    user: "bob_the_pilot",
+    amount: 150,
+    currency: "RUB",
+    message: "на корабль",
+    ...overrides,
+  };
+}
+
+let originalDocument;
+
+beforeEach(() => {
+  jest.useFakeTimers();
+  originalDocument = global.document;
+  global.document = { createElement: (tag) => makeEl(tag) };
+});
+
+afterEach(() => {
+  global.document = originalDocument;
+  jest.useRealTimers();
+});
+
+describe("WidgetUecTransfer", () => {
+  test("до первого алерта ничего не показывает", () => {
+    const parent = makeEl("div");
+    const w = new WidgetUecTransfer(item(), makeContext());
+    w.mount(parent);
+
+    expect(w.element.style.opacity).toBe("0");
+    expect(w.element.classList.contains("is-compact")).toBe(false);
+    expect(w.element.classList.contains("is-expanded")).toBe(false);
+
+    w.unmount();
+  });
+
+  test("донат начинается с компактной плашки «входящее сообщение»", () => {
+    const ctx = makeContext();
+    const w = new WidgetUecTransfer(item(), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, donation());
+
+    expect(w.element.classList.contains("is-compact")).toBe(true);
+    expect(w.compactTextEl.textContent).toBe("uec.incoming");
+    expect(w.channelEl.textContent).toBe("uec.channel");
+    expect(w.titleEl.textContent).toBe("uec.transmission");
+    expect(w.chipEl.textContent).toBe("uec.chipDonation");
+    expect(w.creditLabelEl.textContent).toBe("uec.credited");
+    expect(w.amountEl.textContent).toBe("+150 ₽");
+    expect(w.messageEl.textContent).toBe("на корабль");
+    // Ник ещё не раскрыт: это должен быть «шифр», а не готовое имя.
+    expect(w.nameEl.textContent).not.toBe("bob_the_pilot");
+
+    w.unmount();
+  });
+
+  test("после паузы панель раскрывается и ник расшифровывается", () => {
+    const ctx = makeContext();
+    const w = new WidgetUecTransfer(item(), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, donation());
+    jest.advanceTimersByTime(1400);
+
+    expect(w.element.classList.contains("is-compact")).toBe(false);
+    expect(w.element.classList.contains("is-expanded")).toBe(true);
+    expect(w.nameEl.textContent).not.toBe("bob_the_pilot");
+
+    // По одному символу за тик — тринадцати тиков хватает на этот ник.
+    jest.advanceTimersByTime(600);
+    expect(w.nameEl.textContent).toBe("bob_the_pilot");
+    expect(w.panelEl.classList.contains("is-decoded")).toBe(true);
+
+    w.unmount();
+  });
+
+  test("по окончании прячет плашку и берёт следующий алерт из очереди", () => {
+    const ctx = makeContext();
+    const w = new WidgetUecTransfer(item({ config: { durationMs: 4000 } }), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, donation({ user: "first" }));
+    ctx.bus.emit(EVENT_TYPES.ALERT, donation({ user: "second", amount: 50 }));
+
+    expect(w.current.user).toBe("first");
+    expect(w.queue).toHaveLength(1);
+
+    jest.advanceTimersByTime(4000);
+    expect(w.current.user).toBe("second");
+    expect(w.element.classList.contains("is-compact")).toBe(true);
+    expect(w.queue).toHaveLength(0);
+
+    jest.advanceTimersByTime(4000);
+    expect(w.current).toBeNull();
+    expect(w.element.style.opacity).toBe("0");
+
+    w.unmount();
+  });
+
+  test("showAmount=false и showMessage=false убирают сумму и лог связи", () => {
+    const ctx = makeContext();
+    const w = new WidgetUecTransfer(
+      item({ config: { showAmount: false, showMessage: false } }),
+      ctx
+    );
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, donation());
+
+    expect(w.amountEl.style.display).toBe("none");
+    expect(w.creditLabelEl.style.display).toBe("none");
+    expect(w.panelEl.classList.contains("is-no-message")).toBe(true);
+
+    w.unmount();
+  });
+
+  test("не-денежные события получают свои подписи", () => {
+    const ctx = makeContext();
+    const w = new WidgetUecTransfer(item(), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "follow", user: "alice" });
+    expect(w.chipEl.textContent).toBe("uec.chipFollow");
+    expect(w.creditLabelEl.textContent).toBe("uec.registered");
+    expect(w.amountEl.style.display).toBe("none");
+
+    w.unmount();
+  });
+});

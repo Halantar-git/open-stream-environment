@@ -402,6 +402,7 @@
   manager.register("grimhex-chat", OW.WidgetGrimHexChat);
   manager.register("grimhex-goal", OW.WidgetGrimHexGoal);
   manager.register("grimhex-holo-alert", OW.WidgetGrimHexHoloAlert);
+  manager.register("uec-transfer", OW.WidgetUecTransfer);
   manager.register("nuclear", OW.WidgetNuclear);
   manager.register("nuclear-chat", OW.WidgetNuclearChat);
   manager.register("nuclear-goal", OW.WidgetNuclearGoal);
