@@ -1178,4 +1178,6 @@ tests/                     — фронтовые Jest-тесты (бэкенд 
 * **Jingle_Win_00 & Jingle_Lose_01** — автор [LittleRobotSoundFactory](https://freesound.org/people/LittleRobotSoundFactory/), [звук 270333](https://freesound.org/people/LittleRobotSoundFactory/sounds/270333/) и [звук 270334](https://freesound.org/people/LittleRobotSoundFactory/sounds/270334/) (CC BY 4.0)
 * **Buzzer (звук уведомлений)** — «alarm clock buzzer alarm beep», автор [Garuda1982](https://freesound.org/people/Garuda1982/), [звук 530172](https://freesound.org/people/Garuda1982/sounds/530172/) (CC0); в поставке — обрезанный фрагмент
 
-Отдельная благодарность [CH_AK](https://www.twitch.tv/ch_ak) за идею виджета «UEC-перевод».
+### Идеи для виджетов
+
+* [CH_AK](https://www.twitch.tv/ch_ak) — идея виджета «UEC-перевод».
