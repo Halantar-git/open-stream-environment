@@ -222,7 +222,9 @@
     "sec": "sec",
     "splashPerScene": "Per scene",
     "splashPerSceneHint": "The switch next to a scene enables the splash when entering it and when returning from it to the game. Without its own file the global splash is used.",
-    "splashDurationHint": "auto — video plays to the end, image/GIF uses the default. 1–30 — fixed duration."
+    "splashDurationHint": "auto — video plays to the end, image/GIF uses the default. 1–30 — fixed duration.",
+    "splashSourceUrl": "OBS link (splash scene)",
+    "splashSourceHint": "Add it as a 1920×1080 browser source to the OBS scene named in Settings → OBS WebSocket → Opening. Turn off “Shutdown source when not visible” in the source properties, otherwise the splash may not connect in time."
   },
   "settings": {
     "twitch": "Twitch",

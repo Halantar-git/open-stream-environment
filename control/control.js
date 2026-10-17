@@ -613,6 +613,8 @@ const { EVENT_TYPES } = window.SharedEvents;
     obsUrlLabel.textContent = overlayUrl;
     if (appPortInput) appPortInput.value = port;
     if (appOverlayUrlInput) appOverlayUrlInput.value = overlayUrl;
+    const splashSourceInput = document.getElementById("splashSourceUrl");
+    if (splashSourceInput) splashSourceInput.value = splashUrl();
     twitchRedirectUriEl.textContent = `http://localhost:${port}/oauth/twitch/callback`;
     daRedirectUriEl.textContent = `http://localhost:${port}/oauth/donationalerts/callback`;
     youtubeRedirectUriEl.textContent = `http://localhost:${port}/oauth/youtube/callback`;
@@ -1332,6 +1334,14 @@ const { EVENT_TYPES } = window.SharedEvents;
 
     let html = `
       <div class="md-field">
+        <label>${t("scenes.splashSourceUrl")}</label>
+        <div class="settings__port-row">
+          <input type="text" id="splashSourceUrl" readonly value="${escapeAttr(splashUrl())}">
+          <button class="md-button md-button--tonal" id="copySplashUrlBtn">${t("common.copy")}</button>
+        </div>
+      </div>
+      <p class="properties__hint" style="margin:0 0 8px;">${t("scenes.splashSourceHint")}</p>
+      <div class="md-field">
         <label>${t("scenes.globalSplashFile")}</label>
         <div class="splash-row">
           <div id="globalSplashFile"></div>
@@ -1361,6 +1371,16 @@ const { EVENT_TYPES } = window.SharedEvents;
     });
 
     splashSettingsFormEl.innerHTML = html;
+
+    const copySplashBtn = splashSettingsFormEl.querySelector("#copySplashUrlBtn");
+    if (copySplashBtn) {
+      copySplashBtn.addEventListener("click", async () => {
+        const ok = await copyText(splashUrl());
+        if (!ok) return;
+        copySplashBtn.textContent = t("scenes.copied");
+        setTimeout(() => (copySplashBtn.textContent = t("common.copy")), 1400);
+      });
+    }
 
     splashSettingsFormEl.querySelector("#globalSplashFile").appendChild(
       makeSoundFileInput(splash.file || "", "media/...mp4/gif", "media", (v) =>
@@ -3001,6 +3021,12 @@ const { EVENT_TYPES } = window.SharedEvents;
     return `http://localhost:${port}/overlay/scene.html?type=${id}`;
   }
 
+  // Ссылка на страницу заставки: её кладут браузерным источником в OBS-сцену,
+  // имя которой задано в «Настройки → OBS WebSocket → Opening».
+  function splashUrl() {
+    return `http://localhost:${port}/overlay/video-splash.html`;
+  }
+
   function renderScenesNav() {
     scenesNavListEl.innerHTML = "";
     Object.values(SceneCatalog.SCENE_DEFS).forEach((def) => {
@@ -3944,6 +3970,9 @@ const { EVENT_TYPES } = window.SharedEvents;
     canvasEditor.renderLayers();
     propertiesPanel.render();
     renderSceneForm();
+    // Подписи и поля заставок тоже строятся из t(), поэтому при смене языка
+    // форму нужно собрать заново — applyLocales не перерисовывает всю панель.
+    renderSplashSettings();
     if (!wheelPanelEl.hidden) renderWheelPanels();
     if (!pollPanelEl.hidden) renderPollPanels();
     renderThemeGrid();
