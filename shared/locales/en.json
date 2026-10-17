@@ -602,7 +602,7 @@
     "music": "Donation music",
     "musicDesc": "Track attached to a donation: cover art, title, requester and progress",
     "uec-transfer": "UEC transfer",
-    "uec-transferDesc": "Incoming transmission: channel, callsign and donation amount in Star Citizen style (Grim HEX theme)",
+    "uec-transferDesc": "Incoming transmission: channel, callsign and donation amount in Star Citizen style (Orbital theme)",
     "stat": "Counter",
     "statDesc": "Followers, subscribers or top donation as a badge",
     "social": "Social banner",

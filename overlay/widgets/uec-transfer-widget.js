@@ -18,14 +18,17 @@
 /*
   UEC transfer alert ("Входящая передача").
 
-  A Star Citizen HUD-style alert for the Grim HEX theme: a compact strip
+  A Star Citizen HUD-style alert (Orbital first): a compact strip
   ("ВХОДЯЩЕЕ СООБЩЕНИЕ") slides in first, the panel then expands to show the
   channel, the callsign and — for donations — the transferred amount. The
   callsign is scrambled and decoded character by character, like a signal
   being decrypted.
 
-  The widget is DOM-only: phases are driven by tracked `later()`/`every()`
-  timers, so no rAF loop is needed and the scene budget stays low.
+  The panel surface, border, glow and accent come from the active theme's
+  tokens, so the widget sits next to the other HUD panels instead of carrying
+  its own palette. The widget is DOM-only: phases are driven by tracked
+  `later()`/`every()` timers, so no rAF loop is needed and the scene budget
+  stays low.
 */
 (function (root, factory) {
   const BaseWidget =
