@@ -3245,6 +3245,10 @@ const { EVENT_TYPES } = window.SharedEvents;
             `${ext("https://freesound.org/people/LittleRobotSoundFactory/sounds/270334/", "Jingle Lose")} — LittleRobotSoundFactory, CC BY 4.0`,
           ) +
           row(`${ext("https://freesound.org/people/Garuda1982/", "Buzzer")} — Garuda1982, CC0`),
+      ) +
+      group(
+        t("settings.creditsIdeas"),
+        row(`${ext("https://www.twitch.tv/ch_ak", "CH_AK")} — ${t("settings.creditsIdeaUec")}`),
       );
     host.querySelectorAll("[data-external]").forEach((el) => {
       el.addEventListener("click", (event) => {
