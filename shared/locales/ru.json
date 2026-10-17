@@ -905,6 +905,7 @@
     "musicAutoplay": "Проигрывать трек",
     "uecChannel": "Канал в шапке",
     "uecDuration": "Показывать, мс",
+    "uecDecode": "Шаг дешифровки, мс",
     "uecShowAmount": "Показывать сумму",
     "uecShowMessage": "Показывать сообщение",
     "volume": "Громкость",

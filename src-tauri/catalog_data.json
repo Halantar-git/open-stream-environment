@@ -1,5 +1,5 @@
 {
-  "sourceHash": "bab69d040c9009c8",
+  "sourceHash": "60b28788abc41de4",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -1087,7 +1087,8 @@
       "defaultConfig": {
         "showAmount": true,
         "showMessage": true,
-        "durationMs": 9000
+        "durationMs": 9000,
+        "decodeTickMs": 76
       }
     }
   },

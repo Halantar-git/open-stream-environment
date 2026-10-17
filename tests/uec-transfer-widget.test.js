@@ -266,4 +266,33 @@ describe("WidgetUecTransfer", () => {
       w.unmount();
     });
   });
+
+  test("decodeTickMs задаёт шаг дешифровки", () => {
+    const ctx = makeContext();
+    const w = new WidgetUecTransfer(item({ config: { decodeTickMs: 200 } }), ctx);
+    w.mount(makeEl("div"));
+
+    expect(w.decodeTickMs()).toBe(200);
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, donation());
+    jest.advanceTimersByTime(1400 + 600);
+    expect(w.nameEl.textContent).not.toBe("bob_the_pilot");
+
+    jest.advanceTimersByTime(2200);
+    expect(w.nameEl.textContent).toBe("bob_the_pilot");
+    expect(w.messageEl.textContent).toBe("на корабль");
+
+    w.unmount();
+  });
+
+  test("decodeTickMs зажимается в разумные рамки", () => {
+    const fast = new WidgetUecTransfer(item({ config: { decodeTickMs: 1 } }), makeContext());
+    expect(fast.decodeTickMs()).toBe(10);
+
+    const slow = new WidgetUecTransfer(item({ config: { decodeTickMs: 9999 } }), makeContext());
+    expect(slow.decodeTickMs()).toBe(500);
+
+    const fallback = new WidgetUecTransfer(item(), makeContext());
+    expect(fallback.decodeTickMs()).toBe(76);
+  });
 });

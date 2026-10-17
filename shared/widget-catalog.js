@@ -666,7 +666,7 @@
       defaultGeometry: { x: 25, y: 3, w: 50, h: 20 },
       minW: 30,
       minH: 14,
-      defaultConfig: { showAmount: true, showMessage: true, durationMs: 9000 },
+      defaultConfig: { showAmount: true, showMessage: true, durationMs: 9000, decodeTickMs: 76 },
     },
   };
 

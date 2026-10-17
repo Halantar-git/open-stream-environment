@@ -408,6 +408,7 @@ export function initPropertiesPanel({
       extraHtml = `
         <div class="md-field"><label>${t("properties.uecChannel")}</label><input type="text" id="pUecChannel" value="${escapeAttr(config.channel || "")}" placeholder="${escapeAttr(t("uec.channel"))}"></div>
         <div class="md-field"><label>${t("properties.uecDuration")}</label><input type="number" id="pUecDuration" min="1500" max="60000" step="500" value="${config.durationMs || 9000}"></div>
+        <div class="md-field"><label>${t("properties.uecDecode")}</label><input type="number" id="pUecDecode" min="10" max="500" step="10" value="${config.decodeTickMs || 76}"></div>
         <div class="properties__toggle-row"><label>${t("properties.uecShowAmount")}</label>${switchHtml("pUecShowAmount", config.showAmount !== false)}</div>
         <div class="properties__toggle-row"><label>${t("properties.uecShowMessage")}</label>${switchHtml("pUecShowMessage", config.showMessage !== false)}</div>`;
     }
@@ -583,6 +584,7 @@ export function initPropertiesPanel({
     } else if (inst.type === "uec-transfer") {
       propertiesEl.querySelector("#pUecChannel").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { channel: e.target.value.trim() } } }));
       propertiesEl.querySelector("#pUecDuration").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { durationMs: Math.max(1500, Math.min(60000, Number(e.target.value) || 9000)) } } }));
+      propertiesEl.querySelector("#pUecDecode").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { decodeTickMs: Math.max(10, Math.min(500, Number(e.target.value) || 76)) } } }));
       wireSwitch(propertiesEl.querySelector("#pUecShowAmount"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showAmount: on } } }));
       wireSwitch(propertiesEl.querySelector("#pUecShowMessage"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showMessage: on } } }));
     }

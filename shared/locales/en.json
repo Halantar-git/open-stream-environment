@@ -905,6 +905,7 @@
     "musicAutoplay": "Play the track",
     "uecChannel": "Header channel",
     "uecDuration": "Show for, ms",
+    "uecDecode": "Decode step, ms",
     "uecShowAmount": "Show amount",
     "uecShowMessage": "Show message",
     "volume": "Volume",

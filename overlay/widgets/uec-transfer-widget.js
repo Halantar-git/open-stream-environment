@@ -49,9 +49,11 @@
   // Компактная плашка держится чуть больше секунды — как «входящий вызов» в
   // референсе: успеваешь прочитать, но она не мешает раскрытию.
   const COMPACT_MS = 1400;
-  // Дешифровка идёт по одному тику на символ: 76 мс читаются как заметное
-  // «раскрытие сигнала», а не как мельтешение.
-  const DECODE_TICK_MS = 76;
+  // Дефолтный шаг дешифровки: 76 мс читаются как заметное «раскрытие сигнала»,
+  // а не как мельтешение. В настройках виджета шаг можно переопределить.
+  const DEFAULT_DECODE_TICK_MS = 76;
+  const MIN_DECODE_TICK_MS = 10;
+  const MAX_DECODE_TICK_MS = 500;
   const MESSAGE_TICKS = 18;
   const DEFAULT_DURATION_MS = 9000;
 
@@ -392,6 +394,14 @@
       return `+${formatMoney(amount)} ${symbol(alert.currency || "RUB")}`.trim();
     }
 
+    // Шаг дешифровки в миллисекундах: больше — медленнее. Настройка виджета
+    // ограничена разумными рамками, чтобы кривое число не заморозило текст.
+    decodeTickMs() {
+      const value = Number(this.config.decodeTickMs);
+      if (!Number.isFinite(value) || value <= 0) return DEFAULT_DECODE_TICK_MS;
+      return Math.max(MIN_DECODE_TICK_MS, Math.min(MAX_DECODE_TICK_MS, Math.round(value)));
+    }
+
     // Донат красится по tier'ам (как в TESO), cheer — третичным акцентом темы.
     amountColor(kind, amount) {
       if (kind === "donation") return donationQualityColor(amount);
@@ -420,7 +430,7 @@
           return;
         }
         this.nameEl.textContent = this._scramble(chars, revealed);
-      }, DECODE_TICK_MS);
+      }, this.decodeTickMs());
     }
 
     _clearDecode() {
@@ -457,7 +467,7 @@
           return;
         }
         this.messageEl.textContent = this._scramble(chars, revealed);
-      }, DECODE_TICK_MS);
+      }, this.decodeTickMs());
     }
 
     _clearMessageDecode() {
