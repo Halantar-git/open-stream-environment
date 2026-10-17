@@ -309,6 +309,28 @@ describe("WidgetUecTransfer", () => {
     w.unmount();
   });
 
+  test("обновление раскладки не сбрасывает высоту раскрытой панели", () => {
+    const hadWindow = "window" in global;
+    const prevWindow = global.window;
+    global.window = { innerHeight: 1080 };
+
+    const w = new WidgetUecTransfer(item({ y: 0 }), makeContext());
+    w.mount(makeEl("div"));
+    w.element.clientHeight = 50;
+    w.panelEl.offsetHeight = 800;
+    w.current = { kind: "donation" };
+    w.element.classList.add("is-expanded");
+    w.element.style.height = "802px";
+
+    // Как syncLayout из-за STATE или смены статуса связи.
+    w.update(item({ y: 0 }));
+    expect(w.element.style.height).toBe("802px");
+
+    w.unmount();
+    if (hadWindow) global.window = prevWindow;
+    else delete global.window;
+  });
+
   test("высота считается по полному тексту, пока он ещё зашифрован", () => {
     const hadWindow = "window" in global;
     const prevWindow = global.window;

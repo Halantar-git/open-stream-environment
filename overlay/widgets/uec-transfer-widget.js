@@ -216,6 +216,12 @@
 
     onUpdate() {
       this.applyConfig();
+      // syncLayout зовёт update() на каждый STATE, смену темы и даже статус связи.
+      // _applyGeometry при этом сбрасывает высоту к геометрии, поэтому раскрытую
+      // панель подгоняем заново — иначе она «прыгает» обратно во время показа.
+      if (this.current && this.element && this.element.classList.contains("is-expanded")) {
+        this._fitHeight(true);
+      }
     }
 
     onUnmount() {
