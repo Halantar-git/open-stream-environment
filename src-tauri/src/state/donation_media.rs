@@ -462,6 +462,51 @@ mod tests {
     }
 
     #[test]
+    fn donation_alerts_currency_reaches_the_rule() {
+        let fixture = Fixture::new("currencies");
+        let mut config = fixture.config();
+        write_section(
+            &mut config,
+            section_with(json!([
+                { "id": "rub", "minAmount": 100, "currency": "RUB", "audioFile": "rub.mp3" },
+                { "id": "usd", "minAmount": 5, "currency": "USD", "imageFile": "usd.png" },
+                { "id": "eur", "minAmount": 5, "currency": "EUR", "videoFile": "eur.mp4" },
+            ])),
+        );
+
+        // DonationAlerts отдаёт суммы в исходной валюте — каждая валюта идёт
+        // в своё правило, а не сравнивается «числом» с рублями.
+        let usd = alert_payload(
+            &config,
+            &json!({ "kind": "donation", "user": "fan", "amount": 10, "currency": "USD" }),
+        )
+        .expect("доллары");
+        assert_eq!(usd["ruleId"], json!("usd"));
+
+        let eur = alert_payload(
+            &config,
+            &json!({ "kind": "donation", "user": "fan", "amount": 10, "currency": "EUR" }),
+        )
+        .expect("евро");
+        assert_eq!(eur["ruleId"], json!("eur"));
+
+        let rub = alert_payload(
+            &config,
+            &json!({ "kind": "donation", "user": "fan", "amount": 150, "currency": "RUB" }),
+        )
+        .expect("рубли");
+        assert_eq!(rub["ruleId"], json!("rub"));
+
+        // Чужой валюты в правилах нет — медиа не запускается, хотя число
+        // больше порога долларового правила.
+        assert!(alert_payload(
+            &config,
+            &json!({ "kind": "donation", "user": "fan", "amount": 10, "currency": "GBP" }),
+        )
+        .is_none());
+    }
+
+    #[test]
     fn normalize_config_turns_an_absent_section_into_defaults() {
         let fixture = Fixture::new("normalize");
         let mut config = fixture.config();
