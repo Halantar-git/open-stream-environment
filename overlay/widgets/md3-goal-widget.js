@@ -134,16 +134,28 @@
     onUpdate(prev, next) {
       if (prev.showPercentage !== next.showPercentage) this._updateDom();
       if (prev.showBackground !== next.showBackground) this._applySurface();
-      if (prev.perspective !== next.perspective) this._applyPerspective();
+      if (prev.perspective !== next.perspective || prev.perspectiveDirection !== next.perspectiveDirection) this._applyPerspective();
     }
 
     // Perspective tilt (0-100) from the widget inspector — the same transform
-    // the themed 3D chat and sign widgets use.
+    // the themed 3D chat and sign widgets use. `perspectiveDirection` picks
+    // which way the bar leans; `left` keeps the historical look.
     _applyPerspective() {
       const v = Math.max(0, Math.min(100, Number(this.config.perspective) || 0));
       if (v > 0) {
-        const ry = -(v * 0.15); // 0 .. -15deg
-        const rx = v * 0.03; // 0 .. 3deg
+        const magnitude = v * 0.15; // 0 .. 15deg
+        const direction = this.config.perspectiveDirection || "left";
+        let ry = -magnitude;
+        let rx = magnitude * 0.2;
+        if (direction === "right") {
+          ry = magnitude;
+        } else if (direction === "up") {
+          ry = 0;
+          rx = magnitude;
+        } else if (direction === "down") {
+          ry = 0;
+          rx = -magnitude;
+        }
         this.element.style.transform = `perspective(1200px) rotateY(${ry}deg) rotateX(${rx}deg)`;
         this.element.style.transformStyle = "preserve-3d";
       } else {

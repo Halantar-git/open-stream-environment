@@ -199,7 +199,15 @@ export function initPropertiesPanel({
         <div class="md-field"><label>${t("properties.currency")}</label><input type="text" id="pGoalCurrency" value="${escapeAttr(state.goal.currency || "")}"></div>
         <div class="properties__toggle-row"><label>${t("properties.showPercent")}</label>${switchHtml("pShowPercent", !!config.showPercentage)}</div>
         <div class="properties__toggle-row"><label>${t("properties.showBackground")}</label>${switchHtml("pShowBackground", config.showBackground !== false)}</div>
-        ${inst.type === "goal" ? "" : `<div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>`}`;
+        ${inst.type === "goal" ? "" : `<div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>
+        <div class="md-field"><label>${t("properties.perspectiveDirection")}</label>
+          <select id="pPerspectiveDirection">
+            <option value="left" ${(config.perspectiveDirection || "left") === "left" ? "selected" : ""}>${t("properties.perspectiveLeft")}</option>
+            <option value="right" ${config.perspectiveDirection === "right" ? "selected" : ""}>${t("properties.perspectiveRight")}</option>
+            <option value="up" ${config.perspectiveDirection === "up" ? "selected" : ""}>${t("properties.perspectiveUp")}</option>
+            <option value="down" ${config.perspectiveDirection === "down" ? "selected" : ""}>${t("properties.perspectiveDown")}</option>
+          </select>
+        </div>`}`;
     } else if (inst.type === "chat") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.maxMessages")}</label><input type="number" id="pMaxMessages" min="1" max="20" value="${config.maxMessages || 8}"></div>
@@ -431,6 +439,10 @@ export function initPropertiesPanel({
           if (label) label.textContent = String(value);
           send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { perspective: value } } });
         });
+      }
+      const perspectiveDirection = propertiesEl.querySelector("#pPerspectiveDirection");
+      if (perspectiveDirection) {
+        perspectiveDirection.addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { perspectiveDirection: e.target.value } } }));
       }
     } else if (inst.type === "chat") {
       propertiesEl.querySelector("#pMaxMessages").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { maxMessages: Number(e.target.value) } } }));

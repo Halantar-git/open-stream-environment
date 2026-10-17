@@ -155,6 +155,17 @@ describe("WidgetGrimHexGoal", () => {
     expect(w.element.style.transform).toContain("rotateY(-7.5deg)");
     expect(w.element.style.transformStyle).toBe("preserve-3d");
 
+    // Направление переворачивает наклон, не меняя силу.
+    w.update({ config: { perspectiveDirection: "right" } });
+    expect(w.element.style.transform).toContain("rotateY(7.5deg)");
+
+    w.update({ config: { perspectiveDirection: "up" } });
+    expect(w.element.style.transform).toContain("rotateY(0deg)");
+    expect(w.element.style.transform).toContain("rotateX(7.5deg)");
+
+    w.update({ config: { perspectiveDirection: "down" } });
+    expect(w.element.style.transform).toContain("rotateX(-7.5deg)");
+
     w.update({ config: { perspective: 0 } });
     expect(w.element.style.transform).toBe("");
     expect(w.element.style.transformStyle).toBe("");
