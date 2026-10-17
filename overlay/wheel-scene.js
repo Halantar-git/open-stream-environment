@@ -27,7 +27,7 @@
   let wheelSectors = [];
   let wheelRotation = 0;
   let wheelSpinning = false;
-  let wheelConfig = { musicVolume: 50, x: 960, y: 540 };
+  let wheelConfig = { musicVolume: 50, effectsVolume: 90, x: 960, y: 540 };
   let wheelSpeedConfig = { speed: 3 };
   let resultTimer = null;
   let participantsConfig = { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82, x: 24, y: 340, w: 340, h: 400 };
@@ -318,10 +318,17 @@
 
   // ---------------- winner result + audio --------------
 
+  // Громкость звуков победы/выбывания — отдельно от музыки вращения, чтобы
+  // можно было приглушить эффекты, не трогая сам спин.
+  function effectsVolume() {
+    return Math.max(0, Math.min(1, (wheelConfig.effectsVolume ?? 90) / 100));
+  }
+
   function playFanfare() {
     try {
       const Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx) return;
+      const vol = effectsVolume();
       const ctx = new Ctx();
       if (ctx.state === "suspended") ctx.resume().catch(() => {});
       const notes = [523.25, 659.25, 783.99, 1046.5];
@@ -332,7 +339,7 @@
         osc.frequency.value = freq;
         const t = ctx.currentTime + i * 0.14;
         gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.exponentialRampToValueAtTime(0.22, t + 0.03);
+        gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, 0.22 * vol), t + 0.03);
         gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
         osc.connect(gain).connect(ctx.destination);
         osc.start(t);
@@ -348,6 +355,7 @@
     try {
       const Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx) return;
+      const vol = effectsVolume();
       const ctx = new Ctx();
       if (ctx.state === "suspended") ctx.resume().catch(() => {});
       const osc = ctx.createOscillator();
@@ -356,7 +364,7 @@
       osc.frequency.setValueAtTime(330, ctx.currentTime);
       osc.frequency.exponentialRampToValueAtTime(140, ctx.currentTime + 0.4);
       gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, 0.18 * vol), ctx.currentTime + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
       osc.connect(gain).connect(ctx.destination);
       osc.start();
@@ -370,7 +378,7 @@
   function playWinSound() {
     try {
       const a = new Audio("/assets/audio/win.wav");
-      a.volume = 0.9;
+      a.volume = effectsVolume();
       const p = a.play();
       if (p && p.catch) p.catch(() => playFanfare());
     } catch {
@@ -381,7 +389,7 @@
   function playEliminationAudio() {
     try {
       const a = new Audio("/assets/audio/elimination.wav");
-      a.volume = 0.9;
+      a.volume = effectsVolume();
       const p = a.play();
       if (p && p.catch) p.catch(() => playEliminationSound());
     } catch {

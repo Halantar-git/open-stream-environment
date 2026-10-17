@@ -78,7 +78,7 @@ pub fn default_data() -> Map<String, Value> {
     // Настройки Колеса Фортуны (звук и позиция на сцене).
     data.insert(
         "wheel_config".to_string(),
-        json!({ "musicVolume": 50, "x": 960, "y": 540 }),
+        json!({ "musicVolume": 50, "effectsVolume": 90, "x": 960, "y": 540 }),
     );
     // Скорость вращения Колеса Фортуны.
     data.insert("wheel_speed_config".to_string(), json!({ "speed": 3 }));
@@ -643,6 +643,7 @@ impl Database {
         let raw = self.get("wheel_config").unwrap_or(Value::Null);
         json!({
             "musicVolume": number_or(raw.get("musicVolume"), 50.0),
+            "effectsVolume": number_or(raw.get("effectsVolume"), 90.0),
             "x": number_or(raw.get("x"), 960.0),
             "y": number_or(raw.get("y"), 540.0),
         })
@@ -1258,7 +1259,7 @@ mod tests {
         db.append_stream_event(&json!({ "type": "donation", "username": "a", "amount": 1 }));
         db.append_chat(&json!({ "user": "a", "message": "hi" }));
         db.start_session("test");
-        db.save_wheel_config(Some(&json!({ "musicVolume": 70 })));
+        db.save_wheel_config(Some(&json!({ "musicVolume": 70, "effectsVolume": 35 })));
 
         db.clear_history();
 
@@ -1266,6 +1267,7 @@ mod tests {
         assert!(db.chat(None).is_empty());
         assert!(db.sessions().is_empty());
         assert_eq!(db.wheel_config()["musicVolume"], json!(70));
+        assert_eq!(db.wheel_config()["effectsVolume"], json!(35));
     }
 
     #[test]
@@ -1281,6 +1283,7 @@ mod tests {
 
         assert!(db.widgets().is_empty());
         assert_eq!(db.wheel_config()["musicVolume"], json!(50));
+        assert_eq!(db.wheel_config()["effectsVolume"], json!(90));
         assert_eq!(db.stream_events(&limited(10)).total, 0);
     }
 

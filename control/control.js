@@ -2068,6 +2068,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         <div class="md-field"><label>Y (px)</label><input type="number" id="wheelY" step="1" value="${state.wheelConfig.y ?? 540}"></div>
       </div>
       <div class="md-field"><label>${t("giveaway.musicVolume")}: <span id="wsMusicVolumeValue">${state.wheelConfig.musicVolume ?? 50}%</span></label><input type="range" id="wsMusicVolume" min="0" max="100" value="${state.wheelConfig.musicVolume ?? 50}"></div>
+      <div class="md-field"><label>${t("giveaway.effectsVolume")}: <span id="wsEffectsVolumeValue">${state.wheelConfig.effectsVolume ?? 90}%</span></label><input type="range" id="wsEffectsVolume" min="0" max="100" value="${state.wheelConfig.effectsVolume ?? 90}"></div>
       <div class="md-field"><label>${t("giveaway.spinSpeed")}: <span id="wsSpeedValue">${state.wheelSpeedConfig.speed ?? 3}</span></label><input type="range" id="wsSpeed" min="1" max="5" value="${state.wheelSpeedConfig.speed ?? 3}"></div>
     `;
 
@@ -2121,6 +2122,12 @@ const { EVENT_TYPES } = window.SharedEvents;
       state.wheelConfig = { ...state.wheelConfig, musicVolume: v };
       send(EVENT_TYPES.CMD_SET_WHEEL_CONFIG, { config: state.wheelConfig });
     });
+    wheelPanelBody.querySelector("#wsEffectsVolume").addEventListener("input", (e) => {
+      const v = Number(e.target.value);
+      wheelPanelBody.querySelector("#wsEffectsVolumeValue").textContent = `${v}%`;
+      state.wheelConfig = { ...state.wheelConfig, effectsVolume: v };
+      send(EVENT_TYPES.CMD_SET_WHEEL_CONFIG, { config: state.wheelConfig });
+    });
     wheelPanelBody.querySelector("#wsSpeed").addEventListener("input", (e) => {
       const v = Number(e.target.value);
       wheelPanelBody.querySelector("#wsSpeedValue").textContent = `${v}`;
@@ -2167,6 +2174,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     setPanelValue("#wheelX", wc.x ?? 960);
     setPanelValue("#wheelY", wc.y ?? 540);
     if (setPanelValue("#wsMusicVolume", wc.musicVolume ?? 50)) setPanelText("#wsMusicVolumeValue", `${wc.musicVolume ?? 50}%`);
+    if (setPanelValue("#wsEffectsVolume", wc.effectsVolume ?? 90)) setPanelText("#wsEffectsVolumeValue", `${wc.effectsVolume ?? 90}%`);
     if (setPanelValue("#wsSpeed", ws.speed ?? 3)) setPanelText("#wsSpeedValue", `${ws.speed ?? 3}`);
   }
 

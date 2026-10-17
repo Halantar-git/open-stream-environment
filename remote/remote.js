@@ -103,6 +103,8 @@
   const wsMarquee = document.getElementById("wsMarquee");
   const wsMusicVolume = document.getElementById("wsMusicVolume");
   const wsMusicVolumeValue = document.getElementById("wsMusicVolumeValue");
+  const wsEffectsVolume = document.getElementById("wsEffectsVolume");
+  const wsEffectsVolumeValue = document.getElementById("wsEffectsVolumeValue");
   const wsSpeed = document.getElementById("wsSpeed");
   const wsSpeedValue = document.getElementById("wsSpeedValue");
   const wheelParticipantsCount = document.getElementById("wheelParticipantsCount");
@@ -132,7 +134,7 @@
   let cameraFilters = [];
   let activeFilters = [];
   let participantsConfig = { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82, x: 24, y: 340, w: 340, h: 400 };
-  let wheelConfig = { musicVolume: 50 };
+  let wheelConfig = { musicVolume: 50, effectsVolume: 90 };
   let wheelSpeedConfig = { speed: 3 };
   let giveaway = { command: "!go", eliminationMode: false, participants: [], count: 0 };
   let alertQueue = null; // последний снимок очереди алертов (см. EVENT_TYPES.ALERT_QUEUE_UPDATE)
@@ -267,6 +269,8 @@
     setSwitch(wsMarquee, !!participantsConfig.marquee);
     wsMusicVolume.value = wheelConfig.musicVolume ?? 50;
     wsMusicVolumeValue.textContent = `${wheelConfig.musicVolume ?? 50}%`;
+    wsEffectsVolume.value = wheelConfig.effectsVolume ?? 90;
+    wsEffectsVolumeValue.textContent = `${wheelConfig.effectsVolume ?? 90}%`;
     wsSpeed.value = wheelSpeedConfig.speed ?? 3;
     wsSpeedValue.textContent = `${wheelSpeedConfig.speed ?? 3}`;
   }
@@ -344,6 +348,13 @@
       const v = Number(wsMusicVolume.value);
       wheelConfig.musicVolume = v;
       wsMusicVolumeValue.textContent = `${v}%`;
+      sendCommand(EVENT_TYPES.CMD_SET_WHEEL_CONFIG, { config: wheelConfig });
+    });
+
+    wsEffectsVolume.addEventListener("input", () => {
+      const v = Number(wsEffectsVolume.value);
+      wheelConfig.effectsVolume = v;
+      wsEffectsVolumeValue.textContent = `${v}%`;
       sendCommand(EVENT_TYPES.CMD_SET_WHEEL_CONFIG, { config: wheelConfig });
     });
 

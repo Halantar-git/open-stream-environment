@@ -500,6 +500,7 @@
     "widgetHeight": "Height (px)",
     "wheelSettings": "Wheel settings",
     "musicVolume": "Music volume",
+    "effectsVolume": "Sound volume",
     "spinSpeed": "Spin speed"
   },
   "poll": {
@@ -1410,7 +1411,7 @@
       "p1": "Viewers join by typing the entry command in Twitch chat.",
       "p2": "Elimination mode removes one participant per spin until the final winner.",
       "p3": "The Wheel button in the header opens the wheel settings panel, with a participants panel (search and clear) next to it.",
-      "p4": "Use Generate wheel and Spin the wheel, plus the music volume and spin speed settings.",
+      "p4": "Use Generate wheel and Spin the wheel, plus the music and sound volume and spin speed settings.",
       "p5": "In the Web Remote, the Wheel tab mirrors these settings and lets you manage participants from your phone."
     },
     "debug": {
