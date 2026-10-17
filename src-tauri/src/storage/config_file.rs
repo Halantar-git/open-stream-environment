@@ -212,6 +212,7 @@ const SECRET_FIELDS: &[(&str, &str, &str)] = &[
     ("youtube", "clientSecret", labels::YOUTUBE_CLIENT_SECRET),
     ("youtube", "accessToken", labels::YOUTUBE_ACCESS_TOKEN),
     ("youtube", "refreshToken", labels::YOUTUBE_REFRESH_TOKEN),
+    ("donatex", "externalToken", labels::DONATEX_EXTERNAL_TOKEN),
     ("obs", "password", labels::OBS_PASSWORD),
 ];
 
@@ -427,7 +428,7 @@ mod tests {
         // до первого сохранения.
         fs::write(
             dir.config(),
-            r#"{"port":8710,"twitch":{"clientSecret":"живой"},"obs":{"password":"пароль"}}"#,
+            r#"{"port":8710,"twitch":{"clientSecret":"живой"},"obs":{"password":"пароль"},"donatex":{"externalToken":"dx-токен"}}"#,
         )
         .unwrap();
 
@@ -436,6 +437,10 @@ mod tests {
         assert_eq!(
             config.get("twitch").unwrap()["clientSecret"],
             json!("живой")
+        );
+        assert_eq!(
+            config.get("donatex").unwrap()["externalToken"],
+            json!("dx-токен")
         );
 
         config.set("port", json!(9000));
@@ -454,9 +459,16 @@ mod tests {
             assert!(super::secrets::is_sealed(
                 saved["obs"]["password"].as_str().unwrap()
             ));
+            let donatex = saved["donatex"]["externalToken"].as_str().unwrap();
+            assert!(
+                super::secrets::is_sealed(donatex),
+                "external token должен быть зашифрован: {donatex}"
+            );
+            assert!(!donatex.contains("dx-токен"));
         } else {
             // Хранилища нет — значение остаётся открытым, но не пустым.
             assert_eq!(secret, "живой");
+            assert_eq!(saved["donatex"]["externalToken"], json!("dx-токен"));
         }
     }
 

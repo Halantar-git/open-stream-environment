@@ -72,6 +72,7 @@ pub mod labels {
     pub const YOUTUBE_CLIENT_SECRET: &str = "YouTube Client Secret";
     pub const YOUTUBE_ACCESS_TOKEN: &str = "YouTube Access Token";
     pub const YOUTUBE_REFRESH_TOKEN: &str = "YouTube Refresh Token";
+    pub const DONATEX_EXTERNAL_TOKEN: &str = "DonateX External Token";
     pub const OBS_PASSWORD: &str = "OBS Password";
 }
 
