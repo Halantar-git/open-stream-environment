@@ -160,7 +160,7 @@
       defaultGeometry: { x: 50, y: 82, w: 40, h: 12 },
       minW: 10,
       minH: 3,
-      defaultConfig: {},
+      defaultConfig: { perspective: 0 },
     },
     death: {
       type: "death",

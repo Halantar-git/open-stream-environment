@@ -342,6 +342,15 @@ export function initPropertiesPanel({
         </div>`;
       }
       fields += `<div class="md-field"><label>${t("mic.opacity")}: <span id="pMicOpacityValue">${Math.round(num("opacity", 0.9) * 100)}%</span></label><input type="range" id="pMicOpacity" min="5" max="100" step="1" value="${Math.round(num("opacity", 0.9) * 100)}"></div>`;
+      fields += `<div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>
+        <div class="md-field"><label>${t("properties.perspectiveDirection")}</label>
+          <select id="pPerspectiveDirection">
+            <option value="left" ${(config.perspectiveDirection || "left") === "left" ? "selected" : ""}>${t("properties.perspectiveLeft")}</option>
+            <option value="right" ${config.perspectiveDirection === "right" ? "selected" : ""}>${t("properties.perspectiveRight")}</option>
+            <option value="up" ${config.perspectiveDirection === "up" ? "selected" : ""}>${t("properties.perspectiveUp")}</option>
+            <option value="down" ${config.perspectiveDirection === "down" ? "selected" : ""}>${t("properties.perspectiveDown")}</option>
+          </select>
+        </div>`;
 
       const captureHtml = `
         <p class="properties__hint" style="font-weight:600;margin:8px 0 0;">${t("mic.capture")}</p>
@@ -537,6 +546,19 @@ export function initPropertiesPanel({
       onMicRange("pMicGain", "pMicGainValue", (v) => `${v.toFixed(1)}×`, (v) => setMic("gain", v));
       onMicRange("pMicNoiseGate", "pMicNoiseGateValue", (v) => `${Math.round(v * 100)}%`, (v) => setMic("noiseGate", v));
       onMicRange("pMicOpacity", "pMicOpacityValue", (v) => `${Math.round(v)}%`, (v) => setMic("opacity", v / 100));
+      const micPerspective = propertiesEl.querySelector("#pPerspective");
+      if (micPerspective) {
+        micPerspective.addEventListener("input", (e) => {
+          const v = Number(e.target.value);
+          const label = propertiesEl.querySelector("#pPerspectiveValue");
+          if (label) label.textContent = String(v);
+          setMic("perspective", v);
+        });
+      }
+      const micPerspectiveDirection = propertiesEl.querySelector("#pPerspectiveDirection");
+      if (micPerspectiveDirection) {
+        micPerspectiveDirection.addEventListener("change", (e) => setMic("perspectiveDirection", e.target.value));
+      }
       const micScaleEl = propertiesEl.querySelector("#pMicFreqScale");
       if (micScaleEl) micScaleEl.addEventListener("change", (e) => setMic("freqScale", e.target.value));
       const micColorEl = propertiesEl.querySelector("#pMicColor");

@@ -1,5 +1,5 @@
 {
-  "sourceHash": "60b28788abc41de4",
+  "sourceHash": "dd62e7578da709e4",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -226,7 +226,9 @@
       },
       "minW": 10,
       "minH": 3,
-      "defaultConfig": {}
+      "defaultConfig": {
+        "perspective": 0
+      }
     },
     "death": {
       "type": "death",

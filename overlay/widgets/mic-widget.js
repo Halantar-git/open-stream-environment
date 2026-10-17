@@ -79,8 +79,15 @@
       this._bandScale = "";
       this._frameGate = DSP.createFrameGate ? DSP.createFrameGate(MIC_RENDER_FPS) : null;
 
+      this._applyPerspective();
       this._startAudio();
       this._loop();
+    }
+
+    onUpdate(prev, next) {
+      if (prev.perspective !== next.perspective || prev.perspectiveDirection !== next.perspectiveDirection) {
+        this._applyPerspective();
+      }
     }
 
     onUnmount() {
@@ -91,6 +98,33 @@
     }
 
     render() {}
+
+    // Наклон (0–100) из инспектора виджета — тот же приём, что у 3D-виджетов.
+    // `perspectiveDirection` задаёт, в какую сторону наклонять; `left` —
+    // историческое поведение.
+    _applyPerspective() {
+      const v = Math.max(0, Math.min(100, Number(this.config.perspective) || 0));
+      if (v > 0) {
+        const magnitude = v * 0.15; // 0 .. 15deg
+        const direction = this.config.perspectiveDirection || "left";
+        let ry = -magnitude;
+        let rx = magnitude * 0.2;
+        if (direction === "right") {
+          ry = magnitude;
+        } else if (direction === "up") {
+          ry = 0;
+          rx = magnitude;
+        } else if (direction === "down") {
+          ry = 0;
+          rx = -magnitude;
+        }
+        this.element.style.transform = `perspective(1200px) rotateY(${ry}deg) rotateX(${rx}deg)`;
+        this.element.style.transformStyle = "preserve-3d";
+      } else {
+        this.element.style.transform = "";
+        this.element.style.transformStyle = "";
+      }
+    }
 
     // Per-widget setting with the global mic config as fallback.
     _setting(key, fallback) {
