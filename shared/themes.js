@@ -525,6 +525,85 @@
       },
     },
 
+    // Synthwave / retrowave: неоновая ночь, магента и циан на тёмно-фиолетовом,
+    // сетка и скобки как в HUD, шрифты — Orbitron для заголовков, Montserrat для
+    // текста. Пока только 2D: 3D-набор можно добавить отдельно, если теме
+    // понадобятся свои виджеты.
+    synthwave: {
+      id: "synthwave",
+      name: "Synthwave",
+      builtin: true,
+      category: "system",
+      dimension: "2d",
+      family: "synthwave",
+      borderRadius: "0px",
+      tokens: {
+        // Неоновая магента (#ff2d95) — главный акцент: рамки, скобки, заголовки.
+        "--md-primary": "#ff2d95",
+        "--md-on-primary": "#2a0016",
+        "--md-primary-container": "#5c0a3a",
+        "--md-on-primary-container": "#ffd6ea",
+
+        // Электрический циан (#2de2e6) — сетка, ссылки, второй неон.
+        "--md-secondary": "#2de2e6",
+        "--md-on-secondary": "#002a2b",
+        "--md-secondary-container": "#0a4a4c",
+        "--md-on-secondary-container": "#d6fdff",
+
+        // Закатный оранжевый (#ffa24c) — тёплый третичный акцент.
+        "--md-tertiary": "#ffa24c",
+        "--md-on-tertiary": "#2e1400",
+        "--md-tertiary-container": "#5a2a00",
+        "--md-on-tertiary-container": "#ffe1bf",
+
+        "--md-error": "#ff5c7a",
+        "--md-on-error": "#3a0010",
+        "--md-error-container": "#6e0022",
+        "--md-on-error-container": "#ffd9e0",
+
+        // Ночной фиолетово-чёрный: чем выше контейнер, тем светлее неоновая
+        // подсветка поверхности.
+        "--md-surface-dim": "#07040f",
+        "--md-surface": "#0d0719",
+        "--md-surface-bright": "#2a1a44",
+        "--md-surface-container-lowest": "#05020b",
+        "--md-surface-container-low": "#130b24",
+        "--md-surface-container": "#1a1030",
+        "--md-surface-container-high": "#24173f",
+        "--md-surface-container-highest": "#2e1f4d",
+
+        "--md-on-surface": "#f3e8ff",
+        "--md-on-surface-variant": "#c3b0e0",
+        "--md-outline": "#7b5fa6",
+        "--md-outline-variant": "#3d2a5e",
+
+        // Orbitron — ретро-футуристичные заголовки (кириллица уходит в Segoe UI),
+        // Montserrat — текст с кириллицей, JetBrains Mono — числа и суммы.
+        "--font-display": '"Orbitron", "Segoe UI", sans-serif',
+        "--font-body": '"Montserrat", "Segoe UI", sans-serif',
+        "--font-mono": '"JetBrains Mono", "Consolas", monospace',
+
+        // Резкие панели без скруглений: неоновая рамка, магента-свечение с
+        // холодным циановым ободком и четыре угловых скобки.
+        "--panel-radius": "0px",
+        "--panel-clip": "none",
+        "--panel-decoration": "brackets4",
+        "--panel-glow": "0 0 18px rgba(255,45,149,0.35), 0 0 46px rgba(45,226,230,0.12), inset 0 0 28px rgba(255,45,149,0.05)",
+        "--panel-bg": "rgba(13, 7, 25, 0.88)",
+        "--panel-blur": "0px",
+        "--panel-border": "1px solid rgba(255, 45, 149, 0.45)",
+        "--alert-enter-easing": "cubic-bezier(0.2, 0.9, 0.2, 1.15)",
+        "--alert-enter-duration": "320ms",
+
+        "--shape-xs": "0px",
+        "--shape-sm": "0px",
+        "--shape-md": "0px",
+        "--shape-lg": "0px",
+        "--shape-xl": "0px",
+        "--shape-full": "999px",
+      },
+    },
+
     // WarDogs — тактический шутер про три ЧВК на Кавказе. Тема снята с
     // игрового HUD: золотисто-янтарный свет ключевого арта и логотипа как
     // акцент, синий и красный — цвета враждующих фракций, а тёмные тёплые
