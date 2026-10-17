@@ -767,7 +767,7 @@ impl Database {
             "fps": num(clamp(
                 coerced_number(raw.get("fps"), 12.0).round(),
                 1.0,
-                30.0
+                60.0
             )),
             "quality": num(clamp(raw_number(raw.get("quality"), 0.6), 0.2, 0.95)),
         })
@@ -1698,7 +1698,7 @@ mod tests {
         let saved = db.save_camera_config(Some(&json!({
             "deviceId": "cam-1",
             "width": 5000,
-            "fps": 60,
+            "fps": 120,
             "quality": 2,
         })));
         assert_eq!(saved["deviceId"], json!("cam-1"));
@@ -1707,7 +1707,7 @@ mod tests {
         let normalized = db.camera_config();
         assert_eq!(normalized["deviceId"], json!("cam-1"));
         assert_eq!(normalized["width"], json!(1920));
-        assert_eq!(normalized["fps"], json!(30));
+        assert_eq!(normalized["fps"], json!(60));
         assert_eq!(normalized["quality"], json!(0.95));
 
         // Мусор откатывается к умолчаниям, отрицательный fps — к нижней границе.

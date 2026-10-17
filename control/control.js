@@ -4369,7 +4369,11 @@ const { EVENT_TYPES } = window.SharedEvents;
   // и отправляет их бинарно; сервер пересылает оверлею, где виджет рисует их
   // на canvas. Параметры захвата глобальные: камера открывается один раз,
   // сколько бы виджетов её ни показывало.
-  const CAMERA_MIN_INTERVAL_MS = 33; // потолок 30 FPS, даже если попросили больше
+  //
+  // 60 FPS — верхняя граница, но не гарантия: тик пропускается, пока кодируется
+  // предыдущий кадр, поэтому фактическая частота сама опускается до той, что
+  // тянет камера и процессор при выбранной ширине и качестве.
+  const CAMERA_MIN_INTERVAL_MS = 16;
   const cameraCapture = createCaptureGeneration();
   const cameraBridge = {
     running: false,
@@ -4431,7 +4435,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     _constraints() {
       const cfg = state.cameraConfig || {};
       const width = clamp(Math.round(Number(cfg.width) || 960), 320, 1920);
-      const fps = clamp(Math.round(Number(cfg.fps) || 12), 1, 30);
+      const fps = clamp(Math.round(Number(cfg.fps) || 12), 1, 60);
       const video = {
         width: { ideal: width },
         height: { ideal: Math.round((width * 9) / 16) },
@@ -4443,7 +4447,7 @@ const { EVENT_TYPES } = window.SharedEvents;
 
     _startTimer() {
       if (this.timer) clearInterval(this.timer);
-      const fps = clamp(Math.round(Number((state.cameraConfig || {}).fps) || 12), 1, 30);
+      const fps = clamp(Math.round(Number((state.cameraConfig || {}).fps) || 12), 1, 60);
       this.timer = setInterval(() => this.tick(), Math.max(CAMERA_MIN_INTERVAL_MS, Math.round(1000 / fps)));
     },
 

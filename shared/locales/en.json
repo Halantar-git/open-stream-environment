@@ -1344,7 +1344,7 @@
       "p3": "The microphone visualizer has modes (sine, bars, ring, equalizer), colour, opacity, gain and noise gate. The equalizer mode uses its own green-yellow-red palette.",
       "p4": "The microphone visualizer, webcam frame, 3D goals and the Executive Hangar timer have perspective: tilt strength 0–100 and a direction — left, right, up or down. The tilt is visible both in the overlay and in the editor preview.",
       "p5": "Microphone settings are split in two: display (mode, color, opacity, perspective) is per widget, while the device, echo cancellation and noise suppression are global because the microphone is opened once.",
-      "p6": "The webcam frame has two modes. Frame only is decoration: corners, a thin border and a LIVE badge in the current theme color; the camera is a separate OBS source. Live video from the panel makes the control panel capture the camera and send JPEG frames to the overlay; device, frame width, FPS and quality are configurable, plus mirror and fit. The OBS browser source itself has no camera access."
+      "p6": "The webcam frame has two modes. Frame only is decoration: corners, a thin border and a LIVE badge in the current theme color; the camera is a separate OBS source. Live video from the panel makes the control panel capture the camera and send JPEG frames to the overlay; device, frame width, FPS (up to 60) and quality are configurable, plus mirror and fit. The OBS browser source itself has no camera access."
     },
     "presets": {
       "title": "Layout presets",

@@ -419,7 +419,7 @@ export function initPropertiesPanel({
           </div>
         </div>
         <div class="md-field"><label>${t("properties.webcamWidth")}</label><select id="pCameraWidth">${widthOptions}</select></div>
-        <div class="md-field"><label>${t("properties.webcamFps")}: <span id="pCameraFpsValue">${fps}</span></label><input type="range" id="pCameraFps" min="1" max="30" step="1" value="${fps}"></div>
+        <div class="md-field"><label>${t("properties.webcamFps")}: <span id="pCameraFpsValue">${fps}</span></label><input type="range" id="pCameraFps" min="1" max="60" step="1" value="${fps}"></div>
         <div class="md-field"><label>${t("properties.webcamQuality")}: <span id="pCameraQualityValue">${quality}%</span></label><input type="range" id="pCameraQuality" min="20" max="95" step="5" value="${quality}"></div>
         <div class="properties__toggle-row"><label>${t("properties.webcamMirror")}</label>${switchHtml("pWebcamMirror", !!config.mirror)}</div>
         <div class="md-field"><label>${t("properties.webcamFit")}</label>
