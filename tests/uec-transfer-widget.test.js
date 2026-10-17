@@ -295,4 +295,27 @@ describe("WidgetUecTransfer", () => {
     const fallback = new WidgetUecTransfer(item(), makeContext());
     expect(fallback.decodeTickMs()).toBe(76);
   });
+
+  test("длинное сообщение растит панель до низа экрана", () => {
+    const hadWindow = "window" in global;
+    const prevWindow = global.window;
+    global.window = { innerHeight: 1080 };
+
+    const w = new WidgetUecTransfer(item({ y: 10 }), makeContext());
+    w.mount(makeEl("div"));
+    w.element.clientHeight = 216;
+
+    w.panelEl.offsetHeight = 800;
+    w._fitHeight();
+    expect(w.element.style.height).toBe("802px");
+
+    // Даже очень длинный текст не выводит панель за нижнюю границу окна.
+    w.panelEl.offsetHeight = 2000;
+    w._fitHeight();
+    expect(w.element.style.height).toBe("964px");
+
+    w.unmount();
+    if (hadWindow) global.window = prevWindow;
+    else delete global.window;
+  });
 });

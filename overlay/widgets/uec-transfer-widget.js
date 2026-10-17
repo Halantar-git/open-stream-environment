@@ -516,8 +516,12 @@
       this.panelEl.style.overflow = panelOverflow;
 
       if (!needed) return;
-      const cap = Math.max(360, base);
-      this.element.style.height = Math.min(Math.max(base, needed + 2), cap) + "px";
+      // Растём до низа экрана, а не до фиксированного потолка: длинное
+      // сообщение должно помещаться целиком, даже если виджет стоит высоко.
+      const viewport = (typeof window !== "undefined" && window.innerHeight) || 1080;
+      const top = (Number(this.geometry.y) / 100) * viewport;
+      const maxHeight = Math.max(base, viewport - top - 8);
+      this.element.style.height = Math.min(Math.max(base, needed + 2), maxHeight) + "px";
     }
 
     // ---- small DOM helpers ----
