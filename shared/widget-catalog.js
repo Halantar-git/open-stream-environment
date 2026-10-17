@@ -33,6 +33,7 @@
   };
 
   const WIDGET_TYPES = {
+    // ---- Общие 2D-виджеты (доступны в любой теме) ----
     alerts: {
       type: "alerts",
       label: "Алерты",
@@ -128,30 +129,6 @@
         ],
       },
     },
-    timer: {
-      type: "timer",
-      label: "Таймер Executive Hangar",
-      description: "Executive Hangar: фазы, огни и обратный отсчёт (темы Orbital и свои)",
-      icon: "widgetTimer",
-      themes: ["orbital", "custom"],
-      defaultGeometry: { x: 36, y: 8, w: 28, h: 18 },
-      minW: 16,
-      minH: 10,
-      defaultConfig: { ...EXEC_TIMER_DEFAULT_CONFIG },
-    },
-    "grimhex-timer": {
-      type: "grimhex-timer",
-      label: "Таймер Grim HEX",
-      description: "Executive Hangar: фазы, огни и обратный отсчёт (только для темы Grim HEX)",
-      icon: "widgetTimer",
-      dimension: "3d",
-      theme: "grimhex",
-      renderType: "2d",
-      defaultGeometry: { x: 36, y: 6, w: 28, h: 20 },
-      minW: 16,
-      minH: 10,
-      defaultConfig: { ...EXEC_TIMER_DEFAULT_CONFIG },
-    },
     mic: {
       type: "mic",
       label: "Визуализатор микрофона",
@@ -181,6 +158,34 @@
       minW: 12,
       minH: 8,
       defaultConfig: { popupDurationMs: 4600, imageSize: 200, showImage: true, showText: true, showBackground: true, showBorder: true },
+    },
+
+    // ---- Orbital и свои темы ----
+    timer: {
+      type: "timer",
+      label: "Таймер Executive Hangar",
+      description: "Executive Hangar: фазы, огни и обратный отсчёт (темы Orbital и свои)",
+      icon: "widgetTimer",
+      themes: ["orbital", "custom"],
+      defaultGeometry: { x: 36, y: 8, w: 28, h: 18 },
+      minW: 16,
+      minH: 10,
+      defaultConfig: { ...EXEC_TIMER_DEFAULT_CONFIG },
+    },
+
+    // ---- Star Citizen / Grim HEX (3D) ----
+    "grimhex-timer": {
+      type: "grimhex-timer",
+      label: "Таймер Grim HEX",
+      description: "Executive Hangar: фазы, огни и обратный отсчёт (только для темы Grim HEX)",
+      icon: "widgetTimer",
+      dimension: "3d",
+      theme: "grimhex",
+      renderType: "2d",
+      defaultGeometry: { x: 36, y: 6, w: 28, h: 20 },
+      minW: 16,
+      minH: 10,
+      defaultConfig: { ...EXEC_TIMER_DEFAULT_CONFIG },
     },
     grimhex: {
       type: "grimhex",
@@ -235,6 +240,19 @@
       minH: 4,
       defaultConfig: { showPercentage: false },
     },
+    // UEC-перевод — 2D-виджет и доступен в любой теме, но по стилю это Star
+    // Citizen, поэтому в колонке он стоит в блоке Grim HEX сразу после цели.
+    "uec-transfer": {
+      type: "uec-transfer",
+      label: "UEC-перевод",
+      description: "Входящая передача: канал, позывной и сумма — в стиле Star Citizen",
+      icon: "widgetUecTransfer",
+      services: ["twitchEvents", "donationAlerts", "donatex", "youtube"],
+      defaultGeometry: { x: 25, y: 3, w: 50, h: 20 },
+      minW: 30,
+      minH: 14,
+      defaultConfig: { showAmount: true, showMessage: true, durationMs: 9000, decodeTickMs: 76 },
+    },
     "grimhex-holo-alert": {
       type: "grimhex-holo-alert",
       label: "Голограмма Grim HEX",
@@ -263,6 +281,8 @@
       minH: 12,
       defaultConfig: { opacity: 100 },
     },
+
+    // ---- Nuclear (3D) ----
     nuclear: {
       type: "nuclear",
       label: "Знак радиации",
@@ -318,6 +338,8 @@
       minH: 8,
       defaultConfig: {},
     },
+
+    // ---- Cobra Mk II (3D) ----
     cobra: {
       type: "cobra",
       label: "Корабль Cobra Mk II",
@@ -343,6 +365,78 @@
       minH: 6,
       defaultConfig: { perspective: 0 },
     },
+    "cobra-chat": {
+      type: "cobra-chat",
+      label: "Чат Cobra",
+      description: "Чат стрима в оранжевом HUD Cobra Mk II (только для темы Cobra Mk II)",
+      icon: "widgetCobraChat",
+      services: ["twitchChat", "youtube"],
+      dimension: "3d",
+      theme: "cobra-mk2",
+      renderType: "2d",
+      defaultGeometry: { x: 68, y: 6, w: 29, h: 46 },
+      minW: 16,
+      minH: 16,
+      defaultConfig: { maxMessages: 50, perspective: 0 },
+    },
+    "cobra-goal": {
+      type: "cobra-goal",
+      label: "Цель Cobra",
+      description: "Донат-цель из оранжевых секторов (только для темы Cobra Mk II)",
+      icon: "widgetCobraGoal",
+      services: ["donationAlerts", "youtube"],
+      dimension: "3d",
+      theme: "cobra-mk2",
+      renderType: "2d",
+      defaultGeometry: { x: 3, y: 84, w: 32, h: 6 },
+      minW: 16,
+      minH: 4,
+      defaultConfig: { showPercentage: false },
+    },
+    "cobra-holo-alert": {
+      type: "cobra-holo-alert",
+      label: "Голограмма Cobra",
+      description: "Голографический терминал с вращающимся кораблём (только для темы Cobra Mk II)",
+      icon: "widgetCobraHoloAlert",
+      services: ["twitchEvents", "donationAlerts", "youtube"],
+      dimension: "3d",
+      theme: "cobra-mk2",
+      renderType: "2d",
+      defaultGeometry: { x: 40, y: 16, w: 26, h: 14 },
+      minW: 16,
+      minH: 8,
+      defaultConfig: {},
+    },
+    "cobra-shield": {
+      type: "cobra-shield",
+      label: "Щит Cobra",
+      description: "Донат-цель с кораблём и кольцами щита (только для темы Cobra Mk II)",
+      icon: "widgetCobraShield",
+      services: ["donationAlerts", "youtube"],
+      dimension: "3d",
+      theme: "cobra-mk2",
+      role: "shield",
+      defaultGeometry: { x: 40, y: 64, w: 20, h: 28 },
+      minW: 12,
+      minH: 14,
+      defaultConfig: { opacity: 100 },
+    },
+    "cobra-radar": {
+      type: "cobra-radar",
+      label: "Радар Cobra",
+      description: "Перспективный круговой радар с кораблями-донатерами (только для темы Cobra Mk II)",
+      icon: "widgetCobraRadar",
+      services: ["donationAlerts", "youtube"],
+      dimension: "3d",
+      theme: "cobra-mk2",
+      role: "radar",
+      defaultGeometry: { x: 42, y: 8, w: 16, h: 24 },
+      minW: 12,
+      minH: 12,
+      defaultConfig: { opacity: 100 },
+    },
+
+    // ---- TESO (3D) ----
     "teso-seal": {
       type: "teso-seal",
       label: "Печать Уроборос",
@@ -398,34 +492,8 @@
       minH: 8,
       defaultConfig: {},
     },
-    "cobra-chat": {
-      type: "cobra-chat",
-      label: "Чат Cobra",
-      description: "Чат стрима в оранжевом HUD Cobra Mk II (только для темы Cobra Mk II)",
-      icon: "widgetCobraChat",
-      services: ["twitchChat", "youtube"],
-      dimension: "3d",
-      theme: "cobra-mk2",
-      renderType: "2d",
-      defaultGeometry: { x: 68, y: 6, w: 29, h: 46 },
-      minW: 16,
-      minH: 16,
-      defaultConfig: { maxMessages: 50, perspective: 0 },
-    },
-    "cobra-goal": {
-      type: "cobra-goal",
-      label: "Цель Cobra",
-      description: "Донат-цель из оранжевых секторов (только для темы Cobra Mk II)",
-      icon: "widgetCobraGoal",
-      services: ["donationAlerts", "youtube"],
-      dimension: "3d",
-      theme: "cobra-mk2",
-      renderType: "2d",
-      defaultGeometry: { x: 3, y: 84, w: 32, h: 6 },
-      minW: 16,
-      minH: 4,
-      defaultConfig: { showPercentage: false },
-    },
+
+    // ---- Wardogs (3D) ----
     "wardogs-goal": {
       type: "wardogs-goal",
       label: "Цель Wardogs",
@@ -481,48 +549,8 @@
       minH: 6,
       defaultConfig: { perspective: 0, motion: true },
     },
-    "cobra-holo-alert": {
-      type: "cobra-holo-alert",
-      label: "Голограмма Cobra",
-      description: "Голографический терминал с вращающимся кораблём (только для темы Cobra Mk II)",
-      icon: "widgetCobraHoloAlert",
-      services: ["twitchEvents", "donationAlerts", "youtube"],
-      dimension: "3d",
-      theme: "cobra-mk2",
-      renderType: "2d",
-      defaultGeometry: { x: 40, y: 16, w: 26, h: 14 },
-      minW: 16,
-      minH: 8,
-      defaultConfig: {},
-    },
-    "cobra-shield": {
-      type: "cobra-shield",
-      label: "Щит Cobra",
-      description: "Донат-цель с кораблём и кольцами щита (только для темы Cobra Mk II)",
-      icon: "widgetCobraShield",
-      services: ["donationAlerts", "youtube"],
-      dimension: "3d",
-      theme: "cobra-mk2",
-      role: "shield",
-      defaultGeometry: { x: 40, y: 64, w: 20, h: 28 },
-      minW: 12,
-      minH: 14,
-      defaultConfig: { opacity: 100 },
-    },
-    "cobra-radar": {
-      type: "cobra-radar",
-      label: "Радар Cobra",
-      description: "Перспективный круговой радар с кораблями-донатерами (только для темы Cobra Mk II)",
-      icon: "widgetCobraRadar",
-      services: ["donationAlerts", "youtube"],
-      dimension: "3d",
-      theme: "cobra-mk2",
-      role: "radar",
-      defaultGeometry: { x: 42, y: 8, w: 16, h: 24 },
-      minW: 12,
-      minH: 12,
-      defaultConfig: { opacity: 100 },
-    },
+
+    // ---- Material You (3D) ----
     "md3-orb": {
       type: "md3-orb",
       label: "Сфера Material You",
@@ -578,6 +606,8 @@
       minH: 8,
       defaultConfig: {},
     },
+
+    // ---- Pixel Perfect (3D) ----
     "pixel-cube": {
       type: "pixel-cube",
       label: "Куб Pixel Perfect",
@@ -633,6 +663,8 @@
       minH: 8,
       defaultConfig: {},
     },
+
+    // ---- Интеграции DonateX ----
     "donatex-ai": {
       type: "donatex-ai",
       label: "ИИ-персонаж DonateX",
@@ -655,19 +687,7 @@
       minH: 6,
       defaultConfig: { autoplay: true },
     },
-    // Стилизованный алерт Star Citizen доступен в любой теме: это отдельный
-    // виджет, а не часть 3D-набора Grim HEX. Это не 3D-виджет — DOM и CSS.
-    "uec-transfer": {
-      type: "uec-transfer",
-      label: "UEC-перевод",
-      description: "Входящая передача: канал, позывной и сумма — в стиле Star Citizen",
-      icon: "widgetUecTransfer",
-      services: ["twitchEvents", "donationAlerts", "donatex", "youtube"],
-      defaultGeometry: { x: 25, y: 3, w: 50, h: 20 },
-      minW: 30,
-      minH: 14,
-      defaultConfig: { showAmount: true, showMessage: true, durationMs: 9000, decodeTickMs: 76 },
-    },
+
   };
 
   const CANVAS = { w: 1920, h: 1080 };

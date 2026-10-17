@@ -64,6 +64,33 @@ describe("widget-catalog helpers", () => {
     expect(widgetsForTheme("")).toEqual([]);
   });
 
+  test("виджеты одной темы идут в каталоге подряд", () => {
+    // Порядок ключей задаёт порядок карточек в колонке виджетов: тематический
+    // блок не должен перемешиваться с соседними темами.
+    const keys = Object.keys(WIDGET_TYPES);
+    const byTheme = new Map();
+    keys.forEach((key, index) => {
+      const theme = WIDGET_TYPES[key].theme;
+      if (!theme) return;
+      if (!byTheme.has(theme)) byTheme.set(theme, []);
+      byTheme.get(theme).push(index);
+    });
+    for (const [theme, indices] of byTheme) {
+      // Внутри блока могут стоять виджеты без привязки к теме (например,
+      // UEC-перевод в блоке Grim HEX), но чужая тема разрывать блок не должна.
+      const foreign = keys
+        .slice(indices[0], indices[indices.length - 1] + 1)
+        .map((key) => WIDGET_TYPES[key].theme)
+        .filter((value) => value && value !== theme);
+      expect(`${theme}: ${foreign.join(",")}`).toBe(`${theme}: `);
+    }
+  });
+
+  test("UEC-перевод стоит сразу после «Цель Grim HEX»", () => {
+    const keys = Object.keys(WIDGET_TYPES);
+    expect(keys[keys.indexOf("grimhex-goal") + 1]).toBe("uec-transfer");
+  });
+
   test("widgetRole сводит 2D-базу и её 3D-варианты к одной роли", () => {
     // 2D-база и все 3D-варианты — одна роль.
     expect(widgetRole("chat")).toBe("chat");
