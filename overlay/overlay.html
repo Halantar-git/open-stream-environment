@@ -26,6 +26,11 @@
 </head>
 <body>
   <div id="canvas"></div>
+  <!-- Медиа доната: глобальный слой, не зависит от раскладки виджетов. -->
+  <div id="donationMedia" class="donation-media" hidden>
+    <video id="donationMediaVideo" class="donation-media__video" playsinline></video>
+    <img id="donationMediaImage" class="donation-media__image" alt="" />
+  </div>
   <script src="/shared/events.js"></script>
   <script src="/shared/mic-frame.js"></script>
   <script src="/shared/i18n.js"></script>
@@ -88,6 +93,7 @@
   <script src="widgets/pixel-holo-alert-widget.js"></script>
   <script src="widgets/donatex-ai-widget.js"></script>
   <script src="widgets/music-widget.js"></script>
+  <script src="donation-media.js"></script>
   <script src="hud-editor.js"></script>
   <script src="overlay.js"></script>
 </body>

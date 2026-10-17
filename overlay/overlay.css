@@ -621,3 +621,29 @@ body[data-decoration="nuclear"]::after {
   cursor: nwse-resize;
   z-index: 3001;
 }
+
+/* Donation media: global layer for a sound/image/video assigned to a donation.
+   It sits above widgets (the effect is meant to be seen) but never blocks the
+   mouse. Images hold for their configured duration, videos play to the end. */
+.donation-media {
+  position: fixed;
+  inset: 0;
+  z-index: 9997;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  animation: donation-media-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.donation-media[hidden] { display: none; }
+.donation-media__image,
+.donation-media__video {
+  max-width: 86vw;
+  max-height: 86vh;
+  object-fit: contain;
+  filter: drop-shadow(0 0 28px rgba(0, 0, 0, 0.55));
+}
+@keyframes donation-media-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: none; }
+}

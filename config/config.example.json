@@ -62,6 +62,11 @@
     "queueMode": false,
     "sounds": []
   },
+  "donationMedia": {
+    "enabled": true,
+    "volume": 0.8,
+    "rules": []
+  },
   "streamdeck": {
     "icons": {
       "start": "",

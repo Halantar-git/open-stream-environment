@@ -209,6 +209,11 @@ const { EVENT_TYPES } = window.SharedEvents;
   const soundboardEnabledSwitch = document.getElementById("soundboardEnabledSwitch");
   const soundboardVolume = document.getElementById("soundboardVolume");
   const soundboardVolumeValue = document.getElementById("soundboardVolumeValue");
+  const donationMediaEnabledSwitch = document.getElementById("donationMediaEnabledSwitch");
+  const donationMediaVolume = document.getElementById("donationMediaVolume");
+  const donationMediaVolumeValue = document.getElementById("donationMediaVolumeValue");
+  const donationMediaList = document.getElementById("donationMediaList");
+  const addDonationMediaBtn = document.getElementById("addDonationMediaBtn");
   const soundboardQueueSwitch = document.getElementById("soundboardQueueSwitch");
   const notificationSoundSwitch = document.getElementById("notificationSoundSwitch");
   const notificationVolume = document.getElementById("notificationVolume");
@@ -553,6 +558,13 @@ const { EVENT_TYPES } = window.SharedEvents;
       soundboardVolumeValue.textContent = `${vol}%`;
       renderSoundboard();
     }
+    if (state.donationMedia) {
+      setSwitchState(donationMediaEnabledSwitch, !!state.donationMedia.enabled);
+      const mediaVol = Math.round((state.donationMedia.volume ?? 0.8) * 100);
+      donationMediaVolume.value = mediaVol;
+      donationMediaVolumeValue.textContent = `${mediaVol}%`;
+    }
+    renderDonationMedia();
     renderTwitchRewards();
     if (state.tts) {
       setSwitchState(ttsEnabledSwitch, !!state.tts.enabled);
@@ -1040,6 +1052,10 @@ const { EVENT_TYPES } = window.SharedEvents;
     send(EVENT_TYPES.CMD_SET_SOUNDBOARD_CONFIG, { config: patch });
   }
 
+  function sendDonationMediaConfig(patch) {
+    send(EVENT_TYPES.CMD_SET_DONATION_MEDIA_CONFIG, { config: patch });
+  }
+
   function sendTtsConfig(patch) {
     send(EVENT_TYPES.CMD_SET_TTS_CONFIG, { config: patch });
   }
@@ -1486,6 +1502,95 @@ const { EVENT_TYPES } = window.SharedEvents;
     });
   }
 
+  function updateDonationMediaRule(id, patch) {
+    const rules = (state.donationMedia.rules || []).map((rule) =>
+      rule.id === id ? { ...rule, ...patch } : rule
+    );
+    sendDonationMediaConfig({ rules });
+  }
+
+  function renderDonationMediaItem(rule) {
+    const row = document.createElement("div");
+    row.className = "donation-media-item";
+
+    const amount = document.createElement("input");
+    amount.type = "number";
+    amount.min = "0";
+    amount.step = "1";
+    amount.placeholder = t("settings.donationMediaAmount");
+    amount.title = t("settings.donationMediaAmount");
+    amount.value = String(Math.max(0, Number(rule.minAmount) || 0));
+    amount.addEventListener("change", () =>
+      updateDonationMediaRule(rule.id, { minAmount: Math.max(0, Number(amount.value) || 0) })
+    );
+
+    const audio = makeSoundFileInput(rule.audioFile || "", "media/...mp3", "audio", (v) =>
+      updateDonationMediaRule(rule.id, { audioFile: v })
+    );
+    const image = makeSoundFileInput(rule.imageFile || "", "media/...gif", "image", (v) =>
+      updateDonationMediaRule(rule.id, { imageFile: v })
+    );
+    const video = makeSoundFileInput(rule.videoFile || "", "media/...mp4", "video", (v) =>
+      updateDonationMediaRule(rule.id, { videoFile: v })
+    );
+
+    const duration = document.createElement("input");
+    duration.type = "number";
+    duration.min = "1";
+    duration.max = "60";
+    duration.step = "1";
+    duration.placeholder = t("settings.donationMediaDuration");
+    duration.title = t("settings.donationMediaDuration");
+    duration.value = String(Math.max(1, Math.round((Number(rule.durationMs) || 5000) / 1000)));
+    duration.addEventListener("change", () => {
+      const seconds = Math.max(1, Math.min(60, Number(duration.value) || 5));
+      updateDonationMediaRule(rule.id, { durationMs: seconds * 1000 });
+    });
+
+    const test = document.createElement("button");
+    test.className = "md-button md-button--tonal";
+    test.textContent = "▶";
+    test.title = t("settings.test");
+    test.addEventListener("click", () => send(EVENT_TYPES.CMD_TEST_DONATION_MEDIA, { ruleId: rule.id }));
+
+    const remove = document.createElement("button");
+    remove.className = "md-button md-button--text";
+    remove.textContent = "✕";
+    remove.title = t("common.remove");
+    remove.addEventListener("click", () => {
+      const rules = (state.donationMedia.rules || []).filter((item) => item.id !== rule.id);
+      sendDonationMediaConfig({ rules });
+    });
+
+    row.append(amount, audio, image, video, duration, test, remove);
+    return row;
+  }
+
+  function renderDonationMedia() {
+    if (!donationMediaList) return;
+    donationMediaList.innerHTML = "";
+    (state.donationMedia.rules || []).forEach((rule) => {
+      donationMediaList.appendChild(renderDonationMediaItem(rule));
+    });
+  }
+
+  if (addDonationMediaBtn) {
+    addDonationMediaBtn.addEventListener("click", () => {
+      const rules = [
+        ...(state.donationMedia.rules || []),
+        {
+          id: "dm_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
+          minAmount: 100,
+          audioFile: "",
+          imageFile: "",
+          videoFile: "",
+          durationMs: 5000,
+        },
+      ];
+      sendDonationMediaConfig({ rules });
+    });
+  }
+
   addSoundBtn.addEventListener("click", () => {
     const sounds = [...(state.soundboard.sounds || []), { id: "sound_" + Date.now(), rewardTitle: "", rewardId: "", audioFile: "", imageFile: "", videoFile: "", title: "" }];
     sendSoundboardConfig({ sounds });
@@ -1629,6 +1734,16 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   wireSwitch(soundboardQueueSwitch, (on) => sendSoundboardConfig({ queueMode: on }));
   wireSwitch(soundboardEnabledSwitch, (on) => sendSoundboardConfig({ enabled: on }));
+
+  if (donationMediaVolume) {
+    donationMediaVolume.addEventListener("input", (e) => {
+      donationMediaVolumeValue.textContent = `${e.target.value}%`;
+    });
+    donationMediaVolume.addEventListener("change", (e) => {
+      sendDonationMediaConfig({ volume: Number(e.target.value) / 100 });
+    });
+    wireSwitch(donationMediaEnabledSwitch, (on) => sendDonationMediaConfig({ enabled: on }));
+  }
 
   wireSwitch(notificationSoundSwitch, (on) => send(EVENT_TYPES.CMD_SET_NOTIFICATION_SOUND, { enabled: on }));
   if (notificationVolume) {
@@ -3973,6 +4088,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     // Подписи и поля заставок тоже строятся из t(), поэтому при смене языка
     // форму нужно собрать заново — applyLocales не перерисовывает всю панель.
     renderSplashSettings();
+    renderDonationMedia();
     if (!wheelPanelEl.hidden) renderWheelPanels();
     if (!pollPanelEl.hidden) renderPollPanels();
     renderThemeGrid();

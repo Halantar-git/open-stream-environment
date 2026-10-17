@@ -34,7 +34,7 @@ use crate::protocol::event_types;
 use crate::server::cli;
 use crate::server::locales::{self, Locales};
 use crate::server::remote;
-use crate::state::{appearance, config, layout, poll, scenes};
+use crate::state::{appearance, config, donation_media, layout, poll, scenes};
 use crate::storage::history::{js_number, js_number_or_zero, js_truthy};
 
 /// Разобрать и выполнить команду клиента без привязки к отправителю.
@@ -1035,6 +1035,22 @@ pub fn handle_message(
                 .map(crate::state::js_string)
                 .unwrap_or_default();
             diagnostics.trigger_soundboard(&sound_id, "Тест");
+        }
+        event_types::CMD_SET_DONATION_MEDIA_CONFIG => {
+            {
+                let mut config = diagnostics.config();
+                let patch = payload.get("config").cloned().unwrap_or_else(|| json!({}));
+                donation_media::set_config(&mut config, &patch);
+            }
+            broadcast_state(diagnostics);
+        }
+        event_types::CMD_TEST_DONATION_MEDIA => {
+            let rule_id = payload
+                .get("ruleId")
+                .filter(|value| js_truthy(Some(value)))
+                .map(crate::state::js_string)
+                .unwrap_or_default();
+            diagnostics.test_donation_media(&rule_id);
         }
         event_types::CMD_SET_CHAT_BOT_CONFIG => {
             {

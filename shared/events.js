@@ -60,7 +60,8 @@
     DEATH_COUNT_UPDATE: "death_count_update", // { count }
     CAMERA_ANGLE_UPDATE: "camera_angle_update", // { activeCameraAngle }
     CAMERA_FILTER_UPDATE: "camera_filter_update", // { filterId, active }
-    SOUNDBOARD_PLAY: "soundboard_play", // { soundId, title, user, audioFile, imageFile, videoFile }
+    SOUNDBOARD_PLAY: "soundboard_play",
+    DONATION_MEDIA_PLAY: "donation_media_play", // { ruleId, user, amount, currency, audioFile, imageFile, videoFile, durationMs, volume } — донат-медиа // { soundId, title, user, audioFile, imageFile, videoFile }
     VIDEO_SPLASH_PLAY: "video_splash_play", // { mediaFile, scene, nextScene } — server -> overlay: play intro/brb/outro splash
     MIC_AUDIO_DATA: "mic_audio_data", // { level, wave, freq } — mic bridge (control -> server -> overlay)
     HUD_EDIT_MODE: "hud_edit_mode", // { enabled } — game HUD overlay entered/left direct-edit mode
@@ -156,7 +157,9 @@
     CMD_SET_NOTIFICATION_VOLUME: "cmd_set_notification_volume", // { volume: 0..1 }
     CMD_SET_NOTIFICATION_REPEATS: "cmd_set_notification_repeats", // { repeats }
     CMD_SET_OBS_CONFIG: "cmd_set_obs_config", // { host?, port?, password?, clearPassword?, sceneMap? }
-    CMD_SET_SOUNDBOARD_CONFIG: "cmd_set_soundboard_config", // { config }
+    CMD_SET_SOUNDBOARD_CONFIG: "cmd_set_soundboard_config",
+    CMD_SET_DONATION_MEDIA_CONFIG: "cmd_set_donation_media_config", // { config: { enabled?, volume?, rules? } }
+    CMD_TEST_DONATION_MEDIA: "cmd_test_donation_media", // { ruleId } // { config }
     CMD_SET_CHAT_BOT_CONFIG: "cmd_set_chat_bot_config", // { config }
     CMD_SET_TTS_CONFIG: "cmd_set_tts_config", // { config: { enabled?, volume?, rate?, lang? } }
     CMD_SET_DONATION_VOICE: "cmd_set_donation_voice", // { config: { donationAlerts?, volume? } }

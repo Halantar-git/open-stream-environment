@@ -905,6 +905,9 @@ pub fn normalize_config(config: &mut ConfigFile) {
         }),
     );
 
+    // Медиа для донатов: правила «сумма → звук/картинка/видео».
+    crate::state::donation_media::normalize_config(config);
+
     // Stream Deck.
     let sd = object_or_empty(config.get("streamdeck"));
     let icons = merge_maps(
@@ -1127,6 +1130,22 @@ pub fn replace_config(
         ),
     );
     next.insert("soundboard".to_string(), Value::Object(soundboard));
+
+    // Медиа для донатов: поля доливаются, правила берутся из импорта целиком.
+    let current_donation_media = object_or_empty(config.get("donationMedia"));
+    let donation_media_patch = incoming.get("donationMedia");
+    let mut donation_media = merge_maps(current_donation_media.clone(), donation_media_patch);
+    donation_media.insert(
+        "rules".to_string(),
+        keep_arr(
+            donation_media_patch.and_then(|section| section.get("rules")),
+            current_donation_media
+                .get("rules")
+                .cloned()
+                .unwrap_or_else(|| json!([])),
+        ),
+    );
+    next.insert("donationMedia".to_string(), Value::Object(donation_media));
 
     // Stream Deck: иконки сливаются.
     let current_streamdeck = object_or_empty(config.get("streamdeck"));
@@ -1858,6 +1877,7 @@ mod tests {
             .get("start")
             .is_some());
         assert_eq!(config.get("soundboard").unwrap()["volume"], json!(0.8));
+        assert_eq!(config.get("donationMedia").unwrap()["volume"], json!(0.8));
         assert_eq!(config.get("chatHud").unwrap()["width"], json!(360));
         assert_eq!(config.get("tts").unwrap()["lang"], json!("ru-RU"));
         // Сцены появились, опрос нормализован, службы включены.

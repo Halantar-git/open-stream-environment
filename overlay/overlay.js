@@ -508,6 +508,9 @@
       case EVENT_TYPES.SOUNDBOARD_PLAY:
         bus.emit(EVENT_TYPES.SOUNDBOARD_PLAY, msg.payload);
         break;
+      case EVENT_TYPES.DONATION_MEDIA_PLAY:
+        if (window.OSEDonationMedia) window.OSEDonationMedia.play(msg.payload);
+        break;
       case EVENT_TYPES.REWARD_TTS:
         speakReward(msg.payload && msg.payload.text);
         break;

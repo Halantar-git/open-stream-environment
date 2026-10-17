@@ -28,6 +28,7 @@
 
 pub mod appearance;
 pub mod config;
+pub mod donation_media;
 pub mod layout;
 pub mod poll;
 pub mod runtime;

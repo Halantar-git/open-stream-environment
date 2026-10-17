@@ -29,6 +29,9 @@ describe("shared/events vocabulary", () => {
     expect(EVENT_TYPES.CMD_SET_CAMERA_ANGLE).toBe("cmd_set_camera_angle");
     expect(EVENT_TYPES.SOUNDBOARD_PLAY).toBe("soundboard_play");
     expect(EVENT_TYPES.CMD_SET_SOUNDBOARD_CONFIG).toBe("cmd_set_soundboard_config");
+    expect(EVENT_TYPES.DONATION_MEDIA_PLAY).toBe("donation_media_play");
+    expect(EVENT_TYPES.CMD_SET_DONATION_MEDIA_CONFIG).toBe("cmd_set_donation_media_config");
+    expect(EVENT_TYPES.CMD_TEST_DONATION_MEDIA).toBe("cmd_test_donation_media");
     expect(EVENT_TYPES.CMD_SET_STREAMDECK_CONFIG).toBe("cmd_set_streamdeck_config");
   });
 });

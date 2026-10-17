@@ -906,6 +906,23 @@
 
         <div class="settings__card md-card">
           <div class="settings__card-head">
+            <h2 data-i18n="settings.donationMedia">Медиа для донатов</h2>
+            <div class="md-switch is-on" id="donationMediaEnabledSwitch" role="switch" aria-checked="true" data-i18n-title="settings.integrationSwitch"><div class="md-switch__thumb"></div></div>
+          </div>
+          <p class="settings__desc" data-i18n="settings.donationMediaDesc">При донате от указанной суммы проигрывается звук, картинка или видео. Если подходят несколько правил, срабатывает правило с самой высокой суммой.</p>
+          <div class="md-field">
+            <label><span data-i18n="settings.donationMediaVolume">Громкость</span>: <span id="donationMediaVolumeValue">80%</span></label>
+            <input type="range" id="donationMediaVolume" min="0" max="100" step="1" value="80" />
+          </div>
+          <div class="soundboard-list" id="donationMediaList"></div>
+          <div class="settings__actions">
+            <button class="md-button md-button--tonal" id="addDonationMediaBtn" data-i18n="settings.addDonationMedia">+ Добавить правило</button>
+          </div>
+          <p class="settings__desc" data-i18n="settings.donationMediaHint">Сумма — порог «от». Для картинки длительность задаётся в секундах, видео играет до конца, звук — отдельно от картинки.</p>
+        </div>
+
+        <div class="settings__card md-card">
+          <div class="settings__card-head">
             <h2 data-i18n="settings.streamdeck">Stream Deck</h2>
           </div>
           <p class="settings__desc" data-i18n="settings.streamdeckDesc">Свои иконки для кнопок плагина Elgato Stream Deck. Файл (PNG/JPG/GIF/WebP) копируется в media/ и применяется поверх стандартной иконки плагина.</p>

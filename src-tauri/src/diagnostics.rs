@@ -1007,6 +1007,20 @@ impl Diagnostics {
         true
     }
 
+    /// Проверить медиа-правило доната: панель просит проиграть его сейчас.
+    /// Работает и при выключенной секции — пользователь как раз настраивает её.
+    pub fn test_donation_media(&self, rule_id: &str) -> bool {
+        let payload = {
+            let config = self.config();
+            crate::state::donation_media::test_payload(&config, rule_id)
+        };
+        let Some(payload) = payload else {
+            return false;
+        };
+        broadcast_clients(&self.clients, event_types::DONATION_MEDIA_PLAY, payload);
+        true
+    }
+
     /// Перезапустить чтение чата Twitch по текущим настройкам.
     ///
     /// Зовётся при старте приложения, при смене канала и по кнопке
@@ -1088,6 +1102,7 @@ impl Diagnostics {
         if !self.queue_enabled() {
             let text = json!({ "type": event_types::ALERT, "payload": alert }).to_string();
             self.clients.broadcast_text(&text);
+            broadcast_donation_media(&self.config, &self.clients, alert);
             return EnqueueOutcome {
                 accepted: true,
                 reason: None,
@@ -2642,7 +2657,8 @@ fn publish_alert_static(
         crate::state::config::alert_queue_config(&config)["enabled"] != Value::Bool(false)
     };
     if !enabled {
-        broadcast_clients(clients, event_types::ALERT, with_duration);
+        broadcast_clients(clients, event_types::ALERT, with_duration.clone());
+        broadcast_donation_media(config, clients, &with_duration);
         return;
     }
     let is_test = js_truthy(with_duration.get("isTest"));
@@ -2673,6 +2689,24 @@ impl LogBus for ClientLogBus {
 fn broadcast_clients(clients: &ClientRegistry, kind: &str, payload: Value) {
     let text = json!({ "type": kind, "payload": payload }).to_string();
     clients.broadcast_text(&text);
+}
+
+/// Подобрать медиа для донат-алерта и разослать его оверлею.
+///
+/// Блокировка настроек отпускается до рассылки: `set_config` берёт тот же замок
+/// из команды панели.
+fn broadcast_donation_media(
+    config: &Arc<Mutex<ConfigFile>>,
+    clients: &Arc<ClientRegistry>,
+    alert: &Value,
+) {
+    let payload = {
+        let config = config.lock().unwrap_or_else(|error| error.into_inner());
+        crate::state::donation_media::alert_payload(&config, alert)
+    };
+    if let Some(payload) = payload {
+        broadcast_clients(clients, event_types::DONATION_MEDIA_PLAY, payload);
+    }
 }
 
 /// Кадр `twitch_action_result`: `action` идёт первым, затем поля результата —
@@ -2794,9 +2828,13 @@ fn build_alert_queue(
     };
 
     let play_clients = Arc::clone(&clients);
+    let play_config = Arc::clone(&config);
     let on_play: Arc<PlayFn> = Arc::new(move |item: &Value| {
         let text = json!({ "type": event_types::ALERT, "payload": item }).to_string();
         play_clients.broadcast_text(&text);
+        // Медиа доната играет вместе с его алертом, а не в момент постановки
+        // в очередь: иначе звук/видео обгоняли бы карточку на несколько секунд.
+        broadcast_donation_media(&play_config, &play_clients, item);
     });
 
     let change_config = Arc::clone(&config);
