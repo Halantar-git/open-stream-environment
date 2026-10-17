@@ -314,6 +314,12 @@
   function handleMessage(msg) {
     switch (msg.type) {
       case EVENT_TYPES.STATE:
+        if (window.TwitchEmotes && window.TwitchEmotes.configure) {
+          window.TwitchEmotes.configure({
+            channel: msg.payload.twitchChannel,
+            channelId: msg.payload.twitchBroadcasterId,
+          });
+        }
         applyTheme(msg.payload.appearance);
         recentEvents = msg.payload.recentEvents || [];
         topDonation = msg.payload.topDonation || topDonation;

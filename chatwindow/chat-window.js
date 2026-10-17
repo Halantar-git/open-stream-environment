@@ -248,6 +248,13 @@
         currentChannel = msg.payload.twitchChannel || "";
         channelLabelEl.textContent = currentChannel || "—";
         setStatus((msg.payload.connectionStatus || {}).twitchChat);
+        // Сторонние смайлы грузятся по каналу и его числовому id.
+        if (window.TwitchEmotes && window.TwitchEmotes.configure) {
+          window.TwitchEmotes.configure({
+            channel: msg.payload.twitchChannel,
+            channelId: msg.payload.twitchBroadcasterId,
+          });
+        }
         break;
       case EVENT_TYPES.CHAT_MESSAGE: {
         const payload = msg.payload || {};

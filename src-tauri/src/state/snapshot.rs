@@ -117,6 +117,12 @@ pub fn snapshot(config: &ConfigFile, db: &Database, runtime: &Runtime) -> Value 
         "twitchChannel".to_string(),
         nested(config, "twitch", "channel"),
     );
+    // Числовой id канала нужен фронту для наборов смайлов BetterTTV и 7TV:
+    // их API ищет канал только по нему, в отличие от FrankerFaceZ (по логину).
+    out.insert(
+        "twitchBroadcasterId".to_string(),
+        nested(config, "twitch", "broadcasterId"),
+    );
     out.insert(
         "twitchClientId".to_string(),
         nested(config, "twitch", "clientId"),

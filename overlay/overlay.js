@@ -41,6 +41,13 @@
     window.TwitchEmotes && window.TwitchEmotes.renderEmotes
       ? window.TwitchEmotes.renderEmotes.bind(window.TwitchEmotes)
       : (msg) => escapeHtml(msg);
+  // Сторонние смайлы (BTTV/FFZ/7TV) ищутся по имени, поэтому наборы грузятся
+  // один раз, когда становится известен канал.
+  const configureEmotes = (channel, channelId) => {
+    if (window.TwitchEmotes && window.TwitchEmotes.configure) {
+      window.TwitchEmotes.configure({ channel, channelId });
+    }
+  };
 
   const canvas = document.getElementById("canvas");
   const bus = new window.OSEWidgets.EventBus();
@@ -429,6 +436,7 @@
     switch (msg.type) {
       case EVENT_TYPES.STATE: {
         const p = msg.payload || {};
+        configureEmotes(p.twitchChannel, p.twitchBroadcasterId);
         state.goal = p.goal || state.goal;
         state.recentEvents = p.recentEvents || [];
         state.stats = p.stats || state.stats;
