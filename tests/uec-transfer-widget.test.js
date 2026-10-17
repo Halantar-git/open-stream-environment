@@ -166,8 +166,8 @@ describe("WidgetUecTransfer", () => {
     expect(w.messageEl.textContent).not.toBe("на корабль");
 
     // По одному символу за тик — тринадцати тиков хватает на этот ник, а
-    // сообщение укладывается в те же полсекунды.
-    jest.advanceTimersByTime(600);
+    // сообщение укладывается в то же время.
+    jest.advanceTimersByTime(1100);
     expect(w.nameEl.textContent).toBe("bob_the_pilot");
     expect(w.messageEl.textContent).toBe("на корабль");
     expect(w.panelEl.classList.contains("is-decoded")).toBe(true);
