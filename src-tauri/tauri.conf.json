@@ -1,5 +1,5 @@
 {
-  "$schema": "https://schema.tauri.app/config/2",
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Open Stream Environment",
   "version": "4.0.8",
   "identifier": "com.openstreamenvironment.app",
