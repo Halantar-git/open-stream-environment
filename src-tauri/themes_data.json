@@ -1,5 +1,5 @@
 {
-  "sourceHash": "e57832a6798cbe40",
+  "sourceHash": "23b213ab590811d1",
   "builtinThemes": {
     "nebula": {
       "id": "nebula",
@@ -370,12 +370,12 @@
         "--font-body": "\"Montserrat\", \"Segoe UI\", sans-serif",
         "--font-mono": "\"JetBrains Mono\", \"Consolas\", monospace",
         "--panel-radius": "0px",
-        "--panel-clip": "none",
-        "--panel-decoration": "brackets4",
+        "--panel-clip": "polygon(26px 0, 100% 0, 100% 100%, 0 100%)",
+        "--panel-decoration": "retrowave",
         "--panel-glow": "0 0 18px rgba(255,45,149,0.35), 0 0 46px rgba(45,226,230,0.12), inset 0 0 28px rgba(255,45,149,0.05)",
         "--panel-bg": "rgba(13, 7, 25, 0.88)",
         "--panel-blur": "0px",
-        "--panel-border": "1px solid rgba(255, 45, 149, 0.45)",
+        "--panel-border": "2px solid rgba(255, 45, 149, 0.55)",
         "--alert-enter-easing": "cubic-bezier(0.2, 0.9, 0.2, 1.15)",
         "--alert-enter-duration": "320ms",
         "--shape-xs": "0px",
@@ -383,7 +383,7 @@
         "--shape-md": "0px",
         "--shape-lg": "0px",
         "--shape-xl": "0px",
-        "--shape-full": "999px"
+        "--shape-full": "2px"
       }
     },
     "wardogs": {

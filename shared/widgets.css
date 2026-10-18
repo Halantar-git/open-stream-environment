@@ -715,6 +715,73 @@
     bottom -1px right -1px, bottom -1px right -1px;
 }
 
+/* ---------- Retrowave: chamfered neon panels ----------
+   The theme clips panels with a slanted leading edge (--panel-clip). Here we
+   draw the edge light, the inner cyan hairline and the faint perspective grid
+   so the cut corner still reads as a neon frame. Driven by the decoration
+   token, so custom themes can borrow the same look. */
+[data-decoration="retrowave"] .widget-alert,
+[data-decoration="retrowave"] .widget-goal,
+[data-decoration="retrowave"] .widget-recent,
+[data-decoration="retrowave"] .widget-custom.has-card,
+[data-decoration="retrowave"] .widget-stat,
+[data-decoration="retrowave"] .widget-social,
+[data-decoration="retrowave"] .widget-death {
+  position: relative;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(45, 226, 230, 0.055) 0 1px, transparent 1px 34px),
+    repeating-linear-gradient(0deg, rgba(255, 45, 149, 0.045) 0 1px, transparent 1px 34px);
+  box-shadow: inset 0 0 0 1px rgba(45, 226, 230, 0.16), inset 0 0 28px rgba(255, 45, 149, 0.09);
+}
+[data-decoration="retrowave"] .widget-alert::before,
+[data-decoration="retrowave"] .widget-goal::before,
+[data-decoration="retrowave"] .widget-recent::before,
+[data-decoration="retrowave"] .widget-custom.has-card::before,
+[data-decoration="retrowave"] .widget-stat::before,
+[data-decoration="retrowave"] .widget-social::before,
+[data-decoration="retrowave"] .widget-death::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  clip-path: polygon(26px 0, 31px 0, 5px 100%, 0 100%);
+  background: linear-gradient(90deg, var(--md-secondary) 0 2px, var(--md-primary) 2px 5px);
+  filter: drop-shadow(0 0 7px rgba(45, 226, 230, 0.6)) drop-shadow(0 0 14px rgba(255, 45, 149, 0.35));
+  opacity: 0.95;
+}
+[data-decoration="retrowave"] .widget-alert { padding-left: 42px; }
+[data-decoration="retrowave"] .widget-goal { padding-left: 38px; }
+[data-decoration="retrowave"] .widget-recent { padding-left: 38px; }
+[data-decoration="retrowave"] .widget-stat { padding-left: 38px; }
+[data-decoration="retrowave"] .widget-social { padding-left: 38px; }
+[data-decoration="retrowave"] .widget-death { padding-left: 38px; }
+[data-decoration="retrowave"] .widget-custom.has-card .widget-custom__text { padding-left: 40px; }
+
+/* Cyan icon rings and per-message chat chips carry the same leading-edge
+   language as the panels. */
+[data-decoration="retrowave"] .widget-alert__icon,
+[data-decoration="retrowave"] .widget-stat__icon {
+  background: rgba(45, 226, 230, 0.10);
+  color: var(--md-secondary);
+  box-shadow: inset 0 0 0 1px rgba(45, 226, 230, 0.5), 0 0 12px rgba(45, 226, 230, 0.18);
+}
+[data-decoration="retrowave"] .widget-chat__msg {
+  position: relative;
+  border-radius: 0;
+  clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%);
+  background: linear-gradient(90deg, rgba(255, 45, 149, 0.12), rgba(9, 7, 15, 0.62) 24%);
+  padding-left: 14px;
+}
+[data-decoration="retrowave"] .widget-chat__msg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  clip-path: polygon(10px 0, 12px 0, 2px 100%, 0 100%);
+  background: linear-gradient(180deg, var(--md-secondary), var(--md-primary));
+  opacity: 0.85;
+}
+
 /* UEC transfer follows the same HUD decoration as the other panels: scanlines
    and four corner brackets under Orbital (brackets4), two corners under
    angular custom themes (brackets2). */

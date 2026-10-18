@@ -90,11 +90,12 @@ describe("встроенные темы", () => {
     expect(THREE_D_STYLES.some((style) => style.id === "retrowave")).toBe(false);
   });
 
-  test("Retrowave задаёт неоновую палитру и сетку на сценах", () => {
+  test("Retrowave задаёт неоновую палитру и скошенные панели", () => {
     const tokens = BUILTIN_THEMES.retrowave.tokens;
     expect(tokens["--md-primary"]).toBe("#ff2d95");
     expect(tokens["--md-secondary"]).toBe("#2de2e6");
-    expect(tokens["--panel-decoration"]).toBe("brackets4");
+    expect(tokens["--panel-decoration"]).toBe("retrowave");
+    expect(tokens["--panel-clip"]).toContain("polygon(26px 0");
     expect(tokens["--panel-radius"]).toBe("0px");
   });
 });

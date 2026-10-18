@@ -583,15 +583,16 @@
         "--font-body": '"Montserrat", "Segoe UI", sans-serif',
         "--font-mono": '"JetBrains Mono", "Consolas", monospace',
 
-        // Резкие панели без скруглений: неоновая рамка, магента-свечение с
-        // холодным циановым ободком и четыре угловых скобки.
+        // Резкие панели без скруглений с косой передней кромкой: неоновая
+        // магента, холодный циановый кант и сетка внутри; заливка просвечивает
+        // звёздным фоном сцены.
         "--panel-radius": "0px",
-        "--panel-clip": "none",
-        "--panel-decoration": "brackets4",
+        "--panel-clip": "polygon(26px 0, 100% 0, 100% 100%, 0 100%)",
+        "--panel-decoration": "retrowave",
         "--panel-glow": "0 0 18px rgba(255,45,149,0.35), 0 0 46px rgba(45,226,230,0.12), inset 0 0 28px rgba(255,45,149,0.05)",
         "--panel-bg": "rgba(13, 7, 25, 0.88)",
         "--panel-blur": "0px",
-        "--panel-border": "1px solid rgba(255, 45, 149, 0.45)",
+        "--panel-border": "2px solid rgba(255, 45, 149, 0.55)",
         "--alert-enter-easing": "cubic-bezier(0.2, 0.9, 0.2, 1.15)",
         "--alert-enter-duration": "320ms",
 
@@ -600,7 +601,7 @@
         "--shape-md": "0px",
         "--shape-lg": "0px",
         "--shape-xl": "0px",
-        "--shape-full": "999px",
+        "--shape-full": "2px",
       },
     },
 
