@@ -56,6 +56,10 @@
   const MAX_DECODE_TICK_MS = 500;
   const MESSAGE_TICKS = 18;
   const DEFAULT_DURATION_MS = 9000;
+  // С этого момента сообщение переносится на несколько строк даже на широком
+  // виджете: подпись логичнее вынести над текстом, а не держать в одной строке
+  // с ним.
+  const LONG_MESSAGE_CHARS = 90;
 
   // Символы для «шифра»: цифры и знаки читаются как служебный код, а не как
   // случайный текст. Буквы оставлены латинскими, чтобы ник не превращался в
@@ -212,6 +216,15 @@
       // Смена языка приходит отдельным кадром: статичные подписи нужно
       // перерисовать, иначе они останутся на прежнем языке до нового алерта.
       this.subscribe(this.context.EVENT_TYPES.LOCALES, () => this.applyConfig());
+      // Если алерт пришёл до загрузки вшитых шрифтов, после их готовности
+      // переносы станут другими — иначе текст обрежется старой высотой.
+      const fonts = typeof document !== "undefined" ? document.fonts : null;
+      if (fonts && typeof fonts.addEventListener === "function") {
+        this._onFontsDone = () => {
+          if (this.current && this.element.classList.contains("is-expanded")) this._fitHeight(true);
+        };
+        fonts.addEventListener("loadingdone", this._onFontsDone);
+      }
     }
 
     onUpdate() {
@@ -227,6 +240,10 @@
     onUnmount() {
       this._clearDecode();
       this._clearMessageDecode();
+      if (this._onFontsDone && typeof document !== "undefined" && document.fonts) {
+        document.fonts.removeEventListener("loadingdone", this._onFontsDone);
+        this._onFontsDone = null;
+      }
       if (this._hideId != null) this.clearTimer(this._hideId);
       if (this._compactId != null) this.clearTimer(this._compactId);
       this._hideId = null;
@@ -305,6 +322,12 @@
       // Меряем сразу по полному тексту: пока он зашифрован, ширина символов
       // другая, и панель могла получиться ниже финальной.
       this._fitHeight(true);
+      // Шрифты и переносы могут досчитаться уже после замера: повторяем на
+      // следующем кадре, иначе длинное сообщение останется обрезанным
+      // высотой, посчитанной по старой раскладке.
+      if (typeof requestAnimationFrame === "function") {
+        requestAnimationFrame(() => this._fitHeight(true));
+      }
     }
 
     // ---- content ----
@@ -362,6 +385,10 @@
       if (this.asideEl && typeof this.asideEl.style.setProperty === "function") {
         this.asideEl.style.setProperty("--uec-amount-color", this.amountColor(kind, alert.amount));
       }
+      // Длинный текст раскладываем иначе: подпись — отдельной строкой, текст на
+      // всю ширину. Иначе каждая перенесённая строка начинается с отступа под
+      // подпись, и на узком виджете сообщение вытягивается в длинный столбик.
+      this.element.classList.toggle("is-long-message", Array.from(text).length > LONG_MESSAGE_CHARS);
     }
 
     // Сведения о неденежных событиях: уровень подписки и количество подарков.
@@ -505,7 +532,7 @@
     }
 
     // Панель растёт под сообщение, но не бесконечно: длинный текст больше не
-    // обрезается, а высота ограничена разумным потолком.
+    // обрезается, а высота ограничена нижней границей экрана.
     _fitHeight(usePlainMessage = false) {
       if (!this.element || !this.frameEl || !this.panelEl) return;
       this.element.style.height = this.geometry.h + "%";
@@ -519,13 +546,29 @@
         this.messageEl.textContent = this._messageText;
       }
 
+      const viewport = (typeof window !== "undefined" && window.innerHeight) || 1080;
+      const top = (Number(this.geometry.y) / 100) * viewport;
+      const maxHeight = Math.max(base, viewport - top - 8);
+
+      // Без `is-measuring` flex-дети сжимаются под высоту виджета, и панель
+      // получается ниже текста — потом `overflow: hidden` обрезает конец
+      // длинного сообщения. В этом режиме высота считается по содержимому.
+      this.panelEl.classList.add("is-measuring");
       const frameHeight = this.frameEl.style.height;
       const panelHeight = this.panelEl.style.height;
       const panelOverflow = this.panelEl.style.overflow;
       this.frameEl.style.height = "auto";
       this.panelEl.style.height = "auto";
       this.panelEl.style.overflow = "visible";
-      const needed = this.panelEl.offsetHeight || 0;
+      let needed = this.panelEl.offsetHeight || 0;
+
+      // Если даже полный текст не помещается до низа экрана, уплотняем его:
+      // лучше чуть меньше шрифт, чем обрезанное сообщение.
+      const dense = needed + 2 > maxHeight;
+      this.panelEl.classList.toggle("is-dense", dense);
+      if (dense) needed = this.panelEl.offsetHeight || needed;
+
+      this.panelEl.classList.remove("is-measuring");
       this.frameEl.style.height = frameHeight;
       this.panelEl.style.height = panelHeight;
       this.panelEl.style.overflow = panelOverflow;
@@ -534,11 +577,6 @@
       }
 
       if (!needed) return;
-      // Растём до низа экрана, а не до фиксированного потолка: длинное
-      // сообщение должно помещаться целиком, даже если виджет стоит высоко.
-      const viewport = (typeof window !== "undefined" && window.innerHeight) || 1080;
-      const top = (Number(this.geometry.y) / 100) * viewport;
-      const maxHeight = Math.max(base, viewport - top - 8);
       this.element.style.height = Math.min(Math.max(base, needed + 2), maxHeight) + "px";
     }
 

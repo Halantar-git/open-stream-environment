@@ -2557,6 +2557,47 @@
   min-width: 0;
 }
 
+/* Длинное сообщение: подпись уходит на свою строку, текст занимает всю ширину
+   панели. Иначе перенесённые строки начинаются с отступа под подпись, и
+   сообщение вытягивается в узкий столбик. */
+.uec-transfer.is-long-message .uec-transfer__message-row {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25em;
+}
+.uec-transfer.is-long-message .uec-transfer__body {
+  align-items: start;
+}
+.uec-transfer.is-long-message .uec-transfer__aside {
+  align-self: start;
+}
+
+/* Замер высоты: пока считаем, снимаем flex-сжатие. Иначе тело панели
+   подстраивается под высоту виджета, а не под текст, и панель выходит ниже
+   сообщения. */
+.uec-transfer__panel.is-measuring,
+.uec-transfer__panel.is-measuring .uec-transfer__body,
+.uec-transfer__panel.is-measuring .uec-transfer__main,
+.uec-transfer__panel.is-measuring .uec-transfer__message-row {
+  flex: 0 0 auto;
+  height: auto;
+}
+
+/* Текст не помещается даже до нижней границы экрана: уплотняем его, чтобы
+   сообщение было видно целиком, а не обрезалось по краю панели. */
+.uec-transfer__panel.is-dense {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  gap: 6px;
+}
+.uec-transfer__panel.is-dense .uec-transfer__message {
+  font-size: 0.84em;
+  line-height: 1.28;
+}
+.uec-transfer__panel.is-dense .uec-transfer__label {
+  line-height: 1.2;
+}
+
 .uec-transfer__message {
   flex: 1 1 auto;
   min-width: 0;

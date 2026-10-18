@@ -309,6 +309,22 @@ describe("WidgetUecTransfer", () => {
     w.unmount();
   });
 
+  test("длинное сообщение раскладывается в колонку, короткое — в строку", () => {
+    const ctx = makeContext();
+    const long = new WidgetUecTransfer(item(), ctx);
+    long.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, donation({ message: "Спасибо за стрим!".repeat(10) }));
+    expect(long.element.classList.contains("is-long-message")).toBe(true);
+
+    // Следующий короткий алерт возвращает компактную раскладку.
+    ctx.bus.emit(EVENT_TYPES.ALERT, donation({ message: "Спасибо!" }));
+    long.showNext();
+    expect(long.element.classList.contains("is-long-message")).toBe(false);
+
+    long.unmount();
+  });
+
   test("обновление раскладки не сбрасывает высоту раскрытой панели", () => {
     const hadWindow = "window" in global;
     const prevWindow = global.window;
