@@ -225,6 +225,8 @@
     "properties": "Scene properties",
     "copyUrl": "Copy OBS URL",
     "copied": "Copied!",
+    "layoutCount": "Layout: {{count}}",
+    "editLayout": "Edit layout",
     "splashSettings": "Splashes",
     "globalSplashFile": "Global splash (for all scenes)",
     "globalSplashDuration": "Duration, sec",

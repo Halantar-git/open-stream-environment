@@ -442,6 +442,20 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 
 /* ---------- Scenes preview ---------- */
 .scenes-preview-wrap { padding: 24px; }
+/* В тулбаре превью прячем служебные элементы через hidden: у кнопок
+   собственный display, который иначе перебивает браузерное правило. */
+.canvas-toolbar [hidden] { display: none; }
+.canvas-toolbar .md-button { flex-shrink: 0; white-space: nowrap; }
+.scene-layout-badge {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--md-on-surface-variant);
+  background: var(--md-surface-container-highest);
+  border-radius: 999px;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
 .scenes-preview-scale {
   width: 960px;
   height: 540px;

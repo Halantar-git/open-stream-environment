@@ -225,6 +225,8 @@
     "properties": "Свойства сцены",
     "copyUrl": "Скопировать URL для OBS",
     "copied": "Скопировано!",
+    "layoutCount": "Раскладка: {{count}}",
+    "editLayout": "Настроить раскладку",
     "splashSettings": "Заставки",
     "globalSplashFile": "Общая заставка (для всех сцен)",
     "globalSplashDuration": "Длительность, сек",

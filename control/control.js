@@ -184,6 +184,8 @@ const { EVENT_TYPES } = window.SharedEvents;
   const scenesPreviewFrame = document.getElementById("scenesPreviewFrame");
   const sceneUrlLabel = document.getElementById("sceneUrlLabel");
   const copySceneUrlBtn = document.getElementById("copySceneUrlBtn");
+  const sceneLayoutBadge = document.getElementById("sceneLayoutBadge");
+  const editSceneLayoutBtn = document.getElementById("editSceneLayoutBtn");
   const sceneFormTitle = document.getElementById("sceneFormTitle");
   const sceneFormEl = document.getElementById("sceneForm");
 
@@ -3310,6 +3312,20 @@ const { EVENT_TYPES } = window.SharedEvents;
     });
   }
 
+  // Превью в «Сценах» — живая страница сцены, поэтому раскладку оно получает
+  // само по шине. Панель показывает только число виджетов и даёт сразу перейти
+  // к их настройке: иначе нужную раскладку пришлось бы искать в редакторе.
+  function renderSceneLayoutMeta() {
+    const id = state.activeSceneId;
+    const supportsWidgets = WIDGET_SCENE_IDS.has(id);
+    const widgets = supportsWidgets ? state.layouts[id] || [] : [];
+    if (sceneLayoutBadge) {
+      sceneLayoutBadge.hidden = !supportsWidgets;
+      sceneLayoutBadge.textContent = supportsWidgets ? t("scenes.layoutCount", { count: widgets.length }) : "";
+    }
+    if (editSceneLayoutBtn) editSceneLayoutBtn.hidden = !supportsWidgets;
+  }
+
   function selectScene(id) {
     state.activeSceneId = id;
     const url = sceneUrl(id);
@@ -3317,6 +3333,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     sceneUrlLabel.textContent = url;
     renderScenesNav();
     renderSceneForm();
+    renderSceneLayoutMeta();
   }
 
   function sendSceneUpdate(patch) {
@@ -3704,6 +3721,15 @@ const { EVENT_TYPES } = window.SharedEvents;
     copySceneUrlBtn.textContent = t("scenes.copied");
     setTimeout(() => (copySceneUrlBtn.textContent = t("scenes.copyUrl")), 1400);
   });
+
+  if (editSceneLayoutBtn) {
+    editSceneLayoutBtn.addEventListener("click", () => {
+      const id = state.activeSceneId;
+      if (!WIDGET_SCENE_IDS.has(id)) return;
+      switchView("editor");
+      setLayoutTarget(id);
+    });
+  }
 
   // Подписи кнопок берутся из data-i18n: до прихода словарей t() вернул бы
   // сам ключ, и кнопка осталась бы с текстом вида common.copy.
@@ -4395,6 +4421,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         renderSceneForm();
         renderSplashSettings();
         syncCameraBridge();
+        renderSceneLayoutMeta();
         break;
       case EVENT_TYPES.TOP_DONATION_UPDATE:
         state.topDonation = msg.payload;
@@ -4549,6 +4576,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     copyUrlBtn.textContent = t("editor.copyUrl");
     renderUpdateCheckButton();
     copySceneUrlBtn.textContent = t("scenes.copyUrl");
+    renderSceneLayoutMeta();
     exportConfigBtn.textContent = t("settings.export");
     importConfigBtn.textContent = t("settings.import");
     const chatBtn = document.getElementById("openChatWindowBtn");
@@ -4597,6 +4625,9 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   function handleLayoutUpdate(newLayout, target = "main") {
     state.layouts[target] = newLayout;
+    // Счётчик в «Сценах» обновляется и для неактивной раскладки: превью
+    // должно быть верным к моменту, когда пользователь переключит сцену.
+    renderSceneLayoutMeta();
     if (target !== state.layoutTarget) return;
     state.layout = newLayout;
     if (state.pendingAdd) {
