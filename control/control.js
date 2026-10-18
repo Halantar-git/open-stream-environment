@@ -4772,9 +4772,13 @@ const { EVENT_TYPES } = window.SharedEvents;
   };
 
   function syncCameraBridge() {
+    // Захват живёт только ради видимого виджета: скрытый live-виджет не должен
+    // держать камеру и энкодер включёнными — принцип «в покое ноль нагрузки».
     const hasCamera =
       Array.isArray(state.layout) &&
-      state.layout.some((w) => w.type === "webcam" && w.config && w.config.source === "camera");
+      state.layout.some(
+        (w) => w.type === "webcam" && w.config && w.config.source === "camera" && w.visible !== false
+      );
     if (hasCamera) cameraBridge.start();
     else cameraBridge.stop();
   }
