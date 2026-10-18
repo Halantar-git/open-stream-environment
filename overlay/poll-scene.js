@@ -187,12 +187,16 @@
   // ---------------- socket ----------------
 
   function handleMessage(msg) {
+    if (window.SceneCanvas) window.SceneCanvas.handleMessage(msg);
     switch (msg.type) {
       case EVENT_TYPES.STATE:
         applyTheme(msg.payload.appearance);
         if (window.SceneCamera) {
           window.SceneCamera.applyScene(msg.payload.scenes && msg.payload.scenes.poll);
           window.SceneCamera.setActive(msg.payload.activeScene === "poll");
+        }
+        if (window.SceneAlerts) {
+          window.SceneAlerts.applyScene(msg.payload.scenes && msg.payload.scenes.poll);
         }
         if (msg.payload.poll) {
           poll = msg.payload.poll;
@@ -202,9 +206,11 @@
       case EVENT_TYPES.THEME_UPDATE:
         applyTheme(msg.payload);
         if (window.SceneCamera) window.SceneCamera.refreshTheme();
+        if (window.SceneAlerts) window.SceneAlerts.refreshTheme();
         break;
       case EVENT_TYPES.SCENES_UPDATE:
         if (window.SceneCamera) window.SceneCamera.applyScene(msg.payload && msg.payload.poll);
+        if (window.SceneAlerts) window.SceneAlerts.applyScene(msg.payload && msg.payload.poll);
         break;
       case EVENT_TYPES.REMOTE_ACTION: {
         // Камера на голосовании ведёт себя как на остальных сценах: видна
@@ -218,6 +224,9 @@
       }
       case EVENT_TYPES.CAMERA_STREAM_CONFIG:
         if (window.SceneCamera) window.SceneCamera.handleConfig(msg.payload || {});
+        break;
+      case EVENT_TYPES.ALERT:
+        if (window.SceneAlerts) window.SceneAlerts.handleAlert(msg.payload);
         break;
       case EVENT_TYPES.POLL_UPDATE:
         if (msg.payload && msg.payload.poll) {
@@ -249,6 +258,7 @@
     ws.onmessage = (ev) => {
       if (typeof ev.data !== "string") {
         if (window.SceneCamera) window.SceneCamera.handleBinary(ev.data);
+        if (window.SceneCanvas) window.SceneCanvas.handleBinary(ev.data);
         return;
       }
       try {
@@ -262,5 +272,7 @@
   }
 
   if (window.SceneCamera) window.SceneCamera.init("poll", send);
+  if (window.SceneAlerts) window.SceneAlerts.init();
+  if (window.SceneCanvas) window.SceneCanvas.init("poll", send);
   connect();
 })();

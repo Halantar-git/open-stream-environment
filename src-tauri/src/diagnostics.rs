@@ -824,18 +824,11 @@ impl Diagnostics {
     // ---- Longshot (таймер Executive Hangar) ----
 
     /// Есть ли в раскладке видимый таймер Executive Hangar (роль «timer»: и 2D
-    /// `timer`, и 3D `grimhex-timer`).
+    /// `timer`, и 3D `grimhex-timer`). Смотрим и оверлей, и раскладки сцен:
+    /// таймер может стоять только на «Разговоре» или «Начале».
     pub fn has_timer_widget(&self) -> bool {
-        self.database.widgets().iter().any(|widget| {
-            if widget.get("visible") == Some(&Value::Bool(false)) {
-                return false;
-            }
-            let kind = widget
-                .get("type")
-                .and_then(Value::as_str)
-                .unwrap_or_default();
-            crate::catalog::widget_role(kind).as_deref() == Some("timer")
-        })
+        let config = self.config();
+        crate::state::layout::has_timer_widget(&self.database, &config)
     }
 
     /// Ленивый опрос Longshot: включаем, только пока в раскладке есть видимый

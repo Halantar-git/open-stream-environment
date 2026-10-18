@@ -27,6 +27,11 @@
 export function createStateManager() {
   const state = {
     layout: [],
+    // Какая раскладка открыта в редакторе: `main` или id сцены. Сами массивы
+    // лежат в `layouts`, а `layout` — активный из них: остальные части панели
+    // читают его без изменений.
+    layoutTarget: "main",
+    layouts: { main: [] },
     layoutPresets: [],
     pollPresets: [],
     goal: { title: "Цель", current: 0, target: 1, currency: "RUB" },
@@ -100,7 +105,14 @@ export function createStateManager() {
 
   // Maps the server's `state` snapshot payload into this object.
   state.applySnapshot = (payload) => {
-    state.layout = payload.layout || [];
+    state.layouts.main = payload.layout || [];
+    for (const [id, scene] of Object.entries(payload.scenes || {})) {
+      state.layouts[id] = scene && Array.isArray(scene.widgets) ? scene.widgets : [];
+    }
+    if (state.layoutTarget !== "main" && !state.layouts[state.layoutTarget]) {
+      state.layoutTarget = "main";
+    }
+    state.layout = state.layouts[state.layoutTarget] || [];
     state.layoutPresets = payload.layoutPresets || [];
     state.pollPresets = payload.pollPresets || [];
     state.goal = payload.goal;
@@ -144,6 +156,20 @@ export function createStateManager() {
     state.sessionDonations = payload.sessionDonations || state.sessionDonations;
     state.longshot = payload.longshot || state.longshot;
   };
+
+  // Переключить редактируемую раскладку, сохранив текущую в кэше.
+  state.setLayoutTarget = (target) => {
+    const next = target === "main" || state.layouts[target] !== undefined ? target : "main";
+    state.layouts[state.layoutTarget] = state.layout;
+    state.layoutTarget = next;
+    state.layout = state.layouts[next] || [];
+    state.selectedId = null;
+    state.pendingAdd = null;
+  };
+
+  // Все раскладки сразу — для мостов камеры и микрофона: виджет может стоять
+  // и на сцене, а не только на основном оверлее.
+  state.allLayoutWidgets = () => Object.values(state.layouts).flat();
 
   return state;
 }

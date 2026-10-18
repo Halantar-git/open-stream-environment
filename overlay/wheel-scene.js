@@ -433,12 +433,16 @@
   }
 
   function handleMessage(msg) {
+    if (window.SceneCanvas) window.SceneCanvas.handleMessage(msg);
     switch (msg.type) {
       case EVENT_TYPES.STATE:
         applyTheme(msg.payload.appearance);
         if (window.SceneCamera) {
           window.SceneCamera.applyScene(msg.payload.scenes && msg.payload.scenes.wheel);
           window.SceneCamera.setActive(msg.payload.activeScene === "wheel");
+        }
+        if (window.SceneAlerts) {
+          window.SceneAlerts.applyScene(msg.payload.scenes && msg.payload.scenes.wheel);
         }
         if (msg.payload.giveaway) {
           participantsState = {
@@ -463,9 +467,11 @@
       case EVENT_TYPES.THEME_UPDATE:
         applyTheme(msg.payload);
         if (window.SceneCamera) window.SceneCamera.refreshTheme();
+        if (window.SceneAlerts) window.SceneAlerts.refreshTheme();
         break;
       case EVENT_TYPES.SCENES_UPDATE:
         if (window.SceneCamera) window.SceneCamera.applyScene(msg.payload && msg.payload.wheel);
+        if (window.SceneAlerts) window.SceneAlerts.applyScene(msg.payload && msg.payload.wheel);
         break;
       case EVENT_TYPES.REMOTE_ACTION: {
         // Переключение сцены из панели: камера появляется и прячется вместе со
@@ -513,6 +519,7 @@
         renderParticipants();
         break;
       case EVENT_TYPES.ALERT:
+        if (window.SceneAlerts) window.SceneAlerts.handleAlert(msg.payload);
         if (msg.payload && msg.payload.kind === "wheel_winner") showWinnerResult(msg.payload);
         break;
       default:
@@ -527,6 +534,7 @@
     ws.onmessage = (ev) => {
       if (typeof ev.data !== "string") {
         if (window.SceneCamera) window.SceneCamera.handleBinary(ev.data);
+        if (window.SceneCanvas) window.SceneCanvas.handleBinary(ev.data);
         return;
       }
       try {
@@ -540,5 +548,7 @@
   }
 
   if (window.SceneCamera) window.SceneCamera.init("wheel", send);
+  if (window.SceneAlerts) window.SceneAlerts.init();
+  if (window.SceneCanvas) window.SceneCanvas.init("wheel", send);
   connect();
 })();

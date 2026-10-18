@@ -669,6 +669,15 @@ body {
   pointer-events: none;
 }
 
+/* Слой канваса сцены: виджеты из своей раскладки поверх фиксированного
+   контента, но под рамкой камеры (15) и алертами (20). */
+.scene-canvas-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none;
+}
+
 /* Слой алертов: тот же виджет, что на оверлее, поверх камеры и карточек. */
 .scene-alerts-layer {
   position: absolute;

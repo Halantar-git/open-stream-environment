@@ -28,6 +28,14 @@ const FALLBACK_MIN_H: f64 = 5.0;
 /// Длина имени пресета — как в панели.
 const PRESET_NAME_LIMIT: usize = 60;
 
+/// Полноэкранные сцены, у которых может быть своя раскладка виджетов.
+pub const SCENE_IDS: [&str; 7] = ["start", "brb", "talk", "end", "wheel", "poll", "pause"];
+
+/// Цель раскладки: `main` — оверлей, иначе id сцены.
+pub fn is_scene_target(target: &str) -> bool {
+    SCENE_IDS.contains(&target)
+}
+
 /// Раскладка оверлея.
 ///
 /// Если в базе ничего нет, берётся старая раскладка из настроек
@@ -55,20 +63,31 @@ pub fn widgets(db: &Database, config: &ConfigFile) -> Vec<Value> {
 /// Роль `timer` есть и у 2D-таймера, и у 3D `grimhex-timer`. Отсчёт всегда идёт от
 /// Longshot, поэтому пока такого виджета нет или он скрыт, внешний API не
 /// опрашивается вовсе.
-pub fn has_timer_widget(db: &Database) -> bool {
-    db.widgets().iter().any(|widget| {
+pub fn has_timer_widget(db: &Database, config: &ConfigFile) -> bool {
+    let is_timer = |widget: &Value| {
         widget.get("visible") != Some(&Value::Bool(false))
             && catalog::widget_role(widget_type(widget)).as_deref() == Some("timer")
-    })
+    };
+    widgets(db, config).iter().any(is_timer)
+        || SCENE_IDS
+            .iter()
+            .any(|scene| scene_widgets(config, scene).iter().any(is_timer))
 }
 
 /// Поставить виджет по умолчанию: геометрия, слой и настройки — из каталога.
 ///
 /// `None` — такого типа в каталоге нет (панель могла прислать старое имя).
 pub fn add_widget(db: &Database, kind: &str) -> Option<Value> {
+    let mut layout = db.widgets();
+    let added = add_to_layout(&mut layout, kind)?;
+    db.save_widgets(layout);
+    Some(added)
+}
+
+/// Общая часть добавления: и оверлей, и сцена получают виджет одинаково.
+fn add_to_layout(layout: &mut Vec<Value>, kind: &str) -> Option<Value> {
     let def = catalog::def(kind)?;
-    let current = db.widgets();
-    let max_z = current
+    let max_z = layout
         .iter()
         .map(|widget| js_number_or_zero(widget.get("z")))
         .fold(0.0, f64::max);
@@ -88,10 +107,9 @@ pub fn add_widget(db: &Database, kind: &str) -> Option<Value> {
     widget.insert("visible".to_string(), Value::Bool(true));
     widget.insert("config".to_string(), catalog::default_config(kind));
 
-    let mut layout = current;
-    layout.push(Value::Object(widget.clone()));
-    db.save_widgets(layout);
-    Some(Value::Object(widget))
+    let widget = Value::Object(widget);
+    layout.push(widget.clone());
+    Some(widget)
 }
 
 /// Изменить виджет: геометрия ограничивается каталогом, настройки доливаются.
@@ -99,6 +117,13 @@ pub fn add_widget(db: &Database, kind: &str) -> Option<Value> {
 /// `None` — виджета с таким идентификатором нет.
 pub fn update_widget(db: &Database, id: &str, patch: &Value) -> Option<Value> {
     let mut layout = db.widgets();
+    let updated = update_in_layout(&mut layout, id, patch)?;
+    db.save_widgets(layout);
+    Some(updated)
+}
+
+/// Общая правка виджета: границы каталога и слияние настроек.
+fn update_in_layout(layout: &mut [Value], id: &str, patch: &Value) -> Option<Value> {
     let widget = layout
         .iter_mut()
         .find(|widget| widget.get("id").and_then(Value::as_str) == Some(id))?;
@@ -137,30 +162,37 @@ pub fn update_widget(db: &Database, id: &str, patch: &Value) -> Option<Value> {
         merge_config(widget, patch_config);
     }
 
-    let updated = widget.clone();
-    db.save_widgets(layout);
-    Some(updated)
+    Some(widget.clone())
 }
 
 /// Убрать виджет; `false` — такого не было.
 pub fn remove_widget(db: &Database, id: &str) -> bool {
-    let layout = db.widgets();
-    let kept: Vec<Value> = layout
-        .iter()
-        .filter(|widget| widget.get("id").and_then(Value::as_str) != Some(id))
-        .cloned()
-        .collect();
-    if kept.len() == layout.len() {
+    let mut layout = db.widgets();
+    if !remove_from_layout(&mut layout, id) {
         return false;
     }
-    db.save_widgets(kept);
+    db.save_widgets(layout);
     true
+}
+
+fn remove_from_layout(layout: &mut Vec<Value>, id: &str) -> bool {
+    let before = layout.len();
+    layout.retain(|widget| widget.get("id").and_then(Value::as_str) != Some(id));
+    layout.len() != before
 }
 
 /// Подвинуть виджет на слой вперёд или назад: меняются местами `z` с соседом по
 /// порядку слоёв.
 pub fn reorder_widget(db: &Database, id: &str, direction: &str) -> bool {
     let mut layout = db.widgets();
+    if !reorder_in_layout(&mut layout, id, direction) {
+        return false;
+    }
+    db.save_widgets(layout);
+    true
+}
+
+fn reorder_in_layout(layout: &mut [Value], id: &str, direction: &str) -> bool {
     let mut order: Vec<usize> = (0..layout.len()).collect();
     order.sort_by(|left, right| {
         js_number_or_zero(layout[*left].get("z"))
@@ -188,7 +220,6 @@ pub fn reorder_widget(db: &Database, id: &str, direction: &str) -> bool {
     let second_z = layout[second].get("z").cloned().unwrap_or(Value::from(0));
     layout[first]["z"] = second_z;
     layout[second]["z"] = first_z;
-    db.save_widgets(layout);
     true
 }
 
@@ -201,12 +232,104 @@ pub fn save_layout(db: &Database, layout: &Value) -> bool {
         return false;
     };
 
-    let saved: Vec<Value> = items
+    db.save_widgets(normalized_layout(items));
+    true
+}
+
+fn normalized_layout(items: &[Value]) -> Vec<Value> {
+    items
         .iter()
         .filter(|widget| widget_is_known(widget))
         .map(normalize_widget)
-        .collect();
-    db.save_widgets(saved);
+        .collect()
+}
+
+// ---- раскладки полноэкранных сцен ----
+
+/// Виджеты сцены лежат рядом с её текстом: `scenes.<id>.widgets`.
+pub fn scene_widgets(config: &ConfigFile, scene: &str) -> Vec<Value> {
+    if !is_scene_target(scene) {
+        return Vec::new();
+    }
+    let raw = config
+        .get("scenes")
+        .and_then(|scenes| scenes.get(scene))
+        .and_then(|scene| scene.get("widgets"))
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    clean_widgets(&raw)
+}
+
+pub fn add_scene_widget(config: &mut ConfigFile, scene: &str, kind: &str) -> Option<Value> {
+    let mut widgets = scene_widgets(config, scene);
+    let added = add_to_layout(&mut widgets, kind)?;
+    if !save_scene_widgets(config, scene, widgets) {
+        return None;
+    }
+    Some(added)
+}
+
+pub fn update_scene_widget(
+    config: &mut ConfigFile,
+    scene: &str,
+    id: &str,
+    patch: &Value,
+) -> Option<Value> {
+    let mut widgets = scene_widgets(config, scene);
+    let updated = update_in_layout(&mut widgets, id, patch)?;
+    if !save_scene_widgets(config, scene, widgets) {
+        return None;
+    }
+    Some(updated)
+}
+
+pub fn remove_scene_widget(config: &mut ConfigFile, scene: &str, id: &str) -> bool {
+    let mut widgets = scene_widgets(config, scene);
+    if !remove_from_layout(&mut widgets, id) {
+        return false;
+    }
+    save_scene_widgets(config, scene, widgets)
+}
+
+pub fn reorder_scene_widget(
+    config: &mut ConfigFile,
+    scene: &str,
+    id: &str,
+    direction: &str,
+) -> bool {
+    let mut widgets = scene_widgets(config, scene);
+    if !reorder_in_layout(&mut widgets, id, direction) {
+        return false;
+    }
+    save_scene_widgets(config, scene, widgets)
+}
+
+pub fn save_scene_layout(config: &mut ConfigFile, scene: &str, layout: &Value) -> bool {
+    let Some(items) = layout.as_array() else {
+        return false;
+    };
+    save_scene_widgets(config, scene, normalized_layout(items))
+}
+
+fn save_scene_widgets(config: &mut ConfigFile, scene: &str, widgets: Vec<Value>) -> bool {
+    if !is_scene_target(scene) {
+        return false;
+    }
+    let mut scenes = config
+        .get("scenes")
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default();
+    let mut fields = scenes
+        .get(scene)
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default();
+    fields.insert("widgets".to_string(), Value::Array(widgets));
+    scenes.insert(scene.to_string(), Value::Object(fields));
+    config.set("scenes", Value::Object(scenes));
+    config.save();
     true
 }
 
@@ -751,24 +874,71 @@ mod tests {
     fn the_hangar_timer_is_seen_only_when_it_is_visible() {
         let fixture = Fixture::new("timer");
         let (db, config) = (fixture.db(), fixture.config());
-        assert!(!has_timer_widget(&db));
+        assert!(!has_timer_widget(&db, &config));
 
         let timer = add_widget(&db, "timer").expect("таймер");
-        assert!(has_timer_widget(&db));
+        assert!(has_timer_widget(&db, &config));
 
         // 3D-вариант таймера — та же роль.
         let id = timer["id"].as_str().unwrap().to_string();
         update_widget(&db, &id, &json!({ "visible": false }));
-        assert!(!has_timer_widget(&db));
+        assert!(!has_timer_widget(&db, &config));
         assert!(add_widget(&db, "grimhex-timer").is_some());
-        assert!(has_timer_widget(&db));
+        assert!(has_timer_widget(&db, &config));
 
         // А обычный виджет таймером не считается.
         let chat = add_widget(&db, "chat").expect("чат");
         let chat_id = chat["id"].as_str().unwrap().to_string();
         update_widget(&db, &chat_id, &json!({ "visible": false }));
-        assert!(has_timer_widget(&db));
+        assert!(has_timer_widget(&db, &config));
         assert_eq!(layout(&db, &config).len(), 3);
+    }
+
+    #[test]
+    fn scene_layout_is_independent_from_the_overlay() {
+        let fixture = Fixture::new("scene-layout");
+        let mut config = fixture.config();
+        let db = fixture.db();
+
+        assert!(scene_widgets(&config, "talk").is_empty());
+        let overlay = add_widget(&db, "chat").expect("оверлей");
+        let scene = add_scene_widget(&mut config, "talk", "goal").expect("сцена");
+
+        assert_eq!(scene_widgets(&config, "talk").len(), 1);
+        assert_eq!(layout(&db, &config).len(), 1);
+        // У других сцен своей раскладки нет.
+        assert!(scene_widgets(&config, "brb").is_empty());
+        // Незнакомая цель не создаёт виджет.
+        assert!(add_scene_widget(&mut config, "нет-такой", "chat").is_none());
+
+        let scene_id = scene["id"].as_str().unwrap().to_string();
+        update_scene_widget(
+            &mut config,
+            "talk",
+            &scene_id,
+            &json!({ "x": 5, "visible": false }),
+        )
+        .expect("правка сцены");
+        let widgets = scene_widgets(&config, "talk");
+        assert_eq!(widgets[0]["x"], json!(5));
+        assert_eq!(widgets[0]["visible"], json!(false));
+        // Оверлей не тронут.
+        assert_eq!(layout(&db, &config)[0]["id"], overlay["id"]);
+
+        assert!(remove_scene_widget(&mut config, "talk", &scene_id));
+        assert!(!remove_scene_widget(&mut config, "talk", &scene_id));
+        assert!(scene_widgets(&config, "talk").is_empty());
+    }
+
+    #[test]
+    fn a_timer_on_a_scene_keeps_longshot_polling_alive() {
+        let fixture = Fixture::new("scene-timer");
+        let mut config = fixture.config();
+        let db = fixture.db();
+
+        assert!(!has_timer_widget(&db, &config));
+        add_scene_widget(&mut config, "talk", "timer").expect("таймер");
+        assert!(has_timer_widget(&db, &config));
     }
 
     #[test]

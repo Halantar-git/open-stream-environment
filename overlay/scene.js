@@ -250,6 +250,9 @@
   }
 
   function handleMessage(msg) {
+    // Раскладка виджетов сцены работает на том же потоке, что и её
+    // собственное оформление: канвас сам обновляет состояние и шину.
+    if (window.SceneCanvas) window.SceneCanvas.handleMessage(msg);
     switch (msg.type) {
       case EVENT_TYPES.STATE:
         if (window.TwitchEmotes && window.TwitchEmotes.configure) {
@@ -328,6 +331,7 @@
     ws.onmessage = (ev) => {
       if (typeof ev.data !== "string") {
         if (window.SceneCamera) window.SceneCamera.handleBinary(ev.data);
+        if (window.SceneCanvas) window.SceneCanvas.handleBinary(ev.data);
         return;
       }
       try {
@@ -342,5 +346,6 @@
 
   if (window.SceneCamera) window.SceneCamera.init(sceneType, send);
   if (window.SceneAlerts) window.SceneAlerts.init();
+  if (window.SceneCanvas) window.SceneCanvas.init(sceneType, send);
   connect();
 })();

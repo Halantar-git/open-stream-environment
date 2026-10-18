@@ -25,6 +25,7 @@
     // Broadcast from server -> overlay + control
     STATE: "state", // full state snapshot, sent on connect
     LAYOUT_UPDATE: "layout_update", // full layout array, sent after any add/update/remove/reorder
+    SCENE_LAYOUT_UPDATE: "scene_layout_update", // { scene, layout } — раскладка конкретной сцены
     LAYOUT_PRESETS_UPDATE: "layout_presets_update", // { presets: [{ id, name, widgetCount, createdAt, updatedAt }] }
     ALERT: "alert", // { kind: 'follow'|'sub'|'gift_sub'|'cheer'|'donation', ... }
     ALERT_QUEUE_UPDATE: "alert_queue_update", // { queue: { now, items, paused, pausedUntil, rules, stats } }

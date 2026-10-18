@@ -40,6 +40,7 @@ event_types! {
     // Сервер -> оверлей и панель.
     STATE => "state",
     LAYOUT_UPDATE => "layout_update",
+    SCENE_LAYOUT_UPDATE => "scene_layout_update",
     LAYOUT_PRESETS_UPDATE => "layout_presets_update",
     ALERT => "alert",
     ALERT_QUEUE_UPDATE => "alert_queue_update",

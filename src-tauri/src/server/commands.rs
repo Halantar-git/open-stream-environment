@@ -99,41 +99,58 @@ pub fn handle_message(
 
         // ---- Раскладка ----
         event_types::CMD_ADD_WIDGET => {
-            let added = payload
-                .get("type")
-                .and_then(Value::as_str)
-                .and_then(|kind| layout::add_widget(diagnostics.database(), kind))
-                .is_some();
+            let target = layout_target(&payload);
+            let kind = payload.get("type").and_then(Value::as_str).unwrap_or("");
+            let added = if layout::is_scene_target(target) {
+                let mut config = diagnostics.config();
+                layout::add_scene_widget(&mut config, target, kind).is_some()
+            } else {
+                layout::add_widget(diagnostics.database(), kind).is_some()
+            };
             if added {
-                broadcast_layout(diagnostics);
+                broadcast_layout(diagnostics, target);
             }
             // Новый виджет мог оказаться видимым таймером Executive Hangar.
             diagnostics.sync_longshot_activity();
         }
         event_types::CMD_UPDATE_WIDGET => {
+            let target = layout_target(&payload);
             let id = payload
                 .get("id")
                 .and_then(Value::as_str)
                 .unwrap_or_default();
             let patch = payload.get("patch").cloned().unwrap_or_else(|| json!({}));
-            let updated = layout::update_widget(diagnostics.database(), id, &patch).is_some();
+            let updated = if layout::is_scene_target(target) {
+                let mut config = diagnostics.config();
+                layout::update_scene_widget(&mut config, target, id, &patch).is_some()
+            } else {
+                layout::update_widget(diagnostics.database(), id, &patch).is_some()
+            };
             if updated {
-                broadcast_layout(diagnostics);
+                broadcast_layout(diagnostics, target);
             }
             // Правка `visible` может включить или выключить опрос Longshot.
             diagnostics.sync_longshot_activity();
         }
         event_types::CMD_REMOVE_WIDGET => {
+            let target = layout_target(&payload);
             let id = payload
                 .get("id")
                 .and_then(Value::as_str)
                 .unwrap_or_default();
-            if layout::remove_widget(diagnostics.database(), id) {
-                broadcast_layout(diagnostics);
+            let removed = if layout::is_scene_target(target) {
+                let mut config = diagnostics.config();
+                layout::remove_scene_widget(&mut config, target, id)
+            } else {
+                layout::remove_widget(diagnostics.database(), id)
+            };
+            if removed {
+                broadcast_layout(diagnostics, target);
             }
             diagnostics.sync_longshot_activity();
         }
         event_types::CMD_REORDER_WIDGET => {
+            let target = layout_target(&payload);
             let id = payload
                 .get("id")
                 .and_then(Value::as_str)
@@ -142,20 +159,37 @@ pub fn handle_message(
                 .get("direction")
                 .and_then(Value::as_str)
                 .unwrap_or_default();
-            if layout::reorder_widget(diagnostics.database(), id, direction) {
-                broadcast_layout(diagnostics);
+            let reordered = if layout::is_scene_target(target) {
+                let mut config = diagnostics.config();
+                layout::reorder_scene_widget(&mut config, target, id, direction)
+            } else {
+                layout::reorder_widget(diagnostics.database(), id, direction)
+            };
+            if reordered {
+                broadcast_layout(diagnostics, target);
             }
         }
         event_types::CMD_SAVE_LAYOUT => {
-            let layout = match payload.get("layout") {
+            let target = layout_target(&payload);
+            let layout_value = match payload.get("layout") {
                 Some(layout) => layout.clone(),
                 None => {
                     let config = diagnostics.config();
-                    Value::Array(layout::widgets(diagnostics.database(), &config))
+                    if layout::is_scene_target(target) {
+                        Value::Array(layout::scene_widgets(&config, target))
+                    } else {
+                        Value::Array(layout::widgets(diagnostics.database(), &config))
+                    }
                 }
             };
-            if layout::save_layout(diagnostics.database(), &layout) {
-                broadcast_layout(diagnostics);
+            let saved = if layout::is_scene_target(target) {
+                let mut config = diagnostics.config();
+                layout::save_scene_layout(&mut config, target, &layout_value)
+            } else {
+                layout::save_layout(diagnostics.database(), &layout_value)
+            };
+            if saved {
+                broadcast_layout(diagnostics, target);
             }
             diagnostics.sync_longshot_activity();
         }
@@ -1161,16 +1195,36 @@ pub fn handle_message(
 }
 
 /// Раскладка целиком — как `broadcast(LAYOUT_UPDATE, { layout })`.
-fn broadcast_layout(diagnostics: &Diagnostics) {
-    let layout = {
+fn broadcast_layout(diagnostics: &Diagnostics, target: &str) {
+    if layout::is_scene_target(target) {
+        let widgets = {
+            let config = diagnostics.config();
+            layout::scene_widgets(&config, target)
+        };
+        broadcast(
+            diagnostics,
+            event_types::SCENE_LAYOUT_UPDATE,
+            json!({ "scene": target, "layout": widgets }),
+        );
+        return;
+    }
+    let widgets = {
         let config = diagnostics.config();
         layout::widgets(diagnostics.database(), &config)
     };
     broadcast(
         diagnostics,
         event_types::LAYOUT_UPDATE,
-        json!({ "layout": layout }),
+        json!({ "layout": widgets }),
     );
+}
+
+/// Цель раскладки из команды: `main` по умолчанию, иначе id сцены.
+fn layout_target(payload: &Value) -> &str {
+    payload
+        .get("target")
+        .and_then(Value::as_str)
+        .unwrap_or("main")
 }
 
 /// Состояние целиком — самый частый ответ на правку настроек.
@@ -1516,6 +1570,31 @@ mod tests {
         assert_eq!(message["type"], json!(event_types::LAYOUT_UPDATE));
         assert_eq!(message["payload"]["layout"].as_array().unwrap().len(), 1);
         assert_eq!(message["payload"]["layout"][0]["type"], json!("chat"));
+    }
+
+    #[test]
+    fn a_scene_widget_command_targets_only_that_scene() {
+        let fixture = Fixture::new("scene-widget");
+        let mut receiver = fixture.listen();
+
+        handle(
+            &fixture.diagnostics,
+            None,
+            &json!({
+                "type": event_types::CMD_ADD_WIDGET,
+                "payload": { "type": "chat", "target": "talk" },
+            }),
+        );
+
+        let message = frame(&mut receiver);
+        assert_eq!(message["type"], json!(event_types::SCENE_LAYOUT_UPDATE));
+        assert_eq!(message["payload"]["scene"], json!("talk"));
+        assert_eq!(message["payload"]["layout"].as_array().unwrap().len(), 1);
+        assert_eq!(message["payload"]["layout"][0]["type"], json!("chat"));
+
+        // Основная раскладка осталась пустой.
+        let config = fixture.diagnostics.config();
+        assert!(crate::state::layout::widgets(fixture.diagnostics.database(), &config).is_empty());
     }
 
     #[test]

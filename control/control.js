@@ -57,11 +57,27 @@ const { EVENT_TYPES } = window.SharedEvents;
   };
 
   const wsClient = initWsClient({ url: `ws://localhost:${port}/ws`, role: "control", t, onMessage: handleMessage, onStatusClick, resolveUrl: resolveWsUrl });
-  const send = wsClient.send;
+  const wsSend = wsClient.send;
   const sendBinary = wsClient.sendBinary;
 
   // ---- state ----
   const state = createStateManager();
+
+  // Команды раскладки всегда несут адресата: основной оверлей или сцена.
+  // Так один и тот же редактор и панель свойств работают для обеих раскладок.
+  const LAYOUT_COMMANDS = new Set([
+    EVENT_TYPES.CMD_ADD_WIDGET,
+    EVENT_TYPES.CMD_UPDATE_WIDGET,
+    EVENT_TYPES.CMD_REMOVE_WIDGET,
+    EVENT_TYPES.CMD_REORDER_WIDGET,
+    EVENT_TYPES.CMD_SAVE_LAYOUT,
+  ]);
+  const send = (type, payload) => {
+    const next = LAYOUT_COMMANDS.has(type)
+      ? { ...(payload || {}), target: state.layoutTarget || "main" }
+      : payload;
+    return wsSend(type, next);
+  };
 
   let ttsVoices = [];
   let notificationSoundQueue = [];
@@ -77,6 +93,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const widgetTooltip = document.getElementById("widgetTooltip");
   const obsUrlLabel = document.getElementById("obsUrlLabel");
   const copyUrlBtn = document.getElementById("copyUrlBtn");
+  const layoutTargetSelect = document.getElementById("layoutTargetSelect");
   const appVersionEl = document.getElementById("appVersion");
   const updateMenu = document.getElementById("updateMenu");
   const updateMenuInstallBtn = document.getElementById("updateMenuInstallBtn");
@@ -628,7 +645,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   function setAppPort(nextPort) {
     port = String(nextPort);
     overlayUrl = `http://localhost:${port}/overlay/overlay.html`;
-    obsUrlLabel.textContent = overlayUrl;
+    updateEditorTargetUrl();
     if (appPortInput) appPortInput.value = port;
     if (appOverlayUrlInput) appOverlayUrlInput.value = overlayUrl;
     const splashSourceInput = document.getElementById("splashSourceUrl");
@@ -2733,6 +2750,11 @@ const { EVENT_TYPES } = window.SharedEvents;
     onSelectionChange: () => propertiesPanel.render(),
   });
 
+  if (layoutTargetSelect) {
+    layoutTargetSelect.addEventListener("change", () => setLayoutTarget(layoutTargetSelect.value));
+  }
+  renderLayoutTargetOptions();
+
   // ---- appearance: theme picker + custom theme editor ----
 
   function renderThemeSwatch(theme) {
@@ -3120,7 +3142,9 @@ const { EVENT_TYPES } = window.SharedEvents;
       `<option value="">${escapeHtml(t("presets.placeholder"))}</option>` +
       presets.map((p) => `<option value="${escapeAttr(p.id)}">${escapeHtml(p.name)}</option>`).join("");
     layoutPresetSelect.value = presets.some((p) => p.id === current) ? current : "";
-    if (deleteLayoutPresetBtn) deleteLayoutPresetBtn.hidden = !layoutPresetSelect.value;
+    if (deleteLayoutPresetBtn) {
+      deleteLayoutPresetBtn.hidden = state.layoutTarget !== "main" || !layoutPresetSelect.value;
+    }
   }
 
   if (saveLayoutPresetBtn) {
@@ -3195,6 +3219,51 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (id === "wheel") return `http://localhost:${port}/overlay/wheel-scene.html`;
     if (id === "poll") return `http://localhost:${port}/overlay/poll-scene.html`;
     return `http://localhost:${port}/overlay/scene.html?type=${id}`;
+  }
+
+  // ---- выбор раскладки (оверлей или сцена) ----
+
+  function renderLayoutTargetOptions() {
+    if (!layoutTargetSelect) return;
+    const defs = (window.SceneCatalog && window.SceneCatalog.SCENE_DEFS) || {};
+    const options = [`<option value="main">${escapeHtml(t("editor.layoutMain"))}</option>`].concat(
+      Object.values(defs).map((def) => `<option value="${escapeAttr(def.id)}">${escapeHtml(t("scene." + def.id + "Label"))}</option>`)
+    );
+    layoutTargetSelect.innerHTML = options.join("");
+    layoutTargetSelect.value = state.layoutTarget;
+    const presetWrap = document.getElementById("layoutPresetWrap");
+    // Пресеты пока описывают основную раскладку: для сцен их ещё нет.
+    const presetControls = [
+      presetWrap,
+      document.getElementById("layoutPresetName"),
+      document.getElementById("saveLayoutPresetBtn"),
+      document.getElementById("deleteLayoutPresetBtn"),
+    ];
+    presetControls.forEach((control) => {
+      if (control) control.hidden = state.layoutTarget !== "main";
+    });
+  }
+
+  function editorTargetUrl() {
+    return state.layoutTarget === "main" ? overlayUrl : sceneUrl(state.layoutTarget);
+  }
+
+  function updateEditorTargetUrl() {
+    if (obsUrlLabel) obsUrlLabel.textContent = editorTargetUrl();
+    if (layoutTargetSelect) layoutTargetSelect.value = state.layoutTarget;
+  }
+
+  function setLayoutTarget(target) {
+    if (!target || target === state.layoutTarget) return;
+    state.setLayoutTarget(target);
+    renderLayoutTargetOptions();
+    renderLayoutPresets();
+    updateEditorTargetUrl();
+    canvasEditor.renderCanvas();
+    canvasEditor.renderLayers();
+    propertiesPanel.invalidate();
+    propertiesPanel.render();
+    renderSceneBudget();
   }
 
   // Ссылка на страницу заставки: её кладут браузерным источником в OBS-сцену,
@@ -3625,8 +3694,9 @@ const { EVENT_TYPES } = window.SharedEvents;
   });
 
   obsUrlLabel.textContent = overlayUrl;
+  updateEditorTargetUrl();
   copyUrlBtn.addEventListener("click", async () => {
-    const ok = await copyText(overlayUrl);
+    const ok = await copyText(editorTargetUrl());
     if (!ok) return;
     copyUrlBtn.textContent = t("editor.copied");
     setTimeout(() => (copyUrlBtn.textContent = t("editor.copyUrl")), 1400);
@@ -4147,6 +4217,8 @@ const { EVENT_TYPES } = window.SharedEvents;
     switch (msg.type) {
       case EVENT_TYPES.STATE:
         state.applySnapshot(msg.payload);
+        renderLayoutTargetOptions();
+        updateEditorTargetUrl();
         applyQueuePayload(msg.payload.alertQueue, null);
         daPanel.applySnapshot(msg.payload);
         if (msg.payload.port && Number(msg.payload.port) !== Number(port)) {
@@ -4180,6 +4252,11 @@ const { EVENT_TYPES } = window.SharedEvents;
       case EVENT_TYPES.LAYOUT_UPDATE:
         handleLayoutUpdate(msg.payload.layout || []);
         break;
+      case EVENT_TYPES.SCENE_LAYOUT_UPDATE: {
+        const payload = msg.payload || {};
+        if (payload.scene) handleLayoutUpdate(payload.layout || [], payload.scene);
+        break;
+      }
       case EVENT_TYPES.LAYOUT_PRESETS_UPDATE:
         state.layoutPresets = (msg.payload && msg.payload.presets) || [];
         renderLayoutPresets();
@@ -4267,6 +4344,14 @@ const { EVENT_TYPES } = window.SharedEvents;
         break;
       case EVENT_TYPES.SCENES_UPDATE:
         state.scenes = msg.payload;
+        Object.entries(msg.payload || {}).forEach(([id, scene]) => {
+          if (scene && Array.isArray(scene.widgets)) state.layouts[id] = scene.widgets;
+        });
+        if (state.layoutTarget !== "main") {
+          state.layout = state.layouts[state.layoutTarget] || [];
+          canvasEditor.renderCanvas();
+          canvasEditor.renderLayers();
+        }
         renderSceneForm();
         renderSplashSettings();
         syncCameraBridge();
@@ -4401,6 +4486,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     }
     updateLanguageButtons();
     renderLibrary();
+    renderLayoutTargetOptions();
     renderScenesNav();
     canvasEditor.renderCanvas();
     canvasEditor.renderLayers();
@@ -4468,7 +4554,9 @@ const { EVENT_TYPES } = window.SharedEvents;
     sceneBudgetEl.classList.toggle("is-heavy", count > 3 || areaPct >= 80);
   }
 
-  function handleLayoutUpdate(newLayout) {
+  function handleLayoutUpdate(newLayout, target = "main") {
+    state.layouts[target] = newLayout;
+    if (target !== state.layoutTarget) return;
     state.layout = newLayout;
     if (state.pendingAdd) {
       const newItem = state.layout.find((w) => !state.pendingAdd.knownIds.has(w.id));
@@ -4612,7 +4700,8 @@ const { EVENT_TYPES } = window.SharedEvents;
   };
 
   function syncMicBridge() {
-    const hasMic = Array.isArray(state.layout) && state.layout.some((w) => w.type === "mic");
+    const widgets = state.allLayoutWidgets ? state.allLayoutWidgets() : state.layout;
+    const hasMic = Array.isArray(widgets) && widgets.some((w) => w.type === "mic");
     if (hasMic) micBridge.start();
     else micBridge.stop();
   }
@@ -5026,9 +5115,10 @@ const { EVENT_TYPES } = window.SharedEvents;
     // держать камеру и энкодер включёнными — принцип «в покое ноль нагрузки».
     // Камера сцены — такой же потребитель: если она включена и смотрит live,
     // мост должен работать, даже когда на канвасе оверлея рамки нет.
+    const widgets = state.allLayoutWidgets ? state.allLayoutWidgets() : state.layout;
     const layoutCamera =
-      Array.isArray(state.layout) &&
-      state.layout.some(
+      Array.isArray(widgets) &&
+      widgets.some(
         (w) => w.type === "webcam" && w.config && w.config.source === "camera" && w.visible !== false
       );
     const sceneCamera = Object.values(state.scenes || {}).some(

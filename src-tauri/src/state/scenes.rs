@@ -97,6 +97,7 @@ pub fn default_scenes() -> Value {
             "socials": socials.clone(),
             "camera": camera.clone(),
             "alerts": alerts_off.clone(),
+            "widgets": [],
         },
         "brb": {
             "statusLabel": "ПЕРЕРЫВ НА СТРИМЕ",
@@ -113,6 +114,7 @@ pub fn default_scenes() -> Value {
             "socials": socials.clone(),
             "camera": camera.clone(),
             "alerts": alerts_off.clone(),
+            "widgets": [],
         },
         "talk": {
             "statusLabel": "ОБЩАЕМСЯ",
@@ -129,6 +131,7 @@ pub fn default_scenes() -> Value {
             "socials": socials.clone(),
             "camera": camera.clone(),
             "alerts": alerts_on.clone(),
+            "widgets": [],
         },
         "end": {
             "statusLabel": "СТРИМ ЗАВЕРШЁН",
@@ -145,6 +148,7 @@ pub fn default_scenes() -> Value {
             "socials": socials.clone(),
             "camera": camera.clone(),
             "alerts": alerts_off.clone(),
+            "widgets": [],
         },
         "wheel": {
             "statusLabel": "РОЗЫГРЫШ",
@@ -161,6 +165,7 @@ pub fn default_scenes() -> Value {
             "socials": [],
             "camera": camera.clone(),
             "alerts": alerts_off.clone(),
+            "widgets": [],
         },
         "poll": {
             "statusLabel": "ГОЛОСОВАНИЕ",
@@ -177,6 +182,7 @@ pub fn default_scenes() -> Value {
             "socials": [],
             "camera": camera.clone(),
             "alerts": alerts_off.clone(),
+            "widgets": [],
         },
         "pause": {
             "statusLabel": "ПАУЗА",
@@ -193,6 +199,7 @@ pub fn default_scenes() -> Value {
             "socials": [],
             "camera": camera,
             "alerts": alerts_off,
+            "widgets": [],
         },
     })
 }
@@ -241,6 +248,11 @@ pub fn normalize_scenes(config: &mut ConfigFile) {
                     "alerts".to_string(),
                     Value::Object(merge(default_alerts, Some(existing_alerts))),
                 );
+            }
+            // Раскладка сцены — массив виджетов; мусор из старого конфига
+            // не должен ломать сервер при обходе сцен.
+            if !merged.get("widgets").is_some_and(Value::is_array) {
+                merged.insert("widgets".to_string(), Value::Array(Vec::new()));
             }
             scenes.insert(id.clone(), Value::Object(merged));
         }
