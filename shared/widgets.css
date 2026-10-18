@@ -744,10 +744,10 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  clip-path: polygon(26px 0, 31px 0, 5px 100%, 0 100%);
-  background: linear-gradient(90deg, var(--md-secondary) 0 2px, var(--md-primary) 2px 5px);
-  filter: drop-shadow(0 0 7px rgba(45, 226, 230, 0.6)) drop-shadow(0 0 14px rgba(255, 45, 149, 0.35));
-  opacity: 0.95;
+  clip-path: polygon(26px 0, 28px 0, 2px 100%, 0 100%);
+  background: var(--md-primary);
+  filter: drop-shadow(0 0 3px rgba(45, 226, 230, 0.7)) drop-shadow(0 0 9px rgba(255, 45, 149, 0.3));
+  opacity: 0.9;
 }
 [data-decoration="retrowave"] .widget-alert { padding-left: 42px; }
 [data-decoration="retrowave"] .widget-goal { padding-left: 38px; }
@@ -796,10 +796,10 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  clip-path: polygon(26px 0, 31px 0, 5px 100%, 0 100%);
-  background: linear-gradient(90deg, var(--md-secondary) 0 2px, var(--md-primary) 2px 5px);
-  filter: drop-shadow(0 0 7px rgba(45, 226, 230, 0.6)) drop-shadow(0 0 14px rgba(255, 45, 149, 0.35));
-  opacity: 0.95;
+  clip-path: polygon(26px 0, 28px 0, 2px 100%, 0 100%);
+  background: var(--md-primary);
+  filter: drop-shadow(0 0 3px rgba(45, 226, 230, 0.7)) drop-shadow(0 0 9px rgba(255, 45, 149, 0.3));
+  opacity: 0.9;
 }
 
 /* UEC transfer follows the same HUD decoration as the other panels: scanlines

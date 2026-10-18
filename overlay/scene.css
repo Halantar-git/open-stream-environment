@@ -682,10 +682,10 @@ body {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  clip-path: polygon(48px 0, 52px 0, 4px 100%, 0 100%);
-  background: linear-gradient(90deg, var(--md-secondary) 0 1px, var(--md-primary) 1px 4px);
-  filter: drop-shadow(0 0 8px var(--md-primary));
-  opacity: 0.95;
+  clip-path: polygon(48px 0, 50px 0, 2px 100%, 0 100%);
+  background: var(--md-primary);
+  filter: drop-shadow(0 0 3px rgba(45, 226, 230, 0.7)) drop-shadow(0 0 9px rgba(255, 45, 149, 0.3));
+  opacity: 0.9;
 }
 
 [data-decoration="retrowave"] .scene-chat {
@@ -696,10 +696,10 @@ body {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  clip-path: polygon(40px 0, 44px 0, 4px 100%, 0 100%);
-  background: linear-gradient(90deg, var(--md-secondary) 0 1px, var(--md-primary) 1px 4px);
-  filter: drop-shadow(0 0 8px var(--md-primary));
-  opacity: 0.95;
+  clip-path: polygon(40px 0, 42px 0, 2px 100%, 0 100%);
+  background: var(--md-primary);
+  filter: drop-shadow(0 0 3px rgba(45, 226, 230, 0.7)) drop-shadow(0 0 9px rgba(255, 45, 149, 0.3));
+  opacity: 0.9;
 }
 [data-decoration="retrowave"] .scene-chat__header { padding-left: 54px; }
 

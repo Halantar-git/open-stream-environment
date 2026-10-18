@@ -117,7 +117,7 @@
 
       const bg = (read && read("--panel-bg")) || "rgba(13, 7, 25, 0.88)";
       const blur = (read && read("--panel-blur")) || "0px";
-      const border = (read && read("--panel-border")) || "2px solid rgba(255, 45, 149, 0.55)";
+      const border = (read && read("--panel-border")) || "2px solid rgba(255, 45, 149, 0.8)";
       const radius = (read && read("--panel-radius")) || "0px";
       const clip = (read && read("--panel-clip")) || "none";
       const elev =

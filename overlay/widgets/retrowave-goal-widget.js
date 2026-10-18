@@ -53,7 +53,7 @@
   const DEFAULT_MUTED = "#c3b0e0";
 
   const DEFAULT_PANEL_BG = "rgba(13, 7, 25, 0.88)";
-  const DEFAULT_PANEL_BORDER = "2px solid rgba(255, 45, 149, 0.55)";
+  const DEFAULT_PANEL_BORDER = "2px solid rgba(255, 45, 149, 0.8)";
   const DEFAULT_PANEL_GLOW = "0 0 18px rgba(255,45,149,0.35), 0 0 46px rgba(45,226,230,0.12)";
 
   const FONT_DISPLAY = "'Orbitron', 'Segoe UI', sans-serif";
