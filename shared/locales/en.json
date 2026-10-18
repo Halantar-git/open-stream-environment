@@ -838,21 +838,7 @@
     "splashDuration": "Splash duration, sec",
     "splashVideoHint": "Video, image or GIF plays on transition: Start → Main, → BRB and → End. Without a file a standard splash is shown. Requires an Opening OBS scene with the /overlay/video-splash.html browser source.",
     "pauseBackground": "Background (video/image)",
-    "pauseBackgroundHint": "Empty — the default blurred theme background.",
-    "camera": "Scene camera",
-    "cameraShow": "Show camera",
-    "cameraPosition": "Position and size, %",
-    "cameraWidth": "Width",
-    "cameraHeight": "Height",
-    "alerts": "Scene alerts",
-    "alertsShow": "Show alerts",
-    "alertsWidget": "Alert style",
-    "alertsWidgetUec": "UEC transfer",
-    "alertsWidgetCard": "Card",
-    "alertsPosition": "Position and size, %",
-    "alertsHint": "Alerts use the active theme like the overlay does. One alert is shown at a time.",
-    "cameraHint": "The frame look comes from the theme. Below are the shared capture settings and the frame position on the scene.",
-    "cameraCaptureHint": "Shared capture settings: change them here or in the overlay camera widget."
+    "pauseBackgroundHint": "Empty — the default blurred theme background."
   },
   "themeEditor": {
     "themeName": "Theme name",

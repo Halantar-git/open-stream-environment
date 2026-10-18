@@ -28,48 +28,6 @@ fn default_socials() -> Value {
     ])
 }
 
-/// Рамка камеры на сцене: положение/размер в процентах и настройки самого
-/// виджета. Полей ровно столько, сколько читает `WebcamWidget`; радиус не
-/// задан — значит, рамка берёт скругление темы.
-fn default_camera() -> Value {
-    json!({
-        "enabled": false,
-        "x": 3,
-        "y": 60,
-        "w": 24,
-        "h": 24,
-        "config": {
-            "source": "camera",
-            "label": "LIVE",
-            "labelPosition": "top-left",
-            "showLabel": true,
-            "showBorder": true,
-            "showCorners": true,
-            "showBackground": false,
-            "showVignette": false,
-            "thickness": 4,
-            "color": "",
-            "mirror": false,
-            "fit": "cover",
-            "perspective": 0,
-            "perspectiveDirection": "left",
-        },
-    })
-}
-
-/// Виджет алертов на сцене: положение/размер в процентах холста. Сами
-/// настройки виджета не нужны — он использует карточки оверлея и токены темы.
-fn default_alerts(enabled: bool) -> Value {
-    json!({
-        "enabled": enabled,
-        "widget": "uec",
-        "x": 68,
-        "y": 2,
-        "w": 28,
-        "h": 30,
-    })
-}
-
 /// Сцены по умолчанию — порт `defaultScenes()`.
 ///
 /// Порядок сцен и полей повторён по JS. У `pause` нет `splashEnabled` — так в
@@ -77,9 +35,6 @@ fn default_alerts(enabled: bool) -> Value {
 /// ровном месте.
 pub fn default_scenes() -> Value {
     let socials = default_socials();
-    let camera = default_camera();
-    // Алерты по умолчанию выключены; включаются в форме сцены без канваса.
-    let alerts_off = default_alerts(false);
     json!({
         "start": {
             "statusLabel": "СТРИМ СКОРО НАЧНЁТСЯ",
@@ -94,8 +49,6 @@ pub fn default_scenes() -> Value {
             "showEvents": true,
             "showSocials": true,
             "socials": socials.clone(),
-            "camera": camera.clone(),
-            "alerts": alerts_off.clone(),
             "widgets": [],
         },
         "brb": {
@@ -111,8 +64,6 @@ pub fn default_scenes() -> Value {
             "showEvents": true,
             "showSocials": true,
             "socials": socials.clone(),
-            "camera": camera.clone(),
-            "alerts": alerts_off.clone(),
             "widgets": [],
         },
         "talk": {
@@ -143,8 +94,6 @@ pub fn default_scenes() -> Value {
             "showEvents": true,
             "showSocials": true,
             "socials": socials.clone(),
-            "camera": camera.clone(),
-            "alerts": alerts_off.clone(),
             "widgets": [],
         },
         "wheel": {
@@ -190,8 +139,6 @@ pub fn default_scenes() -> Value {
             "showEvents": false,
             "showSocials": false,
             "socials": [],
-            "camera": camera,
-            "alerts": alerts_off,
             "widgets": [],
         },
     })
@@ -214,34 +161,10 @@ pub fn normalize_scenes(config: &mut ConfigFile) {
                 .and_then(Value::as_object)
                 .cloned()
                 .unwrap_or_default();
-            let merged = merge(
+            let mut merged = merge(
                 default.as_object().expect("сцена — объект"),
                 Some(&existing),
             );
-            let mut merged = merged;
-            // Камера — вложенный объект, поэтому обычного поверхностного
-            // слияния мало: иначе старый конфиг с одним полем камеры терял бы
-            // остальные умолчания (источник, подпись, толщину).
-            if let (Some(default_camera), Some(existing_camera)) = (
-                default.get("camera").and_then(Value::as_object),
-                existing.get("camera").and_then(Value::as_object),
-            ) {
-                merged.insert(
-                    "camera".to_string(),
-                    Value::Object(merge_camera(default_camera, existing_camera)),
-                );
-            }
-            // Алерты — тоже вложенный объект: старый конфиг с одним
-            // `enabled` не должен терять положение и размеры.
-            if let (Some(default_alerts), Some(existing_alerts)) = (
-                default.get("alerts").and_then(Value::as_object),
-                existing.get("alerts").and_then(Value::as_object),
-            ) {
-                merged.insert(
-                    "alerts".to_string(),
-                    Value::Object(merge(default_alerts, Some(existing_alerts))),
-                );
-            }
             // Раскладка сцены — массив виджетов; мусор из старого конфига
             // не должен ломать сервер при обходе сцен.
             if !merged.get("widgets").is_some_and(Value::is_array) {
@@ -306,121 +229,6 @@ pub fn set_scene_config(config: &mut ConfigFile, scene_id: &Value, patch: &Value
     }
     if let Some(value) = patch.get("backgroundFile") {
         next.insert("backgroundFile".to_string(), sliced(value, 200, false));
-    }
-    if let Some(camera) = patch.get("camera").and_then(Value::as_object) {
-        let current = next
-            .get("camera")
-            .and_then(Value::as_object)
-            .cloned()
-            .unwrap_or_else(|| default_camera().as_object().cloned().unwrap_or_default());
-        let mut merged = current.clone();
-        for (key, value) in camera {
-            if key != "config" {
-                merged.insert(key.clone(), value.clone());
-            }
-        }
-        let mut config = current
-            .get("config")
-            .and_then(Value::as_object)
-            .cloned()
-            .unwrap_or_default();
-        if let Some(patch_config) = camera.get("config").and_then(Value::as_object) {
-            for (key, value) in patch_config {
-                config.insert(key.clone(), value.clone());
-            }
-        }
-
-        // Геометрия — проценты сцены; ширина/высота не меньше 5%, чтобы
-        // рамку можно было взять мышью в панели.
-        let enabled = merged
-            .get("enabled")
-            .and_then(Value::as_bool)
-            .unwrap_or(false);
-        let width = merged
-            .get("w")
-            .and_then(Value::as_f64)
-            .unwrap_or(24.0)
-            .clamp(5.0, 100.0);
-        let height = merged
-            .get("h")
-            .and_then(Value::as_f64)
-            .unwrap_or(24.0)
-            .clamp(5.0, 100.0);
-        let x = merged
-            .get("x")
-            .and_then(Value::as_f64)
-            .unwrap_or(3.0)
-            .clamp(0.0, 100.0 - width);
-        let y = merged
-            .get("y")
-            .and_then(Value::as_f64)
-            .unwrap_or(60.0)
-            .clamp(0.0, 100.0 - height);
-
-        merged.insert("enabled".to_string(), Value::Bool(enabled));
-        merged.insert("x".to_string(), number_value(x.round()));
-        merged.insert("y".to_string(), number_value(y.round()));
-        merged.insert("w".to_string(), number_value(width.round()));
-        merged.insert("h".to_string(), number_value(height.round()));
-        merged.insert(
-            "config".to_string(),
-            Value::Object(sanitize_camera_config(&config)),
-        );
-        next.insert("camera".to_string(), Value::Object(merged));
-    }
-    if let Some(alerts) = patch.get("alerts").and_then(Value::as_object) {
-        let defaults = default_alerts(false)
-            .as_object()
-            .cloned()
-            .unwrap_or_default();
-        let current = next
-            .get("alerts")
-            .and_then(Value::as_object)
-            .cloned()
-            .unwrap_or_default();
-        let mut merged = merge(&defaults, Some(&current));
-        for (key, value) in alerts {
-            merged.insert(key.clone(), value.clone());
-        }
-
-        // То же правило, что и у камеры: проценты холста, минимум 5% и не
-        // вылезаем за край — иначе виджет нельзя будет взять мышью.
-        let enabled = merged
-            .get("enabled")
-            .and_then(Value::as_bool)
-            .unwrap_or(false);
-        let widget = match merged.get("widget").and_then(Value::as_str) {
-            Some("card") => "card",
-            _ => "uec",
-        };
-        let width = merged
-            .get("w")
-            .and_then(Value::as_f64)
-            .unwrap_or(28.0)
-            .clamp(5.0, 100.0);
-        let height = merged
-            .get("h")
-            .and_then(Value::as_f64)
-            .unwrap_or(30.0)
-            .clamp(5.0, 100.0);
-        let x = merged
-            .get("x")
-            .and_then(Value::as_f64)
-            .unwrap_or(68.0)
-            .clamp(0.0, 100.0 - width);
-        let y = merged
-            .get("y")
-            .and_then(Value::as_f64)
-            .unwrap_or(2.0)
-            .clamp(0.0, 100.0 - height);
-
-        merged.insert("enabled".to_string(), Value::Bool(enabled));
-        merged.insert("widget".to_string(), Value::from(widget));
-        merged.insert("x".to_string(), number_value(x.round()));
-        merged.insert("y".to_string(), number_value(y.round()));
-        merged.insert("w".to_string(), number_value(width.round()));
-        merged.insert("h".to_string(), number_value(height.round()));
-        next.insert("alerts".to_string(), Value::Object(merged));
     }
     if let Some(socials) = patch.get("socials").and_then(Value::as_array) {
         let cleaned: Vec<Value> = socials
@@ -532,112 +340,6 @@ fn merge(base: &Map<String, Value>, patch: Option<&Map<String, Value>>) -> Map<S
     merged
 }
 
-/// Слияние камеры сцены: внешние поля (геометрия, `enabled`) и вложенный
-/// `config` обновляются независимо, иначе правка одной настройки стирала бы
-/// остальные, пришедшие из умолчаний.
-fn merge_camera(base: &Map<String, Value>, patch: &Map<String, Value>) -> Map<String, Value> {
-    let mut merged = merge(base, Some(patch));
-    let mut config = base
-        .get("config")
-        .and_then(Value::as_object)
-        .cloned()
-        .unwrap_or_default();
-    if let Some(patch_config) = patch.get("config").and_then(Value::as_object) {
-        for (key, value) in patch_config {
-            config.insert(key.clone(), value.clone());
-        }
-    }
-    merged.insert("config".to_string(), Value::Object(config));
-    merged
-}
-
-/// Оставить в настройках камеры только то, что читает `WebcamWidget`.
-///
-/// Значения приходят из панели, но конфиг можно править руками, поэтому числа
-/// и перечисления ограничиваем здесь же — как у остальных полей сцены.
-fn sanitize_camera_config(config: &Map<String, Value>) -> Map<String, Value> {
-    let mut out = Map::new();
-
-    let source = match config.get("source").and_then(Value::as_str) {
-        Some("frame") => "frame",
-        _ => "camera",
-    };
-    out.insert("source".to_string(), Value::from(source));
-
-    let label = config
-        .get("label")
-        .cloned()
-        .unwrap_or_else(|| Value::from("LIVE"));
-    out.insert("label".to_string(), sliced(&label, 40, true));
-
-    let label_position = match config.get("labelPosition").and_then(Value::as_str) {
-        Some("top-right") => "top-right",
-        Some("bottom-left") => "bottom-left",
-        Some("bottom-right") => "bottom-right",
-        _ => "top-left",
-    };
-    out.insert("labelPosition".to_string(), Value::from(label_position));
-
-    for (key, default) in [
-        ("showLabel", true),
-        ("showBorder", true),
-        ("showCorners", true),
-        ("showBackground", false),
-        ("showVignette", false),
-        ("mirror", false),
-    ] {
-        out.insert(
-            key.to_string(),
-            Value::Bool(config.get(key).and_then(Value::as_bool).unwrap_or(default)),
-        );
-    }
-
-    let thickness = config
-        .get("thickness")
-        .and_then(Value::as_f64)
-        .unwrap_or(4.0)
-        .round()
-        .clamp(1.0, 16.0);
-    out.insert("thickness".to_string(), number_value(thickness));
-
-    // Нет радиуса — рамка берёт скругление темы (см. `_themeRadius` в виджете).
-    if let Some(radius) = config.get("radius").and_then(Value::as_f64) {
-        out.insert(
-            "radius".to_string(),
-            number_value(radius.round().clamp(0.0, 64.0)),
-        );
-    }
-
-    let color = config
-        .get("color")
-        .cloned()
-        .unwrap_or_else(|| Value::from(""));
-    out.insert("color".to_string(), sliced(&color, 32, false));
-
-    let fit = match config.get("fit").and_then(Value::as_str) {
-        Some("contain") => "contain",
-        _ => "cover",
-    };
-    out.insert("fit".to_string(), Value::from(fit));
-
-    let perspective = config
-        .get("perspective")
-        .and_then(Value::as_f64)
-        .unwrap_or(0.0)
-        .clamp(0.0, 100.0);
-    out.insert("perspective".to_string(), number_value(perspective.round()));
-
-    let direction = match config.get("perspectiveDirection").and_then(Value::as_str) {
-        Some("right") => "right",
-        Some("up") => "up",
-        Some("down") => "down",
-        _ => "left",
-    };
-    out.insert("perspectiveDirection".to_string(), Value::from(direction));
-
-    out
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -690,135 +392,6 @@ mod tests {
         assert_eq!(scenes["start"]["timerDuration"], json!(600));
         assert_eq!(scenes["start"]["socials"].as_array().unwrap().len(), 3);
         assert_eq!(scenes["wheel"]["socials"], json!([]));
-    }
-
-    #[test]
-    fn scenes_without_canvas_keep_camera_and_alert_defaults() {
-        let scenes = default_scenes();
-        for id in ["start", "brb", "end", "pause"] {
-            let camera = &scenes[id]["camera"];
-            assert_eq!(camera["enabled"], json!(false), "{id}");
-            assert_eq!(camera["config"]["source"], json!("camera"), "{id}");
-            assert_eq!(camera["config"]["showBorder"], json!(true), "{id}");
-            // Радиус не задан — рамка берёт скругление темы.
-            assert!(camera["config"].get("radius").is_none(), "{id}");
-
-            assert_eq!(scenes[id]["alerts"]["enabled"], json!(false), "{id}");
-            assert_eq!(scenes[id]["alerts"]["widget"], json!("uec"), "{id}");
-            assert_eq!(scenes[id]["alerts"]["x"], json!(68), "{id}");
-        }
-        // На этих сценах есть канвас: камера и алерты — обычные виджеты,
-        // отдельных блоков в конфиге им не нужно.
-        for id in ["talk", "wheel", "poll"] {
-            assert!(scenes[id].get("camera").is_none(), "{id}");
-            assert!(scenes[id].get("alerts").is_none(), "{id}");
-        }
-    }
-
-    #[test]
-    fn camera_patch_clamps_geometry_and_merges_config() {
-        let fixture = Fixture::new("camera");
-        let mut config = fixture.config();
-        normalize_scenes(&mut config);
-
-        let scene = set_scene_config(
-            &mut config,
-            &json!("talk"),
-            &json!({
-                "camera": {
-                    "enabled": true,
-                    "x": -10,
-                    "y": 200,
-                    "w": 120,
-                    "h": 30,
-                    "config": {
-                        "source": "camera",
-                        "label": "CAM",
-                        "thickness": 99,
-                        "radius": 999,
-                        "perspective": 150,
-                    },
-                },
-            }),
-        )
-        .expect("сцена есть");
-
-        let camera = &scene["camera"];
-        assert_eq!(camera["enabled"], json!(true));
-        assert_eq!(camera["x"], json!(0));
-        assert_eq!(camera["y"], json!(70));
-        assert_eq!(camera["w"], json!(100));
-        assert_eq!(camera["h"], json!(30));
-        assert_eq!(camera["config"]["source"], json!("camera"));
-        assert_eq!(camera["config"]["label"], json!("CAM"));
-        assert_eq!(camera["config"]["thickness"], json!(16));
-        assert_eq!(camera["config"]["radius"], json!(64));
-        assert_eq!(camera["config"]["perspective"], json!(100));
-        // Настройки, которых не было в патче, остались из умолчаний.
-        assert_eq!(camera["config"]["showBorder"], json!(true));
-
-        // Частичная правка геометрии не стирает настройки внешнего вида.
-        // Ширину возвращаем к 40%, иначе x=12 прижмётся к нулю: рамка не
-        // должна вылезать за правый край сцены.
-        let moved = set_scene_config(
-            &mut config,
-            &json!("talk"),
-            &json!({ "camera": { "x": 12, "w": 40 } }),
-        )
-        .expect("сцена есть");
-        assert_eq!(moved["camera"]["x"], json!(12));
-        assert_eq!(moved["camera"]["w"], json!(40));
-        assert_eq!(moved["camera"]["config"]["label"], json!("CAM"));
-    }
-
-    #[test]
-    fn alerts_patch_clamps_geometry_and_keeps_other_fields() {
-        let fixture = Fixture::new("alerts");
-        let mut config = fixture.config();
-        normalize_scenes(&mut config);
-
-        let scene = set_scene_config(
-            &mut config,
-            &json!("brb"),
-            &json!({
-                "alerts": { "enabled": true, "x": -10, "y": 200, "w": 120, "h": 4 },
-            }),
-        )
-        .expect("сцена есть");
-
-        let alerts = &scene["alerts"];
-        assert_eq!(alerts["enabled"], json!(true));
-        assert_eq!(alerts["widget"], json!("uec"));
-        assert_eq!(alerts["x"], json!(0));
-        assert_eq!(alerts["y"], json!(95));
-        assert_eq!(alerts["w"], json!(100));
-        assert_eq!(alerts["h"], json!(5));
-
-        let moved = set_scene_config(
-            &mut config,
-            &json!("brb"),
-            &json!({ "alerts": { "x": 12, "w": 40 } }),
-        )
-        .expect("сцена есть");
-        assert_eq!(moved["alerts"]["x"], json!(12));
-        assert_eq!(moved["alerts"]["w"], json!(40));
-        assert_eq!(moved["alerts"]["enabled"], json!(true));
-
-        // Неизвестный вид виджета возвращается к UEC, явный «card» сохраняется.
-        let card = set_scene_config(
-            &mut config,
-            &json!("brb"),
-            &json!({ "alerts": { "widget": "card" } }),
-        )
-        .expect("сцена есть");
-        assert_eq!(card["alerts"]["widget"], json!("card"));
-        let bogus = set_scene_config(
-            &mut config,
-            &json!("brb"),
-            &json!({ "alerts": { "widget": "что-то" } }),
-        )
-        .expect("сцена есть");
-        assert_eq!(bogus["alerts"]["widget"], json!("uec"));
     }
 
     #[test]

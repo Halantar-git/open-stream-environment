@@ -2495,37 +2495,6 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .md-field input[type="range"] { width: 100%; padding: 0; accent-color: var(--md-primary); }
 .md-field input[type="color"] { height: 40px; padding: 2px; }
 
-/* ---------- Scene camera ---------- */
-.scene-camera {
-  margin-top: 14px;
-  padding-top: 10px;
-  border-top: 1px solid var(--md-outline-variant);
-}
-.scene-camera > summary {
-  cursor: pointer;
-  list-style: none;
-  font-family: var(--font-display);
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--md-on-surface);
-}
-.scene-camera > summary::-webkit-details-marker { display: none; }
-.scene-camera > summary::before {
-  content: "▸";
-  display: inline-block;
-  width: 16px;
-  color: var(--md-primary);
-  transition: transform 0.15s ease;
-}
-.scene-camera[open] > summary::before { transform: rotate(90deg); }
-.scene-camera__body {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 10px;
-}
-#sCameraRadiusAuto { align-self: flex-start; margin-top: -2px; }
-
 /* ---------- Responsive ---------- */
 @media (max-width: 1200px) {
   .settings__actions { gap: 0.5rem; }

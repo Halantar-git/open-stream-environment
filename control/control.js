@@ -3342,246 +3342,10 @@ const { EVENT_TYPES } = window.SharedEvents;
     send(EVENT_TYPES.CMD_SET_SCENE_CONFIG, { sceneId, patch });
   }
 
-  // Камера сцены — отдельный от оверлея экземпляр: положение и размеры
-  // хранятся в `config.scenes.<id>.camera`, поэтому каждую сцену можно
-  // настроить независимо. Оформление берётся из темы.
-  function sceneCameraSection(scene) {
-    const camera = scene.camera || {};
-    const cfg = camera.config || {};
-    const themePrimary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#ff2d95";
-    const themeRadiusRaw = parseFloat((state.appearance.tokens && state.appearance.tokens["--panel-radius"]) || "");
-    const themeRadius = Number.isFinite(themeRadiusRaw) ? Math.max(0, Math.min(64, Math.round(themeRadiusRaw))) : 16;
-    const radius = cfg.radius == null ? themeRadius : Math.max(0, Math.min(64, Math.round(Number(cfg.radius) || 0)));
-    const enabled = !!camera.enabled;
-    const source = cfg.source === "frame" ? "frame" : "camera";
-    const label = cfg.label == null ? "LIVE" : cfg.label;
-    const position = ["top-left", "top-right", "bottom-left", "bottom-right"].includes(cfg.labelPosition) ? cfg.labelPosition : "top-left";
-    const thickness = Math.max(1, Math.min(16, Math.round(Number(cfg.thickness) || 4)));
-    const perspective = Math.max(0, Math.min(100, Math.round(Number(cfg.perspective) || 0)));
-    const direction = cfg.perspectiveDirection || "left";
-    const color = cfg.color || themePrimary;
-    const num = (value, fallback) => (Number.isFinite(Number(value)) ? Number(value) : fallback);
-
-    const cameraCfg = state.cameraConfig || {};
-    const devices = Array.isArray(state.cameraDevices) ? state.cameraDevices : [];
-    const deviceId = cameraCfg.deviceId || "";
-    const deviceOptions = [
-      `<option value="" ${deviceId ? "" : "selected"}>${t("properties.webcamDeviceDefault")}</option>`,
-      ...devices.map(
-        (d) => `<option value="${escapeAttr(d.deviceId)}" ${deviceId === d.deviceId ? "selected" : ""}>${escapeHtml(d.label)}</option>`
-      ),
-    ].join("");
-    const widthOptions = [320, 480, 640, 960, 1280, 1920]
-      .map((w) => `<option value="${w}" ${Number(cameraCfg.width) === w ? "selected" : ""}>${w} px</option>`)
-      .join("");
-    const fps = Math.max(1, Math.min(60, Math.round(Number(cameraCfg.fps) || 12)));
-    const quality = Math.max(20, Math.min(95, Math.round((Number(cameraCfg.quality) || 0.6) * 100)));
-    const bitrate = Math.max(500, Math.min(20000, Math.round(Number(cameraCfg.bitrateKbps) || 4000)));
-    const codec = cameraCfg.codec || "auto";
-    const captureHtml = source !== "camera" ? "" : `
-      <div class="inspector__title" style="margin-top:4px;">${t("properties.webcamCapture")}</div>
-      <p class="properties__hint" style="margin:0;">${t("sceneForm.cameraCaptureHint")}</p>
-      <div class="md-field"><label>${t("properties.webcamDevice")}</label>
-        <div class="properties__row">
-          <select id="sCameraDevice">${deviceOptions}</select>
-          <button class="md-button md-button--text" id="sCameraDeviceRefresh" title="${t("properties.webcamDeviceRefresh")}">↻</button>
-        </div>
-      </div>
-      <div class="properties__row">
-        <div class="md-field"><label>${t("properties.webcamWidth")}</label><select id="sCameraWidth">${widthOptions}</select></div>
-        <div class="md-field"><label>${t("properties.webcamFps")}</label><input type="number" id="sCameraFps" min="1" max="60" step="1" value="${fps}"></div>
-      </div>
-      <div class="md-field"><label>${t("properties.webcamCodec")}</label>
-        <select id="sCameraCodec">
-          <option value="auto" ${codec === "auto" ? "selected" : ""}>${t("properties.webcamCodecAuto")}</option>
-          <option value="h264" ${codec === "h264" ? "selected" : ""}>${t("properties.webcamCodecH264")}</option>
-          <option value="jpeg" ${codec === "jpeg" ? "selected" : ""}>${t("properties.webcamCodecJpeg")}</option>
-        </select>
-      </div>
-      <div class="properties__row">
-        <div class="md-field"><label>${t("properties.webcamBitrate")}, кбит/с</label><input type="number" id="sCameraBitrate" min="500" max="20000" step="500" value="${bitrate}"></div>
-        <div class="md-field"><label>${t("properties.webcamQuality")}, %</label><input type="number" id="sCameraQuality" min="20" max="95" step="5" value="${quality}"></div>
-      </div>`;
-
-    return `
-      <details class="scene-camera" ${enabled ? "open" : ""}>
-        <summary>${t("sceneForm.camera")}</summary>
-        <div class="scene-camera__body">
-          <div class="properties__toggle-row"><label>${t("sceneForm.cameraShow")}</label>${switchHtml("sCameraEnabled", enabled)}</div>
-          <div class="inspector__title" style="margin-top:2px;">${t("sceneForm.cameraPosition")}</div>
-          <div class="properties__row">
-            <div class="md-field"><label>X</label><input type="number" id="sCameraX" min="0" max="100" step="1" value="${num(camera.x, 3)}"></div>
-            <div class="md-field"><label>Y</label><input type="number" id="sCameraY" min="0" max="100" step="1" value="${num(camera.y, 60)}"></div>
-          </div>
-          <div class="properties__row">
-            <div class="md-field"><label>${t("sceneForm.cameraWidth")}</label><input type="number" id="sCameraW" min="5" max="100" step="1" value="${num(camera.w, 24)}"></div>
-            <div class="md-field"><label>${t("sceneForm.cameraHeight")}</label><input type="number" id="sCameraH" min="5" max="100" step="1" value="${num(camera.h, 24)}"></div>
-          </div>
-          <div class="md-field"><label>${t("properties.webcamSource")}</label>
-            <select id="sCameraSource">
-              <option value="frame" ${source === "frame" ? "selected" : ""}>${t("properties.webcamSourceFrame")}</option>
-              <option value="camera" ${source === "camera" ? "selected" : ""}>${t("properties.webcamSourceCamera")}</option>
-            </select>
-          </div>
-          <div class="md-field"><label>${t("properties.webcamLabel")}</label><input type="text" id="sCameraLabel" value="${escapeAttr(label)}" placeholder="LIVE"></div>
-          <div class="properties__toggle-row"><label>${t("properties.webcamShowLabel")}</label>${switchHtml("sCameraShowLabel", cfg.showLabel !== false)}</div>
-          <div class="md-field"><label>${t("properties.webcamLabelPosition")}</label>
-            <select id="sCameraLabelPosition">
-              <option value="top-left" ${position === "top-left" ? "selected" : ""}>${t("properties.webcamPosTopLeft")}</option>
-              <option value="top-right" ${position === "top-right" ? "selected" : ""}>${t("properties.webcamPosTopRight")}</option>
-              <option value="bottom-left" ${position === "bottom-left" ? "selected" : ""}>${t("properties.webcamPosBottomLeft")}</option>
-              <option value="bottom-right" ${position === "bottom-right" ? "selected" : ""}>${t("properties.webcamPosBottomRight")}</option>
-            </select>
-          </div>
-          <div class="properties__toggle-row"><label>${t("properties.webcamShowBorder")}</label>${switchHtml("sCameraShowBorder", cfg.showBorder !== false)}</div>
-          <div class="properties__toggle-row"><label>${t("properties.webcamShowCorners")}</label>${switchHtml("sCameraShowCorners", cfg.showCorners !== false)}</div>
-          <div class="properties__toggle-row"><label>${t("properties.webcamShowBackground")}</label>${switchHtml("sCameraShowBackground", !!cfg.showBackground)}</div>
-          <div class="properties__toggle-row"><label>${t("properties.webcamShowVignette")}</label>${switchHtml("sCameraShowVignette", !!cfg.showVignette)}</div>
-          <div class="properties__row">
-            <div class="md-field"><label>${t("properties.webcamThickness")}</label><input type="number" id="sCameraThickness" min="1" max="16" step="1" value="${thickness}"></div>
-            <div class="md-field"><label>${t("properties.webcamRadius")}</label><input type="number" id="sCameraRadius" min="0" max="64" step="1" value="${radius}"></div>
-          </div>
-          <button class="md-button md-button--text" id="sCameraRadiusAuto">${t("properties.webcamRadiusAuto")}</button>
-          <div class="md-field"><label>${t("properties.webcamColor")}</label>
-            <div class="properties__color-row">
-              <input type="color" id="sCameraColor" value="${escapeAttr(color)}">
-              <button class="md-button md-button--text" id="sCameraColorReset">${t("properties.webcamColorAuto")}</button>
-            </div>
-          </div>
-          <div class="properties__toggle-row"><label>${t("properties.webcamMirror")}</label>${switchHtml("sCameraMirror", !!cfg.mirror)}</div>
-          <div class="md-field"><label>${t("properties.webcamFit")}</label>
-            <select id="sCameraFit">
-              <option value="cover" ${(cfg.fit || "cover") === "cover" ? "selected" : ""}>${t("properties.webcamFitCover")}</option>
-              <option value="contain" ${cfg.fit === "contain" ? "selected" : ""}>${t("properties.webcamFitContain")}</option>
-            </select>
-          </div>
-          <div class="md-field"><label>${t("properties.perspective")}: <span id="sCameraPerspectiveValue">${perspective}</span></label><input type="range" id="sCameraPerspective" min="0" max="100" step="1" value="${perspective}"></div>
-          <div class="md-field"><label>${t("properties.perspectiveDirection")}</label>
-            <select id="sCameraPerspectiveDirection">
-              <option value="left" ${direction === "left" ? "selected" : ""}>${t("properties.perspectiveLeft")}</option>
-              <option value="right" ${direction === "right" ? "selected" : ""}>${t("properties.perspectiveRight")}</option>
-              <option value="up" ${direction === "up" ? "selected" : ""}>${t("properties.perspectiveUp")}</option>
-              <option value="down" ${direction === "down" ? "selected" : ""}>${t("properties.perspectiveDown")}</option>
-            </select>
-          </div>
-          <p class="properties__hint">${t("sceneForm.cameraHint")}</p>
-          ${captureHtml}
-        </div>
-      </details>`;
-  }
-
-  function wireSceneCamera(scene) {
-    const camera = scene.camera || {};
-    const cfg = camera.config || {};
-    const patchCamera = (patch, configPatch) => {
-      const next = { ...camera, ...patch };
-      if (configPatch) next.config = { ...cfg, ...configPatch };
-      sendSceneUpdate({ camera: next });
-    };
-    const config = (patch) => patchCamera({}, patch);
-
-    wireSwitch(sceneFormEl.querySelector("#sCameraEnabled"), (on) => patchCamera({ enabled: on }));
-    [
-      ["sCameraX", "x"],
-      ["sCameraY", "y"],
-      ["sCameraW", "w"],
-      ["sCameraH", "h"],
-    ].forEach(([id, key]) => {
-      const el = sceneFormEl.querySelector("#" + id);
-      if (el) el.addEventListener("change", (e) => patchCamera({ [key]: Number(e.target.value) }));
-    });
-    sceneFormEl.querySelector("#sCameraSource").addEventListener("change", (e) => config({ source: e.target.value }));
-    sceneFormEl.querySelector("#sCameraLabel").addEventListener("change", (e) => config({ label: e.target.value }));
-    sceneFormEl.querySelector("#sCameraLabelPosition").addEventListener("change", (e) => config({ labelPosition: e.target.value }));
-    wireSwitch(sceneFormEl.querySelector("#sCameraShowLabel"), (on) => config({ showLabel: on }));
-    wireSwitch(sceneFormEl.querySelector("#sCameraShowBorder"), (on) => config({ showBorder: on }));
-    wireSwitch(sceneFormEl.querySelector("#sCameraShowCorners"), (on) => config({ showCorners: on }));
-    wireSwitch(sceneFormEl.querySelector("#sCameraShowBackground"), (on) => config({ showBackground: on }));
-    wireSwitch(sceneFormEl.querySelector("#sCameraShowVignette"), (on) => config({ showVignette: on }));
-    sceneFormEl.querySelector("#sCameraThickness").addEventListener("change", (e) => config({ thickness: Number(e.target.value) }));
-    sceneFormEl.querySelector("#sCameraRadius").addEventListener("change", (e) => config({ radius: Number(e.target.value) }));
-    sceneFormEl.querySelector("#sCameraRadiusAuto").addEventListener("click", () => config({ radius: null }));
-    sceneFormEl.querySelector("#sCameraColor").addEventListener("input", (e) => config({ color: e.target.value }));
-    sceneFormEl.querySelector("#sCameraColorReset").addEventListener("click", () => config({ color: "" }));
-    wireSwitch(sceneFormEl.querySelector("#sCameraMirror"), (on) => config({ mirror: on }));
-    sceneFormEl.querySelector("#sCameraFit").addEventListener("change", (e) => config({ fit: e.target.value }));
-    sceneFormEl.querySelector("#sCameraPerspective").addEventListener("input", (e) => {
-      const value = Number(e.target.value);
-      const label = sceneFormEl.querySelector("#sCameraPerspectiveValue");
-      if (label) label.textContent = String(value);
-      config({ perspective: value });
-    });
-    sceneFormEl.querySelector("#sCameraPerspectiveDirection").addEventListener("change", (e) => config({ perspectiveDirection: e.target.value }));
-
-    // Настройки захвата общие для всех камер (и для виджета на оверлее):
-    // поля появляются только у live-режима.
-    const device = sceneFormEl.querySelector("#sCameraDevice");
-    if (device) {
-      device.addEventListener("change", (e) => sendCameraCaptureConfig({ deviceId: e.target.value }));
-      sceneFormEl.querySelector("#sCameraDeviceRefresh").addEventListener("click", () => refreshCameraDevices());
-      sceneFormEl.querySelector("#sCameraWidth").addEventListener("change", (e) => sendCameraCaptureConfig({ width: Number(e.target.value) }));
-      sceneFormEl.querySelector("#sCameraFps").addEventListener("change", (e) => sendCameraCaptureConfig({ fps: Number(e.target.value) }));
-      sceneFormEl.querySelector("#sCameraCodec").addEventListener("change", (e) => sendCameraCaptureConfig({ codec: e.target.value }));
-      sceneFormEl.querySelector("#sCameraBitrate").addEventListener("change", (e) => sendCameraCaptureConfig({ bitrateKbps: Number(e.target.value) }));
-      sceneFormEl.querySelector("#sCameraQuality").addEventListener("change", (e) => sendCameraCaptureConfig({ quality: Number(e.target.value) / 100 }));
-    }
-  }
-
-  function sceneAlertsSection(scene) {
-    const alerts = scene.alerts || {};
-    const enabled = alerts.enabled === true;
-    const widget = alerts.widget === "card" ? "card" : "uec";
-    const num = (value, fallback) => (Number.isFinite(Number(value)) ? Number(value) : fallback);
-
-    return `
-      <details class="scene-camera" ${enabled ? "open" : ""}>
-        <summary>${t("sceneForm.alerts")}</summary>
-        <div class="scene-camera__body">
-          <div class="properties__toggle-row"><label>${t("sceneForm.alertsShow")}</label>${switchHtml("sAlertsEnabled", enabled)}</div>
-          <div class="md-field"><label>${t("sceneForm.alertsWidget")}</label>
-            <select id="sAlertsWidget">
-              <option value="uec" ${widget === "uec" ? "selected" : ""}>${t("sceneForm.alertsWidgetUec")}</option>
-              <option value="card" ${widget === "card" ? "selected" : ""}>${t("sceneForm.alertsWidgetCard")}</option>
-            </select>
-          </div>
-          <div class="inspector__title" style="margin-top:2px;">${t("sceneForm.alertsPosition")}</div>
-          <div class="properties__row">
-            <div class="md-field"><label>X</label><input type="number" id="sAlertsX" min="0" max="100" step="1" value="${num(alerts.x, 68)}"></div>
-            <div class="md-field"><label>Y</label><input type="number" id="sAlertsY" min="0" max="100" step="1" value="${num(alerts.y, 2)}"></div>
-          </div>
-          <div class="properties__row">
-            <div class="md-field"><label>${t("sceneForm.cameraWidth")}</label><input type="number" id="sAlertsW" min="5" max="100" step="1" value="${num(alerts.w, 28)}"></div>
-            <div class="md-field"><label>${t("sceneForm.cameraHeight")}</label><input type="number" id="sAlertsH" min="5" max="100" step="1" value="${num(alerts.h, 30)}"></div>
-          </div>
-          <p class="properties__hint">${t("sceneForm.alertsHint")}</p>
-        </div>
-      </details>`;
-  }
-
-  function wireSceneAlerts(scene) {
-    const alerts = scene.alerts || {};
-    const patch = (next) => sendSceneUpdate({ alerts: { ...alerts, ...next } });
-
-    wireSwitch(sceneFormEl.querySelector("#sAlertsEnabled"), (on) => patch({ enabled: on }));
-    sceneFormEl.querySelector("#sAlertsWidget").addEventListener("change", (e) => patch({ widget: e.target.value }));
-    [
-      ["sAlertsX", "x"],
-      ["sAlertsY", "y"],
-      ["sAlertsW", "w"],
-      ["sAlertsH", "h"],
-    ].forEach(([id, key]) => {
-      const el = sceneFormEl.querySelector("#" + id);
-      if (el) el.addEventListener("change", (e) => patch({ [key]: Number(e.target.value) }));
-    });
-  }
-
   function renderSceneForm() {
     const scene = state.scenes[state.activeSceneId];
     if (!scene) return;
     const def = SceneCatalog.SCENE_DEFS[state.activeSceneId];
-    // На сценах с канвасом камера и алерты — обычные виджеты, поэтому
-    // отдельные блоки свойств им не нужны и только дублируют настройку.
-    const hasCanvas = WIDGET_SCENE_IDS.has(state.activeSceneId);
     sceneFormTitle.textContent = t("scene." + def.id + "Label");
 
     if (state.activeSceneId === "wheel") {
@@ -3609,14 +3373,10 @@ const { EVENT_TYPES } = window.SharedEvents;
           <div id="pauseBackgroundFile"></div>
           <p class="properties__hint" style="margin:6px 0 0;">${t("sceneForm.pauseBackgroundHint")}</p>
         </div>
-        ${sceneCameraSection(scene)}
-        ${sceneAlertsSection(scene)}
       `;
       sceneFormEl.querySelector("#pauseBackgroundFile").appendChild(
         makeSoundFileInput(scene.backgroundFile || "", "media/...mp4/gif", "media", (v) => sendSceneUpdate({ backgroundFile: v }))
       );
-      wireSceneCamera(scene);
-      wireSceneAlerts(scene);
       return;
     }
 
@@ -3637,8 +3397,6 @@ const { EVENT_TYPES } = window.SharedEvents;
       <div class="inspector__title" style="margin-top:4px;">${t("sceneForm.topDonation")}</div>
       <div class="properties__hint">${state.topDonation.amount > 0 ? `${escapeHtml(state.topDonation.user)} — ${formatMoney(state.topDonation.amount)} ${escapeHtml(currencySymbol(state.topDonation.currency))}` : t("sceneForm.noDonations")}</div>
       <button class="md-button md-button--outlined" id="sResetTopDonation">${t("sceneForm.resetTopDonation")}</button>
-      ${hasCanvas ? "" : sceneCameraSection(scene)}
-      ${hasCanvas ? "" : sceneAlertsSection(scene)}
     `;
 
     renderSocialsList(scene.socials || []);
@@ -3657,10 +3415,6 @@ const { EVENT_TYPES } = window.SharedEvents;
     sceneFormEl.querySelector("#sResetTopDonation").addEventListener("click", () => {
       if (confirm(t("sceneForm.resetTopDonationConfirm"))) send(EVENT_TYPES.CMD_RESET_TOP_DONATION, {});
     });
-    if (!hasCanvas) {
-      wireSceneCamera(scene);
-      wireSceneAlerts(scene);
-    }
   }
 
   function renderSocialsList(socials) {
@@ -5180,26 +4934,13 @@ const { EVENT_TYPES } = window.SharedEvents;
   function syncCameraBridge() {
     // Захват живёт только ради видимого виджета: скрытый live-виджет не должен
     // держать камеру и энкодер включёнными — принцип «в покое ноль нагрузки».
-    // На сценах без канваса камера остаётся отдельным блоком свойств и тоже
-    // требует моста, даже когда рамки на канвасе оверлея нет. У сцен с
-    // канвасом старый `scene.camera` больше не монтируется — его не считаем,
-    // иначе камера включалась бы без единого видимого виджета.
     const widgets = state.allLayoutWidgets ? state.allLayoutWidgets() : state.layout;
     const layoutCamera =
       Array.isArray(widgets) &&
       widgets.some(
         (w) => w.type === "webcam" && w.config && w.config.source === "camera" && w.visible !== false
       );
-    const sceneCamera = Object.entries(state.scenes || {}).some(
-      ([id, scene]) =>
-        !WIDGET_SCENE_IDS.has(id) &&
-        scene &&
-        scene.camera &&
-        scene.camera.enabled === true &&
-        scene.camera.config &&
-        scene.camera.config.source === "camera"
-    );
-    if (layoutCamera || sceneCamera) cameraBridge.start();
+    if (layoutCamera) cameraBridge.start();
     else cameraBridge.stop();
   }
 

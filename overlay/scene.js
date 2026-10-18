@@ -24,10 +24,6 @@
   const sceneType = params.get("type") || "brb";
   const isTalk = sceneType === "talk";
   const isPause = sceneType === "pause";
-  // На «Разговоре» есть канвас виджетов: камера и алерты — обычные виджеты,
-  // поэтому отдельные слои SceneCamera/SceneAlerts здесь не нужны (старые
-  // настройки сцены с `camera`/`alerts` не должны включать их повторно).
-  const usesSceneCanvas = isTalk;
 
   let recentEvents = [];
   let topDonation = { user: "", amount: 0, currency: "RUB" };
@@ -113,10 +109,6 @@
   function renderScene(scene) {
     if (!scene) return;
     currentScene = scene;
-    // Камера живёт отдельно от текста сцены: её геометрия и настройки
-    // приезжают в `scene.camera` и переживают смену локали.
-    if (!usesSceneCanvas && window.SceneCamera) window.SceneCamera.applyScene(scene);
-    if (!usesSceneCanvas && window.SceneAlerts) window.SceneAlerts.applyScene(scene);
     renderSceneText(scene);
 
     if (isPause) {
@@ -239,7 +231,6 @@
         recentEvents = msg.payload.recentEvents || [];
         topDonation = msg.payload.topDonation || topDonation;
         if (typeof msg.payload.activeScene === "string") activeScene = msg.payload.activeScene;
-        if (!usesSceneCanvas && window.SceneCamera) window.SceneCamera.setActive(activeScene === sceneType);
         sceneStartedAt = typeof msg.payload.sceneStartedAt === "number" ? msg.payload.sceneStartedAt : null;
         renderScene(msg.payload.scenes && msg.payload.scenes[sceneType]);
         break;
@@ -249,15 +240,12 @@
         if (action === "SCENE_SET") {
           if (typeof payload.scene === "string") activeScene = payload.scene;
           if (typeof payload.startedAt === "number") sceneStartedAt = payload.startedAt;
-          if (!usesSceneCanvas && window.SceneCamera) window.SceneCamera.setActive(activeScene === sceneType);
           if (currentScene) renderScene(currentScene);
         }
         break;
       }
       case EVENT_TYPES.THEME_UPDATE:
         applyTheme(msg.payload);
-        if (!usesSceneCanvas && window.SceneCamera) window.SceneCamera.refreshTheme();
-        if (!usesSceneCanvas && window.SceneAlerts) window.SceneAlerts.refreshTheme();
         break;
       case EVENT_TYPES.SCENES_UPDATE:
         renderScene(msg.payload[sceneType]);
@@ -265,12 +253,6 @@
       case EVENT_TYPES.RECENT_EVENT:
         recentEvents = [msg.payload, ...recentEvents].slice(0, 15);
         renderEvents();
-        break;
-      case EVENT_TYPES.CAMERA_STREAM_CONFIG:
-        if (!usesSceneCanvas && window.SceneCamera) window.SceneCamera.handleConfig(msg.payload || {});
-        break;
-      case EVENT_TYPES.ALERT:
-        if (!usesSceneCanvas && window.SceneAlerts) window.SceneAlerts.handleAlert(msg.payload);
         break;
       case EVENT_TYPES.TOP_DONATION_UPDATE:
         topDonation = msg.payload;
@@ -301,7 +283,6 @@
     ws.binaryType = "arraybuffer";
     ws.onmessage = (ev) => {
       if (typeof ev.data !== "string") {
-        if (!usesSceneCanvas && window.SceneCamera) window.SceneCamera.handleBinary(ev.data);
         if (window.SceneCanvas) window.SceneCanvas.handleBinary(ev.data);
         return;
       }
@@ -315,8 +296,6 @@
     ws.onerror = () => ws.close();
   }
 
-  if (!usesSceneCanvas && window.SceneCamera) window.SceneCamera.init(sceneType, send);
-  if (!usesSceneCanvas && window.SceneAlerts) window.SceneAlerts.init();
   if (window.SceneCanvas) window.SceneCanvas.init(sceneType, send);
   connect();
 })();
