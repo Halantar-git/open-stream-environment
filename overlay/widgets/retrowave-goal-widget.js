@@ -296,6 +296,9 @@
       barPath();
       ctx.fillStyle = "rgba(5, 2, 11, 0.82)";
       ctx.fill();
+      // Неоновый кант дорожки: без ореола шкала терялась на тёмном фоне.
+      ctx.shadowColor = "rgba(45, 226, 230, 0.55)";
+      ctx.shadowBlur = 8;
       ctx.strokeStyle = "rgba(45, 226, 230, 0.55)";
       ctx.lineWidth = 1;
       ctx.stroke();
@@ -325,7 +328,10 @@
         grad.addColorStop(1, this.tertiary);
 
         ctx.fillStyle = grad;
+        ctx.shadowColor = "rgba(255, 45, 149, 0.5)";
+        ctx.shadowBlur = 10;
         ctx.fillRect(x, y, fillW, h);
+        ctx.shadowBlur = 0;
 
         // Horizontal stripes over the fill only, so the unfilled track stays
         // clean and the bar keeps the "sunset disc" look.
@@ -337,6 +343,8 @@
         // Leading edge: a bright hairline plus a soft glow at the head.
         ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = 1.5;
+        ctx.shadowColor = "rgba(255, 45, 149, 0.9)";
+        ctx.shadowBlur = 12;
         ctx.beginPath();
         ctx.moveTo(head, y + 1);
         ctx.lineTo(head, y + h - 1);
@@ -344,6 +352,8 @@
 
         ctx.fillStyle = this.primary;
         ctx.beginPath();
+        ctx.shadowColor = "rgba(45, 226, 230, 0.9)";
+        ctx.shadowBlur = 16;
         ctx.arc(head, y + h / 2, 2.6, 0, Math.PI * 2);
         ctx.fill();
       }

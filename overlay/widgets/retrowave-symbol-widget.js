@@ -186,8 +186,8 @@
 
       // Soft neon halo so the wireframe reads over bright gameplay.
       const halo = ctx.createRadialGradient(cx, cy, radius * 0.2, cx, cy, radius * 2.1);
-      halo.addColorStop(0, this._rgba(this.primary, 0.16));
-      halo.addColorStop(0.55, this._rgba(this.secondary, 0.07));
+      halo.addColorStop(0, this._rgba(this.primary, 0.22));
+      halo.addColorStop(0.55, this._rgba(this.secondary, 0.10));
       halo.addColorStop(1, this._rgba(this.primary, 0));
       ctx.fillStyle = halo;
       ctx.fillRect(0, 0, cw, ch);

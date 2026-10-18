@@ -570,10 +570,14 @@ body {
 [data-decoration="retrowave"] .scene-wrapper {
   background-color: #05020b;
   background-image:
-    radial-gradient(ellipse at 50% 28%, rgba(255, 45, 149, 0.20), transparent 56%),
-    radial-gradient(ellipse at 20% 44%, rgba(45, 226, 230, 0.10), transparent 50%),
-    radial-gradient(ellipse at 82% 38%, rgba(105, 55, 210, 0.18), transparent 56%),
+    radial-gradient(ellipse at 50% 28%, rgba(255, 45, 149, 0.26), transparent 56%),
+    radial-gradient(ellipse at 20% 44%, rgba(45, 226, 230, 0.14), transparent 50%),
+    radial-gradient(ellipse at 82% 38%, rgba(105, 55, 210, 0.22), transparent 56%),
     linear-gradient(180deg, #04010a 0%, #0d0719 58%, #190a2c 100%);
+  /* Неоновая дымка по краям кадра: эфир не обрывается в чёрное одним шагом. */
+  box-shadow:
+    inset 0 0 180px rgba(255, 45, 149, 0.16),
+    inset 0 0 70px rgba(45, 226, 230, 0.08);
 }
 
 /* Pink horizon line behind the scene card — the retrowave sunset strip. */
@@ -594,16 +598,16 @@ body {
     rgba(255, 45, 149, 0.5) 78%,
     transparent
   );
-  box-shadow: 0 0 22px rgba(255, 45, 149, 0.45);
-  opacity: 0.6;
+  box-shadow: 0 0 30px rgba(255, 45, 149, 0.6), 0 0 70px rgba(45, 226, 230, 0.16);
+  opacity: 0.7;
   animation: retrowave-horizon 10s ease-in-out infinite;
 }
 
 /* Дышащая линия горизонта — единственный элемент, который меняет яркость:
    анимируем только opacity, чтобы не перерисовывать всё полотно сцены. */
 @keyframes retrowave-horizon {
-  0%, 100% { opacity: 0.55; }
-  50% { opacity: 0.8; }
+  0%, 100% { opacity: 0.62; }
+  50% { opacity: 0.9; }
 }
 
 /* Perspective grid floor and ceiling. The plane only supplies the 3D tilt and
@@ -627,8 +631,8 @@ body {
   right: -20%;
   height: 100vh;
   overflow: hidden;
-  opacity: 0.45;
-  filter: drop-shadow(0 0 3px rgba(255, 45, 149, 0.35));
+  opacity: 0.55;
+  filter: drop-shadow(0 0 6px rgba(255, 45, 149, 0.5));
 }
 [data-decoration="retrowave"] .grid-plane--ceiling {
   top: 0;
@@ -671,8 +675,8 @@ body {
   top: -100%;
   bottom: -100%;
   background-image:
-    linear-gradient(rgba(45, 226, 230, 0.6) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 45, 149, 0.5) 1px, transparent 1px);
+    linear-gradient(rgba(45, 226, 230, 0.72) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 45, 149, 0.6) 1px, transparent 1px);
   background-size: 80px 60px;
   will-change: transform;
   animation: retrowave-grid-scroll 12s linear infinite;
@@ -695,7 +699,7 @@ body {
   background-image:
     repeating-linear-gradient(90deg, rgba(45, 226, 230, 0.05) 0 1px, transparent 1px 34px),
     repeating-linear-gradient(0deg, rgba(255, 45, 149, 0.04) 0 1px, transparent 1px 34px);
-  box-shadow: inset 0 0 0 1px rgba(45, 226, 230, 0.16), inset 0 0 60px rgba(255, 45, 149, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(45, 226, 230, 0.28), inset 0 0 80px rgba(255, 45, 149, 0.14);
 }
 [data-decoration="retrowave"] .scene-card::before {
   content: "";
@@ -722,6 +726,22 @@ body {
   opacity: 0.9;
 }
 [data-decoration="retrowave"] .scene-chat__header { padding-left: 38px; }
+/* Неоновые канты по кромкам карточек — те же штрихи, что у виджетов. */
+[data-decoration="retrowave"] .scene-card::after,
+[data-decoration="retrowave"] .scene-chat::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(90deg, rgba(45, 226, 230, 0.95), rgba(255, 45, 149, 0.85) 58%, transparent),
+    linear-gradient(270deg, rgba(255, 45, 149, 0.95), rgba(45, 226, 230, 0.8) 58%, transparent);
+  background-repeat: no-repeat;
+  background-size: 52% 1px, 52% 1px;
+  background-position: top 0 right 0, bottom 0 left 0;
+  filter: drop-shadow(0 0 5px rgba(255, 45, 149, 0.65));
+  opacity: 0.85;
+}
 /* Список сообщений начинается ниже заголовка, но кромка уходит влево по
    всей высоте: без этого отступа первые строки попадали на срез. */
 [data-decoration="retrowave"] .scene-chat__list { padding-left: 40px; }
@@ -731,7 +751,7 @@ body {
   border-radius: 50%;
   background: rgba(45, 226, 230, 0.10);
   color: var(--md-secondary);
-  box-shadow: inset 0 0 0 1px rgba(45, 226, 230, 0.5), 0 0 12px rgba(45, 226, 230, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(45, 226, 230, 0.5), 0 0 14px rgba(45, 226, 230, 0.26);
 }
 
 /* Фон — только оформление: при системном запрете на анимацию оставляем

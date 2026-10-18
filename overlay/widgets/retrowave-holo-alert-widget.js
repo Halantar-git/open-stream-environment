@@ -263,8 +263,8 @@
         </div>
         <div style="min-width:0;display:flex;flex-direction:column;gap:2px;">
           <span style="font-family:${FONT_MONO};color:${this.secondary};font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;">SIGNAL // ${escapeHtml(this.kindLabel(alert))}</span>
-          <span style="font-family:${FONT_DISPLAY};color:${this.textColor};font-size:16px;font-weight:700;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 0 10px rgba(255,45,149,0.35);">${nameHtml}</span>
-          ${showAmount ? `<span style="font-family:${FONT_MONO};color:${this.primary};font-size:13px;font-weight:700;">${escapeHtml(this.formatAmount(alert))}</span>` : ""}
+          <span style="font-family:${FONT_DISPLAY};color:${this.textColor};font-size:16px;font-weight:700;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 0 10px rgba(255,45,149,0.55);">${nameHtml}</span>
+          ${showAmount ? `<span style="font-family:${FONT_MONO};color:${this.primary};font-size:13px;font-weight:700;text-shadow:0 0 10px rgba(45,226,230,0.45);">${escapeHtml(this.formatAmount(alert))}</span>` : ""}
           ${messageHtml}
         </div>`;
 

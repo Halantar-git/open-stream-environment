@@ -731,7 +731,12 @@
   background-image:
     repeating-linear-gradient(90deg, rgba(45, 226, 230, 0.055) 0 1px, transparent 1px 34px),
     repeating-linear-gradient(0deg, rgba(255, 45, 149, 0.045) 0 1px, transparent 1px 34px);
-  box-shadow: inset 0 0 0 1px rgba(45, 226, 230, 0.16), inset 0 0 28px rgba(255, 45, 149, 0.09);
+  /* Неоновое свечение темы + внутренний кант: раньше правило перекрывало
+     box-shadow целиком и панели оставались без внешнего ореола. */
+  box-shadow:
+    var(--panel-glow),
+    inset 0 0 0 1px rgba(45, 226, 230, 0.26),
+    inset 0 0 34px rgba(255, 45, 149, 0.14);
 }
 [data-decoration="retrowave"] .widget-alert::before,
 [data-decoration="retrowave"] .widget-goal::before,
@@ -748,6 +753,43 @@
   background: var(--md-primary);
   filter: drop-shadow(0 0 3px rgba(45, 226, 230, 0.7)) drop-shadow(0 0 9px rgba(255, 45, 149, 0.3));
   opacity: 0.9;
+}
+
+/* Неоновые канты по верхней и нижней кромке: короткие градиентные штрихи
+   продолжают косую грань и добавляют панелям света без второй рамки. */
+[data-decoration="retrowave"] .widget-alert::after,
+[data-decoration="retrowave"] .widget-goal::after,
+[data-decoration="retrowave"] .widget-recent::after,
+[data-decoration="retrowave"] .widget-custom.has-card::after,
+[data-decoration="retrowave"] .widget-stat::after,
+[data-decoration="retrowave"] .widget-social::after,
+[data-decoration="retrowave"] .widget-death::after,
+.retrowave-surface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(90deg, rgba(45, 226, 230, 0.95), rgba(255, 45, 149, 0.85) 62%, transparent),
+    linear-gradient(270deg, rgba(255, 45, 149, 0.95), rgba(45, 226, 230, 0.8) 62%, transparent);
+  background-repeat: no-repeat;
+  background-size: 46% 1px, 46% 1px;
+  background-position: top 0 left 0, bottom 0 right 0;
+  filter: drop-shadow(0 0 4px rgba(255, 45, 149, 0.6));
+  opacity: 0.85;
+}
+
+/* Ключевые цифры и имена светятся, как неоновая вывеска. */
+[data-decoration="retrowave"] .widget-alert__name,
+[data-decoration="retrowave"] .widget-alert__amount,
+[data-decoration="retrowave"] .widget-goal__title,
+[data-decoration="retrowave"] .widget-goal__percent,
+[data-decoration="retrowave"] .widget-stat__value,
+[data-decoration="retrowave"] .widget-death__value {
+  text-shadow: 0 0 10px color-mix(in srgb, currentColor 55%, transparent);
+}
+[data-decoration="retrowave"] .widget-chat__user {
+  text-shadow: 0 0 9px rgba(255, 45, 149, 0.65);
 }
 [data-decoration="retrowave"] .widget-alert { padding-left: 42px; }
 [data-decoration="retrowave"] .widget-goal { padding-left: 38px; }
@@ -780,6 +822,7 @@
   clip-path: polygon(10px 0, 12px 0, 2px 100%, 0 100%);
   background: linear-gradient(180deg, var(--md-secondary), var(--md-primary));
   opacity: 0.85;
+  filter: drop-shadow(0 0 4px rgba(255, 45, 149, 0.55));
 }
 
 /* 3D-виджеты Retrowave (цель, чат, алерт) собирают панель из токенов темы
