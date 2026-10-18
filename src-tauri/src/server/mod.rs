@@ -376,14 +376,16 @@ async fn handle_socket(mut socket: WebSocket, bus: Bus, role: String, external: 
                 Some(Ok(Message::Text(text))) => {
                     handle_client_message(&bus, id, &role, external, text.as_str())
                 }
-                // Микрокадры: бинарный кадр от панели идёт оверлеям как есть —
-                // сервер только проверяет магию и длину (`MicFrame.isFrame`),
-                // не разбирая FFT-данные.
+                // Микрокадры: бинарный кадр от панели идёт оверлеям и сценам
+                // как есть — сервер только проверяет магию и длину
+                // (`MicFrame.isFrame`), не разбирая FFT-данные. Сценам тоже:
+                // виджет микрофона можно поставить на канвас сцены, а
+                // `getUserMedia` там недоступен.
                 Some(Ok(Message::Binary(data))) => {
                     if crate::audio::frame::is_frame(&data) {
                         bus.diagnostics
                             .clients()
-                            .broadcast_binary_to_role("overlay", data.to_vec());
+                            .broadcast_binary_to_roles(&["overlay", "scene"], data.to_vec());
                     } else if role == "control"
                         && (crate::camera_frame::is_frame(&data)
                             || crate::camera_frame::is_h264_frame(&data))

@@ -4102,6 +4102,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         renderSceneForm();
         renderSplashSettings();
         syncCameraBridge();
+        syncMicBridge();
         renderSceneLayoutMeta();
         break;
       case EVENT_TYPES.TOP_DONATION_UPDATE:
@@ -4304,6 +4305,10 @@ const { EVENT_TYPES } = window.SharedEvents;
     // Счётчик в «Сценах» обновляется и для неактивной раскладки: превью
     // должно быть верным к моменту, когда пользователь переключит сцену.
     renderSceneLayoutMeta();
+    // Мосты захвата зависят от всех раскладок сразу (оверлей + сцены),
+    // поэтому пересчитываем их и когда правится неактивная раскладка.
+    syncMicBridge();
+    syncCameraBridge();
     if (target !== state.layoutTarget) return;
     state.layout = newLayout;
     if (state.pendingAdd) {
@@ -4323,8 +4328,6 @@ const { EVENT_TYPES } = window.SharedEvents;
     canvasEditor.renderLayers();
     propertiesPanel.render();
     renderSceneBudget();
-    syncMicBridge();
-    syncCameraBridge();
   }
 
   // ---- microphone bridge ----------------------------------------------
