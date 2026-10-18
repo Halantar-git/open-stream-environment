@@ -62,6 +62,34 @@ class FakeAlertsWidget {
 }
 FakeAlertsWidget.instances = [];
 
+// Второй виджет — UEC-перевод: тот же контракт BaseWidget, но своё поведение.
+class FakeUecWidget {
+  constructor(config, context) {
+    this.config = config;
+    this.context = context;
+    this.geometry = { x: config.x, y: config.y, w: config.w, h: config.h };
+    this.received = [];
+    context.bus.on(context.EVENT_TYPES.ALERT, (alert) => this.received.push(alert));
+    FakeUecWidget.instances.push(this);
+  }
+
+  mount(parent) {
+    this.parent = parent;
+    this.mounted = true;
+  }
+
+  unmount() {
+    this.unmounted = true;
+    this.mounted = false;
+  }
+
+  update(next) {
+    this.updated = next;
+    this.geometry = { x: next.x, y: next.y, w: next.w, h: next.h };
+  }
+}
+FakeUecWidget.instances = [];
+
 let originalWindow;
 let originalDocument;
 let originalComputed;
@@ -80,11 +108,12 @@ beforeEach(() => {
   };
   global.window = {
     SharedEvents: { EVENT_TYPES: { ALERT: "alert" } },
-    OSEWidgets: { AlertsWidget: FakeAlertsWidget },
+    OSEWidgets: { AlertsWidget: FakeAlertsWidget, WidgetUecTransfer: FakeUecWidget },
     I18n: { t: (key) => key, getLang: () => "ru" },
     SharedIcons: { ICONS: {} },
   };
   FakeAlertsWidget.instances = [];
+  FakeUecWidget.instances = [];
   jest.resetModules();
   require(MODULE_PATH);
 });
@@ -122,6 +151,27 @@ describe("SceneAlerts", () => {
     window.SceneAlerts.handleAlert({ kind: "donation", user: "bob" });
 
     expect(FakeAlertsWidget.instances[0].received).toEqual([{ kind: "donation", user: "bob" }]);
+  });
+
+  test("виджет UEC выбирается настройкой сцены", () => {
+    window.SceneAlerts.init();
+    window.SceneAlerts.applyScene({ alerts: { enabled: true, widget: "uec", x: 10, y: 20, w: 30, h: 40 } });
+
+    expect(FakeUecWidget.instances).toHaveLength(1);
+    expect(FakeAlertsWidget.instances).toHaveLength(0);
+
+    window.SceneAlerts.handleAlert({ kind: "donation", user: "bob" });
+    expect(FakeUecWidget.instances[0].received).toEqual([{ kind: "donation", user: "bob" }]);
+  });
+
+  test("смена вида алерта пересоздаёт виджет", () => {
+    window.SceneAlerts.init();
+    window.SceneAlerts.applyScene({ alerts: { enabled: true, widget: "card", x: 10, y: 20, w: 30, h: 40 } });
+    expect(FakeAlertsWidget.instances).toHaveLength(1);
+
+    window.SceneAlerts.applyScene({ alerts: { enabled: true, widget: "uec", x: 10, y: 20, w: 30, h: 40 } });
+    expect(FakeAlertsWidget.instances[0].unmounted).toBe(true);
+    expect(FakeUecWidget.instances).toHaveLength(1);
   });
 
   test("смена геометрии обновляет виджет, выключение — снимает", () => {

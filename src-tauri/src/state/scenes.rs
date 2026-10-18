@@ -62,6 +62,7 @@ fn default_camera() -> Value {
 fn default_alerts(enabled: bool) -> Value {
     json!({
         "enabled": enabled,
+        "widget": "uec",
         "x": 68,
         "y": 2,
         "w": 28,
@@ -383,6 +384,10 @@ pub fn set_scene_config(config: &mut ConfigFile, scene_id: &Value, patch: &Value
             .get("enabled")
             .and_then(Value::as_bool)
             .unwrap_or(false);
+        let widget = match merged.get("widget").and_then(Value::as_str) {
+            Some("card") => "card",
+            _ => "uec",
+        };
         let width = merged
             .get("w")
             .and_then(Value::as_f64)
@@ -405,6 +410,7 @@ pub fn set_scene_config(config: &mut ConfigFile, scene_id: &Value, patch: &Value
             .clamp(0.0, 100.0 - height);
 
         merged.insert("enabled".to_string(), Value::Bool(enabled));
+        merged.insert("widget".to_string(), Value::from(widget));
         merged.insert("x".to_string(), number_value(x.round()));
         merged.insert("y".to_string(), number_value(y.round()));
         merged.insert("w".to_string(), number_value(width.round()));
@@ -755,6 +761,7 @@ mod tests {
         let scenes = default_scenes();
         for id in ["start", "brb", "end", "wheel", "poll", "pause"] {
             assert_eq!(scenes[id]["alerts"]["enabled"], json!(false), "{id}");
+            assert_eq!(scenes[id]["alerts"]["widget"], json!("uec"), "{id}");
             assert_eq!(scenes[id]["alerts"]["x"], json!(68), "{id}");
         }
         // На «Разговоре» алерты были и раньше — сохраняем поведение.
@@ -778,6 +785,7 @@ mod tests {
 
         let alerts = &scene["alerts"];
         assert_eq!(alerts["enabled"], json!(true));
+        assert_eq!(alerts["widget"], json!("uec"));
         assert_eq!(alerts["x"], json!(0));
         assert_eq!(alerts["y"], json!(95));
         assert_eq!(alerts["w"], json!(100));
@@ -792,6 +800,22 @@ mod tests {
         assert_eq!(moved["alerts"]["x"], json!(12));
         assert_eq!(moved["alerts"]["w"], json!(40));
         assert_eq!(moved["alerts"]["enabled"], json!(true));
+
+        // Неизвестный вид виджета возвращается к UEC, явный «card» сохраняется.
+        let card = set_scene_config(
+            &mut config,
+            &json!("brb"),
+            &json!({ "alerts": { "widget": "card" } }),
+        )
+        .expect("сцена есть");
+        assert_eq!(card["alerts"]["widget"], json!("card"));
+        let bogus = set_scene_config(
+            &mut config,
+            &json!("brb"),
+            &json!({ "alerts": { "widget": "что-то" } }),
+        )
+        .expect("сцена есть");
+        assert_eq!(bogus["alerts"]["widget"], json!("uec"));
     }
 
     #[test]

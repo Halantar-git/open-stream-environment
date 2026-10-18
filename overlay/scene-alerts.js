@@ -28,12 +28,12 @@
   "use strict";
 
   const { EVENT_TYPES } = window.SharedEvents || {};
-  const AlertsWidget = window.OSEWidgets && window.OSEWidgets.AlertsWidget;
 
-  if (!AlertsWidget || !EVENT_TYPES) return;
+  if (!EVENT_TYPES) return;
 
   let layer = null;
   let widget = null;
+  let widgetKind = "";
   let appliedSignature = "";
 
   const handlers = new Map();
@@ -123,19 +123,28 @@
 
   function destroy() {
     appliedSignature = "";
+    widgetKind = "";
     if (widget) {
       widget.unmount();
       widget = null;
     }
   }
 
-  function createWidget(rect) {
+  // «uec» — тот же виджет, что и на оверлее; «card» — обычные карточки алертов.
+  function widgetClass(kind) {
+    const widgets = window.OSEWidgets || {};
+    if (kind === "uec") return widgets.WidgetUecTransfer || widgets.AlertsWidget || null;
+    return widgets.AlertsWidget || widgets.WidgetUecTransfer || null;
+  }
+
+  function createWidget(rect, kind, WidgetClass) {
     const target = ensureLayer();
     if (!target) return;
-    widget = new AlertsWidget(
+    widgetKind = kind;
+    widget = new WidgetClass(
       {
         id: "scene-alerts",
-        type: "alerts",
+        type: kind === "uec" ? "uec-transfer" : "alerts",
         x: rect.x,
         y: rect.y,
         w: rect.w,
@@ -157,12 +166,22 @@
       return;
     }
 
+    // Старые сцены без поля получают обычные карточки; сервер по умолчанию
+    // подставляет UEC, поэтому в живом конфиге выбор всегда явный.
+    const kind = alerts.widget === "uec" ? "uec" : "card";
+    const WidgetClass = widgetClass(kind);
+    if (!WidgetClass) {
+      destroy();
+      return;
+    }
+
     const rect = rectOf(alerts);
-    const signature = JSON.stringify(rect);
+    const signature = JSON.stringify({ kind, rect });
     if (widget && signature === appliedSignature) return;
 
-    if (!widget) {
-      createWidget(rect);
+    if (!widget || widgetKind !== kind) {
+      destroy();
+      createWidget(rect, kind, WidgetClass);
       if (!widget) return;
     } else {
       widget.update({ ...rect, config: {} });

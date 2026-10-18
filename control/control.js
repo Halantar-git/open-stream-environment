@@ -3422,6 +3422,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   function sceneAlertsSection(scene) {
     const alerts = scene.alerts || {};
     const enabled = alerts.enabled === true;
+    const widget = alerts.widget === "card" ? "card" : "uec";
     const num = (value, fallback) => (Number.isFinite(Number(value)) ? Number(value) : fallback);
 
     return `
@@ -3429,6 +3430,12 @@ const { EVENT_TYPES } = window.SharedEvents;
         <summary>${t("sceneForm.alerts")}</summary>
         <div class="scene-camera__body">
           <div class="properties__toggle-row"><label>${t("sceneForm.alertsShow")}</label>${switchHtml("sAlertsEnabled", enabled)}</div>
+          <div class="md-field"><label>${t("sceneForm.alertsWidget")}</label>
+            <select id="sAlertsWidget">
+              <option value="uec" ${widget === "uec" ? "selected" : ""}>${t("sceneForm.alertsWidgetUec")}</option>
+              <option value="card" ${widget === "card" ? "selected" : ""}>${t("sceneForm.alertsWidgetCard")}</option>
+            </select>
+          </div>
           <div class="inspector__title" style="margin-top:2px;">${t("sceneForm.alertsPosition")}</div>
           <div class="properties__row">
             <div class="md-field"><label>X</label><input type="number" id="sAlertsX" min="0" max="100" step="1" value="${num(alerts.x, 68)}"></div>
@@ -3448,6 +3455,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     const patch = (next) => sendSceneUpdate({ alerts: { ...alerts, ...next } });
 
     wireSwitch(sceneFormEl.querySelector("#sAlertsEnabled"), (on) => patch({ enabled: on }));
+    sceneFormEl.querySelector("#sAlertsWidget").addEventListener("change", (e) => patch({ widget: e.target.value }));
     [
       ["sAlertsX", "x"],
       ["sAlertsY", "y"],
