@@ -156,6 +156,25 @@ export function initPropertiesPanel({
 
   let lastSig = null;
 
+  // Фактический размер кадра: что отдаёт источник и что уходит в эфир. Для
+  // телефона разница заметная — мост легко отдаёт 1080p и выше, а виджет
+  // меньше, поэтому шкала ширины описывает выход, а не источник.
+  function cameraStreamText() {
+    const info = state.cameraStreamInfo;
+    if (!info || !info.width || !info.height) return t("properties.webcamStreamIdle");
+    const output = `${info.width}×${info.height}`;
+    const source = info.sourceWidth && info.sourceHeight ? `${info.sourceWidth}×${info.sourceHeight}` : "";
+    if (!source || source === output) return t("properties.webcamStreamSize", { size: output });
+    return t("properties.webcamStreamSize", { size: `${source} → ${output}` });
+  }
+
+  // Мост обновляет подпись на лету, не перестраивая весь инспектор: иначе
+  // каждый новый размер кадра сбрасывал бы фокус с ползунков.
+  function updateCameraStreamInfo() {
+    const node = propertiesEl.querySelector("#pCameraStreamSize");
+    if (node) node.textContent = cameraStreamText();
+  }
+
   function invalidate() {
     lastSig = null;
   }
@@ -478,6 +497,7 @@ export function initPropertiesPanel({
           </div>
         </div>
         <div class="md-field"><label>${t("properties.webcamWidth")}</label><select id="pCameraWidth">${widthOptions}</select></div>
+        <p class="properties__hint" id="pCameraStreamSize">${cameraStreamText()}</p>
         <div class="md-field"><label>${t("properties.webcamFps")}: <span id="pCameraFpsValue">${fps}</span></label><input type="range" id="pCameraFps" min="1" max="60" step="1" value="${fps}"></div>
         <div class="md-field"><label>${t("properties.webcamCodec")}</label>
           <select id="pCameraCodec">
@@ -921,5 +941,5 @@ export function initPropertiesPanel({
     });
   }
 
-  return { render, invalidate };
+  return { render, invalidate, updateCameraStreamInfo };
 }

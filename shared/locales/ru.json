@@ -1118,6 +1118,8 @@
     "webcamDeviceFallback": "Камера {{n}}",
     "webcamDeviceRefresh": "Обновить список устройств",
     "webcamWidth": "Ширина кадра",
+    "webcamStreamSize": "Поток: {{size}}",
+    "webcamStreamIdle": "Поток: не запущен",
     "webcamFps": "Кадров в секунду",
     "webcamQuality": "Качество JPEG",
     "webcamCodec": "Кодек",

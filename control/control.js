@@ -37,6 +37,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const CameraFrame = window.CameraFrame;
   const { ICONS } = window.SharedIcons;
   const { safeCssColor, createCaptureGeneration } = window.ControlGuards;
+  const { cameraOutputSize } = window.ControlCamera;
   const { WIDGET_TYPES, widgetsForTheme, themeAllowsWidget, replacedBy3d, widgetRole, resolveTypeForTheme, isAnimatedWidget } = window.WidgetCatalog;
   const t = (key, params) => (window.I18n ? window.I18n.t(key, params) : key);
 
@@ -4500,6 +4501,10 @@ const { EVENT_TYPES } = window.SharedEvents;
   // панель сама переходит на JPEG — тот же путь, что был раньше.
   const CAMERA_MIN_INTERVAL_MS = 16; // потолок 60 FPS
   const CAMERA_KEYFRAME_INTERVAL_SEC = 2;
+  // Телефон-камера пропадает и возвращается: приложение-мост перезапускает
+  // поток при смене объектива, USB отваливается, камеру выключают. Повторные
+  // попытки с паузой переживают такие провалы, но не превращаются в вечный цикл.
+  const CAMERA_RESTART_DELAYS_MS = [400, 800, 1600, 3200, 6000];
   const cameraCapture = createCaptureGeneration();
   const cameraBridge = {
     running: false,
@@ -4521,6 +4526,10 @@ const { EVENT_TYPES } = window.SharedEvents;
     encoderHeight: 0,
     keyCounter: 0,
     reconfigTimer: null,
+    restartTimer: null,
+    restartAttempts: 0,
+    sourceWidth: 0,
+    sourceHeight: 0,
 
     start() {
       if (this.running) return;
@@ -4559,6 +4568,21 @@ const { EVENT_TYPES } = window.SharedEvents;
           this.deviceId = (state.cameraConfig && state.cameraConfig.deviceId) || "";
           this.captureWidth = clamp(Math.round(Number((state.cameraConfig || {}).width) || 960), 320, 1920);
           this.pipelineStarted = false;
+          // Удачный захват обнуляет счётчик повторов — следующая потеря
+          // устройства снова получит полный набор попыток.
+          this.restartAttempts = 0;
+          const track = stream.getVideoTracks()[0];
+          if (track) {
+            track.addEventListener("ended", () => {
+              // Трек от уже заменённого потока не должен трогать текущий захват.
+              if (this.stream !== stream) return;
+              this._onTrackEnded();
+            });
+          }
+          // Телефон может сменить камеру внутри уже открытого потока: размер
+          // кадра меняется без нового getUserMedia, а энкодер настроен на
+          // прежний. Без перезапуска конвейера первый же кадр уронит кодирование.
+          video.addEventListener("resize", () => this._onVideoResize(video));
           const begin = () => {
             video.play().catch(() => {});
             this._beginPipeline(video);
@@ -4569,9 +4593,54 @@ const { EVENT_TYPES } = window.SharedEvents;
         .catch((err) => {
           // Отказ устаревшего запроса ничего не говорит о текущем захвате.
           if (cameraCapture.isStale(generation)) return;
-          this.running = false;
+          // Устройство занято другим приложением или ещё не поднялось после
+          // переподключения телефона — пробуем ещё раз, а не сдаёмся сразу.
           console.warn("[camera-bridge] camera unavailable:", (err && err.name) || "unknown");
+          this._scheduleRestart("open-failed");
         });
+    },
+
+    _onTrackEnded() {
+      if (!this.running) return;
+      // Трек закончился сам: поток разорван, камеру выдернули или приложение
+      // на телефоне перезапустилось. Последний кадр остаётся на экране,
+      // поэтому без перезапуска виджет выглядит зависшим.
+      this._scheduleRestart("track-ended");
+    },
+
+    _onVideoResize(video) {
+      if (!this.running || this.video !== video || !this.encoder) return;
+      if (!video.videoWidth || !video.videoHeight) return;
+      if (video.videoWidth === this.sourceWidth && video.videoHeight === this.sourceHeight) return;
+      // Сменился режим или объектив: пересобираем энкодер под новый размер и
+      // отправляем оверлеям новый конфиг декодера.
+      this._restartPipeline();
+    },
+
+    _scheduleRestart(reason) {
+      if (!this.running || this.restartTimer) return;
+      if (this.restartAttempts >= CAMERA_RESTART_DELAYS_MS.length) {
+        // Устройства нет совсем: дальше дёргать бессмысленно. Виджет покажет
+        // заглушку, пока не поменяются настройки или видимость. Счётчик
+        // сбрасываем, чтобы следующее явное включение снова получило попытки.
+        this.running = false;
+        this.restartAttempts = 0;
+        console.warn("[camera-bridge] giving up:", reason);
+        return;
+      }
+      const delay = CAMERA_RESTART_DELAYS_MS[this.restartAttempts];
+      this.restartAttempts += 1;
+      console.warn("[camera-bridge] restarting capture:", reason);
+      this.restartTimer = setTimeout(() => {
+        this.restartTimer = null;
+        if (!this.running) return;
+        // stop() сбрасывает счётчик попыток; сохраняем его, иначе при
+        // недоступной камере перезапуск станет бесконечным.
+        const attempts = this.restartAttempts;
+        this.stop();
+        this.restartAttempts = attempts;
+        this.start();
+      }, delay);
     },
 
     _constraints() {
@@ -4599,6 +4668,38 @@ const { EVENT_TYPES } = window.SharedEvents;
       return Math.max(1, Math.round(this._fps() * CAMERA_KEYFRAME_INTERVAL_SEC));
     },
 
+    _outputSize() {
+      const cfg = state.cameraConfig || {};
+      const wanted = clamp(Math.round(Number(cfg.width) || 960), 320, 1920);
+      return cameraOutputSize(wanted, this.sourceWidth, this.sourceHeight);
+    },
+
+    // Фактический размер кадра — в инспектор: разница между тем, что отдаёт
+    // телефон, и тем, что уходит в эфир, неочевидна, а именно она объясняет
+    // нагрузку на энкодер и мягкость картинки.
+    _publishStreamInfo(info) {
+      const next = {
+        codec: info.codec,
+        width: info.width,
+        height: info.height,
+        sourceWidth: this.sourceWidth,
+        sourceHeight: this.sourceHeight,
+      };
+      const prev = state.cameraStreamInfo;
+      if (
+        prev &&
+        prev.codec === next.codec &&
+        prev.width === next.width &&
+        prev.height === next.height &&
+        prev.sourceWidth === next.sourceWidth &&
+        prev.sourceHeight === next.sourceHeight
+      ) {
+        return;
+      }
+      state.cameraStreamInfo = next;
+      propertiesPanel.updateCameraStreamInfo();
+    },
+
     _startTimer() {
       if (this.timer) clearInterval(this.timer);
       this.timer = setInterval(() => this.tick(), Math.max(CAMERA_MIN_INTERVAL_MS, Math.round(1000 / this._fps())));
@@ -4614,11 +4715,15 @@ const { EVENT_TYPES } = window.SharedEvents;
       this.pipelineStarted = true;
       const generation = ++this.pipelineGeneration;
       this.keyCounter = 0;
+      this.sourceWidth = video.videoWidth;
+      this.sourceHeight = video.videoHeight;
       const mode = (state.cameraConfig || {}).codec || "auto";
       this.codecMode = mode;
       const wantH264 = mode !== "jpeg" && !this.forceJpeg && typeof window.VideoEncoder === "function";
       if (!wantH264) {
         this._closeEncoder();
+        const out = this._outputSize();
+        this._publishStreamInfo({ codec: "jpeg", width: out.width, height: out.height });
         send(EVENT_TYPES.CAMERA_STREAM_CONFIG, { codec: "jpeg" });
         this._startTimer();
         return;
@@ -4627,6 +4732,8 @@ const { EVENT_TYPES } = window.SharedEvents;
         if (!this.running || this.video !== video || generation !== this.pipelineGeneration) return;
         if (!ok) {
           this.forceJpeg = true;
+          const out = this._outputSize();
+          this._publishStreamInfo({ codec: "jpeg", width: out.width, height: out.height });
           send(EVENT_TYPES.CAMERA_STREAM_CONFIG, { codec: "jpeg" });
         }
         this._startTimer();
@@ -4635,15 +4742,31 @@ const { EVENT_TYPES } = window.SharedEvents;
 
     _encoderCandidates() {
       // Level 4.2 покрывает 1080p60, 4.0 — 1080p30; дальше — более старые
-      // профили на случай, если конкретный энкодер знает только их.
-      return ["avc1.64002A", "avc1.640028", "avc1.4D0028", "avc1.42E028", "avc1.42E01E"];
+      // профили на случай, если конкретный энкодер знает только их. Уровни
+      // 5.x идут последними: 4:3-поток телефона при ширине 1920 (1920×1440)
+      // не влезает в предел кадра 4.2, но на обычных 960×540 лишний уровень
+      // ни к чему — декодер оверлея должен получить самый скромный из рабочих.
+      return [
+        "avc1.64002A", // High 4.2
+        "avc1.640028", // High 4.0
+        "avc1.4D0028", // Main 4.0
+        "avc1.42E028", // Baseline 4.0
+        "avc1.42E01E", // Baseline 3.0
+        "avc1.640032", // High 5.0
+        "avc1.640033", // High 5.1
+        "avc1.640034", // High 5.2
+      ];
     },
 
     async _configureEncoder(video, generation) {
       const Encoder = window.VideoEncoder;
       if (!Encoder || !video.videoWidth || !video.videoHeight) return false;
-      const width = video.videoWidth;
-      const height = video.videoHeight;
+      // Кодируем уменьшенный кадр, а не нативный поток камеры: телефон легко
+      // отдаёт 1080p и выше, и эти пиксели стоили бы энкодеру вчетверо дороже
+      // без выигрыша в картинке — виджет всё равно меньше.
+      const out = this._outputSize();
+      const width = out.width;
+      const height = out.height;
       for (const codec of this._encoderCandidates()) {
         const config = {
           codec,
@@ -4689,6 +4812,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         this.encoderWidth = width;
         this.encoderHeight = height;
         this.keyCounter = 0;
+        this._publishStreamInfo({ codec, width, height });
         this._sendStreamConfig();
         return true;
       }
@@ -4743,7 +4867,15 @@ const { EVENT_TYPES } = window.SharedEvents;
         // пропускаем, но не копим задержку.
         if (this.encoder.encodeQueueSize > 2) return;
         const keyFrame = this.keyCounter <= 0;
-        const frame = new window.VideoFrame(video, { timestamp: Math.round(performance.now() * 1000) });
+        // Кадр проходит через canvas: размер выхода перестаёт зависеть от
+        // того, какие режимы согласился отдать драйвер камеры.
+        const { width, height } = this._outputSize();
+        if (canvas.width !== width || canvas.height !== height) {
+          canvas.width = width;
+          canvas.height = height;
+        }
+        ctx.drawImage(video, 0, 0, width, height);
+        const frame = new window.VideoFrame(canvas, { timestamp: Math.round(performance.now() * 1000) });
         try {
           this.encoder.encode(frame, { keyFrame });
         } catch (error) {
@@ -4758,8 +4890,7 @@ const { EVENT_TYPES } = window.SharedEvents;
 
       if (this.encoding || !canvas || !ctx) return;
       const cfg = state.cameraConfig || {};
-      const width = clamp(Math.round(Number(cfg.width) || 960), 320, 1920);
-      const height = Math.max(2, Math.round((width * video.videoHeight) / video.videoWidth));
+      const { width, height } = this._outputSize();
       if (canvas.width !== width || canvas.height !== height) {
         canvas.width = width;
         canvas.height = height;
@@ -4795,6 +4926,8 @@ const { EVENT_TYPES } = window.SharedEvents;
       this.forceJpeg = true;
       console.warn("[camera-bridge] H.264 disabled, using JPEG:", reason || "unknown");
       this._closeEncoder();
+      const out = this._outputSize();
+      this._publishStreamInfo({ codec: "jpeg", width: out.width, height: out.height });
       send(EVENT_TYPES.CAMERA_STREAM_CONFIG, { codec: "jpeg" });
     },
 
@@ -4880,8 +5013,12 @@ const { EVENT_TYPES } = window.SharedEvents;
       cameraCapture.invalidate();
       this.pipelineGeneration += 1;
       this.pipelineStarted = false;
+      this.restartAttempts = 0;
+      this.sourceWidth = 0;
+      this.sourceHeight = 0;
       if (this.timer) { clearInterval(this.timer); this.timer = null; }
       if (this.reconfigTimer) { clearTimeout(this.reconfigTimer); this.reconfigTimer = null; }
+      if (this.restartTimer) { clearTimeout(this.restartTimer); this.restartTimer = null; }
       this._closeEncoder();
       if (this.stream) { this.stream.getTracks().forEach((track) => track.stop()); this.stream = null; }
       if (this.video) { this.video.srcObject = null; this.video = null; }
@@ -4889,6 +5026,8 @@ const { EVENT_TYPES } = window.SharedEvents;
       this.ctx = null;
       this.encoding = false;
       this.keyCounter = 0;
+      state.cameraStreamInfo = null;
+      propertiesPanel.updateCameraStreamInfo();
     },
   };
 

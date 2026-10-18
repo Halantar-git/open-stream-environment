@@ -1118,6 +1118,8 @@
     "webcamDeviceFallback": "Camera {{n}}",
     "webcamDeviceRefresh": "Refresh device list",
     "webcamWidth": "Frame width",
+    "webcamStreamSize": "Stream: {{size}}",
+    "webcamStreamIdle": "Stream: not running",
     "webcamFps": "Frames per second",
     "webcamQuality": "JPEG quality",
     "webcamCodec": "Codec",

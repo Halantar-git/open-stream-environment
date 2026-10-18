@@ -105,6 +105,9 @@ export function createStateManager() {
     // иначе при выключенной камере она успела бы мигнуть на старте.
     cameraConfigReady: false,
     cameraDevices: [],
+    // Фактический кадр моста: что отдаёт устройство и что уходит в эфир.
+    // Живёт только в панели, серверу не нужен.
+    cameraStreamInfo: null,
     // Последний снимок конфига Longshot (Executive Hangar), если получен.
     longshot: null,
   };
