@@ -119,6 +119,10 @@ jobs:
             libgtk-3-dev
 
       - name: Cargo test
+        # Платформенные тесты уже гоняет ci.yml на каждый пуш. В релизе
+        # оставляем дешёвый Linux-гейт, чтобы не собирать Rust дважды на
+        # macOS и Windows перед релизной сборкой.
+        if: runner.os == 'Linux'
         run: cargo test --manifest-path src-tauri/Cargo.toml --lib
 
       # Сборка, подпись обновлений и загрузка в один черновик по тегу — на

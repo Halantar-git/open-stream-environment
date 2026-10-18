@@ -80,4 +80,9 @@ jobs:
         run: cargo test --manifest-path src-tauri/Cargo.toml --lib
 
       - name: Cargo clippy
+        # На macOS clippy — это вторая полная компиляция Rust после тестов и
+        # главный источник задержки на самом медленном раннере. Платформенные
+        # различия ловят тесты (пути, регистр), а сам clippy платформенно-
+        # нейтрален: проверяем его на Linux и Windows.
+        if: runner.os != 'macOS'
         run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
