@@ -703,7 +703,15 @@
     "pixel-goal": "Цель Pixel Perfect",
     "pixel-goalDesc": "Блочная пиксельная шкала донат-цели (только для темы Pixel Perfect)",
     "pixel-holo-alert": "Алерт Pixel Perfect",
-    "pixel-holo-alertDesc": "Пиксельный алерт с вращающимся значком (только для темы Pixel Perfect)"
+    "pixel-holo-alertDesc": "Пиксельный алерт с вращающимся значком (только для темы Pixel Perfect)",
+    "retrowave-goal": "Цель Retrowave",
+    "retrowave-goalDesc": "Донат-цель с неоновой шкалой и закатной заливкой (только для темы Retrowave)",
+    "retrowave-chat": "Чат Retrowave",
+    "retrowave-chatDesc": "Чат стрима на неоновой панели с косой кромкой (только для темы Retrowave)",
+    "retrowave-holo-alert": "Алерт Retrowave",
+    "retrowave-holo-alertDesc": "Всплывающий неоновый алерт с полосатым солнцем (только для темы Retrowave)",
+    "retrowave-symbol": "Символ Retrowave",
+    "retrowave-symbolDesc": "Вращающаяся неоновая сфера-сетка, появляется на алерте (только для темы Retrowave)"
   },
   "timer": {
     "defaultTitle": "Executive Hangar",

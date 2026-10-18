@@ -436,6 +436,10 @@
   manager.register("pixel-chat", OW.WidgetPixelChat);
   manager.register("pixel-goal", OW.WidgetPixelGoal);
   manager.register("pixel-holo-alert", OW.WidgetPixelHoloAlert);
+  manager.register("retrowave-goal", OW.WidgetRetrowaveGoal);
+  manager.register("retrowave-chat", OW.WidgetRetrowaveChat);
+  manager.register("retrowave-holo-alert", OW.WidgetRetrowaveHoloAlert);
+  manager.register("retrowave-symbol", OW.WidgetRetrowaveSymbol);
   manager.register("donatex-ai", OW.DonatexAiWidget);
   manager.register("music", OW.MusicWidget);
 

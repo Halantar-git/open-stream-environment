@@ -782,6 +782,26 @@
   opacity: 0.85;
 }
 
+/* 3D-виджеты Retrowave (цель, чат, алерт) собирают панель из токенов темы
+   в JS, а сетку и неоновую косую кромку берут отсюда — так все три панели
+   выглядят одинаково без дублирования разметки в каждом виджете. */
+.retrowave-surface {
+  position: relative;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(45, 226, 230, 0.055) 0 1px, transparent 1px 32px),
+    repeating-linear-gradient(0deg, rgba(255, 45, 149, 0.045) 0 1px, transparent 1px 32px);
+}
+.retrowave-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  clip-path: polygon(26px 0, 31px 0, 5px 100%, 0 100%);
+  background: linear-gradient(90deg, var(--md-secondary) 0 2px, var(--md-primary) 2px 5px);
+  filter: drop-shadow(0 0 7px rgba(45, 226, 230, 0.6)) drop-shadow(0 0 14px rgba(255, 45, 149, 0.35));
+  opacity: 0.95;
+}
+
 /* UEC transfer follows the same HUD decoration as the other panels: scanlines
    and four corner brackets under Orbital (brackets4), two corners under
    angular custom themes (brackets2). */

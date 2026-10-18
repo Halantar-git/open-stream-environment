@@ -998,6 +998,94 @@ export function initCanvasEditor({
           </div>
         </div>`;
       }
+      case "retrowave-goal": {
+        const pct = state.goal && state.goal.target ? Math.min(100, Math.round((state.goal.current / state.goal.target) * 100)) : 0;
+        const primary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#ff2d95";
+        const secondary = (state.appearance.tokens && state.appearance.tokens["--md-secondary"]) || "#2de2e6";
+        const tertiary = (state.appearance.tokens && state.appearance.tokens["--md-tertiary"]) || "#ffa24c";
+        const text = (state.appearance.tokens && state.appearance.tokens["--md-on-surface"]) || "#f3e8ff";
+        const muted = (state.appearance.tokens && state.appearance.tokens["--md-on-surface-variant"]) || "#c3b0e0";
+        const fillW = (199 * pct) / 100;
+        const stripes = Array.from({ length: 5 }, (_, i) => `<rect x="0" y="${5 + i * 5}" width="${fillW.toFixed(2)}" height="1" fill="rgba(5,2,11,0.30)"/>`).join("");
+        return `<div class="retrowave-goal-preview" style="position:relative;height:100%;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:6px 8px 6px 14px;box-sizing:border-box;">
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:11px;"><span style="color:${escapeAttr(text)};font-family:'Orbitron','Segoe UI',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;">${escapeHtml(state.goal.title || t("preview.goalTitle"))}</span><span style="color:${escapeAttr(muted)};font-family:'JetBrains Mono','Consolas',monospace;">${formatMoney(state.goal.current)} / ${formatMoney(state.goal.target)} <b style="color:${escapeAttr(primary)};">[${pct}%]</b></span></div>
+          <svg viewBox="0 0 200 26" preserveAspectRatio="none" style="width:100%;height:24px;">
+            <defs>
+              <linearGradient id="rwg" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="${escapeAttr(secondary)}"/><stop offset="55%" stop-color="${escapeAttr(primary)}"/><stop offset="100%" stop-color="${escapeAttr(tertiary)}"/></linearGradient>
+              <clipPath id="rwc"><path d="M9 0.5H199.5L191 25.5H0.5Z"/></clipPath>
+            </defs>
+            <path d="M9 0.5H199.5L191 25.5H0.5Z" fill="rgba(5,2,11,0.82)" stroke="rgba(45,226,230,0.55)"/>
+            <g clip-path="url(#rwc)">
+              <rect x="0" y="0" width="${fillW.toFixed(2)}" height="26" fill="url(#rwg)"/>
+              ${stripes}
+              ${pct > 0 ? `<rect x="${fillW.toFixed(2)}" y="1" width="1.5" height="23" fill="#ffffff"/>` : ""}
+            </g>
+          </svg>
+        </div>`;
+      }
+      case "retrowave-chat": {
+        const text = (state.appearance.tokens && state.appearance.tokens["--md-on-surface"]) || "#f3e8ff";
+        const muted = (state.appearance.tokens && state.appearance.tokens["--md-on-surface-variant"]) || "#c3b0e0";
+        const primary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#ff2d95";
+        const secondary = (state.appearance.tokens && state.appearance.tokens["--md-secondary"]) || "#2de2e6";
+        const rows = [
+          { user: "nova_viewer", message: t("preview.chat1") },
+          { user: "star_gazer", message: t("preview.chat2") },
+          { user: "orbit_fan", message: t("preview.chat3") },
+        ]
+          .map(
+            (m) =>
+              `<div style="display:flex;gap:7px;padding:3px 8px 3px 10px;font-family:'Montserrat','Segoe UI',sans-serif;font-size:12px;line-height:1.45;color:${escapeAttr(text)};background:linear-gradient(90deg,rgba(255,45,149,0.10),rgba(5,2,11,0.30) 42%,transparent);border-left:2px solid rgba(45,226,230,0.55);">
+                <span style="color:${escapeAttr(muted)};font-family:'JetBrains Mono','Consolas',monospace;font-size:10px;">[12:00]</span>
+                <span style="color:${escapeAttr(primary)};font-weight:700">${escapeHtml(m.user)}</span>
+                <span style="color:${escapeAttr(muted)}">:</span>
+                <span style="color:${escapeAttr(text)}">${escapeHtml(m.message)}</span>
+              </div>`
+          )
+          .join("");
+        return `<div class="retrowave-chat" style="position:relative;height:100%;padding:12px 12px 12px 20px;box-sizing:border-box;display:flex;flex-direction:column;">
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;color:${escapeAttr(text)};font-family:'Orbitron','Segoe UI',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:2px;font-size:11px;"><span style="width:7px;height:7px;background:${escapeAttr(primary)};box-shadow:0 0 8px ${escapeAttr(primary)};transform:rotate(45deg);"></span><span>${escapeHtml(t("editor.chat"))}</span><span style="flex:1;height:1px;background:linear-gradient(90deg,${escapeAttr(secondary)},${escapeAttr(primary)} 60%,transparent);"></span></div>
+          <div style="flex:1;min-height:0;overflow:hidden;margin-top:10px;display:flex;flex-direction:column;justify-content:flex-end;gap:5px;">${rows}</div>
+        </div>`;
+      }
+      case "retrowave-holo-alert": {
+        const primary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#ff2d95";
+        const secondary = (state.appearance.tokens && state.appearance.tokens["--md-secondary"]) || "#2de2e6";
+        const tertiary = (state.appearance.tokens && state.appearance.tokens["--md-tertiary"]) || "#ffa24c";
+        const text = (state.appearance.tokens && state.appearance.tokens["--md-on-surface"]) || "#f3e8ff";
+        const stripes = [26, 30, 34, 38, 42].map((y, i) => `<rect x="6" y="${y}" width="36" height="${i < 2 ? 2 : 1.6}" fill="rgba(13,7,25,0.92)"/>`).join("");
+        return `<div class="retrowave-holo-preview" style="position:relative;height:100%;display:flex;align-items:center;gap:10px;padding:6px 10px;box-sizing:border-box;">
+          <svg viewBox="0 0 48 48" preserveAspectRatio="xMidYMid meet" style="flex-shrink:0;width:40px;height:40px;">
+            <defs><linearGradient id="rws" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${escapeAttr(tertiary)}"/><stop offset="55%" stop-color="${escapeAttr(primary)}"/><stop offset="100%" stop-color="${escapeAttr(primary)}"/></linearGradient></defs>
+            <circle cx="24" cy="24" r="18" fill="url(#rws)" opacity="0.95"/>
+            <circle cx="24" cy="24" r="18" fill="none" stroke="${escapeAttr(secondary)}" stroke-width="1.2" opacity="0.65"/>
+            ${stripes}
+          </svg>
+          <div style="min-width:0;display:flex;flex-direction:column;gap:2px;">
+            <span style="font-family:'JetBrains Mono','Consolas',monospace;font-size:9px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:${escapeAttr(secondary)};">SIGNAL // ${escapeHtml(t("properties.testFollow"))}</span>
+            <span style="font-family:'Orbitron','Segoe UI',sans-serif;font-size:14px;font-weight:700;color:${escapeAttr(text)};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">nova_viewer</span>
+          </div>
+        </div>`;
+      }
+      case "retrowave-symbol": {
+        const primary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#ff2d95";
+        const secondary = (state.appearance.tokens && state.appearance.tokens["--md-secondary"]) || "#2de2e6";
+        return `<div class="retrowave-symbol-preview" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" style="width:78%;height:78%;">
+            <defs><radialGradient id="rwh" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="${escapeAttr(primary)}" stop-opacity="0.22"/><stop offset="100%" stop-color="${escapeAttr(primary)}" stop-opacity="0"/></radialGradient></defs>
+            <circle cx="50" cy="50" r="46" fill="url(#rwh)"/>
+            <g fill="none" stroke="${escapeAttr(secondary)}" stroke-width="0.9" opacity="0.75">
+              <circle cx="50" cy="50" r="30"/>
+              <ellipse cx="50" cy="50" rx="13" ry="30"/>
+              <ellipse cx="50" cy="50" rx="24" ry="30"/>
+            </g>
+            <g fill="none" stroke="${escapeAttr(secondary)}" stroke-width="0.7" opacity="0.45">
+              <path d="M21 39h58M21 61h58M20 50h60"/>
+            </g>
+            <ellipse cx="50" cy="50" rx="43" ry="10" fill="none" stroke="${escapeAttr(primary)}" stroke-width="1.6"/>
+          </svg>
+        </div>`;
+      }
       default:
         return "";
     }

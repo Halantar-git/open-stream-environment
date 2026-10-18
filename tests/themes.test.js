@@ -80,14 +80,14 @@ describe("встроенные темы", () => {
     });
   });
 
-  test("Retrowave — встроенная 2D-тема без 3D-набора", () => {
+  test("Retrowave — встроенная тема с 3D-набором", () => {
     const theme = BUILTIN_THEMES.retrowave;
     expect(theme).toBeTruthy();
     expect(theme.name).toBe("Retrowave");
     expect(theme.dimension).toBe("2d");
     expect(theme.family).toBe("retrowave");
-    expect(theme.variant3d).toBeUndefined();
-    expect(THREE_D_STYLES.some((style) => style.id === "retrowave")).toBe(false);
+    expect(theme.variant3d).toBe("retrowave");
+    expect(THREE_D_STYLES.some((style) => style.id === "retrowave")).toBe(true);
   });
 
   test("Retrowave задаёт неоновую палитру и скошенные панели", () => {

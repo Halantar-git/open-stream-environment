@@ -527,8 +527,8 @@
 
     // Retrowave: неоновая ночь, магента и циан на тёмно-фиолетовом,
     // сетка и скобки как в HUD, шрифты — Orbitron для заголовков, Montserrat для
-    // текста. Пока только 2D: 3D-набор можно добавить отдельно, если теме
-    // понадобятся свои виджеты.
+    // текста. 3D-набор повторяет язык темы: неоновая шкала цели, панели с косой
+    // кромкой, алерт-карточка и вращающаяся сетка-сфера.
     retrowave: {
       id: "retrowave",
       name: "Retrowave",
@@ -536,6 +536,7 @@
       category: "system",
       dimension: "2d",
       family: "retrowave",
+      variant3d: "retrowave",
       borderRadius: "0px",
       tokens: {
         // Неоновая магента (#ff2d95) — главный акцент: рамки, скобки, заголовки.
@@ -756,6 +757,7 @@
     { id: "teso-seal", name: "TESO" },
     { id: "cobra-mk2", name: "Cobra Mk II" },
     { id: "wardogs", name: "Wardogs" },
+    { id: "retrowave", name: "Retrowave" },
   ];
 
   const api = { BUILTIN_THEMES, THREE_D_STYLES };

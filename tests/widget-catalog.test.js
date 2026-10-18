@@ -61,6 +61,9 @@ describe("widget-catalog helpers", () => {
     const grimhex = widgetsForTheme("grimhex").map((d) => d.type);
     expect(grimhex).toEqual(expect.arrayContaining(["grimhex", "musain", "grimhex-chat", "grimhex-goal", "grimhex-holo-alert", "grimhex-radar"]));
 
+    const retrowave = widgetsForTheme("retrowave").map((d) => d.type);
+    expect(retrowave).toEqual(expect.arrayContaining(["retrowave-goal", "retrowave-chat", "retrowave-holo-alert", "retrowave-symbol"]));
+
     expect(widgetsForTheme("")).toEqual([]);
   });
 

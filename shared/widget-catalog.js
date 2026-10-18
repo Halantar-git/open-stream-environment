@@ -690,6 +690,63 @@
       defaultConfig: {},
     },
 
+    // ---- Retrowave (3D) ----
+    "retrowave-goal": {
+      type: "retrowave-goal",
+      label: "Цель Retrowave",
+      description: "Донат-цель с неоновой шкалой и закатной заливкой (только для темы Retrowave)",
+      icon: "widgetRetrowaveGoal",
+      services: ["donationAlerts", "youtube"],
+      dimension: "3d",
+      theme: "retrowave",
+      renderType: "2d",
+      defaultGeometry: { x: 3, y: 84, w: 32, h: 6 },
+      minW: 16,
+      minH: 4,
+      defaultConfig: { showPercentage: true, perspective: 0, perspectiveDirection: "left" },
+    },
+    "retrowave-chat": {
+      type: "retrowave-chat",
+      label: "Чат Retrowave",
+      description: "Чат стрима на неоновой панели с косой кромкой (только для темы Retrowave)",
+      icon: "widgetRetrowaveChat",
+      services: ["twitchChat", "youtube"],
+      dimension: "3d",
+      theme: "retrowave",
+      renderType: "2d",
+      defaultGeometry: { x: 68, y: 6, w: 29, h: 46 },
+      minW: 16,
+      minH: 16,
+      defaultConfig: { maxMessages: 50, perspective: 0 },
+    },
+    "retrowave-holo-alert": {
+      type: "retrowave-holo-alert",
+      label: "Алерт Retrowave",
+      description: "Всплывающий неоновый алерт с полосатым солнцем (только для темы Retrowave)",
+      icon: "widgetRetrowaveHoloAlert",
+      services: ["twitchEvents", "donationAlerts", "youtube"],
+      dimension: "3d",
+      theme: "retrowave",
+      renderType: "2d",
+      defaultGeometry: { x: 40, y: 16, w: 26, h: 14 },
+      minW: 16,
+      minH: 8,
+      defaultConfig: {},
+    },
+    "retrowave-symbol": {
+      type: "retrowave-symbol",
+      label: "Символ Retrowave",
+      description: "Вращающаяся неоновая сфера-сетка, появляется на алерте (только для темы Retrowave)",
+      icon: "widgetRetrowaveSymbol",
+      dimension: "3d",
+      theme: "retrowave",
+      role: "sign",
+      defaultGeometry: { x: 38, y: 6, w: 24, h: 16 },
+      minW: 10,
+      minH: 6,
+      defaultConfig: { perspective: 0 },
+    },
+
     // ---- Интеграции DonateX ----
     "donatex-ai": {
       type: "donatex-ai",
@@ -826,6 +883,8 @@
     "md3-goal",
     "pixel-cube",
     "pixel-goal",
+    "retrowave-goal",
+    "retrowave-symbol",
   ]);
 
   function isAnimatedWidget(type) {

@@ -703,7 +703,15 @@
     "pixel-goal": "Pixel Perfect Goal",
     "pixel-goalDesc": "Blocky pixel donation goal bar (Pixel Perfect theme only)",
     "pixel-holo-alert": "Pixel Perfect Alert",
-    "pixel-holo-alertDesc": "Pixel alert with a rotating badge (Pixel Perfect theme only)"
+    "pixel-holo-alertDesc": "Pixel alert with a rotating badge (Pixel Perfect theme only)",
+    "retrowave-goal": "Retrowave Goal",
+    "retrowave-goalDesc": "Donation goal with a neon bar and sunset fill (Retrowave theme only)",
+    "retrowave-chat": "Retrowave Chat",
+    "retrowave-chatDesc": "Stream chat on a neon panel with a chamfered edge (Retrowave theme only)",
+    "retrowave-holo-alert": "Retrowave Alert",
+    "retrowave-holo-alertDesc": "Floating neon alert with a striped sun (Retrowave theme only)",
+    "retrowave-symbol": "Retrowave Symbol",
+    "retrowave-symbolDesc": "Rotating neon wireframe sphere that appears on alerts (Retrowave theme only)"
   },
   "timer": {
     "defaultTitle": "Executive Hangar",
