@@ -192,6 +192,10 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 
 .resize-handle { position: absolute; width: 10px; height: 10px; background: var(--md-primary); border: 2px solid var(--md-surface-dim); border-radius: 3px; display: none; }
 .canvas-widget.is-selected .resize-handle { display: block; }
+.canvas.is-locked .canvas-widget { cursor: default; }
+.canvas.is-locked .resize-handle { display: none; }
+.layer-row__btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.layout-locked #libraryList .library-card { opacity: 0.55; cursor: not-allowed; }
 .resize-handle[data-h="nw"] { top: -5px; left: -5px; cursor: nwse-resize; }
 .resize-handle[data-h="ne"] { top: -5px; right: -5px; cursor: nesw-resize; }
 .resize-handle[data-h="sw"] { bottom: -5px; left: -5px; cursor: nesw-resize; }
@@ -443,6 +447,15 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
    собственный display, который иначе перебивает браузерное правило. */
 .canvas-toolbar [hidden] { display: none; }
 .canvas-toolbar .md-button { flex-shrink: 0; white-space: nowrap; }
+.md-button:disabled { opacity: 0.5; cursor: not-allowed; }
+.canvas-lock { display: inline-flex; align-items: center; gap: 6px; }
+.canvas-lock__icon { width: 16px; height: 16px; display: inline-flex; }
+.canvas-lock__icon svg { width: 100%; height: 100%; display: block; }
+.canvas-lock.is-on {
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  border-color: var(--md-primary);
+}
 .scene-layout-badge {
   flex-shrink: 0;
   font-size: 12px;

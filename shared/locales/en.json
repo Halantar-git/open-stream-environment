@@ -99,6 +99,8 @@
     "aspectRatio": "Aspect ratio",
     "layoutTarget": "Layout",
     "layoutMain": "Overlay",
+    "lockLayout": "Lock",
+    "lockLayoutHint": "Prevent moving, resizing and deleting widgets. Selection and properties stay available.",
     "obsSource": "OBS Browser Source",
     "obsScenes": "Scenes",
     "perfBudget": "3D animation: {{count}} · {{area}}% of screen",
@@ -1445,7 +1447,8 @@
       "p1": "Drag widgets from the left library onto the canvas, or click one to add it.",
       "p2": "Select a widget to edit its properties on the right. Drag to move it, use the corner handle to resize.",
       "p3": "The Layers panel controls z-order; the Grid toggle helps with alignment. Copy this URL into an OBS Browser Source:",
-      "p4": "Widget icons appear on the canvas next to the label on hover or selection, making widgets easier to tell apart."
+      "p4": "Widget icons appear on the canvas next to the label on hover or selection, so widgets are easier to tell apart.",
+      "p5": "The Lock button in the toolbar below the canvas prevents dragging, resizing, deleting, adding and reordering widgets. Selection and property editing stay available — handy for avoiding an accidental layout shift during a live stream."
     },
     "hud": {
       "title": "Overlays over the game (HUD)",

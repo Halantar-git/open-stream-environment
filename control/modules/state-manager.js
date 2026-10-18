@@ -58,6 +58,9 @@ export function createStateManager() {
     pendingAdd: null,
     appearance: { activeThemeId: "nebula", enable3d: false, activeThemeId3d: "", active3dWidgets: [], enabled3d: {}, tokens: {}, customCss: "", themes: [] },
     editorPrefs: { gridSize: 5, snapEnabled: true, aspectRatio: "16:9" },
+    // Не сохраняется в настройках: это сессионный предохранитель против
+    // случайного сдвига виджетов во время эфира.
+    layoutLocked: false,
     hudEditHotkey: "Control+Shift+H",
     hudDisplayId: null,
     chatHudHotkey: "Control+Shift+L",

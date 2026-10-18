@@ -1914,7 +1914,10 @@ const { EVENT_TYPES } = window.SharedEvents;
     state.selectedId = null;
   });
   const toggleHudBtn = document.getElementById("toggleHudBtn");
-  if (toggleHudBtn) toggleHudBtn.addEventListener("click", () => send(EVENT_TYPES.CMD_TOGGLE_HUD_EDIT_MODE, {}));
+  if (toggleHudBtn) toggleHudBtn.addEventListener("click", () => {
+    if (state.layoutLocked) return;
+    send(EVENT_TYPES.CMD_TOGGLE_HUD_EDIT_MODE, {});
+  });
 
   // ---- events history ----
   const EVENTS_TYPE_LABEL = (type) =>
@@ -3148,6 +3151,13 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   if (layoutPresetSelect) {
     layoutPresetSelect.addEventListener("change", () => {
+      // В заблокированной раскладке пресет не применяем: это замена всех
+      // виджетов разом, а предохранитель существует именно от таких случайностей.
+      if (state.layoutLocked) {
+        layoutPresetSelect.value = "";
+        if (deleteLayoutPresetBtn) deleteLayoutPresetBtn.hidden = true;
+        return;
+      }
       const id = layoutPresetSelect.value;
       if (deleteLayoutPresetBtn) deleteLayoutPresetBtn.hidden = !id;
       if (id) send(EVENT_TYPES.CMD_APPLY_LAYOUT_PRESET, { id });

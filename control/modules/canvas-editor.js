@@ -67,6 +67,9 @@ export function initCanvasEditor({
   const layersEl = el("layers");
   const gridSizeSelect = el("gridSizeSelect");
   const aspectRatioSelect = el("aspectRatioSelect");
+  const layoutLockBtn = el("layoutLockBtn");
+  const layoutLockIcon = el("layoutLockIcon");
+  const toggleHudBtn = document.getElementById("toggleHudBtn");
 
   // While a drag/resize is in progress the canvas must not rebuild its DOM —
   // doing so would detach the element the pointer handlers are bound to and
@@ -1270,6 +1273,7 @@ export function initCanvasEditor({
   }
 
   function addWidget(type, dropXY) {
+    if (state.layoutLocked) return;
     state.pendingAdd = { knownIds: new Set(state.layout.map((w) => w.id)), dropXY };
     send(EVENT_TYPES.CMD_ADD_WIDGET, { type });
   }
@@ -1345,9 +1349,42 @@ export function initCanvasEditor({
     return Math.round(v / size) * size;
   }
 
+  // Блокировка раскладки: предохранитель для эфира. Выбор виджета и правка
+  // свойств остаются доступны, а геометрия, порядок и состав — нет.
+  function applyLayoutLock(updateLayers = true) {
+    const locked = !!state.layoutLocked;
+    canvasEl.classList.toggle("is-locked", locked);
+    document.body.classList.toggle("layout-locked", locked);
+    if (layoutLockBtn) {
+      layoutLockBtn.classList.toggle("is-on", locked);
+      layoutLockBtn.setAttribute("aria-pressed", String(locked));
+    }
+    if (layoutLockIcon) {
+      layoutLockIcon.innerHTML = locked ? ICONS.unlock : ICONS.lock;
+    }
+    // HUD-редактор тоже двигает виджеты — в заблокированной раскладке
+    // не даём в него войти, иначе предохранитель обходится одной кнопкой.
+    if (toggleHudBtn) toggleHudBtn.disabled = locked;
+    if (updateLayers) renderLayers();
+  }
+
+  if (layoutLockBtn) {
+    layoutLockBtn.addEventListener("click", () => {
+      state.layoutLocked = !state.layoutLocked;
+      applyLayoutLock();
+    });
+  }
+  applyLayoutLock(false);
+
   function attachDragHandlers(boxEl, inst) {
     boxEl.addEventListener("pointerdown", (e) => {
       if (e.target.closest(".resize-handle")) return;
+      // В режиме блокировки виджет всё ещё можно выбрать и настроить,
+      // но сдвинуть его нельзя.
+      if (state.layoutLocked) {
+        selectWidget(inst.id);
+        return;
+      }
       e.preventDefault();
       selectWidget(inst.id);
       interacting = true;
@@ -1410,6 +1447,7 @@ export function initCanvasEditor({
       boxEl.appendChild(handle);
 
       handle.addEventListener("pointerdown", (e) => {
+        if (state.layoutLocked) return;
         e.preventDefault();
         e.stopPropagation();
         selectWidget(inst.id);
@@ -1495,9 +1533,9 @@ export function initCanvasEditor({
           ${replaced ? `<span class="layer-row__3d-tag" title="${escapeAttr(t("editor.replacedBy3d"))}">3D</span>` : ""}
           ${inactive ? `<span class="layer-row__3d-tag layer-row__off-tag" title="${escapeAttr(t("editor.themeInactive"))}">${escapeHtml(t("editor.themeInactiveTag"))}</span>` : ""}
           <span class="layer-row__btns">
-            <button class="layer-row__btn" data-action="forward" title="${t("common.forward")}">▲</button>
-            <button class="layer-row__btn" data-action="backward" title="${t("common.backward")}">▼</button>
-            <button class="layer-row__btn" data-action="toggle" title="${t("common.toggleVisibility")}">${ICONS[inst.visible ? "eye" : "eyeOff"]}</button>
+            <button class="layer-row__btn" data-action="forward" title="${t("common.forward")}"${state.layoutLocked ? " disabled" : ""}>▲</button>
+            <button class="layer-row__btn" data-action="backward" title="${t("common.backward")}"${state.layoutLocked ? " disabled" : ""}>▼</button>
+            <button class="layer-row__btn" data-action="toggle" title="${t("common.toggleVisibility")}"${state.layoutLocked ? " disabled" : ""}>${ICONS[inst.visible ? "eye" : "eyeOff"]}</button>
           </span>`;
         row.addEventListener("click", (e) => {
           if (e.target.closest("[data-action]")) return;
@@ -1505,14 +1543,17 @@ export function initCanvasEditor({
         });
         row.querySelector('[data-action="toggle"]').addEventListener("click", (e) => {
           e.stopPropagation();
+          if (state.layoutLocked) return;
           send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { visible: !inst.visible } });
         });
         row.querySelector('[data-action="forward"]').addEventListener("click", (e) => {
           e.stopPropagation();
+          if (state.layoutLocked) return;
           send(EVENT_TYPES.CMD_REORDER_WIDGET, { id: inst.id, direction: "forward" });
         });
         row.querySelector('[data-action="backward"]').addEventListener("click", (e) => {
           e.stopPropagation();
+          if (state.layoutLocked) return;
           send(EVENT_TYPES.CMD_REORDER_WIDGET, { id: inst.id, direction: "backward" });
         });
         layersEl.appendChild(row);
@@ -1532,6 +1573,7 @@ export function initCanvasEditor({
   canvasWrapEl.addEventListener("drop", (e) => {
     e.preventDefault();
     canvasWrapEl.classList.remove("is-drop-target");
+    if (state.layoutLocked) return;
     const type = e.dataTransfer.getData("text/widget-type");
     if (!type) return;
     const rect = canvasEl.getBoundingClientRect();
@@ -1562,11 +1604,21 @@ export function initCanvasEditor({
   });
 
   document.addEventListener("keydown", (e) => {
-    if ((e.key === "Delete" || e.key === "Backspace") && state.selectedId && document.activeElement.tagName !== "INPUT") {
+    if ((e.key === "Delete" || e.key === "Backspace") && !state.layoutLocked && state.selectedId && document.activeElement.tagName !== "INPUT") {
       send(EVENT_TYPES.CMD_REMOVE_WIDGET, { id: state.selectedId });
       state.selectedId = null;
     }
   });
+
+  // Карточки библиотеки остаются на месте, но в режиме блокировки их нельзя
+  // утащить на канвас — визуально это показывает .layout-locked в CSS.
+  document.addEventListener(
+    "dragstart",
+    (e) => {
+      if (state.layoutLocked && e.target.closest(".library-card")) e.preventDefault();
+    },
+    true
+  );
 
   return { addWidget, renderCanvas, renderLayers, applyThemeToCanvas, applyCustomCssToCanvas, applyGridToCanvas, applyCanvasRatio };
 }
