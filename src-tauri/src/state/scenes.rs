@@ -57,6 +57,18 @@ fn default_camera() -> Value {
     })
 }
 
+/// Виджет алертов на сцене: положение/размер в процентах холста. Сами
+/// настройки виджета не нужны — он использует карточки оверлея и токены темы.
+fn default_alerts(enabled: bool) -> Value {
+    json!({
+        "enabled": enabled,
+        "x": 68,
+        "y": 2,
+        "w": 28,
+        "h": 30,
+    })
+}
+
 /// Сцены по умолчанию — порт `defaultScenes()`.
 ///
 /// Порядок сцен и полей повторён по JS. У `pause` нет `splashEnabled` — так в
@@ -65,6 +77,9 @@ fn default_camera() -> Value {
 pub fn default_scenes() -> Value {
     let socials = default_socials();
     let camera = default_camera();
+    // На «Разговоре» алерты были и раньше; на остальных сценах — по желанию.
+    let alerts_off = default_alerts(false);
+    let alerts_on = default_alerts(true);
     json!({
         "start": {
             "statusLabel": "СТРИМ СКОРО НАЧНЁТСЯ",
@@ -80,6 +95,7 @@ pub fn default_scenes() -> Value {
             "showSocials": true,
             "socials": socials.clone(),
             "camera": camera.clone(),
+            "alerts": alerts_off.clone(),
         },
         "brb": {
             "statusLabel": "ПЕРЕРЫВ НА СТРИМЕ",
@@ -95,6 +111,7 @@ pub fn default_scenes() -> Value {
             "showSocials": true,
             "socials": socials.clone(),
             "camera": camera.clone(),
+            "alerts": alerts_off.clone(),
         },
         "talk": {
             "statusLabel": "ОБЩАЕМСЯ",
@@ -110,6 +127,7 @@ pub fn default_scenes() -> Value {
             "showSocials": true,
             "socials": socials.clone(),
             "camera": camera.clone(),
+            "alerts": alerts_on.clone(),
         },
         "end": {
             "statusLabel": "СТРИМ ЗАВЕРШЁН",
@@ -125,6 +143,7 @@ pub fn default_scenes() -> Value {
             "showSocials": true,
             "socials": socials.clone(),
             "camera": camera.clone(),
+            "alerts": alerts_off.clone(),
         },
         "wheel": {
             "statusLabel": "РОЗЫГРЫШ",
@@ -140,6 +159,7 @@ pub fn default_scenes() -> Value {
             "showSocials": false,
             "socials": [],
             "camera": camera.clone(),
+            "alerts": alerts_off.clone(),
         },
         "poll": {
             "statusLabel": "ГОЛОСОВАНИЕ",
@@ -155,6 +175,7 @@ pub fn default_scenes() -> Value {
             "showSocials": false,
             "socials": [],
             "camera": camera.clone(),
+            "alerts": alerts_off.clone(),
         },
         "pause": {
             "statusLabel": "ПАУЗА",
@@ -170,6 +191,7 @@ pub fn default_scenes() -> Value {
             "showSocials": false,
             "socials": [],
             "camera": camera,
+            "alerts": alerts_off,
         },
     })
 }
@@ -206,6 +228,17 @@ pub fn normalize_scenes(config: &mut ConfigFile) {
                 merged.insert(
                     "camera".to_string(),
                     Value::Object(merge_camera(default_camera, existing_camera)),
+                );
+            }
+            // Алерты — тоже вложенный объект: старый конфиг с одним
+            // `enabled` не должен терять положение и размеры.
+            if let (Some(default_alerts), Some(existing_alerts)) = (
+                default.get("alerts").and_then(Value::as_object),
+                existing.get("alerts").and_then(Value::as_object),
+            ) {
+                merged.insert(
+                    "alerts".to_string(),
+                    Value::Object(merge(default_alerts, Some(existing_alerts))),
                 );
             }
             scenes.insert(id.clone(), Value::Object(merged));
@@ -328,6 +361,55 @@ pub fn set_scene_config(config: &mut ConfigFile, scene_id: &Value, patch: &Value
             Value::Object(sanitize_camera_config(&config)),
         );
         next.insert("camera".to_string(), Value::Object(merged));
+    }
+    if let Some(alerts) = patch.get("alerts").and_then(Value::as_object) {
+        let defaults = default_alerts(false)
+            .as_object()
+            .cloned()
+            .unwrap_or_default();
+        let current = next
+            .get("alerts")
+            .and_then(Value::as_object)
+            .cloned()
+            .unwrap_or_default();
+        let mut merged = merge(&defaults, Some(&current));
+        for (key, value) in alerts {
+            merged.insert(key.clone(), value.clone());
+        }
+
+        // То же правило, что и у камеры: проценты холста, минимум 5% и не
+        // вылезаем за край — иначе виджет нельзя будет взять мышью.
+        let enabled = merged
+            .get("enabled")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        let width = merged
+            .get("w")
+            .and_then(Value::as_f64)
+            .unwrap_or(28.0)
+            .clamp(5.0, 100.0);
+        let height = merged
+            .get("h")
+            .and_then(Value::as_f64)
+            .unwrap_or(30.0)
+            .clamp(5.0, 100.0);
+        let x = merged
+            .get("x")
+            .and_then(Value::as_f64)
+            .unwrap_or(68.0)
+            .clamp(0.0, 100.0 - width);
+        let y = merged
+            .get("y")
+            .and_then(Value::as_f64)
+            .unwrap_or(2.0)
+            .clamp(0.0, 100.0 - height);
+
+        merged.insert("enabled".to_string(), Value::Bool(enabled));
+        merged.insert("x".to_string(), number_value(x.round()));
+        merged.insert("y".to_string(), number_value(y.round()));
+        merged.insert("w".to_string(), number_value(width.round()));
+        merged.insert("h".to_string(), number_value(height.round()));
+        next.insert("alerts".to_string(), Value::Object(merged));
     }
     if let Some(socials) = patch.get("socials").and_then(Value::as_array) {
         let cleaned: Vec<Value> = socials
@@ -666,6 +748,50 @@ mod tests {
         assert_eq!(moved["camera"]["x"], json!(12));
         assert_eq!(moved["camera"]["w"], json!(40));
         assert_eq!(moved["camera"]["config"]["label"], json!("CAM"));
+    }
+
+    #[test]
+    fn alerts_are_on_only_for_talk_by_default() {
+        let scenes = default_scenes();
+        for id in ["start", "brb", "end", "wheel", "poll", "pause"] {
+            assert_eq!(scenes[id]["alerts"]["enabled"], json!(false), "{id}");
+            assert_eq!(scenes[id]["alerts"]["x"], json!(68), "{id}");
+        }
+        // На «Разговоре» алерты были и раньше — сохраняем поведение.
+        assert_eq!(scenes["talk"]["alerts"]["enabled"], json!(true));
+    }
+
+    #[test]
+    fn alerts_patch_clamps_geometry_and_keeps_other_fields() {
+        let fixture = Fixture::new("alerts");
+        let mut config = fixture.config();
+        normalize_scenes(&mut config);
+
+        let scene = set_scene_config(
+            &mut config,
+            &json!("brb"),
+            &json!({
+                "alerts": { "enabled": true, "x": -10, "y": 200, "w": 120, "h": 4 },
+            }),
+        )
+        .expect("сцена есть");
+
+        let alerts = &scene["alerts"];
+        assert_eq!(alerts["enabled"], json!(true));
+        assert_eq!(alerts["x"], json!(0));
+        assert_eq!(alerts["y"], json!(95));
+        assert_eq!(alerts["w"], json!(100));
+        assert_eq!(alerts["h"], json!(5));
+
+        let moved = set_scene_config(
+            &mut config,
+            &json!("brb"),
+            &json!({ "alerts": { "x": 12, "w": 40 } }),
+        )
+        .expect("сцена есть");
+        assert_eq!(moved["alerts"]["x"], json!(12));
+        assert_eq!(moved["alerts"]["w"], json!(40));
+        assert_eq!(moved["alerts"]["enabled"], json!(true));
     }
 
     #[test]

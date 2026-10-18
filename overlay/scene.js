@@ -52,7 +52,6 @@
     sceneChat: document.getElementById("sceneChat"),
     sceneChatTitle: document.getElementById("sceneChatTitle"),
     sceneChatList: document.getElementById("sceneChatList"),
-    sceneAlerts: document.getElementById("sceneAlerts"),
     pauseMedia: document.getElementById("pauseMedia"),
     pauseVideo: document.getElementById("pauseVideo"),
     pauseImage: document.getElementById("pauseImage"),
@@ -121,6 +120,7 @@
     // Камера живёт отдельно от текста сцены: её геометрия и настройки
     // приезжают в `scene.camera` и переживают смену локали.
     if (window.SceneCamera) window.SceneCamera.applyScene(scene);
+    if (window.SceneAlerts) window.SceneAlerts.applyScene(scene);
     renderSceneText(scene);
 
     if (isPause) {
@@ -159,7 +159,6 @@
     els.eventsGrid.hidden = true;
     els.socialsFooter.hidden = true;
     els.timerBox.hidden = true;
-    els.sceneAlerts.hidden = true;
     sceneTimer.stop();
 
     const file = scene.backgroundFile || "";
@@ -218,71 +217,6 @@
     els.sceneChatList.appendChild(row);
     while (els.sceneChatList.children.length > MAX_CHAT) els.sceneChatList.removeChild(els.sceneChatList.firstChild);
     els.sceneChatList.scrollTop = els.sceneChatList.scrollHeight;
-  }
-
-  function kindLabel(alert) {
-    switch (alert.kind) {
-      case "follow": return t("alert.follow");
-      case "sub": return t("alert.sub");
-      case "gift_sub": return t("alert.giftSub", { count: alert.count || 1 });
-      case "cheer": return t("alert.cheer");
-      case "donation": return t("alert.donation");
-      case "wheel_start": return t("alert.wheelStart");
-      case "wheel_winner": return t("alert.wheelWinner");
-      case "reward": return t("alert.reward");
-      default: return "";
-    }
-  }
-
-  function formatAmount(alert) {
-    if (alert.kind === "cheer") return t("alert.cheerBits", { amount: alert.amount });
-    if (alert.kind === "donation") return `${formatMoney(alert.amount)} ${currencySymbol(alert.currency || "RUB")}`;
-    return "";
-  }
-
-  function showAlert(alert) {
-    const card = document.createElement("div");
-    card.className = "scene-alert";
-    card.dataset.kind = alert.kind || "";
-
-    let icon = ICONS[alert.kind] || "";
-    let nameHtml = escapeHtml(alert.user || "");
-
-    if (alert.kind === "wheel_start") {
-      icon = "🎉";
-      nameHtml = escapeHtml(t("alert.wheelStartMessage", { command: alert.command || "" }));
-    } else if (alert.kind === "wheel_winner") {
-      icon = "";
-      const name = escapeHtml(alert.user || "");
-      if (alert.isElimination) nameHtml = t("alert.eliminated", { name });
-      else if (alert.isFinalWinner) nameHtml = t("alert.finalWinner", { name });
-      else nameHtml = t("alert.winner", { name });
-    } else if (alert.kind === "reward") {
-      nameHtml = escapeHtml(alert.rewardTitle || alert.user || "");
-    }
-
-    const amount = formatAmount(alert);
-    const messageHtml = (alert.kind === "donation" || alert.kind === "cheer" || alert.kind === "reward") && alert.message
-      ? `<div class="scene-alert__message">«${escapeHtml(alert.message)}»</div>`
-      : "";
-
-    card.innerHTML = `
-      ${icon ? `<div class="scene-alert__icon">${icon}</div>` : ""}
-      <div class="scene-alert__body">
-        <div class="scene-alert__kicker">${kindLabel(alert)}</div>
-        <div class="scene-alert__name">${nameHtml}</div>
-        ${amount ? `<div class="scene-alert__amount">${amount}</div>` : ""}
-        ${messageHtml}
-      </div>`;
-
-    els.sceneAlerts.prepend(card);
-    requestAnimationFrame(() => card.classList.add("scene-alert--in"));
-
-    const holdMs = alert.durationMs || 5000;
-    setTimeout(() => {
-      card.classList.add("scene-alert--out");
-      setTimeout(() => card.remove(), 300);
-    }, holdMs);
   }
 
   // Обратный отсчёт привязан к моменту активации сцены (sceneStartedAt), а не к
@@ -346,6 +280,7 @@
       case EVENT_TYPES.THEME_UPDATE:
         applyTheme(msg.payload);
         if (window.SceneCamera) window.SceneCamera.refreshTheme();
+        if (window.SceneAlerts) window.SceneAlerts.refreshTheme();
         break;
       case EVENT_TYPES.SCENES_UPDATE:
         renderScene(msg.payload[sceneType]);
@@ -361,7 +296,7 @@
         if (window.SceneCamera) window.SceneCamera.handleConfig(msg.payload || {});
         break;
       case EVENT_TYPES.ALERT:
-        if (isTalk) showAlert(msg.payload);
+        if (window.SceneAlerts) window.SceneAlerts.handleAlert(msg.payload);
         break;
       case EVENT_TYPES.TOP_DONATION_UPDATE:
         topDonation = msg.payload;
@@ -406,5 +341,6 @@
   }
 
   if (window.SceneCamera) window.SceneCamera.init(sceneType, send);
+  if (window.SceneAlerts) window.SceneAlerts.init();
   connect();
 })();

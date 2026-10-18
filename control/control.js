@@ -3419,6 +3419,46 @@ const { EVENT_TYPES } = window.SharedEvents;
     }
   }
 
+  function sceneAlertsSection(scene) {
+    const alerts = scene.alerts || {};
+    const enabled = alerts.enabled === true;
+    const num = (value, fallback) => (Number.isFinite(Number(value)) ? Number(value) : fallback);
+
+    return `
+      <details class="scene-camera" ${enabled ? "open" : ""}>
+        <summary>${t("sceneForm.alerts")}</summary>
+        <div class="scene-camera__body">
+          <div class="properties__toggle-row"><label>${t("sceneForm.alertsShow")}</label>${switchHtml("sAlertsEnabled", enabled)}</div>
+          <div class="inspector__title" style="margin-top:2px;">${t("sceneForm.alertsPosition")}</div>
+          <div class="properties__row">
+            <div class="md-field"><label>X</label><input type="number" id="sAlertsX" min="0" max="100" step="1" value="${num(alerts.x, 68)}"></div>
+            <div class="md-field"><label>Y</label><input type="number" id="sAlertsY" min="0" max="100" step="1" value="${num(alerts.y, 2)}"></div>
+          </div>
+          <div class="properties__row">
+            <div class="md-field"><label>${t("sceneForm.cameraWidth")}</label><input type="number" id="sAlertsW" min="5" max="100" step="1" value="${num(alerts.w, 28)}"></div>
+            <div class="md-field"><label>${t("sceneForm.cameraHeight")}</label><input type="number" id="sAlertsH" min="5" max="100" step="1" value="${num(alerts.h, 30)}"></div>
+          </div>
+          <p class="properties__hint">${t("sceneForm.alertsHint")}</p>
+        </div>
+      </details>`;
+  }
+
+  function wireSceneAlerts(scene) {
+    const alerts = scene.alerts || {};
+    const patch = (next) => sendSceneUpdate({ alerts: { ...alerts, ...next } });
+
+    wireSwitch(sceneFormEl.querySelector("#sAlertsEnabled"), (on) => patch({ enabled: on }));
+    [
+      ["sAlertsX", "x"],
+      ["sAlertsY", "y"],
+      ["sAlertsW", "w"],
+      ["sAlertsH", "h"],
+    ].forEach(([id, key]) => {
+      const el = sceneFormEl.querySelector("#" + id);
+      if (el) el.addEventListener("change", (e) => patch({ [key]: Number(e.target.value) }));
+    });
+  }
+
   function renderSceneForm() {
     const scene = state.scenes[state.activeSceneId];
     if (!scene) return;
@@ -3430,9 +3470,11 @@ const { EVENT_TYPES } = window.SharedEvents;
         <div class="wheel-panel__hint">${t("giveaway.wheelPanelHint")}</div>
         <button class="md-button md-button--tonal" id="openWheelSettingsBtn" style="margin-top:10px;">${t("giveaway.openWheelSettings")}</button>
         ${sceneCameraSection(scene)}
+        ${sceneAlertsSection(scene)}
       `;
       sceneFormEl.querySelector("#openWheelSettingsBtn").addEventListener("click", () => setWheelOpen(true));
       wireSceneCamera(scene);
+      wireSceneAlerts(scene);
       return;
     }
 
@@ -3441,9 +3483,11 @@ const { EVENT_TYPES } = window.SharedEvents;
         <div class="wheel-panel__hint">${t("poll.panelHint")}</div>
         <button class="md-button md-button--tonal" id="openPollSettingsBtn" style="margin-top:10px;">${t("poll.openSettings")}</button>
         ${sceneCameraSection(scene)}
+        ${sceneAlertsSection(scene)}
       `;
       sceneFormEl.querySelector("#openPollSettingsBtn").addEventListener("click", () => setPollOpen(true));
       wireSceneCamera(scene);
+      wireSceneAlerts(scene);
       return;
     }
 
@@ -3455,11 +3499,13 @@ const { EVENT_TYPES } = window.SharedEvents;
           <p class="properties__hint" style="margin:6px 0 0;">${t("sceneForm.pauseBackgroundHint")}</p>
         </div>
         ${sceneCameraSection(scene)}
+        ${sceneAlertsSection(scene)}
       `;
       sceneFormEl.querySelector("#pauseBackgroundFile").appendChild(
         makeSoundFileInput(scene.backgroundFile || "", "media/...mp4/gif", "media", (v) => sendSceneUpdate({ backgroundFile: v }))
       );
       wireSceneCamera(scene);
+      wireSceneAlerts(scene);
       return;
     }
 
@@ -3481,6 +3527,7 @@ const { EVENT_TYPES } = window.SharedEvents;
       <div class="properties__hint">${state.topDonation.amount > 0 ? `${escapeHtml(state.topDonation.user)} — ${formatMoney(state.topDonation.amount)} ${escapeHtml(currencySymbol(state.topDonation.currency))}` : t("sceneForm.noDonations")}</div>
       <button class="md-button md-button--outlined" id="sResetTopDonation">${t("sceneForm.resetTopDonation")}</button>
       ${sceneCameraSection(scene)}
+      ${sceneAlertsSection(scene)}
     `;
 
     renderSocialsList(scene.socials || []);
@@ -3500,6 +3547,7 @@ const { EVENT_TYPES } = window.SharedEvents;
       if (confirm(t("sceneForm.resetTopDonationConfirm"))) send(EVENT_TYPES.CMD_RESET_TOP_DONATION, {});
     });
     wireSceneCamera(scene);
+    wireSceneAlerts(scene);
   }
 
   function renderSocialsList(socials) {

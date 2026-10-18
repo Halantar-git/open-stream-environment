@@ -668,6 +668,14 @@ body {
   z-index: 15;
   pointer-events: none;
 }
+
+/* Слой алертов: тот же виджет, что на оверлее, поверх камеры и карточек. */
+.scene-alerts-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+}
 [data-decoration="retrowave"] .grid-texture {
   position: absolute;
   left: 0;

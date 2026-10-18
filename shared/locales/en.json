@@ -838,6 +838,10 @@
     "cameraPosition": "Position and size, %",
     "cameraWidth": "Width",
     "cameraHeight": "Height",
+    "alerts": "Scene alerts",
+    "alertsShow": "Show alerts",
+    "alertsPosition": "Position and size, %",
+    "alertsHint": "Alerts use the active theme like the overlay does. One alert is shown at a time.",
     "cameraHint": "The frame look comes from the theme. Below are the shared capture settings and the frame position on the scene.",
     "cameraCaptureHint": "Shared capture settings: change them here or in the overlay camera widget."
   },
