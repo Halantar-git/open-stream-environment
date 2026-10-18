@@ -537,8 +537,8 @@ body {
     radial-gradient(0.8px 0.8px at 68px 214px, rgba(45, 226, 230, 0.7), transparent 1.5px),
     radial-gradient(1px 1px at 248px 282px, rgba(255, 255, 255, 0.7), transparent 1.7px);
   animation:
-    retrowave-stars-drift 180s linear infinite,
-    retrowave-stars-twinkle 9s ease-in-out infinite;
+    retrowave-stars-drift 240s linear infinite,
+    retrowave-stars-twinkle 14s ease-in-out infinite;
 }
 [data-decoration="retrowave"] .shape-2 {
   background-image:
@@ -549,8 +549,8 @@ body {
     radial-gradient(1.1px 1.1px at 104px 300px, rgba(255, 255, 255, 0.8), transparent 1.8px),
     radial-gradient(0.9px 0.9px at 198px 112px, rgba(45, 226, 230, 0.65), transparent 1.6px);
   animation:
-    retrowave-stars-drift-reverse 240s linear infinite,
-    retrowave-stars-twinkle 13s ease-in-out infinite -4s;
+    retrowave-stars-drift-reverse 320s linear infinite,
+    retrowave-stars-twinkle 19s ease-in-out infinite -6s;
 }
 [data-decoration="retrowave"] .shape-3 { display: none; }
 
@@ -563,8 +563,8 @@ body {
   to { transform: translate3d(-320px, 0, 0); }
 }
 @keyframes retrowave-stars-twinkle {
-  0%, 100% { opacity: 0.9; }
-  50% { opacity: 0.45; }
+  0%, 100% { opacity: 0.95; }
+  50% { opacity: 0.65; }
 }
 
 [data-decoration="retrowave"] .scene-wrapper {
@@ -596,19 +596,23 @@ body {
   );
   box-shadow: 0 0 22px rgba(255, 45, 149, 0.45);
   opacity: 0.6;
-  animation: retrowave-horizon 6s ease-in-out infinite;
+  animation: retrowave-horizon 10s ease-in-out infinite;
 }
 
 /* Дышащая линия горизонта — единственный элемент, который меняет яркость:
    анимируем только opacity, чтобы не перерисовывать всё полотно сцены. */
 @keyframes retrowave-horizon {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 0.85; }
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.8; }
 }
 
-/* Perspective grid floor and ceiling. Large planes + a long perspective
-   make the lines converge toward the horizon instead of collapsing into a
-   thin strip; masks fade them out before they reach the scene card. */
+/* Perspective grid floor and ceiling. The plane only supplies the 3D tilt and
+   the mask; the repeating texture is a taller child that slides along the
+   plane with `transform`. Compositor animation stays sub-pixel smooth at any
+   refresh rate, while `background-position` is snapped to whole pixels and
+   makes the lines visibly step at 1080p. */
+.grid-plane { display: none; }
+
 [data-decoration="retrowave"] .grid-overlay {
   display: block;
   position: absolute;
@@ -616,46 +620,52 @@ body {
   pointer-events: none;
   overflow: hidden;
 }
-[data-decoration="retrowave"] .grid-overlay::before,
-[data-decoration="retrowave"] .grid-overlay::after {
-  content: "";
+[data-decoration="retrowave"] .grid-plane {
+  display: block;
   position: absolute;
   left: -20%;
   right: -20%;
   height: 100vh;
-  background-image:
-    linear-gradient(rgba(45, 226, 230, 0.6) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 45, 149, 0.5) 1px, transparent 1px);
-  background-size: 80px 60px;
+  overflow: hidden;
   opacity: 0.45;
   filter: drop-shadow(0 0 3px rgba(255, 45, 149, 0.35));
-  animation: retrowave-grid-floor 7s linear infinite;
-  will-change: background-position;
 }
-/* Сетка едет к зрителю: на полу — вниз по локальной оси, на потолке — вверх.
-   Шаг анимации равен шагу фоновой плитки (60px), поэтому цикл бесшовный. */
-@keyframes retrowave-grid-floor {
-  from { background-position: 0 0; }
-  to { background-position: 0 60px; }
-}
-@keyframes retrowave-grid-ceiling {
-  from { background-position: 0 0; }
-  to { background-position: 0 -60px; }
-}
-[data-decoration="retrowave"] .grid-overlay::before {
+[data-decoration="retrowave"] .grid-plane--ceiling {
   top: 0;
   transform: perspective(2000px) rotateX(-55deg);
   transform-origin: top center;
-  animation-name: retrowave-grid-ceiling;
   -webkit-mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.7) 45%, transparent 82%);
   mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.7) 45%, transparent 82%);
 }
-[data-decoration="retrowave"] .grid-overlay::after {
+[data-decoration="retrowave"] .grid-plane--floor {
   bottom: 0;
   transform: perspective(2000px) rotateX(55deg);
   transform-origin: bottom center;
   -webkit-mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.7) 45%, transparent 82%);
   mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.7) 45%, transparent 82%);
+}
+[data-decoration="retrowave"] .grid-texture {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -100%;
+  bottom: -100%;
+  background-image:
+    linear-gradient(rgba(45, 226, 230, 0.6) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 45, 149, 0.5) 1px, transparent 1px);
+  background-size: 80px 60px;
+  will-change: transform;
+  animation: retrowave-grid-scroll 12s linear infinite;
+}
+[data-decoration="retrowave"] .grid-plane--ceiling .grid-texture {
+  animation-direction: reverse;
+}
+/* Сетка едет к зрителю: на полу текстура уходит вниз по локальной оси,
+   на потолке — вверх (reverse). Шаг цикла равен шагу плитки (60px), а
+   рисунок повторяющийся, поэтому стык не виден. */
+@keyframes retrowave-grid-scroll {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, 60px, 0); }
 }
 
 /* Scene panels use a deeper chamfer than widget panels. */
@@ -705,8 +715,7 @@ body {
    статичную картинку, ничего не теряя по смыслу. */
 @media (prefers-reduced-motion: reduce) {
   [data-decoration="retrowave"] .bg-shape,
-  [data-decoration="retrowave"] .grid-overlay::before,
-  [data-decoration="retrowave"] .grid-overlay::after,
+  [data-decoration="retrowave"] .grid-texture,
   [data-decoration="retrowave"] .scene-wrapper::after {
     animation: none;
   }
