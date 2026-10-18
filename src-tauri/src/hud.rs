@@ -147,6 +147,12 @@ impl Hud {
         // мост в окне поверх игры — только лишняя поверхность (как в JS).
         let built = WebviewWindowBuilder::new(&self.app, HUD_LABEL, WebviewUrl::External(url))
             .title("Open Stream Environment — HUD")
+            // В режиме редактирования HUD ловит мышь; браузерное меню по правой
+            // кнопке здесь так же лишнее, как и в панели. Мост окну не нужен,
+            // поэтому обходимся одним обработчиком.
+            .initialization_script(
+                "window.addEventListener('contextmenu', (event) => event.preventDefault());",
+            )
             .position(x, y)
             .inner_size(width, height)
             .transparent(true)

@@ -72,6 +72,17 @@
     rotateAccessCode: () => invoke("rotate_access_code"),
   };
 
+  // WebView2 по правой кнопке показывает своё меню (обновить, сохранить,
+  // печать, «просмотреть код»). В приложении оно лишнее: панель, окна чата и
+  // редакторы — не веб-страницы. В полях ввода меню оставляем, иначе пропадает
+  // привычное «вставить» и «копировать».
+  window.addEventListener("contextmenu", (event) => {
+    const target = event.target;
+    const editable =
+      target instanceof Element && target.closest("input, textarea, [contenteditable]");
+    if (!editable) event.preventDefault();
+  });
+
   // Мост окна чата — замена `chatwindow/chat-window-preload.js`: кнопка 📌
   // закрепления поверх окон и подписка на смену состояния.
   window.chatDesktop = {
