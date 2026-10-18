@@ -2550,6 +2550,12 @@ fn apply_alert_side_effects(
     if alert.get("amount").and_then(Value::as_f64).is_none() {
         return;
     }
+    // Тестовый донат существует только для проверки картинки: цель, касса
+    // стрима и лучший донат от него не меняются. Иначе после каждой проверки
+    // приходится вспоминать, какая сумма была до неё, и править её руками.
+    if is_test {
+        return;
+    }
     // Подтянутые с DonationAlerts донаты случились в прошлой сессии — их в
     // «за этот стрим» не считаем (цель и лучший донат при этом обновляем).
     if !js_truthy(alert.get("recovered")) {
@@ -3374,6 +3380,50 @@ mod tests {
             json!(300)
         );
         assert_eq!(diagnostics.runtime().session_donations()["count"], json!(1));
+    }
+
+    #[test]
+    fn a_test_donation_stays_out_of_the_money_counters() {
+        use crate::storage::history::QueryOptions;
+
+        let dir = TempDir::new("test-donation-effects");
+        dir.write_config(
+            r#"{ "alertQueue": { "enabled": false },
+                 "goal": { "title": "Цель", "target": 1000, "current": 250, "currency": "RUB" } }"#,
+        );
+        let diagnostics = Diagnostics::open(dir.storage()).expect("диагностика");
+        let emit = diagnostics.integration_emit();
+
+        emit(json!({
+            "type": event_types::ALERT,
+            "payload": {
+                "kind": "donation", "user": "Тест", "amount": 500,
+                "currency": "RUB", "message": "Проверка", "isTest": true,
+            },
+        }));
+
+        // Тест виден в истории и «последних событиях» — его и проверяют.
+        let page = diagnostics
+            .database()
+            .stream_events(&QueryOptions::default());
+        assert_eq!(page.items[0]["is_test"], json!(true));
+        assert_eq!(
+            diagnostics.runtime().recent_events()[0]["user"],
+            json!("Тест")
+        );
+
+        // Но цель, касса стрима и лучший донат остаются прежними.
+        assert_eq!(
+            diagnostics.config().get("goal").unwrap()["current"],
+            json!(250)
+        );
+        assert_eq!(diagnostics.runtime().session_donations()["count"], json!(0));
+        let top = diagnostics
+            .config()
+            .get("topDonation")
+            .cloned()
+            .unwrap_or(Value::Null);
+        assert_ne!(top["amount"], json!(500));
     }
 
     #[test]
