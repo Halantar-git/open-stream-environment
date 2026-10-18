@@ -850,7 +850,7 @@ CI прогоняет `npm run lint` и `npm test` на каждый push и pul
 (см. `.github/workflows/ci.yml`).
 
 Бэкенд проверяется в Rust (`cargo test --lib` на `src-tauri/src`), фронт — на
-Jest: 46 наборов (374 теста) про виджеты, темы, локали и гейты поставки. CI
+Jest: 46 наборов (390 тестов) про виджеты, темы, локали и гейты поставки. CI
 гоняет `npm run lint` + `npm test` и `cargo test`/`cargo clippy` на каждый push и
 pull request (см. `.github/workflows/ci.yml`).
 

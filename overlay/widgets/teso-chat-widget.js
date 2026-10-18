@@ -206,7 +206,7 @@
 
     pushMessage(msg) {
       if (!this.messagesInner || !msg) return;
-      const { escapeHtml, renderEmotes } = this.context;
+      const { escapeHtml, escapeAttr, renderEmotes } = this.context;
 
       const row = document.createElement("div");
       row.className = "teso-chat__row";
@@ -215,8 +215,20 @@
         "text-shadow:1px 1px 2px rgba(0,0,0,0.9);";
 
       const text = renderEmotes ? renderEmotes(msg.message, msg.emotes) : escapeHtml(msg.message);
+      // Значки рисуются картинками из `badgeImages`; буквой остаются только
+      // те, для которых сервер не нашёл адрес (набор ещё не загрузился).
+      const badges = (msg.badges || [])
+        .slice(0, 3)
+        .map((b, i) => {
+          const url = msg.badgeImages && msg.badgeImages[i];
+          return url
+            ? `<img src="${escapeAttr(url)}" alt="" title="${escapeAttr(String(b))}" style="width:1.05em;height:1.05em;object-fit:contain;vertical-align:-0.15em" />`
+            : `<span style="color:${MUTED};font-weight:700;">${escapeHtml(String(b).slice(0, 1).toUpperCase())}</span>`;
+        })
+        .join(" ");
 
       row.innerHTML =
+        (badges ? `${badges} ` : "") +
         `<span style="color:${GOLD_BRIGHT};font-weight:600;">${escapeHtml(msg.user)}</span>` +
         `<span style="color:${MUTED};">:</span>` +
         ` <span style="color:${TEXT};word-break:break-word;">${text}</span>`;

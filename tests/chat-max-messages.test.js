@@ -16,11 +16,11 @@
  */
 
 /*
-  «Макс. сообщений» у шести 3D-чатов.
+  «Макс. сообщений» у 3D-чатов, а также значки Twitch и смайлы.
 
   Раньше лимит был жёстко зашит в 50 и настройка инспектора ни на что не влияла.
   Здесь проверяем, что значение берётся из конфига, что мусор в конфиге не
-  снимает лимит вовсе и что поведение одинаково у всех шести виджетов.
+  снимает лимит вовсе, а значки и смайлы рисуются одинаково у всех виджетов.
 */
 
 const EventBus = require("../overlay/event-bus");
@@ -33,6 +33,8 @@ const WIDGETS = [
   { name: "md3-chat", theme: "nebula", Widget: require("../overlay/widgets/md3-chat-widget") },
   { name: "pixel-chat", theme: "pixel", Widget: require("../overlay/widgets/pixel-chat-widget") },
   { name: "teso-chat", theme: "teso-seal", Widget: require("../overlay/widgets/teso-chat-widget") },
+  { name: "retrowave-chat", theme: "retrowave", Widget: require("../overlay/widgets/retrowave-chat-widget") },
+  { name: "wardogs-chat", theme: "wardogs", Widget: require("../overlay/widgets/wardogs-chat-widget") },
 ];
 
 function makeEl(tag) {
@@ -162,6 +164,30 @@ describe("3D-чаты: лимит сообщений из конфига", () =>
     const { w, ctx } = mountWidget({ Widget, theme }, { maxMessages: 5000 });
     push(ctx, 210);
     expect(w.messagesInner.children.length).toBe(200);
+    w.unmount();
+  });
+
+  test.each(WIDGETS)("$name рисует значки Twitch и смайлы", ({ Widget, theme }) => {
+    const { w, ctx } = mountWidget({ Widget, theme }, {});
+    const badge = "https://static-cdn.jtvnw.net/badges/v1/mod/2";
+    const emote = '<img class="twitch-emote" src="https://static-cdn.jtvnw.net/emoticons/v2/25/default/dark/2.0" />';
+    // Подменяем рендер смайлов после монтирования: виджет читает его при
+    // каждом сообщении, поэтому так проще проверить, что он вообще зовёт
+    // общий рендер, а не показывает сырой текст.
+    ctx.renderEmotes = () => emote;
+
+    ctx.bus.emit(EVENT_TYPES.CHAT_MESSAGE, {
+      user: "bob",
+      message: "Kappa",
+      badges: ["moderator"],
+      badgeImages: [badge],
+      emotes: { 25: ["0-4"] },
+    });
+
+    const row = w.messagesInner.children[0];
+    expect(row.innerHTML).toContain(badge);
+    expect(row.innerHTML).toContain("twitch-emote");
+
     w.unmount();
   });
 });
