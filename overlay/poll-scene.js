@@ -190,6 +190,10 @@
     switch (msg.type) {
       case EVENT_TYPES.STATE:
         applyTheme(msg.payload.appearance);
+        if (window.SceneCamera) {
+          window.SceneCamera.applyScene(msg.payload.scenes && msg.payload.scenes.poll);
+          window.SceneCamera.setActive(msg.payload.activeScene === "poll");
+        }
         if (msg.payload.poll) {
           poll = msg.payload.poll;
           renderPoll();
@@ -197,6 +201,23 @@
         break;
       case EVENT_TYPES.THEME_UPDATE:
         applyTheme(msg.payload);
+        if (window.SceneCamera) window.SceneCamera.refreshTheme();
+        break;
+      case EVENT_TYPES.SCENES_UPDATE:
+        if (window.SceneCamera) window.SceneCamera.applyScene(msg.payload && msg.payload.poll);
+        break;
+      case EVENT_TYPES.REMOTE_ACTION: {
+        // Камера на голосовании ведёт себя как на остальных сценах: видна
+        // только пока эта сцена в эфире.
+        const action = msg.payload && msg.payload.action;
+        if (action === "SCENE_SET") {
+          const scene = (msg.payload.payload && msg.payload.payload.scene) || null;
+          if (window.SceneCamera) window.SceneCamera.setActive(scene === "poll");
+        }
+        break;
+      }
+      case EVENT_TYPES.CAMERA_STREAM_CONFIG:
+        if (window.SceneCamera) window.SceneCamera.handleConfig(msg.payload || {});
         break;
       case EVENT_TYPES.POLL_UPDATE:
         if (msg.payload && msg.payload.poll) {
@@ -217,10 +238,19 @@
     }
   }
 
+  function send(type, payload) {
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type, payload }));
+  }
+
   function connect() {
     const proto = location.protocol === "https:" ? "wss" : "ws";
-    ws = new WebSocket(`${proto}://${location.host}/ws`);
+    ws = new WebSocket(`${proto}://${location.host}/ws?role=scene`);
+    ws.binaryType = "arraybuffer";
     ws.onmessage = (ev) => {
+      if (typeof ev.data !== "string") {
+        if (window.SceneCamera) window.SceneCamera.handleBinary(ev.data);
+        return;
+      }
       try {
         handleMessage(JSON.parse(ev.data));
       } catch {
@@ -231,5 +261,6 @@
     ws.onerror = () => ws.close();
   }
 
+  if (window.SceneCamera) window.SceneCamera.init("poll", send);
   connect();
 })();

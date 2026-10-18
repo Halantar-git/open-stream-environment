@@ -392,12 +392,11 @@ async fn handle_socket(mut socket: WebSocket, bus: Bus, role: String, external: 
                         && (crate::camera_frame::is_frame(&data)
                             || crate::camera_frame::is_h264_frame(&data))
                     {
-                        // Кадры камеры шлёт только панель: оверлею нечего
-                        // отправлять на шину, а размер кадра куда больше
-                        // микрокадра.
+                        // Кадры камеры шлёт только панель: их ждут и оверлей,
+                        // и полноэкранные сцены (там теперь тоже есть камера).
                         bus.diagnostics
                             .clients()
-                            .broadcast_binary_to_role("overlay", data.to_vec());
+                            .broadcast_binary_to_roles(&["overlay", "scene"], data.to_vec());
                     }
                 }
                 Some(Ok(Message::Close(_))) | None => break,

@@ -32,6 +32,7 @@
   let activeScene = null;
   let sceneStartedAt = null;
   let currentScene = null;
+  let ws = null;
 
   const sceneTimer = window.SceneTimer.createSceneTimer();
 
@@ -117,6 +118,9 @@
   function renderScene(scene) {
     if (!scene) return;
     currentScene = scene;
+    // Камера живёт отдельно от текста сцены: её геометрия и настройки
+    // приезжают в `scene.camera` и переживают смену локали.
+    if (window.SceneCamera) window.SceneCamera.applyScene(scene);
     renderSceneText(scene);
 
     if (isPause) {
@@ -324,6 +328,7 @@
         recentEvents = msg.payload.recentEvents || [];
         topDonation = msg.payload.topDonation || topDonation;
         if (typeof msg.payload.activeScene === "string") activeScene = msg.payload.activeScene;
+        if (window.SceneCamera) window.SceneCamera.setActive(activeScene === sceneType);
         sceneStartedAt = typeof msg.payload.sceneStartedAt === "number" ? msg.payload.sceneStartedAt : null;
         renderScene(msg.payload.scenes && msg.payload.scenes[sceneType]);
         break;
@@ -333,12 +338,14 @@
         if (action === "SCENE_SET") {
           if (typeof payload.scene === "string") activeScene = payload.scene;
           if (typeof payload.startedAt === "number") sceneStartedAt = payload.startedAt;
+          if (window.SceneCamera) window.SceneCamera.setActive(activeScene === sceneType);
           if (currentScene) renderScene(currentScene);
         }
         break;
       }
       case EVENT_TYPES.THEME_UPDATE:
         applyTheme(msg.payload);
+        if (window.SceneCamera) window.SceneCamera.refreshTheme();
         break;
       case EVENT_TYPES.SCENES_UPDATE:
         renderScene(msg.payload[sceneType]);
@@ -349,6 +356,9 @@
         break;
       case EVENT_TYPES.CHAT_MESSAGE:
         if (isTalk) pushChat(msg.payload);
+        break;
+      case EVENT_TYPES.CAMERA_STREAM_CONFIG:
+        if (window.SceneCamera) window.SceneCamera.handleConfig(msg.payload || {});
         break;
       case EVENT_TYPES.ALERT:
         if (isTalk) showAlert(msg.payload);
@@ -371,10 +381,20 @@
     }
   }
 
+  function send(type, payload) {
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type, payload }));
+  }
+
   function connect() {
     const proto = location.protocol === "https:" ? "wss" : "ws";
-    const ws = new WebSocket(`${proto}://${location.host}/ws`);
+    ws = new WebSocket(`${proto}://${location.host}/ws?role=scene`);
+    // Кадры камеры приходят бинарно: сцены получают тот же поток, что оверлей.
+    ws.binaryType = "arraybuffer";
     ws.onmessage = (ev) => {
+      if (typeof ev.data !== "string") {
+        if (window.SceneCamera) window.SceneCamera.handleBinary(ev.data);
+        return;
+      }
       try {
         handleMessage(JSON.parse(ev.data));
       } catch {
@@ -385,5 +405,6 @@
     ws.onerror = () => ws.close();
   }
 
+  if (window.SceneCamera) window.SceneCamera.init(sceneType, send);
   connect();
 })();

@@ -175,6 +175,17 @@ impl ClientRegistry {
         }
     }
 
+    /// Отправить двоичный кадр нескольким ролям за один обход: кадры камеры
+    /// нужны и оверлею, и полноэкранным сценам.
+    pub fn broadcast_binary_to_roles(&self, roles: &[&str], data: Vec<u8>) {
+        let registry = self.lock();
+        for client in &registry.clients {
+            if roles.contains(&client.role.as_str()) {
+                let _ = client.sender.send(Message::Binary(data.clone().into()));
+            }
+        }
+    }
+
     /// Отправить текстовый кадр одному клиенту; `false` — такого нет.
     pub fn send_text(&self, id: ClientId, text: &str) -> bool {
         let registry = self.lock();
@@ -298,6 +309,21 @@ mod tests {
             other => panic!("ожидался бинарный кадр, пришло {other:?}"),
         }
         assert!(receivers[1].try_recv().is_err());
+    }
+
+    #[test]
+    fn camera_frames_reach_overlay_and_scenes() {
+        let (registry, mut receivers) =
+            registry_with(&[("overlay", false), ("scene", false), ("chat", false)]);
+        registry.broadcast_binary_to_roles(&["overlay", "scene"], vec![0x4f, 0x53, 0x02]);
+
+        for receiver in receivers.iter_mut().take(2) {
+            match receiver.try_recv().unwrap() {
+                Message::Binary(data) => assert_eq!(data.as_ref(), &[0x4f, 0x53, 0x02]),
+                other => panic!("ожидался бинарный кадр, пришло {other:?}"),
+            }
+        }
+        assert!(receivers[2].try_recv().is_err());
     }
 
     #[test]

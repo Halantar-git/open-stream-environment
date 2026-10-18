@@ -436,6 +436,10 @@
     switch (msg.type) {
       case EVENT_TYPES.STATE:
         applyTheme(msg.payload.appearance);
+        if (window.SceneCamera) {
+          window.SceneCamera.applyScene(msg.payload.scenes && msg.payload.scenes.wheel);
+          window.SceneCamera.setActive(msg.payload.activeScene === "wheel");
+        }
         if (msg.payload.giveaway) {
           participantsState = {
             count: msg.payload.giveaway.count || 0,
@@ -458,6 +462,23 @@
         break;
       case EVENT_TYPES.THEME_UPDATE:
         applyTheme(msg.payload);
+        if (window.SceneCamera) window.SceneCamera.refreshTheme();
+        break;
+      case EVENT_TYPES.SCENES_UPDATE:
+        if (window.SceneCamera) window.SceneCamera.applyScene(msg.payload && msg.payload.wheel);
+        break;
+      case EVENT_TYPES.REMOTE_ACTION: {
+        // Переключение сцены из панели: камера появляется и прячется вместе со
+        // всей сценой, иначе живой захват оставался бы в эфире на чужой сцене.
+        const action = msg.payload && msg.payload.action;
+        if (action === "SCENE_SET") {
+          const scene = (msg.payload.payload && msg.payload.payload.scene) || null;
+          if (window.SceneCamera) window.SceneCamera.setActive(scene === "wheel");
+        }
+        break;
+      }
+      case EVENT_TYPES.CAMERA_STREAM_CONFIG:
+        if (window.SceneCamera) window.SceneCamera.handleConfig(msg.payload || {});
         break;
       case EVENT_TYPES.GIVEAWAY_WHEEL:
         showWheel((msg.payload && msg.payload.sectors) || []);
@@ -501,8 +522,13 @@
 
   function connect() {
     const proto = location.protocol === "https:" ? "wss" : "ws";
-    ws = new WebSocket(`${proto}://${location.host}/ws`);
+    ws = new WebSocket(`${proto}://${location.host}/ws?role=scene`);
+    ws.binaryType = "arraybuffer";
     ws.onmessage = (ev) => {
+      if (typeof ev.data !== "string") {
+        if (window.SceneCamera) window.SceneCamera.handleBinary(ev.data);
+        return;
+      }
       try {
         handleMessage(JSON.parse(ev.data));
       } catch {
@@ -513,5 +539,6 @@
     ws.onerror = () => ws.close();
   }
 
+  if (window.SceneCamera) window.SceneCamera.init("wheel", send);
   connect();
 })();
