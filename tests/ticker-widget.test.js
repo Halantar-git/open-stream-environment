@@ -92,11 +92,14 @@ const TRANSLATIONS = {
   "ticker.tagFollow": "ФОЛЛОУ",
   "ticker.tagSub": "ПОДПИСКА",
   "ticker.tagChat": "ЧАТ",
+  "ticker.tagReward": "НАГРАДА",
   "ticker.tagMessage": "СООБЩЕНИЕ",
   "ticker.breakingLabel": "СРОЧНО",
   "ticker.donation": "{{user}} — {{amount}}",
   "ticker.follow": "Новый фолловер: {{user}}",
   "ticker.sub": "{{user}} оформил подписку (уровень {{tier}})",
+  "ticker.reward": "{{user}} забрал награду",
+  "ticker.rewardTitle": "{{user}} — {{reward}}",
   "ticker.chat": "{{user}}: {{message}}",
   "ticker.empty": "Пока тихо",
   "ticker.anonymous": "Аноним",
@@ -344,6 +347,46 @@ describe("WidgetTicker", () => {
 
     w.unmount();
     jest.useRealTimers();
+  });
+
+  test("награда за баллы канала показывает название и ввод", () => {
+    const ctx = makeContext();
+    const w = new WidgetTicker(item(), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.REWARD_REDEEM, {
+      kind: "reward",
+      user: "bob",
+      rewardTitle: "Сменить сцену",
+      message: "brb",
+      userInput: "brb",
+    });
+
+    const items = w._items();
+    expect(items).toHaveLength(1);
+    expect(items[0].kind).toBe("reward");
+    expect(items[0].tag).toBe("НАГРАДА");
+    expect(items[0].text).toBe("bob — Сменить сцену — brb");
+
+    w.unmount();
+  });
+
+  test("награда из алерта берёт ввод зрителя, а не шаблон сообщения", () => {
+    const ctx = makeContext();
+    const w = new WidgetTicker(item(), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, {
+      kind: "reward",
+      user: "bob",
+      rewardTitle: "Песня",
+      userInput: "включи",
+      message: "bob: включи",
+    });
+
+    expect(w._items()[0].text).toBe("bob — Песня — включи");
+
+    w.unmount();
   });
 
   test("снимок состояния наполняет ленту прошлыми событиями", () => {

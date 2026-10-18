@@ -1895,7 +1895,7 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   // ---- events history ----
   const EVENTS_TYPE_LABEL = (type) =>
-    ({ donation: t("events.donation"), subscription: t("events.subscription"), follow: t("events.follow"), cheer: t("events.cheer") }[type] || type);
+    ({ donation: t("events.donation"), subscription: t("events.subscription"), follow: t("events.follow"), cheer: t("events.cheer"), reward: t("events.reward") }[type] || type);
   const EVENTS_PAGE_SIZE = 20;
   let eventsOffset = 0;
   let eventsTotal = 0;

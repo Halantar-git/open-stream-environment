@@ -47,6 +47,7 @@ event_types! {
     CHAT_MESSAGE => "chat_message",
     CHAT_SENT => "chat_sent",
     RECENT_EVENT => "recent_event",
+    REWARD_REDEEM => "reward_redeem",
     TICKER_MESSAGE => "ticker_message",
     GOAL_UPDATE => "goal_update",
     DONATEX_AI_EVENT => "donatex_ai_event",

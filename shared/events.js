@@ -32,6 +32,7 @@
     CHAT_MESSAGE: "chat_message",
     CHAT_SENT: "chat_sent", // { clientId, ok, messageId, error? } — server -> client confirmation of an outgoing chat message
     RECENT_EVENT: "recent_event",
+    REWARD_REDEEM: "reward_redeem", // { user, rewardTitle, message } — награда за баллы канала вне очереди алертов
     TICKER_MESSAGE: "ticker_message", // { text, priority: "normal"|"breaking", durationMs? } — произвольное сообщение в новостную ленту
     GOAL_UPDATE: "goal_update", // { current, target, title, currency }
     DONATEX_AI_EVENT: "donatex_ai_event", // { characterName, aiText, aiAudio, user?, amount?, currency?, message? } — ответ ИИ-персонажа DonateX

@@ -151,6 +151,9 @@ pub fn reward_actions(
                 "user": user_text,
                 "rewardTitle": shown_title,
                 "message": message,
+                // Сырой ввод зрителя: лента показывает его, а не шаблон
+                // алерта, где ник и награда уже подставлены.
+                "userInput": user_input,
             }),
         ));
     }
@@ -280,6 +283,23 @@ pub fn notification_events(config: &Value, payload: &Value) -> Vec<Value> {
                 &user,
                 &user_input,
             ));
+
+            // Награда без правила с алертом иначе исчезает из всех лент:
+            // событие нужно тикеру и «последним событиям», но в очередь
+            // алертов оно не попадает — иначе каждый балл перекрывал бы эфир.
+            let has_alert = events.iter().any(|event| event["type"] == json!("alert"));
+            if !has_alert {
+                events.push(bus_event(
+                    "reward_redeem",
+                    json!({
+                        "kind": "reward",
+                        "user": user.clone(),
+                        "rewardTitle": title.clone(),
+                        "message": user_input.clone(),
+                        "userInput": user_input.clone(),
+                    }),
+                ));
+            }
 
             let sounds = config
                 .get("soundboard")
@@ -525,6 +545,7 @@ mod tests {
         assert_eq!(events[0]["payload"]["kind"], json!("reward"));
         assert_eq!(events[0]["payload"]["message"], json!("Вася: включи"));
         assert_eq!(events[0]["payload"]["rewardTitle"], json!("Песня"));
+        assert_eq!(events[0]["payload"]["userInput"], json!("включи"));
         assert_eq!(events[1]["type"], json!("reward_tts"));
         assert_eq!(events[1]["payload"]["text"], json!("Вася: включи"));
         assert_eq!(events[2]["type"], json!("reward_scene_request"));
@@ -669,13 +690,36 @@ mod tests {
                 },
             }),
         );
-        assert_eq!(events.len(), 1);
-        assert_eq!(events[0]["type"], json!("soundboard_play"));
-        assert_eq!(events[0]["payload"]["soundId"], json!("s1"));
-        assert_eq!(events[0]["payload"]["title"], json!("Барабаны"));
-        assert_eq!(events[0]["payload"]["user"], json!("Вася"));
+        assert_eq!(events.len(), 2);
+        // Правила с алертом нет, но награда всё равно уходит в ленту.
+        assert_eq!(events[0]["type"], json!("reward_redeem"));
+        assert_eq!(events[0]["payload"]["rewardTitle"], json!("барабаны"));
+        assert_eq!(events[1]["type"], json!("soundboard_play"));
+        assert_eq!(events[1]["payload"]["soundId"], json!("s1"));
+        assert_eq!(events[1]["payload"]["title"], json!("Барабаны"));
+        assert_eq!(events[1]["payload"]["user"], json!("Вася"));
         // Видео звука оверлей берёт из `videoFile` — его нельзя терять по пути.
-        assert_eq!(events[0]["payload"]["videoFile"], json!("a.webm"));
+        assert_eq!(events[1]["payload"]["videoFile"], json!("a.webm"));
+    }
+
+    #[test]
+    fn a_reward_without_actions_still_reaches_the_ticker() {
+        let events = notification_events(
+            &json!({}),
+            &json!({ "subscription": { "type": "channel.channel_points_custom_reward_redemption.add" },
+                "event": {
+                    "user_name": "Вася",
+                    "user_input": "brb",
+                    "reward": { "id": "rw", "title": "Сменить сцену" },
+                },
+            }),
+        );
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0]["type"], json!("reward_redeem"));
+        assert_eq!(events[0]["payload"]["kind"], json!("reward"));
+        assert_eq!(events[0]["payload"]["user"], json!("Вася"));
+        assert_eq!(events[0]["payload"]["rewardTitle"], json!("Сменить сцену"));
+        assert_eq!(events[0]["payload"]["message"], json!("brb"));
     }
 
     #[test]

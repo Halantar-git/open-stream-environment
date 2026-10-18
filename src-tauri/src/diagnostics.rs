@@ -2476,6 +2476,22 @@ fn apply_bus_event(event: &Value, ctx: &BusContext) {
                 json!({ "filterId": filter_id, "active": active }),
             );
         }
+        "reward_redeem" => {
+            // Награда без алерта: сразу в «последние события» и в историю,
+            // отдельным кадром — тикеру, чтобы очередь алертов её не глотала.
+            let now = chrono::Utc::now().timestamp_millis();
+            let recent = {
+                let mut runtime = runtime.lock().unwrap_or_else(|error| error.into_inner());
+                runtime.push_recent_event(&payload, now);
+                runtime.recent_events().first().cloned()
+            };
+            if let Some(recent) = recent {
+                broadcast_clients(clients, event_types::RECENT_EVENT, recent);
+            }
+            database
+                .append_stream_event(&crate::server::utils::to_stream_event(&payload, false, now));
+            broadcast_clients(clients, event_types::REWARD_REDEEM, payload);
+        }
         "reward_tts" => {
             let text = payload.get("text").and_then(Value::as_str).unwrap_or("");
             if !text.is_empty() {
@@ -2518,6 +2534,10 @@ fn apply_alert_side_effects(
                 "user": alert.get("user").cloned().unwrap_or(Value::Null),
                 "amount": amount,
                 "message": alert.get("message").cloned().unwrap_or(Value::Null),
+                // Награде нужны название и сырой ввод: по ним лента и «последние
+                // события» отличают её от обычного алерта с шаблоном сообщения.
+                "rewardTitle": alert.get("rewardTitle").cloned().unwrap_or(Value::Null),
+                "userInput": alert.get("userInput").cloned().unwrap_or(Value::Null),
             }),
             now,
         );
@@ -3361,6 +3381,41 @@ mod tests {
             json!(300)
         );
         assert_eq!(diagnostics.runtime().session_donations()["count"], json!(1));
+    }
+
+    #[test]
+    fn a_reward_without_an_alert_lands_in_history_and_recent_events() {
+        use crate::storage::history::QueryOptions;
+
+        let dir = TempDir::new("reward-effects");
+        dir.write_config(r#"{ "alertQueue": { "enabled": false } }"#);
+        let diagnostics = Diagnostics::open(dir.storage()).expect("диагностика");
+        let emit = diagnostics.integration_emit();
+
+        emit(json!({
+            "type": "reward_redeem",
+            "payload": {
+                "kind": "reward",
+                "user": "Вася",
+                "rewardTitle": "Сменить сцену",
+                "message": "brb",
+                "userInput": "brb",
+            },
+        }));
+
+        // Награда попадает в историю отдельным типом, а не как алерт.
+        let page = diagnostics
+            .database()
+            .stream_events(&QueryOptions::default());
+        assert_eq!(page.total, 1);
+        assert_eq!(page.items[0]["type"], json!("reward"));
+        assert_eq!(page.items[0]["username"], json!("Вася"));
+        assert_eq!(page.items[0]["message"], json!("brb"));
+
+        // И в «последние события» — с названием награды для ленты.
+        let recent = diagnostics.runtime().recent_events().to_vec();
+        assert_eq!(recent[0]["kind"], json!("reward"));
+        assert_eq!(recent[0]["rewardTitle"], json!("Сменить сцену"));
     }
 
     #[test]

@@ -539,6 +539,9 @@
         state.recentEvents = [msg.payload, ...state.recentEvents].slice(0, 15);
         bus.emit(EVENT_TYPES.RECENT_EVENT, msg.payload);
         break;
+      case EVENT_TYPES.REWARD_REDEEM:
+        bus.emit(EVENT_TYPES.REWARD_REDEEM, msg.payload);
+        break;
       case EVENT_TYPES.GOAL_UPDATE:
         state.goal = msg.payload || state.goal;
         bus.emit(EVENT_TYPES.GOAL_UPDATE, msg.payload);

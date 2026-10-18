@@ -124,6 +124,7 @@
       const E = this.context.EVENT_TYPES;
       this.subscribe(E.ALERT, (alert) => this._ingestAlert(alert));
       this.subscribe(E.CHAT_MESSAGE, (msg) => this._ingestChat(msg));
+      this.subscribe(E.REWARD_REDEEM, (reward) => this._ingestAlert(reward));
       this.subscribe(E.TICKER_MESSAGE, (message) => this._ingestTickerMessage(message));
       this.subscribe(E.GOAL_UPDATE, (goal) => {
         this._goal = goal || null;
@@ -257,6 +258,8 @@
         amount: Number(alert.amount) || 0,
         currency: alert.currency || "RUB",
         message: String(alert.message || "").trim(),
+        rewardTitle: String(alert.rewardTitle || "").trim(),
+        userInput: String(alert.userInput || "").trim(),
         tier: alert.tier,
         count: Number(alert.count) || 0,
       };
@@ -361,8 +364,13 @@
             count: Math.max(1, raw.count || 1),
             tier: this._tier(raw.tier),
           });
-        case "reward":
-          return this.t("ticker.reward", { user });
+        case "reward": {
+          const title = raw.rewardTitle || "";
+          const base = title
+            ? this.t("ticker.rewardTitle", { user, reward: title })
+            : this.t("ticker.reward", { user });
+          return raw.userInput ? `${base} — ${raw.userInput}` : base;
+        }
         case "chat":
           return this.t("ticker.chat", { user, message: raw.message });
         case "message":
