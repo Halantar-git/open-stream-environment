@@ -984,6 +984,7 @@
 [data-decoration="retrowave"] .widget-alert,
 [data-decoration="retrowave"] .widget-goal,
 [data-decoration="retrowave"] .widget-recent,
+[data-decoration="retrowave"] .widget-participants,
 [data-decoration="retrowave"] .widget-custom.has-card,
 [data-decoration="retrowave"] .widget-stat,
 [data-decoration="retrowave"] .widget-social,
@@ -1002,6 +1003,7 @@
 [data-decoration="retrowave"] .widget-alert::before,
 [data-decoration="retrowave"] .widget-goal::before,
 [data-decoration="retrowave"] .widget-recent::before,
+[data-decoration="retrowave"] .widget-participants::before,
 [data-decoration="retrowave"] .widget-custom.has-card::before,
 [data-decoration="retrowave"] .widget-stat::before,
 [data-decoration="retrowave"] .widget-social::before,
@@ -1021,6 +1023,7 @@
 [data-decoration="retrowave"] .widget-alert::after,
 [data-decoration="retrowave"] .widget-goal::after,
 [data-decoration="retrowave"] .widget-recent::after,
+[data-decoration="retrowave"] .widget-participants::after,
 [data-decoration="retrowave"] .widget-custom.has-card::after,
 [data-decoration="retrowave"] .widget-stat::after,
 [data-decoration="retrowave"] .widget-social::after,
@@ -1045,6 +1048,7 @@
 [data-decoration="retrowave"] .widget-alert__amount,
 [data-decoration="retrowave"] .widget-goal__title,
 [data-decoration="retrowave"] .widget-goal__percent,
+[data-decoration="retrowave"] .widget-participants__title,
 [data-decoration="retrowave"] .widget-stat__value,
 [data-decoration="retrowave"] .widget-death__value {
   text-shadow: 0 0 10px color-mix(in srgb, currentColor 55%, transparent);
@@ -1055,6 +1059,7 @@
 [data-decoration="retrowave"] .widget-alert { padding-left: 42px; }
 [data-decoration="retrowave"] .widget-goal { padding-left: 38px; }
 [data-decoration="retrowave"] .widget-recent { padding-left: 38px; }
+[data-decoration="retrowave"] .widget-participants { padding-left: 38px; }
 [data-decoration="retrowave"] .widget-stat { padding-left: 38px; }
 [data-decoration="retrowave"] .widget-social { padding-left: 38px; }
 [data-decoration="retrowave"] .widget-death { padding-left: 38px; }
@@ -1788,7 +1793,15 @@
   flex-direction: column;
   gap: 6px;
   padding: 10px 12px;
-  background: color-mix(in srgb, var(--md-surface-container) var(--pw-bg-opacity, 82%), transparent);
+  /* Фон берём из панельного токена темы: у Retrowave и других наборов он
+     темнее и другого оттенка, чем surface-container, и без этого плашка
+     выбивается из ряда соседних виджетов. Настройка прозрачности работает
+     поверх него. */
+  background: color-mix(
+    in srgb,
+    var(--panel-bg, var(--md-surface-container)) var(--pw-bg-opacity, 82%),
+    transparent
+  );
   backdrop-filter: blur(var(--panel-blur, 0px));
   -webkit-backdrop-filter: blur(var(--panel-blur, 0px));
   border: var(--panel-border, 1px solid var(--md-outline-variant));
