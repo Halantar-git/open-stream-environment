@@ -644,6 +644,17 @@ body {
   -webkit-mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.7) 45%, transparent 82%);
   mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.7) 45%, transparent 82%);
 }
+/* Неоновые волны над горизонтом; canvas создаёт retrowave-waves.js. */
+.retrowave-waves {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 16%;
+  height: 40%;
+  width: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
 [data-decoration="retrowave"] .grid-texture {
   position: absolute;
   left: 0;
