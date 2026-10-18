@@ -100,6 +100,7 @@
     "layoutTarget": "Layout",
     "layoutMain": "Overlay",
     "obsSource": "OBS Browser Source",
+    "obsScenes": "Scenes",
     "perfBudget": "3D animation: {{count}} · {{area}}% of screen",
     "perfHint": "How many animated 3D widgets are on the scene and how much screen area they take. A comfortable target is 2–3 such widgets.",
     "copyUrl": "Copy OBS URL",

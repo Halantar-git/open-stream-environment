@@ -96,6 +96,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const obsUrlLabel = document.getElementById("obsUrlLabel");
   const copyUrlBtn = document.getElementById("copyUrlBtn");
   const layoutTargetSelect = document.getElementById("layoutTargetSelect");
+  const obsSceneLinks = document.getElementById("obsSceneLinks");
   const appVersionEl = document.getElementById("appVersion");
   const updateMenu = document.getElementById("updateMenu");
   const updateMenuInstallBtn = document.getElementById("updateMenuInstallBtn");
@@ -648,6 +649,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     port = String(nextPort);
     overlayUrl = `http://localhost:${port}/overlay/overlay.html`;
     updateEditorTargetUrl();
+    renderObsSceneLinks();
     if (appPortInput) appPortInput.value = port;
     if (appOverlayUrlInput) appOverlayUrlInput.value = overlayUrl;
     const splashSourceInput = document.getElementById("splashSourceUrl");
@@ -3252,6 +3254,23 @@ const { EVENT_TYPES } = window.SharedEvents;
     return state.layoutTarget === "main" ? overlayUrl : sceneUrl(state.layoutTarget);
   }
 
+  function renderObsSceneLinks() {
+    if (!obsSceneLinks) return;
+    const defs = (window.SceneCatalog && window.SceneCatalog.SCENE_DEFS) || {};
+    obsSceneLinks.innerHTML = Object.values(defs)
+      .map((def) => {
+        const url = sceneUrl(def.id);
+        return `<div class="obs-source__scene">
+          <span class="obs-source__scene-name">${escapeHtml(t("scene." + def.id + "Label"))}</span>
+          <div class="obs-source__scene-row">
+            <code class="obs-source__scene-url" title="${escapeAttr(url)}">${escapeHtml(url)}</code>
+            <button class="md-button md-button--text obs-source__scene-copy" type="button" data-copy-scene="${escapeAttr(def.id)}">${escapeHtml(t("common.copy"))}</button>
+          </div>
+        </div>`;
+      })
+      .join("");
+  }
+
   function updateEditorTargetUrl() {
     if (obsUrlLabel) obsUrlLabel.textContent = editorTargetUrl();
     if (layoutTargetSelect) layoutTargetSelect.value = state.layoutTarget;
@@ -3706,6 +3725,18 @@ const { EVENT_TYPES } = window.SharedEvents;
     copyUrlBtn.textContent = t("editor.copied");
     setTimeout(() => (copyUrlBtn.textContent = t("editor.copyUrl")), 1400);
   });
+
+  renderObsSceneLinks();
+  if (obsSceneLinks) {
+    obsSceneLinks.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-copy-scene]");
+      if (!btn) return;
+      const ok = await copyText(sceneUrl(btn.dataset.copyScene));
+      if (!ok) return;
+      btn.textContent = t("editor.copied");
+      setTimeout(() => (btn.textContent = t("common.copy")), 1400);
+    });
+  }
 
   if (copyOverlayUrlBtn) {
     copyOverlayUrlBtn.addEventListener("click", async () => {
@@ -4496,6 +4527,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     updateLanguageButtons();
     renderLibrary();
     renderLayoutTargetOptions();
+    renderObsSceneLinks();
     renderScenesNav();
     canvasEditor.renderCanvas();
     canvasEditor.renderLayers();
