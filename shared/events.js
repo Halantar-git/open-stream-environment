@@ -50,7 +50,6 @@
     GIVEAWAY_PARTICIPANTS: "giveaway_participants", // { count, participants }
     POLL_UPDATE: "poll_update", // { poll }
     POLL_PRESETS_UPDATE: "poll_presets_update", // { presets: [{ id, name, ... }] }
-    OVERLAY_PARTICIPANTS_CONFIG: "overlay_participants_config", // { config }
     WHEEL_CONFIG: "wheel_config", // { config }
     WHEEL_SPEED_CONFIG: "wheel_speed_config", // { config }
     OVERLAY_MIC_CONFIG: "overlay_mic_config", // { config }
@@ -142,7 +141,6 @@
     CMD_ADD_GIVEAWAY_PARTICIPANT: "cmd_add_giveaway_participant", // { username }
     CMD_REMOVE_GIVEAWAY_PARTICIPANT: "cmd_remove_giveaway_participant", // { username }
     CMD_CLEAR_GIVEAWAY_PARTICIPANTS: "cmd_clear_giveaway_participants",
-    CMD_SET_PARTICIPANTS_CONFIG: "cmd_set_participants_config", // { config }
     CMD_SET_WHEEL_CONFIG: "cmd_set_wheel_config", // { config }
     CMD_SET_WHEEL_SPEED_CONFIG: "cmd_set_wheel_speed_config", // { config }
     CMD_START_POLL: "cmd_start_poll", // { command }

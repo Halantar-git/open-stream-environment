@@ -65,6 +65,7 @@
     micConfig: { sensitivity: 1.5, lineWidth: 2, color: "", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2, peakFall: 2.5 },
     remoteMicData: null,
     longshot: null,
+    giveaway: { count: 0, participants: [] },
   };
 
   // ---- pure utils ----
@@ -213,6 +214,7 @@
       "retrowave-ticker": OW.WidgetTicker,
       stat: OW.StatWidget,
       social: OW.SocialWidget,
+      participants: OW.ParticipantsWidget,
       timer: OW.TimerWidget,
       "grimhex-timer": OW.GrimHexTimerWidget,
       mic: OW.MicWidget,
@@ -323,6 +325,7 @@
         state.tts = payload.tts || state.tts;
         state.donationVoice = payload.donationVoice || state.donationVoice;
         state.longshot = payload.longshot || state.longshot;
+        state.giveaway = payload.giveaway || state.giveaway;
         connectionStatus = payload.connectionStatus || connectionStatus;
         if (payload.appearance) applyTheme(payload.appearance);
         const scene = payload.scenes && payload.scenes[sceneType];
@@ -345,6 +348,17 @@
       case EVENT_TYPES.STAT_UPDATE:
         state.stats = msg.payload || state.stats;
         bus.emit(EVENT_TYPES.STAT_UPDATE, msg.payload);
+        break;
+      case EVENT_TYPES.GIVEAWAY_UPDATE:
+        if (msg.payload && msg.payload.giveaway) state.giveaway = msg.payload.giveaway;
+        bus.emit(EVENT_TYPES.GIVEAWAY_UPDATE, msg.payload);
+        break;
+      case EVENT_TYPES.GIVEAWAY_PARTICIPANTS:
+        if (state.giveaway) {
+          if (msg.payload && msg.payload.count != null) state.giveaway.count = msg.payload.count;
+          if (msg.payload && Array.isArray(msg.payload.participants)) state.giveaway.participants = msg.payload.participants;
+        }
+        bus.emit(EVENT_TYPES.GIVEAWAY_PARTICIPANTS, msg.payload);
         break;
       case EVENT_TYPES.DEATH_COUNT_UPDATE:
         state.deathCount = (msg.payload && msg.payload.count) || 0;

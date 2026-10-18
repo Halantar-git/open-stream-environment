@@ -68,6 +68,8 @@
     remoteMicData: null,
     // Последний снимок конфига Longshot (Executive Hangar), если он получен.
     longshot: null,
+    // Участники розыгрыша «Колесо Фортуны» — источник виджета участников.
+    giveaway: { count: 0, participants: [] },
   };
 
   let ws;
@@ -404,6 +406,7 @@
   manager.register("retrowave-ticker", OW.WidgetTicker);
   manager.register("stat", OW.StatWidget);
   manager.register("social", OW.SocialWidget);
+  manager.register("participants", OW.ParticipantsWidget);
   manager.register("timer", OW.TimerWidget);
   manager.register("grimhex-timer", OW.GrimHexTimerWidget);
   manager.register("mic", OW.MicWidget);
@@ -471,6 +474,7 @@
         state.donationVoice = p.donationVoice || state.donationVoice;
         connectionStatus = p.connectionStatus || connectionStatus;
         state.longshot = p.longshot || state.longshot;
+        state.giveaway = p.giveaway || state.giveaway;
         currentLayout = p.layout || [];
         lastAppearance = p.appearance || lastAppearance;
         applyTheme(p.appearance);
@@ -499,6 +503,17 @@
       case EVENT_TYPES.STAT_UPDATE:
         state.stats = msg.payload || state.stats;
         bus.emit(EVENT_TYPES.STAT_UPDATE, msg.payload);
+        break;
+      case EVENT_TYPES.GIVEAWAY_UPDATE:
+        if (msg.payload && msg.payload.giveaway) state.giveaway = msg.payload.giveaway;
+        bus.emit(EVENT_TYPES.GIVEAWAY_UPDATE, msg.payload);
+        break;
+      case EVENT_TYPES.GIVEAWAY_PARTICIPANTS:
+        if (state.giveaway) {
+          if (msg.payload && msg.payload.count != null) state.giveaway.count = msg.payload.count;
+          if (msg.payload && Array.isArray(msg.payload.participants)) state.giveaway.participants = msg.payload.participants;
+        }
+        bus.emit(EVENT_TYPES.GIVEAWAY_PARTICIPANTS, msg.payload);
         break;
       case EVENT_TYPES.DEATH_COUNT_UPDATE:
         state.deathCount = (msg.payload && msg.payload.count) || 0;

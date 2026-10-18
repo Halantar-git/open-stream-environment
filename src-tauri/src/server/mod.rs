@@ -334,17 +334,13 @@ async fn handle_socket(mut socket: WebSocket, bus: Bus, role: String, external: 
     )
     .await;
 
-    // Настройки виджетов колеса и микрофона — сразу после состояния, как в JS:
+    // Настройки колеса, микрофона и камеры — сразу после состояния, как в JS:
     // иначе панель и оверлей остаются с умолчаниями, а первая же правка затирает
     // сохранённое значение дефолтом (перезагрузка источника в OBS сбрасывала
-    // позицию/скорость колеса и настройки участников).
+    // позицию/скорость колеса и настройки захвата).
     {
         let database = bus.diagnostics.database();
         for (kind, config) in [
-            (
-                event_types::OVERLAY_PARTICIPANTS_CONFIG,
-                database.participants_config(),
-            ),
             (event_types::WHEEL_CONFIG, database.wheel_config()),
             (
                 event_types::WHEEL_SPEED_CONFIG,

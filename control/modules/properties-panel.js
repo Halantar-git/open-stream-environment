@@ -288,6 +288,14 @@ export function initPropertiesPanel({
           <div class="scene-socials-list" id="pSocialsList"></div>
           <button class="md-button md-button--text" id="pAddSocial" style="align-self:flex-start;margin-top:4px;">+ ${t("properties.addSocial")}</button>
         </div>`;
+    } else if (inst.type === "participants") {
+      extraHtml = `
+        <div class="md-field"><label>${t("properties.participantsMaxNames")}</label><input type="number" id="pParticipantsMaxNames" min="1" max="200" value="${config.maxNames || 10}"></div>
+        <div class="md-field"><label>${t("properties.participantsFontSize")}</label><input type="number" id="pParticipantsFontSize" min="8" max="64" value="${config.fontSize || 16}"></div>
+        <div class="md-field"><label>${t("properties.participantsTextColor")}</label><input type="color" id="pParticipantsTextColor" value="${escapeAttr(config.textColor || "#e8e1f0")}"></div>
+        <div class="md-field"><label>${t("properties.participantsBgOpacity")}: <span id="pParticipantsBgOpacityValue">${config.backgroundOpacity ?? 82}%</span></label><input type="range" id="pParticipantsBgOpacity" min="0" max="100" value="${config.backgroundOpacity ?? 82}"></div>
+        <div class="properties__toggle-row"><label>${t("properties.participantsMarquee")}</label>${switchHtml("pParticipantsMarquee", !!config.marquee)}</div>
+        <p class="properties__hint">${t("properties.participantsHint")}</p>`;
     } else if (inst.type === "grimhex-timer" || inst.type === "timer") {
       // Источник выбирает сервер (Exectimer, затем Longshot): заголовок
       // фиксирован, редактируемых заметки и источника нет — только статус
@@ -688,6 +696,18 @@ export function initPropertiesPanel({
       propertiesEl.querySelector("#pAddSocial").addEventListener("click", () => {
         send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { socials: [...(config.socials || []), { platform: "", text: "" }] } } });
       });
+    } else if (inst.type === "participants") {
+      const patchParticipants = (configPatch) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: configPatch } });
+      propertiesEl.querySelector("#pParticipantsMaxNames").addEventListener("change", (e) => patchParticipants({ maxNames: Number(e.target.value) || 10 }));
+      propertiesEl.querySelector("#pParticipantsFontSize").addEventListener("change", (e) => patchParticipants({ fontSize: Number(e.target.value) || 16 }));
+      propertiesEl.querySelector("#pParticipantsTextColor").addEventListener("input", (e) => patchParticipants({ textColor: e.target.value }));
+      propertiesEl.querySelector("#pParticipantsBgOpacity").addEventListener("input", (e) => {
+        const value = Number(e.target.value);
+        const label = propertiesEl.querySelector("#pParticipantsBgOpacityValue");
+        if (label) label.textContent = `${value}%`;
+        patchParticipants({ backgroundOpacity: value });
+      });
+      wireSwitch(propertiesEl.querySelector("#pParticipantsMarquee"), (on) => patchParticipants({ marquee: on }));
     } else if (inst.type === "grimhex-timer" || inst.type === "timer") {
       const patchTimer = (configPatch) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: configPatch } });
       wireSwitch(propertiesEl.querySelector("#pTimerShowLights"), (on) => patchTimer({ showLights: on }));

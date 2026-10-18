@@ -30,7 +30,6 @@
     DEATH_COUNT_UPDATE: "death_count_update",
     CAMERA_ANGLE_UPDATE: "camera_angle_update",
     CAMERA_FILTER_UPDATE: "camera_filter_update",
-    OVERLAY_PARTICIPANTS_CONFIG: "overlay_participants_config",
     WHEEL_CONFIG: "wheel_config",
     WHEEL_SPEED_CONFIG: "wheel_speed_config",
     GIVEAWAY_UPDATE: "giveaway_update",
@@ -38,7 +37,6 @@
     CHAT_MESSAGE: "chat_message",
     CHAT_SENT: "chat_sent",
     LOCALES: "locales",
-    CMD_SET_PARTICIPANTS_CONFIG: "cmd_set_participants_config",
     CMD_SET_WHEEL_CONFIG: "cmd_set_wheel_config",
     CMD_SET_WHEEL_SPEED_CONFIG: "cmd_set_wheel_speed_config",
     CMD_SET_GIVEAWAY_ELIMINATION: "cmd_set_giveaway_elimination",
@@ -89,18 +87,6 @@
   const remoteChatSend = document.getElementById("remoteChatSend");
   const wheelCommand = document.getElementById("wheelCommand");
   const wheelElimination = document.getElementById("wheelElimination");
-  const wsMaxNames = document.getElementById("wsMaxNames");
-  const wsFontSize = document.getElementById("wsFontSize");
-  const wsTextColor = document.getElementById("wsTextColor");
-  const wsBgOpacity = document.getElementById("wsBgOpacity");
-  const wsBgOpacityValue = document.getElementById("wsBgOpacityValue");
-  const wsX = document.getElementById("wsX");
-  const wsXValue = document.getElementById("wsXValue");
-  const wsY = document.getElementById("wsY");
-  const wsYValue = document.getElementById("wsYValue");
-  const wsW = document.getElementById("wsW");
-  const wsH = document.getElementById("wsH");
-  const wsMarquee = document.getElementById("wsMarquee");
   const wsMusicVolume = document.getElementById("wsMusicVolume");
   const wsMusicVolumeValue = document.getElementById("wsMusicVolumeValue");
   const wsEffectsVolume = document.getElementById("wsEffectsVolume");
@@ -133,7 +119,6 @@
   let activeCameraAngle = null;
   let cameraFilters = [];
   let activeFilters = [];
-  let participantsConfig = { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82, x: 24, y: 340, w: 340, h: 400 };
   let wheelConfig = { musicVolume: 50, effectsVolume: 90 };
   let wheelSpeedConfig = { speed: 3 };
   let giveaway = { command: "!go", eliminationMode: false, participants: [], count: 0 };
@@ -255,18 +240,6 @@
       wheelCommand.value = giveaway.command || "!go";
     }
     setSwitch(wheelElimination, !!giveaway.eliminationMode);
-    wsMaxNames.value = participantsConfig.maxNames ?? 10;
-    wsFontSize.value = participantsConfig.fontSize ?? 16;
-    wsTextColor.value = participantsConfig.textColor || "#e8e1f0";
-    wsBgOpacity.value = participantsConfig.backgroundOpacity ?? 82;
-    wsBgOpacityValue.textContent = `${participantsConfig.backgroundOpacity ?? 82}%`;
-    wsX.value = participantsConfig.x ?? 24;
-    wsXValue.textContent = `${participantsConfig.x ?? 24}px`;
-    wsY.value = participantsConfig.y ?? 340;
-    wsYValue.textContent = `${participantsConfig.y ?? 340}px`;
-    wsW.value = participantsConfig.w ?? 340;
-    wsH.value = participantsConfig.h ?? 400;
-    setSwitch(wsMarquee, !!participantsConfig.marquee);
     wsMusicVolume.value = wheelConfig.musicVolume ?? 50;
     wsMusicVolumeValue.textContent = `${wheelConfig.musicVolume ?? 50}%`;
     wsEffectsVolume.value = wheelConfig.effectsVolume ?? 90;
@@ -285,63 +258,6 @@
       giveaway.eliminationMode = on;
       setSwitch(wheelElimination, on);
       sendCommand(EVENT_TYPES.CMD_SET_GIVEAWAY_ELIMINATION, { enabled: on });
-    });
-
-    wsMaxNames.addEventListener("change", () => {
-      participantsConfig.maxNames = Math.max(1, Number(wsMaxNames.value) || 10);
-      sendCommand(EVENT_TYPES.CMD_SET_PARTICIPANTS_CONFIG, { config: participantsConfig });
-    });
-
-    wsFontSize.addEventListener("change", () => {
-      participantsConfig.fontSize = Number(wsFontSize.value) || 16;
-      sendCommand(EVENT_TYPES.CMD_SET_PARTICIPANTS_CONFIG, { config: participantsConfig });
-    });
-
-    wsTextColor.addEventListener("input", () => {
-      participantsConfig.textColor = wsTextColor.value;
-      sendCommand(EVENT_TYPES.CMD_SET_PARTICIPANTS_CONFIG, { config: participantsConfig });
-    });
-
-    wsBgOpacity.addEventListener("input", () => {
-      const v = Number(wsBgOpacity.value);
-      participantsConfig.backgroundOpacity = v;
-      wsBgOpacityValue.textContent = `${v}%`;
-      sendCommand(EVENT_TYPES.CMD_SET_PARTICIPANTS_CONFIG, { config: participantsConfig });
-    });
-
-    wsX.addEventListener("input", () => {
-      const v = Number(wsX.value);
-      participantsConfig.x = v;
-      wsXValue.textContent = `${v}px`;
-      sendCommand(EVENT_TYPES.CMD_SET_PARTICIPANTS_CONFIG, { config: participantsConfig });
-    });
-
-    wsY.addEventListener("input", () => {
-      const v = Number(wsY.value);
-      participantsConfig.y = v;
-      wsYValue.textContent = `${v}px`;
-      sendCommand(EVENT_TYPES.CMD_SET_PARTICIPANTS_CONFIG, { config: participantsConfig });
-    });
-
-    wsW.addEventListener("change", () => {
-      const v = Number(wsW.value);
-      if (!Number.isFinite(v) || v <= 0) return;
-      participantsConfig.w = v;
-      sendCommand(EVENT_TYPES.CMD_SET_PARTICIPANTS_CONFIG, { config: participantsConfig });
-    });
-
-    wsH.addEventListener("change", () => {
-      const v = Number(wsH.value);
-      if (!Number.isFinite(v) || v <= 0) return;
-      participantsConfig.h = v;
-      sendCommand(EVENT_TYPES.CMD_SET_PARTICIPANTS_CONFIG, { config: participantsConfig });
-    });
-
-    wsMarquee.addEventListener("click", () => {
-      const on = !participantsConfig.marquee;
-      participantsConfig.marquee = on;
-      setSwitch(wsMarquee, on);
-      sendCommand(EVENT_TYPES.CMD_SET_PARTICIPANTS_CONFIG, { config: participantsConfig });
     });
 
     wsMusicVolume.addEventListener("input", () => {
@@ -928,10 +844,6 @@
         renderParticipants();
         break;
       }
-      case EVENT_TYPES.OVERLAY_PARTICIPANTS_CONFIG:
-        participantsConfig = (msg.payload && msg.payload.config) || participantsConfig;
-        renderWheelSettings();
-        break;
       case EVENT_TYPES.WHEEL_CONFIG:
         wheelConfig = (msg.payload && msg.payload.config) || wheelConfig;
         renderWheelSettings();

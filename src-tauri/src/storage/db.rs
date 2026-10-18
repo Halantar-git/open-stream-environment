@@ -60,21 +60,6 @@ pub fn default_data() -> Map<String, Value> {
         "history_max_records".to_string(),
         json!(history::DEFAULT_MAX_RECORDS),
     );
-    // Настройки виджета списка участников розыгрыша (пиксели сцены 1920×1080).
-    data.insert(
-        "overlay_participants_config".to_string(),
-        json!({
-            "maxNames": 10,
-            "marquee": false,
-            "fontSize": 16,
-            "textColor": "#e8e1f0",
-            "backgroundOpacity": 82,
-            "x": 24,
-            "y": 340,
-            "w": 340,
-            "h": 400,
-        }),
-    );
     // Настройки Колеса Фортуны (звук и позиция на сцене).
     data.insert(
         "wheel_config".to_string(),
@@ -627,29 +612,6 @@ impl Database {
     }
 
     // ---- настройки виджетов ----
-
-    pub fn participants_config(&self) -> Value {
-        let raw = self
-            .get("overlay_participants_config")
-            .unwrap_or(Value::Null);
-        json!({
-            "maxNames": number_or(raw.get("maxNames"), 10.0),
-            "marquee": history::js_truthy(raw.get("marquee")),
-            "fontSize": number_or(raw.get("fontSize"), 16.0),
-            "textColor": string_or(raw.get("textColor"), "#e8e1f0"),
-            "backgroundOpacity": number_or(raw.get("backgroundOpacity"), 82.0),
-            "x": number_or(raw.get("x"), 24.0),
-            "y": number_or(raw.get("y"), 340.0),
-            "w": number_or(raw.get("w"), 340.0),
-            "h": number_or(raw.get("h"), 400.0),
-        })
-    }
-
-    pub fn save_participants_config(&self, config: Option<&Value>) -> Value {
-        let next = merge(self.participants_config(), config);
-        self.set_path("overlay_participants_config", next.clone());
-        next
-    }
 
     pub fn wheel_config(&self) -> Value {
         let raw = self.get("wheel_config").unwrap_or(Value::Null);
@@ -1652,14 +1614,14 @@ mod tests {
         let dir = TempDir::new("numbers");
         let db = dir.open();
 
-        db.save_participants_config(None);
+        db.save_wheel_config(None);
         db.flush();
 
         // Целые не должны превращаться в 10.0: файл читает и правит в том числе
         // Electron-версия, а `serde_json` печатает f64 как есть.
         let text = fs::read_to_string(dir.file("local-db.json")).unwrap();
-        assert!(text.contains("\"maxNames\": 10"), "{text}");
-        assert!(text.contains("\"backgroundOpacity\": 82"), "{text}");
+        assert!(text.contains("\"musicVolume\": 50"), "{text}");
+        assert!(text.contains("\"effectsVolume\": 90"), "{text}");
         assert!(!text.contains(".0,"), "{text}");
     }
 

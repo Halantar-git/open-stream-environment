@@ -87,6 +87,9 @@ export function initCanvasEditor({
     { kind: "sub", user: "nova_viewer" },
     { kind: "follow", user: "star_gazer" },
   ];
+  // Пока розыгрыш не начался, список участников пуст — на канвасе показываем
+  // пример, иначе виджет выглядел бы сломанным при настройке.
+  const SAMPLE_PARTICIPANTS = ["nova_viewer", "star_gazer", "orbit_fan", "pixel_pilot"];
 
   function recentTextPreview(e) {
     const user = `<b>${e.user}</b>`;
@@ -360,6 +363,21 @@ export function initCanvasEditor({
       case "social": {
         const s = (config.socials || [])[0] || { platform: "TG", text: "t.me/your_channel" };
         return `<div class="widget-social"><div class="widget-social__content"><span class="widget-social__icon">${escapeHtml(s.platform)}</span><div class="widget-social__info"><span class="widget-social__platform">${escapeHtml(s.platform)}</span><span class="widget-social__handle">${escapeHtml(s.text)}</span></div></div></div>`;
+      }
+      case "participants": {
+        const live = state.giveaway && Array.isArray(state.giveaway.participants) ? state.giveaway.participants : [];
+        const all = live.length ? live : SAMPLE_PARTICIPANTS;
+        const count = state.giveaway && state.giveaway.count != null ? state.giveaway.count : all.length;
+        const style = `--pw-font-size:${Math.min(64, Math.max(8, Number(config.fontSize) || 16))}px;--pw-text:${escapeAttr(config.textColor || "var(--md-on-surface)")};--pw-bg-opacity:${Math.min(100, Math.max(0, config.backgroundOpacity == null ? 82 : Number(config.backgroundOpacity)))}%;`;
+        const title = `<div class="widget-participants__title">${escapeHtml(t("wheelScene.participantsTitle", { count }))}</div>`;
+        if (config.marquee) {
+          const text = all.join(" • ");
+          return `<div class="widget-participants" style="${style}">${title}<div class="widget-participants__marquee"><span>${escapeHtml(text)}</span><span>${escapeHtml(text)}</span></div></div>`;
+        }
+        const max = Math.max(1, Number(config.maxNames) || 10);
+        const names = all.slice(0, max);
+        const extra = Math.max(0, count - names.length);
+        return `<div class="widget-participants" style="${style}">${title}<div class="widget-participants__list">${names.map((name) => `<span class="widget-participants__chip">${escapeHtml(name)}</span>`).join("")}${extra > 0 ? `<span class="widget-participants__more">+${extra}</span>` : ""}</div></div>`;
       }
       case "timer":
       case "grimhex-timer":

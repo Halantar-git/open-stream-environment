@@ -813,16 +813,6 @@ pub fn handle_message(
                 json!({ "sectors": [] }),
             );
         }
-        event_types::CMD_SET_PARTICIPANTS_CONFIG => {
-            let config = diagnostics
-                .database()
-                .save_participants_config(payload.get("config"));
-            broadcast(
-                diagnostics,
-                event_types::OVERLAY_PARTICIPANTS_CONFIG,
-                json!({ "config": config }),
-            );
-        }
         event_types::CMD_SET_WHEEL_CONFIG => {
             let config = diagnostics
                 .database()
@@ -1545,21 +1535,6 @@ mod tests {
             frame(&mut receiver)["type"],
             json!(event_types::WHEEL_SPEED_CONFIG)
         );
-
-        handle(
-            &fixture.diagnostics,
-            None,
-            &json!({
-                "type": event_types::CMD_SET_PARTICIPANTS_CONFIG,
-                "payload": { "config": { "maxNames": 20 } },
-            }),
-        );
-        let message = frame(&mut receiver);
-        assert_eq!(
-            message["type"],
-            json!(event_types::OVERLAY_PARTICIPANTS_CONFIG)
-        );
-        assert_eq!(message["payload"]["config"]["maxNames"], json!(20));
     }
 
     #[test]

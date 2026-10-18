@@ -30,7 +30,6 @@
   let wheelConfig = { musicVolume: 50, effectsVolume: 90, x: 960, y: 540 };
   let wheelSpeedConfig = { speed: 3 };
   let resultTimer = null;
-  let participantsConfig = { maxNames: 10, marquee: false, fontSize: 16, textColor: "#e8e1f0", backgroundOpacity: 82, x: 24, y: 340, w: 340, h: 400 };
   let participantsState = { count: 0, participants: [] };
   let spinAudioEl = null;
   let spinFallback = null;
@@ -277,46 +276,7 @@
     requestAnimationFrame(frame);
   }
 
-  // ---------------- participants panel ----------------
-
-  function renderParticipants() {
-    const el = document.getElementById("wheel-participants");
-    if (!el) return;
-    const count = participantsState.count || 0;
-    const all = participantsState.participants || [];
-
-    el.style.setProperty("--pw-font-size", participantsConfig.fontSize + "px");
-    el.style.setProperty("--pw-text", participantsConfig.textColor);
-    el.style.setProperty("--pw-bg-opacity", participantsConfig.backgroundOpacity + "%");
-    el.style.left = (participantsConfig.x ?? 24) + "px";
-    el.style.top = (participantsConfig.y ?? 340) + "px";
-    el.style.width = (participantsConfig.w ?? 340) + "px";
-    el.style.height = (participantsConfig.h ?? 400) + "px";
-
-    if (!count) {
-      el.hidden = true;
-      el.innerHTML = "";
-      return;
-    }
-    el.hidden = false;
-
-    let listHtml;
-    if (participantsConfig.marquee) {
-      const text = all.join(" • ");
-      listHtml = `<div class="widget-participants__marquee"><span>${escapeHtml(text)}</span><span>${escapeHtml(text)}</span></div>`;
-    } else {
-      const max = Math.max(1, Number(participantsConfig.maxNames) || 10);
-      const names = all.slice(0, max);
-      const extra = count - names.length;
-      listHtml = `<div class="widget-participants__list">${names.map((n) => `<span class="widget-participants__chip">${escapeHtml(n)}</span>`).join("")}${extra > 0 ? `<span class="widget-participants__more">+${extra}</span>` : ""}</div>`;
-    }
-
-    el.innerHTML = `
-      <div class="widget-participants__title">${t("wheelScene.participantsTitle", { count })}</div>
-      ${listHtml}`;
-  }
-
-  // ---------------- winner result + audio --------------
+  // ---------------- winner result + audio ----------------
 
   // Громкость звуков победы/выбывания — отдельно от музыки вращения, чтобы
   // можно было приглушить эффекты, не трогая сам спин.
@@ -455,7 +415,6 @@
           }
         }
         firstStateSeen = true;
-        renderParticipants();
         break;
       case EVENT_TYPES.THEME_UPDATE:
         applyTheme(msg.payload);
@@ -465,17 +424,6 @@
         break;
       case EVENT_TYPES.GIVEAWAY_SPIN:
         spinWheel((msg.payload && msg.payload.winner) || null);
-        break;
-      case EVENT_TYPES.GIVEAWAY_PARTICIPANTS:
-        participantsState = {
-          count: (msg.payload && msg.payload.count) || 0,
-          participants: Array.isArray(msg.payload && msg.payload.participants) ? msg.payload.participants : [],
-        };
-        renderParticipants();
-        break;
-      case EVENT_TYPES.OVERLAY_PARTICIPANTS_CONFIG:
-        participantsConfig = (msg.payload && msg.payload.config) || participantsConfig;
-        renderParticipants();
         break;
       case EVENT_TYPES.WHEEL_CONFIG:
         wheelConfig = (msg.payload && msg.payload.config) || wheelConfig;
@@ -490,7 +438,6 @@
           window.I18n.setLang(msg.payload && msg.payload.lang);
           window.I18n.apply();
         }
-        renderParticipants();
         break;
       case EVENT_TYPES.ALERT:
         if (msg.payload && msg.payload.kind === "wheel_winner") showWinnerResult(msg.payload);

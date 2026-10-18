@@ -2238,23 +2238,6 @@ const { EVENT_TYPES } = window.SharedEvents;
       </div>
       <div class="properties__toggle-row"><label>${t("giveaway.eliminationMode")}</label>${switchHtml("giveawayElimination", !!state.giveaway.eliminationMode)}</div>
 
-      <div class="inspector__title" style="margin-top:10px;">${t("giveaway.participantsWidgetTitle")}</div>
-      <div class="properties__row">
-        <div class="md-field"><label>${t("giveaway.showNames")}</label><input type="number" id="wsMaxNames" min="1" max="200" value="${state.participantsConfig.maxNames ?? 10}"></div>
-        <div class="md-field"><label>${t("giveaway.fontSize")} (px)</label><input type="number" id="wsFontSize" min="10" max="48" value="${state.participantsConfig.fontSize ?? 16}"></div>
-      </div>
-      <div class="md-field"><label>${t("giveaway.textColor")}</label><input type="color" id="wsTextColor" value="${escapeAttr(state.participantsConfig.textColor || "#e8e1f0")}"></div>
-      <div class="md-field"><label>${t("giveaway.backgroundOpacity")}: <span id="wsBgOpacityValue">${state.participantsConfig.backgroundOpacity ?? 82}%</span></label><input type="range" id="wsBgOpacity" min="0" max="100" value="${state.participantsConfig.backgroundOpacity ?? 82}"></div>
-      <div class="properties__row">
-        <div class="md-field"><label>X (px)</label><input type="number" id="wsX" step="1" value="${state.participantsConfig.x ?? 24}"></div>
-        <div class="md-field"><label>Y (px)</label><input type="number" id="wsY" step="1" value="${state.participantsConfig.y ?? 340}"></div>
-      </div>
-      <div class="properties__row">
-        <div class="md-field"><label>${t("giveaway.widgetWidth")}</label><input type="number" id="wsW" min="1" step="1" value="${state.participantsConfig.w ?? 340}"></div>
-        <div class="md-field"><label>${t("giveaway.widgetHeight")}</label><input type="number" id="wsH" min="1" step="1" value="${state.participantsConfig.h ?? 400}"></div>
-      </div>
-      <div class="properties__toggle-row"><label>${t("giveaway.marquee")}</label>${switchHtml("wsMarquee", !!state.participantsConfig.marquee)}</div>
-
       <div class="inspector__title" style="margin-top:10px;">${t("giveaway.wheelSettings")}</div>
       <div class="properties__row">
         <div class="md-field"><label>X (px)</label><input type="number" id="wheelX" step="1" value="${state.wheelConfig.x ?? 960}"></div>
@@ -2266,36 +2249,6 @@ const { EVENT_TYPES } = window.SharedEvents;
     `;
 
     wireWheelControls();
-
-    wheelPanelBody.querySelector("#wsMaxNames").addEventListener("change", (e) => sendParticipantsConfig({ maxNames: Number(e.target.value) || 10 }));
-    wheelPanelBody.querySelector("#wsFontSize").addEventListener("change", (e) => sendParticipantsConfig({ fontSize: Number(e.target.value) || 16 }));
-    wheelPanelBody.querySelector("#wsTextColor").addEventListener("input", (e) => sendParticipantsConfig({ textColor: e.target.value }));
-    wheelPanelBody.querySelector("#wsBgOpacity").addEventListener("input", (e) => {
-      const v = Number(e.target.value);
-      wheelPanelBody.querySelector("#wsBgOpacityValue").textContent = `${v}%`;
-      sendParticipantsConfig({ backgroundOpacity: v });
-    });
-    wheelPanelBody.querySelector("#wsX").addEventListener("change", (e) => {
-      const v = Number(e.target.value);
-      if (!Number.isFinite(v)) return;
-      sendParticipantsConfig({ x: v });
-    });
-    wheelPanelBody.querySelector("#wsY").addEventListener("change", (e) => {
-      const v = Number(e.target.value);
-      if (!Number.isFinite(v)) return;
-      sendParticipantsConfig({ y: v });
-    });
-    wheelPanelBody.querySelector("#wsW").addEventListener("change", (e) => {
-      const v = Number(e.target.value);
-      if (!Number.isFinite(v) || v <= 0) return;
-      sendParticipantsConfig({ w: v });
-    });
-    wheelPanelBody.querySelector("#wsH").addEventListener("change", (e) => {
-      const v = Number(e.target.value);
-      if (!Number.isFinite(v) || v <= 0) return;
-      sendParticipantsConfig({ h: v });
-    });
-    wireSwitch(wheelPanelBody.querySelector("#wsMarquee"), (on) => sendParticipantsConfig({ marquee: on }));
 
     wheelPanelBody.querySelector("#wheelX").addEventListener("change", (e) => {
       const v = Number(e.target.value);
@@ -2345,25 +2298,10 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (node && node !== document.activeElement) node.textContent = text;
   }
 
-  function setPanelSwitch(selector, on) {
-    const node = wheelPanelBody && wheelPanelBody.querySelector(selector);
-    if (node && node.classList.contains("is-on") !== !!on) node.classList.toggle("is-on", !!on);
-  }
-
   function syncWheelPanelValues() {
-    const pc = state.participantsConfig || {};
     const wc = state.wheelConfig || {};
     const ws = state.wheelSpeedConfig || {};
     renderGiveaway(); // команда розыгрыша, счётчик и список участников
-    setPanelValue("#wsMaxNames", pc.maxNames ?? 10);
-    setPanelValue("#wsFontSize", pc.fontSize ?? 16);
-    setPanelValue("#wsTextColor", pc.textColor || "#e8e1f0");
-    if (setPanelValue("#wsBgOpacity", pc.backgroundOpacity ?? 82)) setPanelText("#wsBgOpacityValue", `${pc.backgroundOpacity ?? 82}%`);
-    setPanelValue("#wsX", pc.x ?? 24);
-    setPanelValue("#wsY", pc.y ?? 340);
-    setPanelValue("#wsW", pc.w ?? 340);
-    setPanelValue("#wsH", pc.h ?? 400);
-    setPanelSwitch("#wsMarquee", !!pc.marquee);
     setPanelValue("#wheelX", wc.x ?? 960);
     setPanelValue("#wheelY", wc.y ?? 540);
     if (setPanelValue("#wsMusicVolume", wc.musicVolume ?? 50)) setPanelText("#wsMusicVolumeValue", `${wc.musicVolume ?? 50}%`);
@@ -2645,12 +2583,6 @@ const { EVENT_TYPES } = window.SharedEvents;
       if (!confirm(t("presets.deleteConfirm", { name: preset ? preset.name : "" }))) return;
       send(EVENT_TYPES.CMD_DELETE_POLL_PRESET, { id });
     });
-  }
-
-  // ---- participants widget settings ----
-  function sendParticipantsConfig(patch) {
-    state.participantsConfig = { ...state.participantsConfig, ...patch };
-    send(EVENT_TYPES.CMD_SET_PARTICIPANTS_CONFIG, { config: state.participantsConfig });
   }
 
   // ---- microphone visualizer widget settings ----
@@ -4201,12 +4133,7 @@ const { EVENT_TYPES } = window.SharedEvents;
       case EVENT_TYPES.GIVEAWAY_UPDATE:
         state.giveaway = msg.payload.giveaway || state.giveaway;
         renderGiveaway();
-        break;
-      case EVENT_TYPES.OVERLAY_PARTICIPANTS_CONFIG:
-        state.participantsConfig = (msg.payload && msg.payload.config) || state.participantsConfig;
         canvasEditor.renderCanvas();
-        propertiesPanel.render();
-        if (!wheelPanelEl.hidden) renderWheelPanel();
         break;
       case EVENT_TYPES.LONGSHOT_UPDATE:
         state.longshot = (msg.payload && msg.payload.longshot) || state.longshot;

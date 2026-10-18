@@ -776,7 +776,7 @@ mod tests {
         // Так выглядит раскладка прошлой версии: тип, которого больше нет в каталоге.
         let mut stored = db.widgets();
         stored.push(
-            json!({ "id": "old-1", "type": "participants", "x": 1, "y": 1, "w": 10, "h": 10 }),
+            json!({ "id": "old-1", "type": "removed-widget", "x": 1, "y": 1, "w": 10, "h": 10 }),
         );
         stored.push(json!({ "type": "chat" })); // без id — тоже мусор
         db.save_widgets(stored);

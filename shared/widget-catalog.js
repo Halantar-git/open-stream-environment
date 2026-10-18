@@ -188,6 +188,16 @@
         ],
       },
     },
+    participants: {
+      type: "participants",
+      label: "Участники розыгрыша",
+      description: "Список участников колеса Фортуны",
+      icon: "widgetParticipants",
+      defaultGeometry: { x: 3, y: 60, w: 20, h: 28 },
+      minW: 10,
+      minH: 8,
+      defaultConfig: { maxNames: 10, marquee: false, fontSize: 16, textColor: "", backgroundOpacity: 82 },
+    },
     mic: {
       type: "mic",
       label: "Визуализатор микрофона",
