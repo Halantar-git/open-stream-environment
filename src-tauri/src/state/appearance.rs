@@ -136,6 +136,13 @@ fn migrated_appearance(raw: Option<&Value>) -> Map<String, Value> {
     {
         appearance.insert("activeThemeId".to_string(), Value::from("nebula"));
     }
+    // Переименованные встроенные темы: старый id должен продолжать работать.
+    if let Some(id) = truthy_string(appearance.get("activeThemeId")) {
+        let next = alias_theme_id(&id);
+        if next != id {
+            appearance.insert("activeThemeId".to_string(), Value::from(next));
+        }
+    }
     if !appearance.get("enable3d").is_some_and(Value::is_boolean) {
         appearance.insert("enable3d".to_string(), Value::Bool(false));
     }
@@ -148,6 +155,7 @@ fn migrated_appearance(raw: Option<&Value>) -> Map<String, Value> {
 
 /// Тема по идентификатору: встроенная как есть, своя — собранная в форму панели.
 pub fn resolve_theme(config: &ConfigFile, id: &str) -> Option<Value> {
+    let id = alias_theme_id(id);
     if let Some(theme) = themes::builtin_theme(id) {
         return Some(theme.clone());
     }
@@ -668,6 +676,15 @@ fn active_theme_id(config: &ConfigFile) -> String {
         .to_string()
 }
 
+/// Переименованные встроенные темы: старые id из сохранённых настроек и
+/// CLI/пульта должны вести на новую тему, а не откатываться на `nebula`.
+fn alias_theme_id(id: &str) -> &str {
+    match id {
+        "synthwave" => "retrowave",
+        other => other,
+    }
+}
+
 /// Встроенная тема включает 3D по умолчанию, только если она сама 3D.
 fn default_enable_3d(id: &str) -> bool {
     builtin_dimension(id).as_deref() == Some("3d")
@@ -988,6 +1005,23 @@ mod tests {
         migrate_appearance(&mut config);
         assert_eq!(appearance(&config)["activeThemeId"], json!("orbital"));
         assert_eq!(appearance(&config)["enable3d"], json!(true));
+    }
+
+    #[test]
+    fn the_former_synthwave_theme_migrates_to_retrowave() {
+        let fixture = Fixture::new("theme-rename");
+        let mut config = fixture.config();
+        config.set(
+            "appearance",
+            json!({ "activeThemeId": "synthwave", "customThemes": [] }),
+        );
+
+        migrate_appearance(&mut config);
+        assert_eq!(appearance(&config)["activeThemeId"], json!("retrowave"));
+
+        // Явный выбор старого id через CLI/пульт тоже ведёт на новую тему.
+        assert!(set_active_theme(&mut config, &json!("synthwave"), None));
+        assert_eq!(appearance(&config)["activeThemeId"], json!("retrowave"));
     }
 
     #[test]

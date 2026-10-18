@@ -525,17 +525,17 @@
       },
     },
 
-    // Synthwave / retrowave: неоновая ночь, магента и циан на тёмно-фиолетовом,
+    // Retrowave: неоновая ночь, магента и циан на тёмно-фиолетовом,
     // сетка и скобки как в HUD, шрифты — Orbitron для заголовков, Montserrat для
     // текста. Пока только 2D: 3D-набор можно добавить отдельно, если теме
     // понадобятся свои виджеты.
-    synthwave: {
-      id: "synthwave",
-      name: "Synthwave",
+    retrowave: {
+      id: "retrowave",
+      name: "Retrowave",
       builtin: true,
       category: "system",
       dimension: "2d",
-      family: "synthwave",
+      family: "retrowave",
       borderRadius: "0px",
       tokens: {
         // Неоновая магента (#ff2d95) — главный акцент: рамки, скобки, заголовки.

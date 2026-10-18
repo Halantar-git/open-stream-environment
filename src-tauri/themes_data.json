@@ -1,5 +1,5 @@
 {
-  "sourceHash": "44a470b93fd48d6a",
+  "sourceHash": "e57832a6798cbe40",
   "builtinThemes": {
     "nebula": {
       "id": "nebula",
@@ -329,13 +329,13 @@
         "--alert-enter-duration": "400ms"
       }
     },
-    "synthwave": {
-      "id": "synthwave",
-      "name": "Synthwave",
+    "retrowave": {
+      "id": "retrowave",
+      "name": "Retrowave",
       "builtin": true,
       "category": "system",
       "dimension": "2d",
-      "family": "synthwave",
+      "family": "retrowave",
       "borderRadius": "0px",
       "tokens": {
         "--md-primary": "#ff2d95",

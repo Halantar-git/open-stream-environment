@@ -16,7 +16,7 @@
  */
 
 /*
-  Встроенные темы: обязательные токены и новая Synthwave.
+  Встроенные темы: обязательные токены и Retrowave.
 
   Оверлей, сцены и Колесо Фортуны читают один и тот же набор `--md-*` и
   `--panel-*`. Если тема забыла хотя бы один токен, она молча подставит значение
@@ -80,18 +80,18 @@ describe("встроенные темы", () => {
     });
   });
 
-  test("Synthwave — встроенная 2D-тема без 3D-набора", () => {
-    const theme = BUILTIN_THEMES.synthwave;
+  test("Retrowave — встроенная 2D-тема без 3D-набора", () => {
+    const theme = BUILTIN_THEMES.retrowave;
     expect(theme).toBeTruthy();
-    expect(theme.name).toBe("Synthwave");
+    expect(theme.name).toBe("Retrowave");
     expect(theme.dimension).toBe("2d");
-    expect(theme.family).toBe("synthwave");
+    expect(theme.family).toBe("retrowave");
     expect(theme.variant3d).toBeUndefined();
-    expect(THREE_D_STYLES.some((style) => style.id === "synthwave")).toBe(false);
+    expect(THREE_D_STYLES.some((style) => style.id === "retrowave")).toBe(false);
   });
 
-  test("Synthwave задаёт неоновую палитру и сетку на сценах", () => {
-    const tokens = BUILTIN_THEMES.synthwave.tokens;
+  test("Retrowave задаёт неоновую палитру и сетку на сценах", () => {
+    const tokens = BUILTIN_THEMES.retrowave.tokens;
     expect(tokens["--md-primary"]).toBe("#ff2d95");
     expect(tokens["--md-secondary"]).toBe("#2de2e6");
     expect(tokens["--panel-decoration"]).toBe("brackets4");
