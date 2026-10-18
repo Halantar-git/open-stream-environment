@@ -689,19 +689,22 @@ body {
 }
 
 [data-decoration="retrowave"] .scene-chat {
-  clip-path: polygon(40px 0, 100% 0, 100% 100%, 0 100%);
+  clip-path: polygon(24px 0, 100% 0, 100% 100%, 0 100%);
 }
 [data-decoration="retrowave"] .scene-chat::before {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
-  clip-path: polygon(40px 0, 42px 0, 2px 100%, 0 100%);
+  clip-path: polygon(24px 0, 26px 0, 2px 100%, 0 100%);
   background: var(--md-primary);
   filter: drop-shadow(0 0 3px rgba(45, 226, 230, 0.7)) drop-shadow(0 0 9px rgba(255, 45, 149, 0.3));
   opacity: 0.9;
 }
-[data-decoration="retrowave"] .scene-chat__header { padding-left: 54px; }
+[data-decoration="retrowave"] .scene-chat__header { padding-left: 38px; }
+/* Список сообщений начинается ниже заголовка, но кромка уходит влево по
+   всей высоте: без этого отступа первые строки попадали на срез. */
+[data-decoration="retrowave"] .scene-chat__list { padding-left: 40px; }
 
 /* Scene event icons: cyan rings instead of filled Material chips. */
 [data-decoration="retrowave"] .event-icon {

@@ -802,6 +802,11 @@
   opacity: 0.9;
 }
 
+/* Высокая панель чата: кромка мягче, иначе она подходит к первым строкам. */
+.retrowave-chat-surface::before {
+  clip-path: polygon(18px 0, 20px 0, 2px 100%, 0 100%);
+}
+
 /* UEC transfer follows the same HUD decoration as the other panels: scanlines
    and four corner brackets under Orbital (brackets4), two corners under
    angular custom themes (brackets2). */

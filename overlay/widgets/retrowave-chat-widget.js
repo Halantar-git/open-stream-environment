@@ -96,7 +96,7 @@
         bottom: "0",
         display: "flex",
         flexDirection: "column",
-        padding: "18px 18px 18px 30px",
+        padding: "18px 18px 18px 32px",
         boxSizing: "border-box",
       });
       this.element.appendChild(frame);
@@ -158,7 +158,10 @@
       const blur = (read && read("--panel-blur")) || "0px";
       const border = (read && read("--panel-border")) || "2px solid rgba(255, 45, 149, 0.8)";
       const radius = (read && read("--panel-radius")) || "0px";
-      const clip = (read && read("--panel-clip")) || "none";
+      // Чат высокий, и текст стоит близко к ведущей кромке: общий срез 26px
+      // съедал первые строки. Здесь кромка мягче, её повторяет
+      // `.retrowave-chat-surface::before` в shared/widgets.css.
+      const clip = "polygon(18px 0, 100% 0, 100% 100%, 0 100%)";
       const elev =
         (read && read("--elev-1")) ||
         "0 1px 3px rgba(0,0,0,0.55), 0 1px 2px rgba(0,0,0,0.35)";
