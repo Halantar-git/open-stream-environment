@@ -263,6 +263,43 @@ body {
   color: var(--md-on-surface);
 }
 
+/* Retrowave: у карточки голосования та же косая кромка, но без светящейся
+   линии срез читается как обрубленный угол — рамка обрывается на диагонали.
+   Рисуем кромку, сетку и внутренний кант, как у панелей и сцен темы. */
+[data-decoration="retrowave"] .poll__card {
+  background-image:
+    repeating-linear-gradient(90deg, rgba(45, 226, 230, 0.055) 0 1px, transparent 1px 34px),
+    repeating-linear-gradient(0deg, rgba(255, 45, 149, 0.045) 0 1px, transparent 1px 34px);
+  box-shadow:
+    var(--panel-glow),
+    inset 0 0 0 1px rgba(45, 226, 230, 0.26),
+    inset 0 0 34px rgba(255, 45, 149, 0.14);
+}
+[data-decoration="retrowave"] .poll__card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  clip-path: polygon(26px 0, 28px 0, 2px 100%, 0 100%);
+  background: var(--md-primary);
+  filter: drop-shadow(0 0 3px rgba(45, 226, 230, 0.7)) drop-shadow(0 0 9px rgba(255, 45, 149, 0.3));
+  opacity: 0.9;
+}
+[data-decoration="retrowave"] .poll__card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(90deg, rgba(45, 226, 230, 0.95), rgba(255, 45, 149, 0.85) 62%, transparent),
+    linear-gradient(270deg, rgba(255, 45, 149, 0.95), rgba(45, 226, 230, 0.8) 62%, transparent);
+  background-repeat: no-repeat;
+  background-size: 46% 1px, 46% 1px;
+  background-position: top 0 left 0, bottom 0 right 0;
+  filter: drop-shadow(0 0 4px rgba(255, 45, 149, 0.6));
+  opacity: 0.85;
+}
+
 .poll__status {
   display: inline-flex;
   align-items: center;
