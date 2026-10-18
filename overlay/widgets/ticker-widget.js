@@ -275,6 +275,8 @@
         userInput: String(alert.userInput || "").trim(),
         tier: alert.tier,
         count: Number(alert.count) || 0,
+        months: Number(alert.months) || 0,
+        resub: Boolean(alert.resub),
       };
       if (options && options.breaking) {
         this._showBreaking(this._textOf(raw), REWARD_BREAKING_MS);
@@ -353,7 +355,7 @@
     }
 
     _keyOf(raw) {
-      return [raw.kind, raw.user || "", raw.amount || "", raw.message || "", raw.count || ""].join("|");
+      return [raw.kind, raw.user || "", raw.amount || "", raw.message || "", raw.count || "", raw.months || ""].join("|");
     }
 
     // ---- formatting ----
@@ -382,7 +384,9 @@
         case "follow":
           return this.t("ticker.follow", { user });
         case "sub":
-          return this.t("ticker.sub", { user, tier: this._tier(raw.tier) });
+          return raw.months > 1
+            ? this.t("ticker.subMonths", { user, tier: this._tier(raw.tier), months: raw.months })
+            : this.t("ticker.sub", { user, tier: this._tier(raw.tier) });
         case "gift_sub":
           return this.t("ticker.gift", {
             user,

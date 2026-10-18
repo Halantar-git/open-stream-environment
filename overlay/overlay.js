@@ -584,6 +584,12 @@
       case EVENT_TYPES.MIC_AUDIO_DATA:
         state.remoteMicData = msg.payload || null;
         break;
+      case EVENT_TYPES.OVERLAY_CAMERA_CONFIG:
+        // Мастер-выключатель камеры: виджет гасит последний кадр и показывает
+        // заглушку, пока захват в панели остановлен.
+        state.cameraConfig = (msg.payload && msg.payload.config) || state.cameraConfig;
+        bus.emit(EVENT_TYPES.OVERLAY_CAMERA_CONFIG, msg.payload);
+        break;
       case EVENT_TYPES.CAMERA_STREAM_CONFIG:
         bus.emit(EVENT_TYPES.CAMERA_STREAM_CONFIG, msg.payload || {});
         break;

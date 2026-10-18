@@ -921,6 +921,27 @@ impl Diagnostics {
         self.hud_edit_mode.load(Ordering::SeqCst)
     }
 
+    /// Включить/выключить захват камеры — сюда смотрит и глобальный хоткей,
+    /// и переключатель в свойствах виджета. Возвращает новое состояние.
+    ///
+    /// Флаг хранится в базе, поэтому выключенная камера не включится сама
+    /// после перезапуска — для приватности это важнее, чем сброс к умолчанию.
+    pub fn toggle_camera_enabled(&self) -> bool {
+        let current = self.database.camera_config();
+        let enabled = current
+            .get("enabled")
+            .and_then(Value::as_bool)
+            .unwrap_or(true);
+        let config = self
+            .database
+            .save_camera_config(Some(&json!({ "enabled": !enabled })));
+        self.broadcast(
+            event_types::OVERLAY_CAMERA_CONFIG,
+            json!({ "config": config }),
+        );
+        !enabled
+    }
+
     /// Окно HUD пересоздаётся на другом мониторе.
     pub fn hud_display_changed(&self) {
         if let Some(host) = self.hud_host() {
@@ -1141,6 +1162,9 @@ impl Diagnostics {
             "message": record.get("message").cloned().unwrap_or(Value::Null),
             "count": record.get("count").cloned().unwrap_or(Value::Null),
             "tier": record.get("tier").cloned().unwrap_or(Value::Null),
+            "months": record.get("months").cloned().unwrap_or(Value::Null),
+            "streakMonths": record.get("streak_months").cloned().unwrap_or(Value::Null),
+            "resub": record.get("resub").cloned().unwrap_or(Value::Null),
         });
         let duration = crate::protocol::alert_duration_ms(kind).unwrap_or(5000);
         if let Value::Object(map) = &mut alert {
@@ -2531,6 +2555,11 @@ fn apply_alert_side_effects(
                 // события» отличают её от обычного алерта с шаблоном сообщения.
                 "rewardTitle": alert.get("rewardTitle").cloned().unwrap_or(Value::Null),
                 "userInput": alert.get("userInput").cloned().unwrap_or(Value::Null),
+                // Длительность подписки нужна «последним событиям» и тикеру:
+                // по ней видно, что человек с каналом уже год, а не пришёл сегодня.
+                "months": alert.get("months").cloned().unwrap_or(Value::Null),
+                "streakMonths": alert.get("streakMonths").cloned().unwrap_or(Value::Null),
+                "resub": alert.get("resub").cloned().unwrap_or(Value::Null),
             }),
             now,
         );
@@ -3424,6 +3453,58 @@ mod tests {
             .cloned()
             .unwrap_or(Value::Null);
         assert_ne!(top["amount"], json!(500));
+    }
+
+    #[test]
+    fn a_resub_keeps_its_months_in_recent_events_and_history() {
+        use crate::storage::history::QueryOptions;
+
+        let dir = TempDir::new("resub-effects");
+        dir.write_config(r#"{ "alertQueue": { "enabled": false } }"#);
+        let diagnostics = Diagnostics::open(dir.storage()).expect("диагностика");
+        let emit = diagnostics.integration_emit();
+
+        emit(json!({
+            "type": event_types::ALERT,
+            "payload": {
+                "kind": "sub", "user": "loyal", "tier": "2000",
+                "months": 14, "resub": true,
+            },
+        }));
+
+        // «Последние события» и история одинаково хранят стаж подписки:
+        // без него продление не отличить от нового саба.
+        let recent = diagnostics.runtime().recent_events().to_vec();
+        assert_eq!(recent[0]["months"], json!(14));
+        assert_eq!(recent[0]["resub"], json!(true));
+
+        let page = diagnostics
+            .database()
+            .stream_events(&QueryOptions::default());
+        assert_eq!(page.items[0]["months"], json!(14));
+        assert_eq!(page.items[0]["resub"], json!(true));
+    }
+
+    #[test]
+    fn the_camera_toggle_flips_the_persisted_flag() {
+        let dir = TempDir::new("camera-toggle");
+        let diagnostics = Diagnostics::open(dir.storage()).expect("диагностика");
+
+        assert_eq!(
+            diagnostics.database().camera_config()["enabled"],
+            json!(true)
+        );
+        assert!(!diagnostics.toggle_camera_enabled());
+        assert_eq!(
+            diagnostics.database().camera_config()["enabled"],
+            json!(false)
+        );
+        // Повторное нажатие возвращает камеру — флаг не блокируется навсегда.
+        assert!(diagnostics.toggle_camera_enabled());
+        assert_eq!(
+            diagnostics.database().camera_config()["enabled"],
+            json!(true)
+        );
     }
 
     #[test]

@@ -68,6 +68,9 @@
       this.emptyEl = null;
       this._decoding = false;
       this._hasFrame = false;
+      // Мастер-флаг камеры: приходит событием от панели. Пока выключен,
+      // виджет не рисует кадры и не держит декодер.
+      this._cameraOff = false;
       this.videoDecoder = null;
       this._streamConfig = null;
       this._reportedDecodeFailure = false;
@@ -79,7 +82,24 @@
       if (EVENT_TYPES && EVENT_TYPES.CAMERA_STREAM_CONFIG) {
         this.subscribe(EVENT_TYPES.CAMERA_STREAM_CONFIG, (payload) => this._onStreamConfig(payload));
       }
+      if (EVENT_TYPES && EVENT_TYPES.OVERLAY_CAMERA_CONFIG) {
+        this.subscribe(EVENT_TYPES.OVERLAY_CAMERA_CONFIG, (payload) => this._onCameraConfig(payload));
+      }
       this._applyPerspective();
+    }
+
+    // Глобальный выключатель камеры: панель перестаёт слать кадры, а оверлей
+    // гасит последний — иначе в эфире остался бы «замёрзший» кадр.
+    _onCameraConfig(payload) {
+      const enabled = !(payload && payload.config && payload.config.enabled === false);
+      if (this._cameraOff === !enabled) return;
+      this._cameraOff = !enabled;
+      if (this._cameraOff) {
+        this._hasFrame = false;
+        this._closeDecoder();
+        this._streamConfig = null;
+      }
+      this.render();
     }
 
     onUpdate(prev, next) {
@@ -124,7 +144,8 @@
       const parts = [];
       if (cfg.showBackground) parts.push(`<div class="widget-webcam__backdrop"></div>`);
       if (camera) {
-        const noSignal = this._hasFrame ? "" : `<div class="widget-webcam__empty">${escapeHtml(t("webcam.noSignal"))}</div>`;
+        const emptyKey = this._cameraOff ? "webcam.cameraOff" : "webcam.noSignal";
+        const noSignal = this._hasFrame ? "" : `<div class="widget-webcam__empty">${escapeHtml(t(emptyKey))}</div>`;
         parts.push(
           `<div class="widget-webcam__video-wrap" data-fit="${escapeAttr(cfg.fit === "contain" ? "contain" : "cover")}">` +
             `<canvas class="widget-webcam__video"></canvas>` +
@@ -161,6 +182,7 @@
     // Кадр приходит Blob'ом (JPEG). Декодируем через Image: это работает и в
     // system webview, и в CEF OBS, и не требует createImageBitmap.
     _onFrame(payload) {
+      if (this._cameraOff) return;
       if (payload && payload.h264) {
         this._onH264Chunk(payload);
         return;
@@ -195,6 +217,7 @@
     // только когда сменились кодек или разрешение — иначе поток дёргался бы
     // каждые две секунды.
     _onStreamConfig(payload) {
+      if (this._cameraOff) return;
       const cfg = payload || {};
       const codec = String(cfg.codec || "").toLowerCase();
       if (this.config.source !== "camera" || !codec.startsWith("avc1")) {
@@ -244,6 +267,7 @@
     }
 
     _onH264Chunk(payload) {
+      if (this._cameraOff) return;
       const decoder = this.videoDecoder;
       if (!decoder || decoder.state !== "configured" || !payload || !payload.data) return;
       try {
@@ -261,7 +285,7 @@
 
     _onVideoFrame(frame) {
       try {
-        if (!this.videoCanvas || !this.videoCanvas.isConnected) return;
+        if (this._cameraOff || !this.videoCanvas || !this.videoCanvas.isConnected) return;
         this._drawImageLike(
           frame,
           frame.displayWidth || frame.codedWidth || 0,

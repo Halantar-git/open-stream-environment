@@ -404,7 +404,14 @@
     detailText(alert) {
       const kind = alert.kind || "";
       if (kind === "follow") return this.t("uec.detailFollow");
-      if (kind === "sub") return this.t("uec.detailSub", { tier: this.tierLabel(alert.tier) });
+      if (kind === "sub") {
+        return Number(alert.months) > 1
+          ? this.t("uec.detailSubMonths", {
+              tier: this.tierLabel(alert.tier),
+              months: alert.months,
+            })
+          : this.t("uec.detailSub", { tier: this.tierLabel(alert.tier) });
+      }
       if (kind === "gift_sub") {
         return this.t("uec.detailGift", {
           count: Math.max(1, Number(alert.count) || 1),

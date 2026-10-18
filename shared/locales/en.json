@@ -544,6 +544,7 @@
   "alert": {
     "follow": "Follower",
     "sub": "Subscription",
+    "resubMonths": "Renewal · {{months}} mo.",
     "giftSub": "Gift: {{count}}",
     "cheer": "Cheer",
     "donation": "Donation",
@@ -564,6 +565,7 @@
   "recent": {
     "follow": "{{user}} followed",
     "sub": "{{user}} subscribed",
+    "subResub": "{{user}} renewed the subscription — {{months}} mo.",
     "giftSub": "{{user}} gifted {{amount}} subscriptions",
     "cheer": "{{user}} cheered {{amount}} bits",
     "donation": "{{user}} donated {{amount}}",
@@ -599,6 +601,7 @@
     "details": "DETAILS",
     "detailFollow": "CHANNEL ADDED TO WATCHLIST",
     "detailSub": "TIER {{tier}}",
+    "detailSubMonths": "TIER {{tier}} · {{months}} MO.",
     "detailGift": "×{{count}} · TIER {{tier}}",
     "decoded": "DECODED",
     "anonymous": "ANONYMOUS",
@@ -623,6 +626,7 @@
     "cheer": "{{user}} — {{amount}} bits",
     "follow": "New follower: {{user}}",
     "sub": "{{user}} subscribed (tier {{tier}})",
+    "subMonths": "{{user}} renewed the subscription — {{months}} mo. (tier {{tier}})",
     "gift": "{{user}} gifted {{count}} subscriptions (tier {{tier}})",
     "reward": "{{user}} redeemed a reward",
     "rewardTitle": "{{user}} — {{reward}}",
@@ -1097,6 +1101,8 @@
     "webcamColor": "Frame color",
     "webcamColorAuto": "Auto (theme)",
     "webcamHint": "In Frame only mode the camera is a separate OBS source. In Live video mode the control panel captures the camera and sends frames to the overlay — the OBS browser source itself has no camera access. H.264 uses the hardware encoder when available; if decoding fails the panel falls back to JPEG automatically.",
+    "webcamEnabled": "Camera on",
+    "webcamEnabledHint": "Global toggle hotkey: Control+Shift+K — works even when the panel is minimized.",
     "webcamSource": "Video source",
     "webcamSourceFrame": "Frame only",
     "webcamSourceCamera": "Live video from the panel",
@@ -1126,7 +1132,8 @@
   },
   "webcam": {
     "noSignal": "No camera signal",
-    "previewLive": "Live camera video"
+    "cameraOff": "Camera off",
+    "previewLive": "Live camera preview"
   },
   "preview": {
     "goalTitle": "Goal",
@@ -1203,6 +1210,7 @@
     "all": "All",
     "donation": "Donation",
     "subscription": "Subscription",
+    "months": "{{months}} mo.",
     "follow": "Follow",
     "cheer": "Cheer",
     "reward": "Reward",
@@ -1501,7 +1509,7 @@
       "p1": "Global hotkeys work even when the game has focus. The first two are changed in Settings → Application (format like Control+Shift+H); on macOS use Command instead of Control.",
       "p2": "Control+Shift+H — HUD edit mode: a transparent overlay appears over the game, widgets can be dragged and resized, and the grid/snap turns on.",
       "p3": "Control+Shift+L — chat over the game: a transparent chat window that stays above other windows and passes clicks through (handy on a single monitor).",
-      "p4": "Control+Shift+C — pin/unpin the chat window (always on top). Control+Shift+G — game mode: hide or show the control panel so it stays out of the way while streaming."
+      "p4": "Control+Shift+C — pin/unpin the chat window (always on top). Control+Shift+G — game mode: hide or show the control panel so it doesn't get in the way on stream. Control+Shift+K — turn the camera off/on: panel capture stops, widgets show a placeholder, and the OBS webcam source is muted when configured."
     },
     "twitch": {
       "title": "Twitch",

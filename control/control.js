@@ -1939,12 +1939,18 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   function renderEventRow(ev) {
     const amount = typeof ev.amount === "number" ? `${formatMoney(ev.amount)} ${currencySymbol(ev.currency)}` : "";
+    // У продления суммы нет — вместо неё показываем стаж подписки.
+    const months =
+      ev.type === "subscription" && Number(ev.months) > 1
+        ? t("events.months", { months: ev.months })
+        : "";
     const testBadge = ev.is_test ? '<span class="events-history__test">' + t("events.test") + '</span>' : "";
     return `
       <div class="events-history__row">
         <span class="events-history__type events-history__type--${escapeAttr(ev.type)}">${escapeHtml(EVENTS_TYPE_LABEL(ev.type))}</span>
         <span class="events-history__user">${escapeHtml(ev.username)}</span>
         ${amount ? `<span class="events-history__amount">${escapeHtml(amount)}</span>` : ""}
+        ${months ? `<span class="events-history__amount">${escapeHtml(months)}</span>` : ""}
         ${ev.message ? `<span class="events-history__message">${escapeHtml(ev.message)}</span>` : ""}
         <span class="events-history__time">${formatEventTime(ev.timestamp)}</span>
         ${testBadge}
@@ -2621,7 +2627,14 @@ const { EVENT_TYPES } = window.SharedEvents;
   function sendCameraCaptureConfig(patch) {
     state.cameraConfig = { ...state.cameraConfig, ...patch };
     send(EVENT_TYPES.CMD_SET_CAMERA_CONFIG, { config: state.cameraConfig });
+    // Выключенная камера не должна даже коротко включиться при правке
+    // остальных параметров — сначала проверяем мастер-флаг.
+    if (state.cameraConfig.enabled === false) {
+      cameraBridge.stop();
+      return;
+    }
     cameraBridge.applyConfig();
+    syncCameraBridge();
   }
 
   // Список камер — для выпадающего списка в инспекторе.
@@ -4163,7 +4176,15 @@ const { EVENT_TYPES } = window.SharedEvents;
         break;
       case EVENT_TYPES.OVERLAY_CAMERA_CONFIG:
         state.cameraConfig = (msg.payload && msg.payload.config) || state.cameraConfig;
-        cameraBridge.applyConfig();
+        state.cameraConfigReady = true;
+        // Состояние приходит и от хоткея (он живёт в нативной части), поэтому
+        // здесь же останавливаем захват, а не только перерисовываем панель.
+        if ((state.cameraConfig || {}).enabled === false) {
+          cameraBridge.stop();
+        } else {
+          cameraBridge.applyConfig();
+          syncCameraBridge();
+        }
         propertiesPanel.render();
         break;
       case EVENT_TYPES.CAMERA_DECODE_FAILED:
@@ -4870,8 +4891,15 @@ const { EVENT_TYPES } = window.SharedEvents;
       widgets.some(
         (w) => w.type === "webcam" && w.config && w.config.source === "camera" && w.visible !== false
       );
-    if (layoutCamera) cameraBridge.start();
-    else cameraBridge.stop();
+    if (
+      layoutCamera &&
+      state.cameraConfigReady !== false &&
+      (state.cameraConfig || {}).enabled !== false
+    ) {
+      cameraBridge.start();
+    } else {
+      cameraBridge.stop();
+    }
   }
 
   // ---- auto-updates ----

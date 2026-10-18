@@ -34,7 +34,14 @@ const LONG_DONATION_LIMIT: usize = 200;
 pub fn build_test_alert(kind: &str) -> Value {
     let user = test_viewer();
     match kind {
-        "sub" => json!({ "kind": "sub", "user": user, "tier": "1000" }),
+        "sub" => json!({
+            "kind": "sub",
+            "user": user,
+            "tier": "1000",
+            // Продление — чтобы кнопка проверки показывала и длительность.
+            "months": 12,
+            "resub": true,
+        }),
         "gift_sub" => json!({ "kind": "gift_sub", "user": user, "count": 3 }),
         "cheer" => json!({ "kind": "cheer", "user": user, "amount": 250 }),
         "donation" => json!({
@@ -127,6 +134,17 @@ pub fn to_stream_event(alert: &Value, is_test: bool, timestamp_ms: i64) -> Value
         "tier".to_string(),
         truthy(alert.get("tier")).unwrap_or(Value::Null),
     );
+    // Длительность подписки: у новой — 1 месяц, у продления — стаж Twitch.
+    // Поля отдельные, чтобы история и повтор алерта не теряли их.
+    out.insert("months".to_string(), number_or_null(alert.get("months")));
+    out.insert(
+        "streak_months".to_string(),
+        number_or_null(alert.get("streakMonths")),
+    );
+    out.insert(
+        "resub".to_string(),
+        Value::from(js_truthy(alert.get("resub"))),
+    );
     // Идентификатор доната на стороне сервиса: по нему «пропущенные» донаты не
     // попадают в историю второй раз (см. `Database::known_source_ids`).
     out.insert(
@@ -182,6 +200,8 @@ mod tests {
         let sub = build_test_alert("sub");
         assert_eq!(sub["kind"], json!("sub"));
         assert_eq!(sub["tier"], json!("1000"));
+        assert_eq!(sub["months"], json!(12));
+        assert_eq!(sub["resub"], json!(true));
 
         let gift = build_test_alert("gift_sub");
         assert_eq!(gift["kind"], json!("gift_sub"));
@@ -239,6 +259,9 @@ mod tests {
         assert_eq!(record["is_test"], json!(false));
         assert_eq!(record["count"], json!(2));
         assert_eq!(record["tier"], json!("1000"));
+        assert_eq!(record["months"], Value::Null);
+        assert_eq!(record["streak_months"], Value::Null);
+        assert_eq!(record["resub"], json!(false));
         assert_eq!(record["source_id"], Value::Null);
     }
 

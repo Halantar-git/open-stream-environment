@@ -127,6 +127,12 @@ pub struct Item {
     pub message: String,
     pub count: u64,
     pub tier: Option<Value>,
+    /// Сколько месяцев длится подписка: у новой — 1, у продления —
+    /// `cumulative_months` из Twitch. В алерте и истории это отдельное
+    /// поле, чтобы ник и сумма не смешивались с длительностью.
+    pub months: Option<f64>,
+    pub streak_months: Option<f64>,
+    pub resub: bool,
     pub is_test: bool,
     pub recovered: bool,
     /// Идентификатор доната на стороне сервиса: по нему пропущенное не
@@ -155,6 +161,15 @@ impl Item {
         out.insert("message".to_string(), Value::from(self.message.clone()));
         out.insert("count".to_string(), Value::from(self.count));
         out.insert("tier".to_string(), self.tier.clone().unwrap_or(Value::Null));
+        out.insert(
+            "months".to_string(),
+            self.months.map(number_value).unwrap_or(Value::Null),
+        );
+        out.insert(
+            "streakMonths".to_string(),
+            self.streak_months.map(number_value).unwrap_or(Value::Null),
+        );
+        out.insert("resub".to_string(), Value::from(self.resub));
         out.insert("isTest".to_string(), Value::from(self.is_test));
         out.insert("recovered".to_string(), Value::from(self.recovered));
         out.insert(
@@ -536,6 +551,9 @@ impl AlertQueue {
             message: text_or(alert.get("message"), ""),
             count: js_number_or_zero(alert.get("count")).max(0.0) as u64,
             tier: truthy(alert.get("tier")),
+            months: alert.get("months").and_then(Value::as_f64),
+            streak_months: alert.get("streakMonths").and_then(Value::as_f64),
+            resub: js_truthy(alert.get("resub")),
             is_test: js_truthy(alert.get("isTest")),
             recovered: meta.recovered,
             // `!= null`, а не «истинно»: `0` и `""` — тоже идентификаторы.

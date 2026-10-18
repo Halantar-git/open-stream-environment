@@ -4,8 +4,9 @@
 //! (`hud-overlay`), который в обычном состоянии пропускает клики насквозь, а по
 //! хоткею входит в режим редактирования и ловит мышь; отдельное окно чата поверх
 //! игры (`chat-hud`), которое только показывается/скрывается. Плюс глобальные
-//! хоткеи: настраиваемые HUD и чата, игровой режим (Ctrl+Shift+G) и закрепление
-//! чата поверх окон (Ctrl+Shift+C).
+//! хоткеи: настраиваемые HUD и чата, игровой режим (Ctrl+Shift+G),
+//! закрепление чата поверх окон (Ctrl+Shift+C) и выключение камеры
+//! (Ctrl+Shift+K).
 //!
 //! Сервер сюда не заглядывает: `server/commands.rs` зовёт [`Diagnostics`] через
 //! [`HudHost`], а глобальный хоткей находит оболочку в состоянии приложения. Так
@@ -473,6 +474,28 @@ impl Hud {
             move |_app, _shortcut, event| {
                 if event.state() == ShortcutState::Pressed {
                     pin.toggle_chat_pin();
+                }
+            },
+        );
+        // Камера выключается вслепую: часто это нужно в игре, когда панель
+        // свёрнута в трей. Захват живёт в панели, поэтому будим её событием,
+        // а не дёргаем видеопоток из нативного кода.
+        let camera = Arc::clone(self);
+        let _ = self.app.global_shortcut().on_shortcut(
+            "Control+Shift+K",
+            move |_app, _shortcut, event| {
+                if event.state() == ShortcutState::Pressed {
+                    let app = camera.app.clone();
+                    std::mem::drop(tauri::async_runtime::spawn(async move {
+                        if let Some(state) = app.try_state::<DesktopState>() {
+                            state.diagnostics.toggle_camera_enabled();
+                            // Отдельный источник в OBS живёт своей жизнью —
+                            // гасим и его, если он настроен.
+                            crate::server::remote::toggle_webcam_source_if_configured(
+                                &state.diagnostics,
+                            );
+                        }
+                    }));
                 }
             },
         );

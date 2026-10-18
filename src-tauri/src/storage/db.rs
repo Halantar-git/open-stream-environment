@@ -475,6 +475,17 @@ impl Database {
             "tier".to_string(),
             or_default(event.get("tier"), Value::Null),
         );
+        // Длительность подписки и признак продления: без них строка истории
+        // не покажет, что человек с нами уже год.
+        row.insert("months".to_string(), number_or_null(event.get("months")));
+        row.insert(
+            "streak_months".to_string(),
+            number_or_null(event.get("streak_months")),
+        );
+        row.insert(
+            "resub".to_string(),
+            json!(history::js_truthy(event.get("resub"))),
+        );
         // Идентификатор события на стороне сервиса (например донат в
         // DonationAlerts): по нему «пропущенные» донаты не добавляются дважды.
         row.insert(
@@ -745,6 +756,9 @@ impl Database {
                 500.0,
                 20000.0
             )),
+            // Глобальный выключатель камеры: `false` останавливает захват
+            // независимо от того, есть ли на раскладке видимый виджет.
+            "enabled": raw.get("enabled").and_then(Value::as_bool).unwrap_or(true),
         })
     }
 
@@ -1671,6 +1685,11 @@ mod tests {
         assert_eq!(defaults["quality"], json!(0.6));
         assert_eq!(defaults["codec"], json!("auto"));
         assert_eq!(defaults["bitrateKbps"], json!(4000));
+        assert_eq!(defaults["enabled"], json!(true));
+
+        // Хоткей выключает камеру — состояние переживает перезапуск.
+        db.save_camera_config(Some(&json!({ "enabled": false })));
+        assert_eq!(db.camera_config()["enabled"], json!(false));
 
         let saved = db.save_camera_config(Some(&json!({
             "deviceId": "cam-1",

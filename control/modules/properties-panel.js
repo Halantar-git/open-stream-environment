@@ -469,6 +469,8 @@ export function initPropertiesPanel({
         source === "camera"
           ? `
         <div class="inspector__title" style="margin-top:10px;">${t("properties.webcamCapture")}</div>
+        <div class="properties__toggle-row"><label>${t("properties.webcamEnabled")}</label>${switchHtml("pCameraEnabled", cameraCfg.enabled !== false)}</div>
+        <p class="properties__hint">${t("properties.webcamEnabledHint")}</p>
         <div class="md-field"><label>${t("properties.webcamDevice")}</label>
           <div class="properties__row">
             <select id="pCameraDevice">${deviceOptions}</select>
@@ -827,6 +829,7 @@ export function initPropertiesPanel({
       });
       propertiesEl.querySelector("#pWebcamColor").addEventListener("input", (e) => patchWebcam({ color: e.target.value }));
       propertiesEl.querySelector("#pWebcamColorReset").addEventListener("click", () => patchWebcam({ color: "" }));
+      wireSwitch(propertiesEl.querySelector("#pCameraEnabled"), (on) => sendCameraCaptureConfig({ enabled: on }));
       const cameraDevice = propertiesEl.querySelector("#pCameraDevice");
       if (cameraDevice) {
         cameraDevice.addEventListener("change", (e) => sendCameraCaptureConfig({ deviceId: e.target.value }));

@@ -97,7 +97,10 @@ export function createStateManager() {
     wheelSpeedConfig: { speed: 3 },
     micConfig: { sensitivity: 1.5, lineWidth: 2, color: "", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2, peakFall: 2.5 },
     micDevices: [],
-    cameraConfig: { deviceId: "", width: 960, fps: 12, quality: 0.6, codec: "auto", bitrateKbps: 4000 },
+    cameraConfig: { deviceId: "", width: 960, fps: 12, quality: 0.6, codec: "auto", bitrateKbps: 4000, enabled: true },
+    // Панель ждёт сохранённый флаг камеры, прежде чем открывать устройство:
+    // иначе при выключенной камере она успела бы мигнуть на старте.
+    cameraConfigReady: false,
     cameraDevices: [],
     // Последний снимок конфига Longshot (Executive Hangar), если получен.
     longshot: null,

@@ -97,7 +97,9 @@
         case "follow":
           return t("alert.follow");
         case "sub":
-          return t("alert.sub");
+          return Number(alert.months) > 1
+            ? t("alert.resubMonths", { months: alert.months })
+            : t("alert.sub");
         case "gift_sub":
           return t("alert.giftSub", { count: alert.count || 1 });
         case "cheer":

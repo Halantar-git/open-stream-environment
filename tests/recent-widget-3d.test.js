@@ -111,6 +111,8 @@ function setup(config = {}, recentEvents = []) {
       t: (key, params) => {
         if (key === "preview.recentTitle") return "Последние события";
         if (key === "recent.follow") return `${params.user} — фоллоу`;
+        if (key === "recent.sub") return `${params.user} — подписка`;
+        if (key === "recent.subResub") return `${params.user} — продление ${params.months} мес.`;
         return key;
       },
     }
@@ -156,6 +158,12 @@ describe("RecentWidget3d", () => {
   test("скорость анимации попадает в CSS-переменную", () => {
     const { widget } = setup({ animationMs: 250 }, [event("a", 1)]);
     expect(widget.host.style.props["--recent-animation"]).toBe("250ms");
+  });
+
+  test("продление показывает стаж подписки, новая — нет", () => {
+    const { widget } = setup({}, []);
+    expect(widget._text({ kind: "sub", user: "loyal", months: 14, resub: true })).toBe("<b>loyal</b> — продление 14 мес.");
+    expect(widget._text({ kind: "sub", user: "nova", months: 1, resub: false })).toBe("<b>nova</b> — подписка");
   });
 
   test("смена лимита пересобирает список", () => {

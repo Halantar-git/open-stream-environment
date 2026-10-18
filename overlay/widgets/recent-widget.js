@@ -66,6 +66,11 @@
         case "follow":
           return t("recent.follow", { user });
         case "sub":
+          // Продление показываем со стажем: «подписался» и «с нами уже год» —
+          // разные события для зрителя и для ленты.
+          if (evt.resub || Number(evt.months) > 1) {
+            return t("recent.subResub", { user, months: Number(evt.months) || 1 });
+          }
           return t("recent.sub", { user });
         case "gift_sub":
           return t("recent.giftSub", { user, amount: evt.amount || "" });

@@ -21,9 +21,12 @@ use crate::storage::history::js_truthy;
 pub const SUBSCRIBE_URL: &str = "https://api.twitch.tv/helix/eventsub/subscriptions";
 
 /// Названия подписок берутся из документации Twitch; порядок — как в JS.
-const SUBSCRIPTION_TYPES: [(&str, &str); 5] = [
+const SUBSCRIPTION_TYPES: [(&str, &str); 6] = [
     ("channel.follow", "2"),
     ("channel.subscribe", "1"),
+    // Продление с числом месяцев и сообщением зрителя: без него длительность
+    // подписки не доехала бы до алерта и истории.
+    ("channel.subscription.message", "1"),
     ("channel.subscription.gift", "1"),
     ("channel.cheer", "1"),
     ("channel.channel_points_custom_reward_redemption.add", "1"),
@@ -213,9 +216,29 @@ pub fn notification_events(config: &Value, payload: &Value) -> Vec<Value> {
                     "kind": "sub",
                     "user": text_of(event.get("user_name")),
                     "tier": text_of(event.get("tier")),
+                    "months": 1,
+                    "resub": false,
                 }),
             ));
             events.push(bus_event("stat_delta", json!({ "subscriberDelta": 1 })));
+        }
+        "channel.subscription.message" => {
+            // Продление: Twitch отдаёт общий стаж (`cumulative_months`) и серию
+            // (`streak_months`). Новым подписчиком человек не становится, поэтому
+            // счётчик подписок не двигаем.
+            let message = event.get("message").and_then(|message| message.get("text"));
+            events.push(bus_event(
+                "alert",
+                json!({
+                    "kind": "sub",
+                    "user": text_of(event.get("user_name")),
+                    "tier": text_of(event.get("tier")),
+                    "months": event.get("cumulative_months").cloned().unwrap_or(json!(1)),
+                    "streakMonths": event.get("streak_months").cloned().unwrap_or(Value::Null),
+                    "resub": true,
+                    "message": text_of(message),
+                }),
+            ));
         }
         "channel.subscription.gift" => {
             let anonymous = js_truthy(event.get("is_anonymous"));
@@ -451,19 +474,57 @@ mod tests {
     use super::*;
 
     #[test]
-    fn subscriptions_cover_the_five_types() {
+    fn subscriptions_cover_the_event_types() {
         let subs = subscriptions("bid");
-        assert_eq!(subs.len(), 5);
+        assert_eq!(subs.len(), 6);
         assert_eq!(subs[0]["type"], json!("channel.follow"));
         assert_eq!(subs[0]["version"], json!("2"));
         // Follow второй версии требует и модератора — это сам вещатель.
         assert_eq!(subs[0]["condition"]["broadcaster_user_id"], json!("bid"));
         assert_eq!(subs[0]["condition"]["moderator_user_id"], json!("bid"));
+        assert_eq!(subs[2]["type"], json!("channel.subscription.message"));
         assert_eq!(
-            subs[4]["type"],
+            subs[5]["type"],
             json!("channel.channel_points_custom_reward_redemption.add")
         );
-        assert_eq!(subs[4]["condition"]["broadcaster_user_id"], json!("bid"));
+        assert_eq!(subs[5]["condition"]["broadcaster_user_id"], json!("bid"));
+    }
+
+    #[test]
+    fn a_new_subscription_counts_one_month_and_a_resub_keeps_its_streak() {
+        let fresh = notification_events(
+            &json!({}),
+            &json!({
+                "subscription": { "type": "channel.subscribe" },
+                "event": { "user_name": "nova", "tier": "1000", "is_gift": false },
+            }),
+        );
+        assert_eq!(fresh[0]["payload"]["months"], json!(1));
+        assert_eq!(fresh[0]["payload"]["resub"], json!(false));
+        assert_eq!(fresh[1]["payload"]["subscriberDelta"], json!(1));
+
+        let resub = notification_events(
+            &json!({}),
+            &json!({
+                "subscription": { "type": "channel.subscription.message" },
+                "event": {
+                    "user_name": "loyal",
+                    "tier": "2000",
+                    "cumulative_months": 14,
+                    "streak_months": 14,
+                    "message": { "text": "Спасибо за стримы!" },
+                },
+            }),
+        );
+        // Продление не добавляет нового подписчика и не трогает счётчик.
+        assert_eq!(resub.len(), 1);
+        let payload = &resub[0]["payload"];
+        assert_eq!(payload["kind"], json!("sub"));
+        assert_eq!(payload["months"], json!(14));
+        assert_eq!(payload["streakMonths"], json!(14));
+        assert_eq!(payload["resub"], json!(true));
+        assert_eq!(payload["tier"], json!("2000"));
+        assert_eq!(payload["message"], json!("Спасибо за стримы!"));
     }
 
     #[test]

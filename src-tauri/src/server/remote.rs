@@ -392,6 +392,21 @@ fn theme_set(diagnostics: &Diagnostics, payload: &Value) {
     }
 }
 
+/// Выключить/включить камеру в OBS — тот же путь, что у кнопки пульта.
+/// Зовётся глобальным хоткеем: если источник не настроен, молча ничего не
+/// делаем, чтобы не засорять журнал на каждом нажатии.
+pub fn toggle_webcam_source_if_configured(diagnostics: &Diagnostics) {
+    let configured = diagnostics
+        .config()
+        .get("obs")
+        .and_then(|obs| obs.get("webcamSource"))
+        .map(crate::state::js_string)
+        .is_some_and(|name| !name.is_empty());
+    if configured {
+        toggle_source(diagnostics, "webcamSource", ToggleKind::Webcam);
+    }
+}
+
 fn toggle_source(diagnostics: &Diagnostics, config_key: &str, kind: ToggleKind) {
     let source_name = {
         let config = diagnostics.config();
