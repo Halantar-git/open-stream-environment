@@ -807,6 +807,47 @@
   clip-path: polygon(18px 0, 20px 0, 2px 100%, 0 100%);
 }
 
+/* UEC-перевод в Retrowave: та же скошенная неоновая кромка, что у панелей
+   темы. Срез мягче общего 26px — заголовок стоит вплотную к краю, а у низкой
+   компактной плашки 26px срезали ещё и бейдж. Кромку рисуем отдельной
+   неоновой линией: без неё срез читается как обрубленный угол. */
+[data-decoration="retrowave"] .uec-transfer__frame,
+[data-decoration="retrowave"] .uec-transfer-preview {
+  background-image:
+    repeating-linear-gradient(90deg, rgba(45, 226, 230, 0.055) 0 1px, transparent 1px 34px),
+    repeating-linear-gradient(0deg, rgba(255, 45, 149, 0.045) 0 1px, transparent 1px 34px);
+  box-shadow: var(--elev-1), var(--panel-glow), inset 0 0 0 1px rgba(45, 226, 230, 0.16);
+}
+[data-decoration="retrowave"] .uec-transfer__frame {
+  clip-path: polygon(18px 0, 100% 0, 100% 100%, 0 100%);
+}
+[data-decoration="retrowave"] .uec-transfer-preview {
+  clip-path: polygon(14px 0, 100% 0, 100% 100%, 0 100%);
+}
+[data-decoration="retrowave"] .uec-transfer__compact {
+  clip-path: polygon(14px 0, 100% 0, 100% 100%, 0 100%);
+}
+[data-decoration="retrowave"] .uec-transfer__frame::before,
+[data-decoration="retrowave"] .uec-transfer-preview::before,
+[data-decoration="retrowave"] .uec-transfer__compact::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--md-primary);
+  filter: drop-shadow(0 0 3px rgba(45, 226, 230, 0.7)) drop-shadow(0 0 9px rgba(255, 45, 149, 0.3));
+  opacity: 0.9;
+}
+[data-decoration="retrowave"] .uec-transfer__frame::before {
+  clip-path: polygon(18px 0, 20px 0, 2px 100%, 0 100%);
+}
+[data-decoration="retrowave"] .uec-transfer-preview::before,
+[data-decoration="retrowave"] .uec-transfer__compact::before {
+  clip-path: polygon(14px 0, 16px 0, 2px 100%, 0 100%);
+}
+[data-decoration="retrowave"] .uec-transfer__panel { padding-left: 34px; }
+[data-decoration="retrowave"] .uec-transfer__compact { padding-left: 26px; }
+
 /* UEC transfer follows the same HUD decoration as the other panels: scanlines
    and four corner brackets under Orbital (brackets4), two corners under
    angular custom themes (brackets2). */

@@ -567,10 +567,19 @@ export function initCanvasEditor({
         const panelBorder = tokens["--panel-border"] || "1px solid rgba(0, 240, 255, 0.35)";
         const panelRadius = tokens["--panel-radius"] || "0px";
         const panelClip = tokens["--panel-clip"] || "none";
+        // Срез Retrowave 26px рассчитан на высокие панели. В превью виджета он
+        // съедает заголовок и бейдж, поэтому берём ту же мягкую кромку, что у
+        // самой панели UEC в shared/widgets.css.
+        const previewClip =
+          tokens["--panel-decoration"] === "retrowave"
+            ? "polygon(14px 0, 100% 0, 100% 100%, 0 100%)"
+            : panelClip;
+        const previewPadding =
+          tokens["--panel-decoration"] === "retrowave" ? "8px 12px 8px 20px" : "8px 12px";
         const panelGlow = tokens["--panel-glow"] || "0 0 15px rgba(0, 240, 255, 0.3)";
         const channel = escapeHtml(config.channel || t("uec.channel"));
         const amountColor = donationQualityColor(250);
-        return `<div class="uec-transfer-preview" style="position:relative;height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;padding:8px 12px;background-color:${panelBg};border:${panelBorder};border-radius:${panelRadius};clip-path:${panelClip};box-shadow:${panelGlow};font-family:'Orbitron','Segoe UI',sans-serif;">
+        return `<div class="uec-transfer-preview" style="position:relative;height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;padding:${previewPadding};background-color:${panelBg};border:${panelBorder};border-radius:${panelRadius};clip-path:${previewClip};box-shadow:${panelGlow};font-family:'Orbitron','Segoe UI',sans-serif;">
           <div style="display:flex;align-items:center;gap:6px;color:${cyan};font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;white-space:nowrap;">
             <svg viewBox="0 0 24 24" style="width:12px;height:12px;flex-shrink:0;color:${cyan};"><path d="M12 2.4l8.2 4.7v9.8L12 21.6l-8.2-4.7V7.1L12 2.4z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M12 6.2l4.9 2.8v5.9L12 17.8l-4.9-2.9V9L12 6.2z" fill="none" stroke="currentColor" stroke-width="0.9"/></svg>
             <span>${escapeHtml(t("uec.transmission"))}</span>
