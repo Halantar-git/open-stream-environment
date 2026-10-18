@@ -23,7 +23,8 @@
       font-size: 13px;
     }
     label { display: block; color: var(--muted); margin-bottom: 6px; }
-    select {
+    select,
+    input[type="text"] {
       width: 100%;
       padding: 8px 10px;
       background: var(--surface);
@@ -32,7 +33,9 @@
       border-radius: 6px;
       font: inherit;
     }
+    input[type="text"] { margin-bottom: 12px; }
     .hint { margin-top: 10px; color: var(--muted); font-size: 11px; }
+    .counter { margin-top: 4px; color: var(--muted); font-size: 11px; text-align: right; }
   </style>
 </head>
 <body>
@@ -43,8 +46,12 @@
   <script>
     let ws = null;
     let context = null;
+    let actionUuid = null;
     let currentSettings = {};
     let options = null;
+    let renderedSignature = null;
+
+    const TICKER_TEXT_LIMIT = 300;
 
     function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, inInfo, inActionInfo) {
       ws = new WebSocket("ws://127.0.0.1:" + inPort);
@@ -72,9 +79,18 @@
       try {
         const info = JSON.parse(inActionInfo || "{}");
         context = info.context || null;
+        actionUuid = info.action || null;
       } catch {
         context = null;
+        actionUuid = null;
       }
+    }
+
+    // У плагина два действия с одной панелью настроек: сцены и сообщение
+    // в ленту. Действие приходит в inActionInfo, поэтому панель не ждёт
+    // ответа плагина, чтобы понять, какие поля рисовать.
+    function isTicker() {
+      return typeof actionUuid === "string" && actionUuid.endsWith(".ticker");
     }
 
     function save(patch) {
@@ -112,16 +128,60 @@
       return el;
     }
 
-    function render() {
-      const root = document.getElementById("root");
-      root.innerHTML = "";
+    function input(value, maxLength, placeholder, oninput) {
+      const el = document.createElement("input");
+      el.type = "text";
+      el.maxLength = maxLength;
+      el.placeholder = placeholder || "";
+      el.value = value;
+      el.addEventListener("input", function () {
+        oninput(el.value);
+      });
+      return el;
+    }
 
+    function renderTicker(root) {
+      root.appendChild(label("Текст сообщения"));
+      root.appendChild(input(currentSettings.text || "", TICKER_TEXT_LIMIT, "Например: скоро розыгрыш", function (value) {
+        save({ text: value });
+      }));
+
+      root.appendChild(label("Приоритет"));
+      root.appendChild(makeSelect(currentSettings.priority || "normal", [
+        { id: "normal", label: "Обычное — в общую ленту" },
+        { id: "breaking", label: "Срочно — отдельной полосой" },
+      ], function (value) {
+        save({ priority: value });
+      }));
+
+      root.appendChild(hint("До " + TICKER_TEXT_LIMIT + " символов. Срочное сообщение перекрывает ленту на несколько секунд и не ждёт её цикла."));
+    }
+
+    function renderScene(root) {
       const scenes = (options && options.scenes) || [];
       root.appendChild(label("Сцена"));
-      root.appendChild(makeSelect(currentSettings.scene || "start", scenes, function (v) {
-        save({ scene: v });
+      root.appendChild(makeSelect(currentSettings.scene || "start", scenes, function (value) {
+        save({ scene: value });
       }));
       root.appendChild(hint("Кнопка подсвечивается, когда сцена активна."));
+    }
+
+    function render() {
+      const ticker = isTicker();
+      const scenes = (options && options.scenes) || [];
+      // Панель перерисовывается на каждое изменение настроек; если структура
+      // та же, не пересоздаём поля — иначе каретка прыгает в начало строки
+      // посреди набора текста.
+      const signature = ticker
+        ? "ticker"
+        : "scene:" + scenes.map(function (s) { return s.id; }).join(",");
+      if (signature === renderedSignature) return;
+      renderedSignature = signature;
+
+      const root = document.getElementById("root");
+      root.innerHTML = "";
+      if (ticker) renderTicker(root);
+      else renderScene(root);
     }
   </script>
 </body>

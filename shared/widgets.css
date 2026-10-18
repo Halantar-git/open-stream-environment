@@ -474,6 +474,62 @@
 .ticker__item[data-kind="system"] .ticker__tag { color: var(--md-on-surface-variant, #8ab4d0); }
 .ticker__item[data-kind="empty"] .ticker__text { opacity: 0.55; }
 
+/* Срочная полоса: отдельная строка над лентой, не меняет её геометрию. */
+.ticker__breaking {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 0.45em);
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+  max-height: 2.8em;
+  padding: 0.45em 1.1em;
+  box-sizing: border-box;
+  background: color-mix(in srgb, #d21f3c 88%, #000);
+  border: 1px solid color-mix(in srgb, #ff5470 70%, transparent);
+  box-shadow: 0 0 18px rgba(255, 45, 85, 0.55), 0 8px 22px rgba(0, 0, 0, 0.45);
+  color: #fff;
+  opacity: 0;
+  transform: translateY(0.5em);
+  transition: opacity 160ms ease, transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 2;
+}
+.ticker__breaking.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.ticker__breaking-label {
+  flex: 0 0 auto;
+  padding: 0.2em 0.55em;
+  background: #fff;
+  color: #b3142f;
+  font-family: var(--font-display, "Orbitron", "Segoe UI", sans-serif);
+  font-size: calc(var(--ticker-font) * 0.62);
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  animation: ticker-breaking-pulse 1.2s ease-in-out infinite;
+}
+.ticker__breaking-text {
+  min-width: 0;
+  font-size: calc(var(--ticker-font) * 0.95);
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@keyframes ticker-breaking-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ticker__breaking-label { animation: none; }
+}
+
 /* 3D-вариант: та же лента в лёгкой перспективе с глубиной и блик по верхней
    кромке. Наклон задаёт настройка `perspective` (0–100 → 0–22°). */
 .ticker--3d { perspective: 900px; }
@@ -506,6 +562,10 @@
 
 /* Retrowave: косой срез и неоновые канты, как у остальных панелей темы. */
 [data-decoration="retrowave"] .ticker__frame { padding-left: 2.4em; }
+[data-decoration="retrowave"] .ticker__breaking {
+  clip-path: polygon(18px 0, 100% 0, 100% 100%, 0 100%);
+  padding-left: 2em;
+}
 [data-decoration="retrowave"] .ticker__frame::before {
   content: "";
   position: absolute;

@@ -78,6 +78,10 @@
       this._top = null;
       this._lastChatTs = 0;
       this._seeded = false;
+      this._messageSeq = 0;
+      this._breakingQueue = [];
+      this._breakingTimer = null;
+      this._breakingActive = false;
 
       this._offset = 0;
       this._cycle = 0;
@@ -107,9 +111,20 @@
       this.frameEl.appendChild(this.railEl);
       this.element.appendChild(this.frameEl);
 
+      // Срочная полоса живёт над основной лентой и не меняет её геометрию:
+      // появляется на время сообщения, поэтому раскладку двигать не нужно.
+      this.breakingEl = div("ticker__breaking");
+      this.breakingLabelEl = span("ticker__breaking-label");
+      this.breakingLabelEl.textContent = this.t("ticker.breakingLabel");
+      this.breakingTextEl = span("ticker__breaking-text");
+      this.breakingEl.appendChild(this.breakingLabelEl);
+      this.breakingEl.appendChild(this.breakingTextEl);
+      this.element.appendChild(this.breakingEl);
+
       const E = this.context.EVENT_TYPES;
       this.subscribe(E.ALERT, (alert) => this._ingestAlert(alert));
       this.subscribe(E.CHAT_MESSAGE, (msg) => this._ingestChat(msg));
+      this.subscribe(E.TICKER_MESSAGE, (message) => this._ingestTickerMessage(message));
       this.subscribe(E.GOAL_UPDATE, (goal) => {
         this._goal = goal || null;
         this._rebuild();
@@ -122,6 +137,7 @@
       // пересобрать, иначе лента останется на прежнем языке до новых событий.
       this.subscribe(E.LOCALES, () => {
         this._applyConfig();
+        if (this.breakingLabelEl) this.breakingLabelEl.textContent = this.t("ticker.breakingLabel");
         this._rebuild(true);
       });
 
@@ -174,10 +190,15 @@
       this._events = [];
       this._goal = null;
       this._top = null;
+      this._breakingQueue = [];
+      this._breakingActive = false;
       this.labelEl = null;
       this.frameEl = null;
       this.railEl = null;
       this.trackEl = null;
+      this.breakingEl = null;
+      this.breakingLabelEl = null;
+      this.breakingTextEl = null;
     }
 
     // ---- data ----
@@ -221,6 +242,7 @@
       if (kind === "follow") return src.follows;
       if (kind === "sub" || kind === "gift_sub") return src.subs;
       if (kind === "reward") return src.rewards;
+      if (kind === "message") return true;
       if (kind === "wheel_start" || kind === "wheel_winner") return src.subs || src.rewards;
       return false;
     }
@@ -254,6 +276,43 @@
         user: String(msg.user || "").trim(),
         message: text.slice(0, CHAT_TEXT_LIMIT),
       });
+    }
+
+    // Сообщение из CLI/пульта/Stream Deck: обычное встаёт в общий поток,
+    // `breaking` уходит отдельной полосой и не ждёт конца цикла ленты.
+    _ingestTickerMessage(message) {
+      if (!message) return;
+      const text = String(message.text || "")
+        .trim()
+        .slice(0, 300);
+      if (!text) return;
+      if (String(message.priority || "") === "breaking") {
+        this._breakingQueue.push({
+          text,
+          durationMs: clamp(Math.round(Number(message.durationMs) || 9000), 2000, 60000),
+        });
+        if (!this._breakingActive) this._nextBreaking();
+        return;
+      }
+      this._push({ kind: "message", message: text, count: ++this._messageSeq });
+    }
+
+    _nextBreaking() {
+      if (!this.breakingEl) return;
+      const next = this._breakingQueue.shift();
+      if (!next) {
+        this._breakingActive = false;
+        this.breakingEl.classList.remove("is-visible");
+        return;
+      }
+      this._breakingActive = true;
+      if (this.breakingTextEl) this.breakingTextEl.textContent = next.text;
+      this.breakingEl.classList.add("is-visible");
+      if (this._breakingTimer != null) this.clearTimer(this._breakingTimer);
+      this._breakingTimer = this.later(() => {
+        this._breakingTimer = null;
+        this._nextBreaking();
+      }, next.durationMs);
     }
 
     _push(raw, rebuild = true) {
@@ -306,6 +365,8 @@
           return this.t("ticker.reward", { user });
         case "chat":
           return this.t("ticker.chat", { user, message: raw.message });
+        case "message":
+          return raw.message;
         case "wheel_start":
           return this.t("ticker.wheelStart");
         case "wheel_winner":
@@ -324,6 +385,7 @@
         gift_sub: "ticker.tagGift",
         reward: "ticker.tagReward",
         chat: "ticker.tagChat",
+        message: "ticker.tagMessage",
         wheel_start: "ticker.tagSystem",
         wheel_winner: "ticker.tagSystem",
       };

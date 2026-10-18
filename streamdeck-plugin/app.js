@@ -82,6 +82,11 @@ function sceneLabel(scene) {
   return found ? found[1] : String(scene || "start");
 }
 
+// Второе действие плагина — кнопка с произвольным сообщением в новостную ленту.
+function isTickerAction(action) {
+  return typeof action === "string" && action.endsWith(".ticker");
+}
+
 // ---- OSE bus ----
 function connectOse() {
   ose = new WebSocket(OSE_URL);
@@ -302,7 +307,7 @@ function handleStreamDeckEvent(msg) {
       if (!inst) return;
       const settings = (msg.payload && msg.payload.settings) || inst.settings;
       inst.settings = settings;
-      onKeyDown(settings);
+      onKeyDown(settings, inst.action);
       break;
     }
     case "keyUp":
@@ -330,13 +335,26 @@ function handleStreamDeckEvent(msg) {
   }
 }
 
-function onKeyDown(settings) {
+function onKeyDown(settings, action) {
+  if (isTickerAction(action)) {
+    const text = String(settings.text || "").trim();
+    if (!text) return;
+    sendRemoteAction("TICKER_MESSAGE", {
+      text,
+      priority: settings.priority === "breaking" ? "breaking" : "normal",
+    });
+    return;
+  }
   sendRemoteAction("SCENE_SET", { scene: settings.scene || "start" });
 }
 
 function sendOptions(context) {
   const inst = instances.get(context);
   if (!inst) return;
+  if (isTickerAction(inst.action)) {
+    sendToPI(context, inst.action, { kind: "ticker" });
+    return;
+  }
   sendToPI(context, inst.action, {
     kind: "scene",
     scenes: SCENES.map(([id, label]) => ({ id, label })),
@@ -346,6 +364,13 @@ function sendOptions(context) {
 function syncInstance(context) {
   const inst = instances.get(context);
   if (!inst) return;
+
+  if (isTickerAction(inst.action)) {
+    const text = String(inst.settings.text || "").trim();
+    setTitle(context, text ? text.slice(0, 16) : "Лента");
+    setState(context, 0);
+    return;
+  }
 
   const scene = inst.settings.scene || "start";
   setTitle(context, sceneLabel(scene));

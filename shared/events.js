@@ -32,6 +32,7 @@
     CHAT_MESSAGE: "chat_message",
     CHAT_SENT: "chat_sent", // { clientId, ok, messageId, error? } — server -> client confirmation of an outgoing chat message
     RECENT_EVENT: "recent_event",
+    TICKER_MESSAGE: "ticker_message", // { text, priority: "normal"|"breaking", durationMs? } — произвольное сообщение в новостную ленту
     GOAL_UPDATE: "goal_update", // { current, target, title, currency }
     DONATEX_AI_EVENT: "donatex_ai_event", // { characterName, aiText, aiAudio, user?, amount?, currency?, message? } — ответ ИИ-персонажа DonateX
     CONNECTION_STATUS: "connection_status", // { service, status }
@@ -99,6 +100,7 @@
     CMD_DELETE_LAYOUT_PRESET: "cmd_delete_layout_preset", // { id }
     CMD_SET_GOAL: "cmd_set_goal", // { title?, current?, target?, currency? }
     CMD_TEST_ALERT: "cmd_test_alert", // { kind }
+    CMD_TICKER_MESSAGE: "cmd_ticker_message", // { text, priority? } — сообщение в новостную ленту
     // Очередь алертов (см. server/alert-queue.js): панель и пульт могут
     // вмешаться в то, что играет и что ждёт.
     CMD_ALERT_QUEUE_PAUSE: "cmd_alert_queue_pause", // { minutes? } — без минут: до снятия вручную

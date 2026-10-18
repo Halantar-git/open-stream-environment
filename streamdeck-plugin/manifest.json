@@ -2,7 +2,7 @@
   "Name": "Open Stream Environment",
   "Category": "Open Stream Environment",
   "Author": "Halantar",
-  "Description": "Переключение сцен OSE: старт, BRB, Колесо, Разговор и окончание стрима.",
+  "Description": "Сцены OSE и сообщения в новостную ленту.",
   "Icon": "assets/plugin",
   "Version": "1.0.0",
   "CodePath": "app.js",
@@ -22,6 +22,16 @@
       "States": [
         { "Image": "assets/scene", "TitleAlignment": "middle", "Title": "Сцена" },
         { "Image": "assets/scene-active", "TitleAlignment": "middle", "Title": "Сцена" }
+      ]
+    },
+    {
+      "UUID": "com.openstreamenvironment.streamdeck.ticker",
+      "Name": "Сообщение в ленту",
+      "Icon": "assets/ticker",
+      "PropertyInspectorPath": "pi/settings.html",
+      "Controllers": ["Keypad"],
+      "States": [
+        { "Image": "assets/ticker", "TitleAlignment": "middle", "Title": "Лента" }
       ]
     }
   ]

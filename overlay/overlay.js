@@ -523,6 +523,9 @@
       case EVENT_TYPES.CHAT_MESSAGE:
         bus.emit(EVENT_TYPES.CHAT_MESSAGE, msg.payload);
         break;
+      case EVENT_TYPES.TICKER_MESSAGE:
+        bus.emit(EVENT_TYPES.TICKER_MESSAGE, msg.payload);
+        break;
       case EVENT_TYPES.SOUNDBOARD_PLAY:
         bus.emit(EVENT_TYPES.SOUNDBOARD_PLAY, msg.payload);
         break;

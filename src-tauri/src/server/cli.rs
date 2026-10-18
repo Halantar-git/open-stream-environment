@@ -32,8 +32,8 @@ const ERR: char = '\u{1}';
 /// Команды верхнего уровня — для подсказок и автодополнения.
 const COMMANDS: &[&str] = &[
     "scene", "cam", "filter", "sound", "death", "wheel", "giveaway", "sim", "alert", "chat",
-    "theme", "themes", "goal", "obs", "sounds", "cameras", "filters", "logs", "media", "modtest",
-    "lang", "status", "clear", "help",
+    "ticker", "theme", "themes", "goal", "obs", "sounds", "cameras", "filters", "logs", "media",
+    "modtest", "lang", "status", "clear", "help",
 ];
 
 /// Подкоманды составных команд.
@@ -56,6 +56,7 @@ const SUBCOMMANDS: &[(&str, &[&str])] = &[
     ("goal", &["add"]),
     ("lang", &["ru", "en"]),
     ("alert", &["follow", "sub", "gift_sub", "cheer", "donation"]),
+    ("ticker", &["breaking"]),
     ("logs", &["info", "success", "warn", "error", "hint", "all"]),
     ("media", &["list", "cleanup"]),
 ];
@@ -73,6 +74,7 @@ const HELP_KEYS: &[&str] = &[
     "simPoints",
     "simRaid",
     "alert",
+    "ticker",
     "chat",
     "theme",
     "goal",
@@ -116,6 +118,7 @@ pub fn execute(diagnostics: &Diagnostics, locales: Option<&Locales>, raw: &str) 
         "giveaway" => cli.giveaway(args),
         "sim" => cli.sim(args),
         "alert" => cli.alert(args.first().copied()),
+        "ticker" => cli.ticker(args),
         "chat" => cli.chat(&args.join(" ")),
         "modtest" => cli.modtest(&args.join(" ")),
         "theme" => cli.theme(args.first().copied()),
@@ -791,6 +794,40 @@ impl Cli<'_> {
             "success",
             &self.t("cli.chat.done", &[("message", message.to_string())]),
         );
+    }
+
+    /// Произвольное сообщение в новостную ленту: `ticker <текст>` или
+    /// `ticker breaking <текст>` — срочная полоса поверх ленты.
+    fn ticker(&self, args: &[&str]) {
+        let breaking = args
+            .first()
+            .is_some_and(|arg| matches!(*arg, "breaking" | "--breaking" | "-b"));
+        let text = if breaking {
+            args.get(1..).unwrap_or_default().join(" ")
+        } else {
+            args.join(" ")
+        };
+        let text = text.trim();
+        if text.is_empty() {
+            self.log("error", &self.t("cli.ticker.usage", &[]));
+            return;
+        }
+        remote::handle(
+            self.diagnostics,
+            &json!({
+                "action": "TICKER_MESSAGE",
+                "payload": {
+                    "text": text,
+                    "priority": if breaking { "breaking" } else { "normal" },
+                },
+            }),
+        );
+        let key = if breaking {
+            "cli.ticker.sentBreaking"
+        } else {
+            "cli.ticker.sent"
+        };
+        self.log("success", &self.t(key, &[("text", text.to_string())]));
     }
 
     fn modtest(&self, message: &str) {

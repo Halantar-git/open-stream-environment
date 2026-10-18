@@ -49,6 +49,7 @@ pub fn handle(diagnostics: &Diagnostics, message: &Value) {
             broadcast(diagnostics, event_types::DEATH_COUNT_UPDATE, value);
         }
         "TEST_ALERT" => test_alert(diagnostics, &payload),
+        "TICKER_MESSAGE" => ticker_message(diagnostics, &payload),
         "THEME_SET" => theme_set(diagnostics, &payload),
         "OBS_RAW_COMMAND" => {
             diagnostics.run_obs_command(payload.get("id").cloned().unwrap_or(Value::Null));
@@ -471,6 +472,32 @@ fn now_ms() -> i64 {
     chrono::Utc::now().timestamp_millis()
 }
 
+/// Максимальная длина сообщения в новостной ленте: длинная строка занимала бы
+/// весь экран и мешала читать остальные события.
+const TICKER_TEXT_LIMIT: usize = 300;
+
+/// Произвольное сообщение в новостную ленту. `breaking` уходит отдельной
+/// приоритетной полосой, остальное — в общий поток.
+fn ticker_message(diagnostics: &Diagnostics, payload: &Value) {
+    let body: String = text(payload, "text")
+        .trim()
+        .chars()
+        .take(TICKER_TEXT_LIMIT)
+        .collect();
+    if body.is_empty() {
+        return;
+    }
+    let breaking = text(payload, "priority").eq_ignore_ascii_case("breaking");
+    let mut frame = json!({
+        "text": body,
+        "priority": if breaking { "breaking" } else { "normal" },
+    });
+    if let Some(ms) = payload.get("durationMs").and_then(Value::as_f64) {
+        frame["durationMs"] = json!(ms.round().clamp(2000.0, 60_000.0) as i64);
+    }
+    broadcast(diagnostics, event_types::TICKER_MESSAGE, frame);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -579,5 +606,38 @@ mod tests {
         let fixture = Fixture::new("main-fallback");
         fixture.switch("");
         assert_eq!(fixture.diagnostics.runtime().active_scene(), "main");
+    }
+
+    #[test]
+    fn a_ticker_message_reaches_the_overlay() {
+        let fixture = Fixture::new("ticker");
+        let mut receiver = fixture.listen();
+
+        handle(
+            &fixture.diagnostics,
+            &json!({
+                "action": "TICKER_MESSAGE",
+                "payload": { "text": "  Привет  ", "priority": "breaking", "durationMs": 5000 },
+            }),
+        );
+
+        let frame = frame(&mut receiver);
+        assert_eq!(frame["type"], json!(event_types::TICKER_MESSAGE));
+        assert_eq!(frame["payload"]["text"], json!("Привет"));
+        assert_eq!(frame["payload"]["priority"], json!("breaking"));
+        assert_eq!(frame["payload"]["durationMs"], json!(5000));
+    }
+
+    #[test]
+    fn an_empty_ticker_message_is_ignored() {
+        let fixture = Fixture::new("ticker-empty");
+        let mut receiver = fixture.listen();
+
+        handle(
+            &fixture.diagnostics,
+            &json!({ "action": "TICKER_MESSAGE", "payload": { "text": "   " } }),
+        );
+
+        assert!(receiver.try_recv().is_err());
     }
 }

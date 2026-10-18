@@ -368,6 +368,13 @@ pub fn handle_message(
             // и в «последние события» — как в Electron.
             diagnostics.emit_bus(json!({ "type": event_types::ALERT, "payload": alert }));
         }
+        event_types::CMD_TICKER_MESSAGE => {
+            // Общий путь с пультом: текст и приоритет проверяются в одном месте.
+            remote::handle(
+                diagnostics,
+                &json!({ "action": "TICKER_MESSAGE", "payload": payload }),
+            );
+        }
         event_types::CMD_ALERT_QUEUE_PAUSE => {
             let minutes = js_number_or_zero(payload.get("minutes")).max(0.0);
             let snapshot = diagnostics.alert_queue().pause(minutes);

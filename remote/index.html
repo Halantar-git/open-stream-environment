@@ -154,6 +154,19 @@
     </section>
 
     <section class="grid-section">
+      <h2 class="grid-section__title" data-i18n="remote.ticker">Новостная лента</h2>
+      <div class="remote-field">
+        <label class="remote-field__label" for="remoteTickerText" data-i18n="remote.tickerText">Текст сообщения</label>
+        <input class="remote-input" id="remoteTickerText" type="text" maxlength="300"
+          data-i18n-placeholder="remote.tickerPlaceholder" placeholder="Например: через 10 минут розыгрыш" autocomplete="off" />
+      </div>
+      <div class="action-grid action-grid--scenes">
+        <button class="action-btn" type="button" id="remoteTickerSend" data-i18n="remote.tickerSend">В ленту</button>
+        <button class="action-btn action-btn--danger" type="button" id="remoteTickerBreaking" data-i18n="remote.tickerBreaking">Срочно</button>
+      </div>
+    </section>
+
+    <section class="grid-section">
       <h2 class="grid-section__title" data-i18n="queue.title">Очередь алертов</h2>
       <div class="queue-panel">
         <div class="queue-panel__now" id="queueNow">

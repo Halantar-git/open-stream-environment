@@ -92,6 +92,8 @@ const TRANSLATIONS = {
   "ticker.tagFollow": "ФОЛЛОУ",
   "ticker.tagSub": "ПОДПИСКА",
   "ticker.tagChat": "ЧАТ",
+  "ticker.tagMessage": "СООБЩЕНИЕ",
+  "ticker.breakingLabel": "СРОЧНО",
   "ticker.donation": "{{user}} — {{amount}}",
   "ticker.follow": "Новый фолловер: {{user}}",
   "ticker.sub": "{{user}} оформил подписку (уровень {{tier}})",
@@ -284,6 +286,64 @@ describe("WidgetTicker", () => {
     expect(w._offset).toBeCloseTo(100.8, 0);
 
     w.unmount();
+  });
+
+  test("произвольное сообщение встаёт в ленту с меткой", () => {
+    const ctx = makeContext();
+    const w = new WidgetTicker(item(), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.TICKER_MESSAGE, { text: "Скоро розыгрыш" });
+
+    const items = w._items();
+    expect(items).toHaveLength(1);
+    expect(items[0].kind).toBe("message");
+    expect(items[0].tag).toBe("СООБЩЕНИЕ");
+    expect(items[0].text).toBe("Скоро розыгрыш");
+
+    w.unmount();
+  });
+
+  test("одинаковые сообщения не схлопываются", () => {
+    const ctx = makeContext();
+    const w = new WidgetTicker(item(), ctx);
+    w.mount(makeEl("div"));
+
+    // Дедупликация нужна повторным событиям из снимка состояния, а ручное
+    // сообщение стример может отправить дважды осознанно.
+    ctx.bus.emit(EVENT_TYPES.TICKER_MESSAGE, { text: "Повтор" });
+    ctx.bus.emit(EVENT_TYPES.TICKER_MESSAGE, { text: "Повтор" });
+
+    expect(w._items().map((i) => i.text)).toEqual(["Повтор", "Повтор"]);
+
+    w.unmount();
+  });
+
+  test("срочное сообщение показывается полосой и уступает место следующему", () => {
+    jest.useFakeTimers();
+    const ctx = makeContext();
+    const w = new WidgetTicker(item(), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.TICKER_MESSAGE, { text: "Первое", priority: "breaking", durationMs: 3000 });
+    expect(w.breakingEl.classList.contains("is-visible")).toBe(true);
+    expect(w.breakingTextEl.textContent).toBe("Первое");
+    // Срочная полоса не засоряет обычную ленту.
+    expect(w._items()).toHaveLength(0);
+
+    ctx.bus.emit(EVENT_TYPES.TICKER_MESSAGE, { text: "Второе", priority: "breaking", durationMs: 3000 });
+    // Второе ждёт в очереди, пока на экране первое.
+    expect(w.breakingTextEl.textContent).toBe("Первое");
+
+    jest.advanceTimersByTime(3000);
+    expect(w.breakingTextEl.textContent).toBe("Второе");
+    expect(w.breakingEl.classList.contains("is-visible")).toBe(true);
+
+    jest.advanceTimersByTime(3000);
+    expect(w.breakingEl.classList.contains("is-visible")).toBe(false);
+
+    w.unmount();
+    jest.useRealTimers();
   });
 
   test("снимок состояния наполняет ленту прошлыми событиями", () => {

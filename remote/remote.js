@@ -1029,6 +1029,40 @@
     });
   }
 
+  // Новостная лента: обычное сообщение встаёт в поток, «срочно» — отдельной
+  // приоритетной полосой над лентой.
+  const remoteTickerText = document.getElementById("remoteTickerText");
+  const sendTickerMessage = (priority) => {
+    const text = remoteTickerText ? remoteTickerText.value.trim() : "";
+    if (!text) {
+      if (remoteTickerText) remoteTickerText.focus();
+      return;
+    }
+    vibrate();
+    send("TICKER_MESSAGE", { text, priority });
+    if (remoteTickerText) remoteTickerText.value = "";
+    showToast(
+      t(priority === "breaking" ? "remote.tickerBreakingSent" : "remote.tickerSent"),
+      false
+    );
+  };
+  const remoteTickerSend = document.getElementById("remoteTickerSend");
+  if (remoteTickerSend) {
+    remoteTickerSend.addEventListener("click", () => sendTickerMessage("normal"));
+  }
+  const remoteTickerBreaking = document.getElementById("remoteTickerBreaking");
+  if (remoteTickerBreaking) {
+    remoteTickerBreaking.addEventListener("click", () => sendTickerMessage("breaking"));
+  }
+  if (remoteTickerText) {
+    remoteTickerText.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        sendTickerMessage("normal");
+      }
+    });
+  }
+
   // Tabs: control pad, wheel, and live chat.
   const remoteMain = document.getElementById("remoteMain");
   const remoteTabs = document.getElementById("remoteTabs");

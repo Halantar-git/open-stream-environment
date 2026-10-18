@@ -75,6 +75,8 @@ const icons = {
   "plugin.png": solidPng(288, 288, [243, 156, 18]), // accent orange
   "scene.png": solidPng(144, 144, [27, 30, 33]), // dark surface
   "scene-active.png": solidPng(144, 144, [243, 156, 18]), // accent orange (highlight)
+  "ticker.png": solidPng(144, 144, [12, 24, 38]), // dark blue surface
+  "ticker-active.png": solidPng(144, 144, [0, 190, 210]), // cyan (ticker accent)
 };
 
 for (const [name, data] of Object.entries(icons)) {
