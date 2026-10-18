@@ -336,11 +336,11 @@ describe("WidgetUecTransfer", () => {
     w.panelEl.offsetHeight = 800;
     w.current = { kind: "donation" };
     w.element.classList.add("is-expanded");
-    w.element.style.height = "802px";
+    w.element.style.height = "812px";
 
     // Как syncLayout из-за STATE или смены статуса связи.
     w.update(item({ y: 0 }));
-    expect(w.element.style.height).toBe("802px");
+    expect(w.element.style.height).toBe("812px");
 
     w.unmount();
     if (hadWindow) global.window = prevWindow;
@@ -364,7 +364,7 @@ describe("WidgetUecTransfer", () => {
     });
 
     w._fitHeight(true);
-    expect(w.element.style.height).toBe("802px");
+    expect(w.element.style.height).toBe("812px");
     // Для показа текст возвращается к «шифру».
     expect(w.messageEl.textContent).toBe("########");
 
@@ -384,7 +384,7 @@ describe("WidgetUecTransfer", () => {
 
     w.panelEl.offsetHeight = 800;
     w._fitHeight();
-    expect(w.element.style.height).toBe("802px");
+    expect(w.element.style.height).toBe("812px");
 
     // Даже очень длинный текст не выводит панель за нижнюю границу окна.
     w.panelEl.offsetHeight = 2000;

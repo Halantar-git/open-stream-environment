@@ -219,11 +219,18 @@
       // Если алерт пришёл до загрузки вшитых шрифтов, после их готовности
       // переносы станут другими — иначе текст обрежется старой высотой.
       const fonts = typeof document !== "undefined" ? document.fonts : null;
-      if (fonts && typeof fonts.addEventListener === "function") {
+      if (fonts) {
         this._onFontsDone = () => {
           if (this.current && this.element.classList.contains("is-expanded")) this._fitHeight(true);
         };
-        fonts.addEventListener("loadingdone", this._onFontsDone);
+        if (typeof fonts.addEventListener === "function") {
+          fonts.addEventListener("loadingdone", this._onFontsDone);
+        }
+        // В headless и при медленной загрузке событие может уже пройти —
+        // готовность шрифтов ловим оба способа.
+        if (fonts.ready && typeof fonts.ready.then === "function") {
+          fonts.ready.then(this._onFontsDone);
+        }
       }
     }
 
@@ -241,7 +248,9 @@
       this._clearDecode();
       this._clearMessageDecode();
       if (this._onFontsDone && typeof document !== "undefined" && document.fonts) {
-        document.fonts.removeEventListener("loadingdone", this._onFontsDone);
+        if (typeof document.fonts.removeEventListener === "function") {
+          document.fonts.removeEventListener("loadingdone", this._onFontsDone);
+        }
         this._onFontsDone = null;
       }
       if (this._hideId != null) this.clearTimer(this._hideId);
@@ -554,9 +563,13 @@
       // получается ниже текста — потом `overflow: hidden` обрезает конец
       // длинного сообщения. В этом режиме высота считается по содержимому.
       this.panelEl.classList.add("is-measuring");
+      const elementHeight = this.element.style.height;
       const frameHeight = this.frameEl.style.height;
       const panelHeight = this.panelEl.style.height;
       const panelOverflow = this.panelEl.style.overflow;
+      // Снимаем и высоту самого виджета: иначе фиксированные проценты
+      // продолжают поджимать панель через flex-родителя.
+      this.element.style.height = "auto";
       this.frameEl.style.height = "auto";
       this.panelEl.style.height = "auto";
       this.panelEl.style.overflow = "visible";
@@ -569,6 +582,7 @@
       if (dense) needed = this.panelEl.offsetHeight || needed;
 
       this.panelEl.classList.remove("is-measuring");
+      this.element.style.height = elementHeight;
       this.frameEl.style.height = frameHeight;
       this.panelEl.style.height = panelHeight;
       this.panelEl.style.overflow = panelOverflow;
@@ -577,7 +591,24 @@
       }
 
       if (!needed) return;
-      this.element.style.height = Math.min(Math.max(base, needed + 2), maxHeight) + "px";
+      // Полстроки запаса: переносы, округление и границы глифов дают разницу в
+      // несколько пикселей, из-за которой последняя строка липла к рамке.
+      this.element.style.height = Math.min(Math.max(base, needed + 12), maxHeight) + "px";
+
+      // Замер по flex-раскладке может недосчитать несколько пикселей (перенос
+      // строк, отступы сетки). Добираем по факту: пока содержимое панели выше
+      // её самой, растим высоту — иначе край обрежет последнюю строку.
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const scroll = this.panelEl.scrollHeight;
+        const client = this.panelEl.clientHeight;
+        if (!Number.isFinite(scroll) || !Number.isFinite(client)) break;
+        const overflow = scroll - client;
+        if (overflow <= 0) break;
+        const current = Number.parseFloat(this.element.style.height) || 0;
+        const next = Math.min(current + overflow + 2, maxHeight);
+        if (next <= current) break;
+        this.element.style.height = next + "px";
+      }
     }
 
     // ---- small DOM helpers ----
