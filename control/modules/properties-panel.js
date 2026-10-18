@@ -471,7 +471,12 @@ export function initPropertiesPanel({
         <div class="properties__toggle-row"><label>${t("properties.webcamShowBackground")}</label>${switchHtml("pWebcamShowBackground", !!config.showBackground)}</div>
         <div class="properties__toggle-row"><label>${t("properties.webcamShowVignette")}</label>${switchHtml("pWebcamShowVignette", !!config.showVignette)}</div>
         <div class="md-field"><label>${t("properties.webcamThickness")}: <span id="pWebcamThicknessValue">${config.thickness ?? 4}</span> px</label><input type="range" id="pWebcamThickness" min="1" max="16" step="1" value="${config.thickness ?? 4}"></div>
-        <div class="md-field"><label>${t("properties.webcamRadius")}: <span id="pWebcamRadiusValue">${radius}</span> px</label><input type="range" id="pWebcamRadius" min="0" max="64" step="1" value="${radius}"></div>
+        <div class="md-field"><label>${t("properties.webcamRadius")}: <span id="pWebcamRadiusValue">${radius}</span> px</label>
+          <div class="properties__row" style="align-items:center;">
+            <input type="range" id="pWebcamRadius" min="0" max="64" step="1" value="${radius}" style="flex:1;min-width:0;">
+            <button class="md-button md-button--text" id="pWebcamRadiusReset" title="${t("properties.webcamRadiusAuto")}">${t("properties.webcamRadiusAuto")}</button>
+          </div>
+        </div>
         <div class="md-field"><label>${t("properties.webcamColor")}</label>
           <div class="properties__color-row">
             <input type="color" id="pWebcamColor" value="${escapeAttr(config.color || themePrimary)}">
@@ -708,6 +713,9 @@ export function initPropertiesPanel({
         const label = propertiesEl.querySelector("#pWebcamRadiusValue");
         if (label) label.textContent = String(value);
         patchWebcam({ radius: value, radiusAuto: false });
+      });
+      propertiesEl.querySelector("#pWebcamRadiusReset").addEventListener("click", () => {
+        patchWebcam({ radius: null, radiusAuto: true });
       });
       propertiesEl.querySelector("#pWebcamColor").addEventListener("input", (e) => patchWebcam({ color: e.target.value }));
       propertiesEl.querySelector("#pWebcamColorReset").addEventListener("click", () => patchWebcam({ color: "" }));
