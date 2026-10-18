@@ -3579,18 +3579,17 @@ const { EVENT_TYPES } = window.SharedEvents;
     const scene = state.scenes[state.activeSceneId];
     if (!scene) return;
     const def = SceneCatalog.SCENE_DEFS[state.activeSceneId];
+    // На сценах с канвасом камера и алерты — обычные виджеты, поэтому
+    // отдельные блоки свойств им не нужны и только дублируют настройку.
+    const hasCanvas = WIDGET_SCENE_IDS.has(state.activeSceneId);
     sceneFormTitle.textContent = t("scene." + def.id + "Label");
 
     if (state.activeSceneId === "wheel") {
       sceneFormEl.innerHTML = `
         <div class="wheel-panel__hint">${t("giveaway.wheelPanelHint")}</div>
         <button class="md-button md-button--tonal" id="openWheelSettingsBtn" style="margin-top:10px;">${t("giveaway.openWheelSettings")}</button>
-        ${sceneCameraSection(scene)}
-        ${sceneAlertsSection(scene)}
       `;
       sceneFormEl.querySelector("#openWheelSettingsBtn").addEventListener("click", () => setWheelOpen(true));
-      wireSceneCamera(scene);
-      wireSceneAlerts(scene);
       return;
     }
 
@@ -3598,12 +3597,8 @@ const { EVENT_TYPES } = window.SharedEvents;
       sceneFormEl.innerHTML = `
         <div class="wheel-panel__hint">${t("poll.panelHint")}</div>
         <button class="md-button md-button--tonal" id="openPollSettingsBtn" style="margin-top:10px;">${t("poll.openSettings")}</button>
-        ${sceneCameraSection(scene)}
-        ${sceneAlertsSection(scene)}
       `;
       sceneFormEl.querySelector("#openPollSettingsBtn").addEventListener("click", () => setPollOpen(true));
-      wireSceneCamera(scene);
-      wireSceneAlerts(scene);
       return;
     }
 
@@ -3642,8 +3637,8 @@ const { EVENT_TYPES } = window.SharedEvents;
       <div class="inspector__title" style="margin-top:4px;">${t("sceneForm.topDonation")}</div>
       <div class="properties__hint">${state.topDonation.amount > 0 ? `${escapeHtml(state.topDonation.user)} — ${formatMoney(state.topDonation.amount)} ${escapeHtml(currencySymbol(state.topDonation.currency))}` : t("sceneForm.noDonations")}</div>
       <button class="md-button md-button--outlined" id="sResetTopDonation">${t("sceneForm.resetTopDonation")}</button>
-      ${sceneCameraSection(scene)}
-      ${sceneAlertsSection(scene)}
+      ${hasCanvas ? "" : sceneCameraSection(scene)}
+      ${hasCanvas ? "" : sceneAlertsSection(scene)}
     `;
 
     renderSocialsList(scene.socials || []);
@@ -3662,8 +3657,10 @@ const { EVENT_TYPES } = window.SharedEvents;
     sceneFormEl.querySelector("#sResetTopDonation").addEventListener("click", () => {
       if (confirm(t("sceneForm.resetTopDonationConfirm"))) send(EVENT_TYPES.CMD_RESET_TOP_DONATION, {});
     });
-    wireSceneCamera(scene);
-    wireSceneAlerts(scene);
+    if (!hasCanvas) {
+      wireSceneCamera(scene);
+      wireSceneAlerts(scene);
+    }
   }
 
   function renderSocialsList(socials) {
@@ -5183,16 +5180,19 @@ const { EVENT_TYPES } = window.SharedEvents;
   function syncCameraBridge() {
     // Захват живёт только ради видимого виджета: скрытый live-виджет не должен
     // держать камеру и энкодер включёнными — принцип «в покое ноль нагрузки».
-    // Камера сцены — такой же потребитель: если она включена и смотрит live,
-    // мост должен работать, даже когда на канвасе оверлея рамки нет.
+    // На сценах без канваса камера остаётся отдельным блоком свойств и тоже
+    // требует моста, даже когда рамки на канвасе оверлея нет. У сцен с
+    // канвасом старый `scene.camera` больше не монтируется — его не считаем,
+    // иначе камера включалась бы без единого видимого виджета.
     const widgets = state.allLayoutWidgets ? state.allLayoutWidgets() : state.layout;
     const layoutCamera =
       Array.isArray(widgets) &&
       widgets.some(
         (w) => w.type === "webcam" && w.config && w.config.source === "camera" && w.visible !== false
       );
-    const sceneCamera = Object.values(state.scenes || {}).some(
-      (scene) =>
+    const sceneCamera = Object.entries(state.scenes || {}).some(
+      ([id, scene]) =>
+        !WIDGET_SCENE_IDS.has(id) &&
         scene &&
         scene.camera &&
         scene.camera.enabled === true &&

@@ -78,9 +78,8 @@ fn default_alerts(enabled: bool) -> Value {
 pub fn default_scenes() -> Value {
     let socials = default_socials();
     let camera = default_camera();
-    // На «Разговоре» алерты были и раньше; на остальных сценах — по желанию.
+    // Алерты по умолчанию выключены; включаются в форме сцены без канваса.
     let alerts_off = default_alerts(false);
-    let alerts_on = default_alerts(true);
     json!({
         "start": {
             "statusLabel": "СТРИМ СКОРО НАЧНЁТСЯ",
@@ -129,8 +128,6 @@ pub fn default_scenes() -> Value {
             "showEvents": true,
             "showSocials": true,
             "socials": socials.clone(),
-            "camera": camera.clone(),
-            "alerts": alerts_on.clone(),
             "widgets": [],
         },
         "end": {
@@ -163,8 +160,6 @@ pub fn default_scenes() -> Value {
             "showEvents": false,
             "showSocials": false,
             "socials": [],
-            "camera": camera.clone(),
-            "alerts": alerts_off.clone(),
             "widgets": [],
         },
         "poll": {
@@ -180,8 +175,6 @@ pub fn default_scenes() -> Value {
             "showEvents": false,
             "showSocials": false,
             "socials": [],
-            "camera": camera.clone(),
-            "alerts": alerts_off.clone(),
             "widgets": [],
         },
         "pause": {
@@ -700,15 +693,25 @@ mod tests {
     }
 
     #[test]
-    fn every_scene_carries_a_camera_default() {
+    fn scenes_without_canvas_keep_camera_and_alert_defaults() {
         let scenes = default_scenes();
-        for id in ["start", "brb", "talk", "end", "wheel", "poll", "pause"] {
+        for id in ["start", "brb", "end", "pause"] {
             let camera = &scenes[id]["camera"];
             assert_eq!(camera["enabled"], json!(false), "{id}");
             assert_eq!(camera["config"]["source"], json!("camera"), "{id}");
             assert_eq!(camera["config"]["showBorder"], json!(true), "{id}");
             // Радиус не задан — рамка берёт скругление темы.
             assert!(camera["config"].get("radius").is_none(), "{id}");
+
+            assert_eq!(scenes[id]["alerts"]["enabled"], json!(false), "{id}");
+            assert_eq!(scenes[id]["alerts"]["widget"], json!("uec"), "{id}");
+            assert_eq!(scenes[id]["alerts"]["x"], json!(68), "{id}");
+        }
+        // На этих сценах есть канвас: камера и алерты — обычные виджеты,
+        // отдельных блоков в конфиге им не нужно.
+        for id in ["talk", "wheel", "poll"] {
+            assert!(scenes[id].get("camera").is_none(), "{id}");
+            assert!(scenes[id].get("alerts").is_none(), "{id}");
         }
     }
 
@@ -766,18 +769,6 @@ mod tests {
         assert_eq!(moved["camera"]["x"], json!(12));
         assert_eq!(moved["camera"]["w"], json!(40));
         assert_eq!(moved["camera"]["config"]["label"], json!("CAM"));
-    }
-
-    #[test]
-    fn alerts_are_on_only_for_talk_by_default() {
-        let scenes = default_scenes();
-        for id in ["start", "brb", "end", "wheel", "poll", "pause"] {
-            assert_eq!(scenes[id]["alerts"]["enabled"], json!(false), "{id}");
-            assert_eq!(scenes[id]["alerts"]["widget"], json!("uec"), "{id}");
-            assert_eq!(scenes[id]["alerts"]["x"], json!(68), "{id}");
-        }
-        // На «Разговоре» алерты были и раньше — сохраняем поведение.
-        assert_eq!(scenes["talk"]["alerts"]["enabled"], json!(true));
     }
 
     #[test]
