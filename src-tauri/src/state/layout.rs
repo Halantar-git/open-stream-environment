@@ -498,6 +498,10 @@ fn clean_widgets(list: &[Value]) -> Vec<Value> {
 /// трогал ползунок (`radiusAuto: false`), это значение считается старым
 /// дефолтом и убирается из выдачи: тогда рамка берёт скругление активной темы.
 /// В базе значение остаётся до первой правки — миграция только для чтения.
+///
+/// У 3D-«Последних событий» так же устарели умолчания скорости: в dev-сборках
+/// оно успело побывать 100 и 420 мс, а теперь равно 840. Иначе виджет,
+/// добавленный в ранней сборке, продолжал бы дёргаться вдвое быстрее.
 fn migrated_widget(widget: &Value) -> Value {
     let mut copy = widget.clone();
     if widget_type(&copy) == "webcam" {
@@ -505,6 +509,18 @@ fn migrated_widget(widget: &Value) -> Value {
             let manual = config.get("radiusAuto").and_then(Value::as_bool) == Some(false);
             if !manual && config.get("radius").and_then(Value::as_f64) == Some(16.0) {
                 config.remove("radius");
+            }
+        }
+    }
+    if widget_type(&copy).ends_with("-recent") {
+        if let Some(config) = copy.get_mut("config").and_then(Value::as_object_mut) {
+            let manual = config.get("animationMsCustom").and_then(Value::as_bool) == Some(true);
+            let legacy = matches!(
+                config.get("animationMs").and_then(Value::as_f64),
+                Some(100.0) | Some(420.0)
+            );
+            if !manual && legacy {
+                config.remove("animationMs");
             }
         }
     }
@@ -732,6 +748,41 @@ mod tests {
         .expect("ручной радиус");
         let manual = layout(&db, &config);
         assert_eq!(manual[0]["config"]["radius"], json!(16));
+    }
+
+    #[test]
+    fn the_old_recent_animation_defaults_fall_back_to_the_new_one() {
+        let fixture = Fixture::new("recent-animation");
+        let (db, config) = (fixture.db(), fixture.config());
+        let widget = add_widget(&db, "retrowave-recent").expect("последние события");
+        let id = widget["id"].as_str().expect("id").to_string();
+
+        // Скорость из ранних сборок — ещё не выбор пользователя.
+        for legacy in [100, 420] {
+            update_widget(&db, &id, &json!({ "config": { "animationMs": legacy } }))
+                .expect("старая скорость");
+            let current = layout(&db, &config);
+            assert!(
+                current[0]["config"].get("animationMs").is_none(),
+                "умолчание {legacy} мс должно уступить новому"
+            );
+        }
+
+        // Осознанно выставленное значение сохраняется: не-legacy число
+        // остаётся и без признака, а совпавшее с старым умолчанием — с ним.
+        update_widget(&db, &id, &json!({ "config": { "animationMs": 250 } }))
+            .expect("ручная скорость");
+        let manual = layout(&db, &config);
+        assert_eq!(manual[0]["config"]["animationMs"], json!(250));
+
+        update_widget(
+            &db,
+            &id,
+            &json!({ "config": { "animationMs": 100, "animationMsCustom": true } }),
+        )
+        .expect("ручная скорость со старым значением");
+        let explicit = layout(&db, &config);
+        assert_eq!(explicit[0]["config"]["animationMs"], json!(100));
     }
 
     #[test]

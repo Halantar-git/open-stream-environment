@@ -1,5 +1,5 @@
 {
-  "sourceHash": "45680112c9c5a73b",
+  "sourceHash": "baf0c5f52bd7de41",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -542,7 +542,7 @@
       "minH": 12,
       "defaultConfig": {
         "maxItems": 5,
-        "animationMs": 420
+        "animationMs": 840
       }
     },
     "grimhex-ticker": {
@@ -701,7 +701,7 @@
       "minH": 12,
       "defaultConfig": {
         "maxItems": 5,
-        "animationMs": 420
+        "animationMs": 840
       }
     },
     "nuclear-ticker": {
@@ -927,7 +927,7 @@
       "minH": 12,
       "defaultConfig": {
         "maxItems": 5,
-        "animationMs": 420
+        "animationMs": 840
       }
     },
     "cobra-ticker": {
@@ -1086,7 +1086,7 @@
       "minH": 12,
       "defaultConfig": {
         "maxItems": 5,
-        "animationMs": 420
+        "animationMs": 840
       }
     },
     "teso-ticker": {
@@ -1246,7 +1246,7 @@
       "minH": 12,
       "defaultConfig": {
         "maxItems": 5,
-        "animationMs": 420
+        "animationMs": 840
       }
     },
     "wardogs-ticker": {
@@ -1405,7 +1405,7 @@
       "minH": 12,
       "defaultConfig": {
         "maxItems": 5,
-        "animationMs": 420
+        "animationMs": 840
       }
     },
     "md3-ticker": {
@@ -1564,7 +1564,7 @@
       "minH": 12,
       "defaultConfig": {
         "maxItems": 5,
-        "animationMs": 420
+        "animationMs": 840
       }
     },
     "pixel-ticker": {
@@ -1725,7 +1725,7 @@
       "minH": 12,
       "defaultConfig": {
         "maxItems": 5,
-        "animationMs": 420
+        "animationMs": 840
       }
     },
     "retrowave-ticker": {

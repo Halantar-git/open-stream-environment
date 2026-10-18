@@ -92,7 +92,7 @@
       defaultGeometry: { x: 3, y: 24, w: 26, h: 30 },
       minW: 14,
       minH: 12,
-      defaultConfig: { maxItems: 5, animationMs: 420 },
+      defaultConfig: { maxItems: 5, animationMs: 840 },
     };
   }
 

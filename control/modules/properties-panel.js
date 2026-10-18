@@ -230,7 +230,7 @@ export function initPropertiesPanel({
     } else if (inst.type.endsWith("-recent")) {
       extraHtml = `
         <div class="md-field"><label>${t("properties.maxItems")}</label><input type="number" id="pMaxItems" min="1" max="15" value="${config.maxItems || 5}"></div>
-        <div class="md-field"><label>${t("properties.recentAnimationMs")}: <span id="pRecentAnimationValue">${config.animationMs || 420}</span></label><input type="range" id="pRecentAnimation" min="100" max="1500" step="10" value="${config.animationMs || 420}"></div>
+        <div class="md-field"><label>${t("properties.recentAnimationMs")}: <span id="pRecentAnimationValue">${config.animationMs || 840}</span></label><input type="range" id="pRecentAnimation" min="100" max="1500" step="10" value="${config.animationMs || 840}"></div>
         <p class="properties__hint">${t("properties.recentAnimationHint")}</p>`;
     } else if (inst.type === "recent") {
       extraHtml = `<div class="md-field"><label>${t("properties.maxItems")}</label><input type="number" id="pMaxItems" min="1" max="15" value="${config.maxItems || 5}"></div>`;
@@ -659,7 +659,7 @@ export function initPropertiesPanel({
         const value = Number(e.target.value);
         const label = propertiesEl.querySelector("#pRecentAnimationValue");
         if (label) label.textContent = String(value);
-        patchRecent({ animationMs: value });
+        patchRecent({ animationMs: value, animationMsCustom: true });
       });
     } else if (inst.type === "recent") {
       propertiesEl.querySelector("#pMaxItems").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { maxItems: Number(e.target.value) } } }));

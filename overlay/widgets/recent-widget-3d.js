@@ -95,7 +95,7 @@
     }
 
     duration() {
-      return Math.max(80, Math.min(2000, Number(this.config.animationMs) || 420));
+      return Math.max(80, Math.min(2000, Number(this.config.animationMs) || 840));
     }
 
     refresh(immediate = false) {

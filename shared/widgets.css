@@ -379,8 +379,8 @@
   transform-style: preserve-3d;
   will-change: transform, opacity;
   transition:
-    transform var(--recent-animation, 420ms) cubic-bezier(0.16, 1, 0.3, 1),
-    opacity var(--recent-animation, 420ms) ease;
+    transform var(--recent-animation, 840ms) cubic-bezier(0.16, 1, 0.3, 1),
+    opacity var(--recent-animation, 840ms) ease;
 }
 .widget-recent3d__item.is-entering {
   opacity: 0;
