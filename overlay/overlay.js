@@ -395,6 +395,14 @@
   manager.register("goal", OW.GoalWidget);
   manager.register("chat", OW.ChatWidget);
   manager.register("recent", OW.RecentWidget);
+  manager.register("grimhex-recent", OW.RecentWidget3d);
+  manager.register("nuclear-recent", OW.RecentWidget3d);
+  manager.register("cobra-recent", OW.RecentWidget3d);
+  manager.register("teso-recent", OW.RecentWidget3d);
+  manager.register("wardogs-recent", OW.RecentWidget3d);
+  manager.register("md3-recent", OW.RecentWidget3d);
+  manager.register("pixel-recent", OW.RecentWidget3d);
+  manager.register("retrowave-recent", OW.RecentWidget3d);
   manager.register("ticker", OW.WidgetTicker);
   manager.register("grimhex-ticker", OW.WidgetTicker);
   manager.register("nuclear-ticker", OW.WidgetTicker);

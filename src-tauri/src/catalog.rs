@@ -200,6 +200,9 @@ pub fn replaced_by_3d(kind: &str) -> Option<&'static str> {
     if kind.ends_with("-ticker") {
         return Some("ticker");
     }
+    if kind.ends_with("-recent") {
+        return Some("recent");
+    }
     None
 }
 
@@ -211,7 +214,10 @@ pub fn widget_role(kind: &str) -> Option<String> {
     if kind.is_empty() {
         return None;
     }
-    if matches!(kind, "chat" | "goal" | "alerts" | "timer" | "ticker") {
+    if matches!(
+        kind,
+        "chat" | "goal" | "alerts" | "timer" | "ticker" | "recent"
+    ) {
         return Some(kind.to_string());
     }
     if let Some(replaced) = replaced_by_3d(kind) {
@@ -400,12 +406,13 @@ mod tests {
     #[test]
     fn widgets_for_theme_returns_the_theme_three_d_widgets() {
         let md3 = types_of(&widgets_for_theme("nebula"));
-        assert_eq!(md3.len(), 5, "{md3:?}");
+        assert_eq!(md3.len(), 6, "{md3:?}");
         for kind in [
             "md3-orb",
             "md3-chat",
             "md3-goal",
             "md3-holo-alert",
+            "md3-recent",
             "md3-ticker",
         ] {
             assert!(md3.iter().any(|item| item == kind), "{kind} в {md3:?}");
@@ -418,6 +425,7 @@ mod tests {
             "grimhex-chat",
             "grimhex-goal",
             "grimhex-holo-alert",
+            "grimhex-recent",
             "grimhex-radar",
             "grimhex-ticker",
         ] {
@@ -469,7 +477,7 @@ mod tests {
         assert_eq!(widget_role("cobra-shield").as_deref(), Some("shield"));
 
         // Без роли: остальные 2D-виджеты.
-        assert_eq!(widget_role("recent"), None);
+        assert_eq!(widget_role("recent").as_deref(), Some("recent"));
         assert_eq!(widget_role("custom"), None);
         assert_eq!(widget_role(""), None);
     }
@@ -513,7 +521,7 @@ mod tests {
         );
         assert_eq!(
             resolve_type_for_theme("recent", builtin("nebula"), None),
-            "recent"
+            "md3-recent"
         );
 
         // Декоративные вывески тоже следуют за темой.

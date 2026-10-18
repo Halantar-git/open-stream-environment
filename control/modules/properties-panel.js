@@ -227,6 +227,11 @@ export function initPropertiesPanel({
     } else if (inst.type === "cobra-shield" || inst.type === "cobra-radar" || inst.type === "grimhex-radar") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.opacity")}: <span id="pOpacityValue">${config.opacity ?? 100}%</span></label><input type="range" id="pOpacity" min="0" max="100" step="1" value="${config.opacity ?? 100}"></div>`;
+    } else if (inst.type.endsWith("-recent")) {
+      extraHtml = `
+        <div class="md-field"><label>${t("properties.maxItems")}</label><input type="number" id="pMaxItems" min="1" max="15" value="${config.maxItems || 5}"></div>
+        <div class="md-field"><label>${t("properties.recentAnimationMs")}: <span id="pRecentAnimationValue">${config.animationMs || 420}</span></label><input type="range" id="pRecentAnimation" min="100" max="1500" step="10" value="${config.animationMs || 420}"></div>
+        <p class="properties__hint">${t("properties.recentAnimationHint")}</p>`;
     } else if (inst.type === "recent") {
       extraHtml = `<div class="md-field"><label>${t("properties.maxItems")}</label><input type="number" id="pMaxItems" min="1" max="15" value="${config.maxItems || 5}"></div>`;
     } else if (inst.type === "ticker" || inst.type.endsWith("-ticker")) {
@@ -646,6 +651,15 @@ export function initPropertiesPanel({
         const label = propertiesEl.querySelector("#pOpacityValue");
         if (label) label.textContent = `${v}%`;
         send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { opacity: v } } });
+      });
+    } else if (inst.type.endsWith("-recent")) {
+      const patchRecent = (configPatch) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: configPatch } });
+      propertiesEl.querySelector("#pMaxItems").addEventListener("change", (e) => patchRecent({ maxItems: Number(e.target.value) || 5 }));
+      propertiesEl.querySelector("#pRecentAnimation").addEventListener("input", (e) => {
+        const value = Number(e.target.value);
+        const label = propertiesEl.querySelector("#pRecentAnimationValue");
+        if (label) label.textContent = String(value);
+        patchRecent({ animationMs: value });
       });
     } else if (inst.type === "recent") {
       propertiesEl.querySelector("#pMaxItems").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { maxItems: Number(e.target.value) } } }));

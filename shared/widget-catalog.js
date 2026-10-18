@@ -77,6 +77,25 @@
     };
   }
 
+  // 3D-вариант «Последних событий»: анимация выезда слева и сдвиг списка.
+  // Стилизуется токенами темы, поэтому один класс работает во всех наборах.
+  function recent3d(type, label, description, theme) {
+    return {
+      type,
+      label,
+      description,
+      icon: "widgetRecent",
+      services: ["twitchEvents", "donationAlerts", "youtube"],
+      dimension: "3d",
+      theme,
+      renderType: "2d",
+      defaultGeometry: { x: 3, y: 24, w: 26, h: 30 },
+      minW: 14,
+      minH: 12,
+      defaultConfig: { maxItems: 5, animationMs: 420 },
+    };
+  }
+
   const WIDGET_TYPES = {
     // ---- Общие 2D-виджеты (доступны в любой теме) ----
     alerts: {
@@ -375,6 +394,12 @@
       minH: 12,
       defaultConfig: { opacity: 100 },
     },
+    "grimhex-recent": recent3d(
+      "grimhex-recent",
+      "События Grim HEX",
+      "3D-очередь событий с выездом слева (только для темы Grim HEX)",
+      "grimhex"
+    ),
     "grimhex-ticker": {
       type: "grimhex-ticker",
       label: "Лента Grim HEX",
@@ -450,6 +475,13 @@
       minH: 8,
       defaultConfig: {},
     },
+
+    "nuclear-recent": recent3d(
+      "nuclear-recent",
+      "События Nuclear",
+      "3D-очередь событий с выездом слева (только для темы Nuclear)",
+      "nuclear"
+    ),
 
     "nuclear-ticker": ticker3d(
       "nuclear-ticker",
@@ -556,6 +588,13 @@
       defaultConfig: { opacity: 100 },
     },
 
+    "cobra-recent": recent3d(
+      "cobra-recent",
+      "События Cobra",
+      "3D-очередь событий с выездом слева (только для темы Cobra Mk II)",
+      "cobra-mk2"
+    ),
+
     "cobra-ticker": ticker3d(
       "cobra-ticker",
       "Лента Cobra",
@@ -620,6 +659,13 @@
       minH: 8,
       defaultConfig: {},
     },
+
+    "teso-recent": recent3d(
+      "teso-recent",
+      "События TESO",
+      "3D-очередь событий с выездом слева (только для темы TESO)",
+      "teso-seal"
+    ),
 
     "teso-ticker": ticker3d(
       "teso-ticker",
@@ -686,6 +732,13 @@
       defaultConfig: { perspective: 0, motion: true },
     },
 
+    "wardogs-recent": recent3d(
+      "wardogs-recent",
+      "События Wardogs",
+      "3D-очередь событий с выездом слева (только для темы Wardogs)",
+      "wardogs"
+    ),
+
     "wardogs-ticker": ticker3d(
       "wardogs-ticker",
       "Лента Wardogs",
@@ -750,6 +803,13 @@
       minH: 8,
       defaultConfig: {},
     },
+
+    "md3-recent": recent3d(
+      "md3-recent",
+      "События Material You",
+      "3D-очередь событий с выездом слева (только для темы Material You)",
+      "nebula"
+    ),
 
     "md3-ticker": ticker3d(
       "md3-ticker",
@@ -816,6 +876,13 @@
       defaultConfig: {},
     },
 
+    "pixel-recent": recent3d(
+      "pixel-recent",
+      "События Pixel Perfect",
+      "3D-очередь событий с выездом слева (только для темы Pixel Perfect)",
+      "pixel"
+    ),
+
     "pixel-ticker": ticker3d(
       "pixel-ticker",
       "Лента Pixel Perfect",
@@ -880,6 +947,13 @@
       minH: 6,
       defaultConfig: { perspective: 0 },
     },
+
+    "retrowave-recent": recent3d(
+      "retrowave-recent",
+      "События Retrowave",
+      "3D-очередь событий с выездом слева (только для темы Retrowave)",
+      "retrowave"
+    ),
 
     "retrowave-ticker": ticker3d(
       "retrowave-ticker",
@@ -949,6 +1023,7 @@
     if (widgetType.endsWith("-holo-alert")) return "alerts";
     if (widgetType.endsWith("-timer")) return "timer";
     if (widgetType.endsWith("-ticker")) return "ticker";
+    if (widgetType.endsWith("-recent")) return "recent";
     return null;
   }
 
@@ -959,7 +1034,7 @@
   // another. Widgets without a role are strictly theme-bound (additive).
   function widgetRole(widgetType) {
     if (!widgetType) return null;
-    if (widgetType === "chat" || widgetType === "goal" || widgetType === "alerts" || widgetType === "timer" || widgetType === "ticker") return widgetType;
+    if (widgetType === "chat" || widgetType === "goal" || widgetType === "alerts" || widgetType === "timer" || widgetType === "ticker" || widgetType === "recent") return widgetType;
     const r3d = replacedBy3d(widgetType);
     if (r3d) return r3d;
     const def = WIDGET_TYPES[widgetType];

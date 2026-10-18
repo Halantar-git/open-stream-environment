@@ -61,14 +61,14 @@ describe("widget-catalog helpers", () => {
 
   test("widgetsForTheme возвращает 3D-виджеты темы", () => {
     const md3 = widgetsForTheme("nebula").map((d) => d.type);
-    expect(md3).toEqual(expect.arrayContaining(["md3-orb", "md3-chat", "md3-goal", "md3-holo-alert", "md3-ticker"]));
-    expect(md3).toHaveLength(5);
+    expect(md3).toEqual(expect.arrayContaining(["md3-orb", "md3-chat", "md3-goal", "md3-holo-alert", "md3-recent", "md3-ticker"]));
+    expect(md3).toHaveLength(6);
 
     const grimhex = widgetsForTheme("grimhex").map((d) => d.type);
-    expect(grimhex).toEqual(expect.arrayContaining(["grimhex", "musain", "grimhex-chat", "grimhex-goal", "grimhex-holo-alert", "grimhex-radar", "grimhex-ticker"]));
+    expect(grimhex).toEqual(expect.arrayContaining(["grimhex", "musain", "grimhex-chat", "grimhex-goal", "grimhex-holo-alert", "grimhex-recent", "grimhex-radar", "grimhex-ticker"]));
 
     const retrowave = widgetsForTheme("retrowave").map((d) => d.type);
-    expect(retrowave).toEqual(expect.arrayContaining(["retrowave-goal", "retrowave-chat", "retrowave-holo-alert", "retrowave-symbol", "retrowave-ticker"]));
+    expect(retrowave).toEqual(expect.arrayContaining(["retrowave-goal", "retrowave-chat", "retrowave-holo-alert", "retrowave-recent", "retrowave-symbol", "retrowave-ticker"]));
 
     expect(widgetsForTheme("")).toEqual([]);
   });
@@ -137,8 +137,12 @@ describe("widget-catalog helpers", () => {
     expect(widgetRole("cobra-radar")).toBe("radar");
     expect(widgetRole("cobra-shield")).toBe("shield");
 
+    // «Последние события»: 2D-база и 3D-варианты — одна роль.
+    expect(widgetRole("recent")).toBe("recent");
+    expect(widgetRole("retrowave-recent")).toBe("recent");
+    expect(widgetRole("md3-recent")).toBe("recent");
+
     // Без роли: остальные 2D-виджеты.
-    expect(widgetRole("recent")).toBeNull();
     expect(widgetRole("custom")).toBeNull();
     expect(widgetRole(null)).toBeNull();
   });
@@ -157,7 +161,10 @@ describe("widget-catalog helpers", () => {
 
     // Без роли — не меняется.
     expect(resolveTypeForTheme("md3-orb", "nebula", {})).toBe("md3-orb");
-    expect(resolveTypeForTheme("recent", "nebula", {})).toBe("recent");
+
+    // «Последние события» следуют за активной 3D-темой.
+    expect(resolveTypeForTheme("recent", "nebula", {})).toBe("md3-recent");
+    expect(resolveTypeForTheme("recent", "", {})).toBe("recent");
 
     // Декоративные вывески тоже следуют за темой.
     expect(resolveTypeForTheme("grimhex", "cobra-mk2", {})).toBe("cobra");

@@ -358,6 +358,44 @@
 .widget-recent__item b { font-weight: 700; }
 .widget-recent__empty { font-size: 12px; color: var(--md-on-surface-variant); opacity: 0.7; }
 
+/* 3D-вариант «Последних событий»: карточки живут в общей перспективе и
+   выезжают слева. Тема задаёт токены и декоративные рамки через
+   `data-decoration`, поэтому отдельные цвета здесь не хардкодятся. */
+.widget-recent3d {
+  perspective: 900px;
+  perspective-origin: left center;
+}
+.widget-recent3d__list {
+  perspective: 900px;
+  transform-style: preserve-3d;
+}
+.widget-recent3d__item {
+  padding: 8px 10px;
+  border-radius: var(--shape-md);
+  background: color-mix(in srgb, var(--md-surface-container-high) 82%, transparent);
+  border: 1px solid var(--md-outline-variant);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transform-origin: left center;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+  transition:
+    transform var(--recent-animation, 420ms) cubic-bezier(0.16, 1, 0.3, 1),
+    opacity var(--recent-animation, 420ms) ease;
+}
+.widget-recent3d__item.is-entering {
+  opacity: 0;
+  transform: translate3d(-120%, 4px, -70px) rotateY(-38deg) scale(0.94);
+}
+.widget-recent3d__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: reduce) {
+  .widget-recent3d__item { transition: none; }
+}
+
 /* ---------- News ticker (бегущая строка) ----------
    Одна полоса на все темы: оформление берётся из токенов, поэтому в
    Retrowave лента неоновая, в Wardogs — плоская, в Pixel — пиксельная.

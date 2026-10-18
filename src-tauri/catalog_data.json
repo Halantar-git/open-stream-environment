@@ -1,5 +1,5 @@
 {
-  "sourceHash": "e16d365e53cdb1a1",
+  "sourceHash": "45680112c9c5a73b",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -519,6 +519,32 @@
         "opacity": 100
       }
     },
+    "grimhex-recent": {
+      "type": "grimhex-recent",
+      "label": "События Grim HEX",
+      "description": "3D-очередь событий с выездом слева (только для темы Grim HEX)",
+      "icon": "widgetRecent",
+      "services": [
+        "twitchEvents",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "grimhex",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 24,
+        "w": 26,
+        "h": 30
+      },
+      "minW": 14,
+      "minH": 12,
+      "defaultConfig": {
+        "maxItems": 5,
+        "animationMs": 420
+      }
+    },
     "grimhex-ticker": {
       "type": "grimhex-ticker",
       "label": "Лента Grim HEX",
@@ -651,6 +677,32 @@
       "minW": 16,
       "minH": 8,
       "defaultConfig": {}
+    },
+    "nuclear-recent": {
+      "type": "nuclear-recent",
+      "label": "События Nuclear",
+      "description": "3D-очередь событий с выездом слева (только для темы Nuclear)",
+      "icon": "widgetRecent",
+      "services": [
+        "twitchEvents",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "nuclear",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 24,
+        "w": 26,
+        "h": 30
+      },
+      "minW": 14,
+      "minH": 12,
+      "defaultConfig": {
+        "maxItems": 5,
+        "animationMs": 420
+      }
     },
     "nuclear-ticker": {
       "type": "nuclear-ticker",
@@ -852,6 +904,32 @@
         "opacity": 100
       }
     },
+    "cobra-recent": {
+      "type": "cobra-recent",
+      "label": "События Cobra",
+      "description": "3D-очередь событий с выездом слева (только для темы Cobra Mk II)",
+      "icon": "widgetRecent",
+      "services": [
+        "twitchEvents",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "cobra-mk2",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 24,
+        "w": 26,
+        "h": 30
+      },
+      "minW": 14,
+      "minH": 12,
+      "defaultConfig": {
+        "maxItems": 5,
+        "animationMs": 420
+      }
+    },
     "cobra-ticker": {
       "type": "cobra-ticker",
       "label": "Лента Cobra",
@@ -984,6 +1062,32 @@
       "minW": 16,
       "minH": 8,
       "defaultConfig": {}
+    },
+    "teso-recent": {
+      "type": "teso-recent",
+      "label": "События TESO",
+      "description": "3D-очередь событий с выездом слева (только для темы TESO)",
+      "icon": "widgetRecent",
+      "services": [
+        "twitchEvents",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "teso-seal",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 24,
+        "w": 26,
+        "h": 30
+      },
+      "minW": 14,
+      "minH": 12,
+      "defaultConfig": {
+        "maxItems": 5,
+        "animationMs": 420
+      }
     },
     "teso-ticker": {
       "type": "teso-ticker",
@@ -1119,6 +1223,32 @@
         "motion": true
       }
     },
+    "wardogs-recent": {
+      "type": "wardogs-recent",
+      "label": "События Wardogs",
+      "description": "3D-очередь событий с выездом слева (только для темы Wardogs)",
+      "icon": "widgetRecent",
+      "services": [
+        "twitchEvents",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "wardogs",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 24,
+        "w": 26,
+        "h": 30
+      },
+      "minW": 14,
+      "minH": 12,
+      "defaultConfig": {
+        "maxItems": 5,
+        "animationMs": 420
+      }
+    },
     "wardogs-ticker": {
       "type": "wardogs-ticker",
       "label": "Лента Wardogs",
@@ -1251,6 +1381,32 @@
       "minW": 16,
       "minH": 8,
       "defaultConfig": {}
+    },
+    "md3-recent": {
+      "type": "md3-recent",
+      "label": "События Material You",
+      "description": "3D-очередь событий с выездом слева (только для темы Material You)",
+      "icon": "widgetRecent",
+      "services": [
+        "twitchEvents",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "nebula",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 24,
+        "w": 26,
+        "h": 30
+      },
+      "minW": 14,
+      "minH": 12,
+      "defaultConfig": {
+        "maxItems": 5,
+        "animationMs": 420
+      }
     },
     "md3-ticker": {
       "type": "md3-ticker",
@@ -1385,6 +1541,32 @@
       "minH": 8,
       "defaultConfig": {}
     },
+    "pixel-recent": {
+      "type": "pixel-recent",
+      "label": "События Pixel Perfect",
+      "description": "3D-очередь событий с выездом слева (только для темы Pixel Perfect)",
+      "icon": "widgetRecent",
+      "services": [
+        "twitchEvents",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "pixel",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 24,
+        "w": 26,
+        "h": 30
+      },
+      "minW": 14,
+      "minH": 12,
+      "defaultConfig": {
+        "maxItems": 5,
+        "animationMs": 420
+      }
+    },
     "pixel-ticker": {
       "type": "pixel-ticker",
       "label": "Лента Pixel Perfect",
@@ -1518,6 +1700,32 @@
       "minH": 6,
       "defaultConfig": {
         "perspective": 0
+      }
+    },
+    "retrowave-recent": {
+      "type": "retrowave-recent",
+      "label": "События Retrowave",
+      "description": "3D-очередь событий с выездом слева (только для темы Retrowave)",
+      "icon": "widgetRecent",
+      "services": [
+        "twitchEvents",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "retrowave",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 24,
+        "w": 26,
+        "h": 30
+      },
+      "minW": 14,
+      "minH": 12,
+      "defaultConfig": {
+        "maxItems": 5,
+        "animationMs": 420
       }
     },
     "retrowave-ticker": {

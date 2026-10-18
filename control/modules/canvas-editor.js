@@ -307,6 +307,19 @@ export function initCanvasEditor({
           .join("");
         return `<div class="widget-chat">${rows}</div>`;
       }
+      case "grimhex-recent":
+      case "nuclear-recent":
+      case "cobra-recent":
+      case "teso-recent":
+      case "wardogs-recent":
+      case "md3-recent":
+      case "pixel-recent":
+      case "retrowave-recent": {
+        const items = SAMPLE_RECENT.slice(0, Math.min(3, config.maxItems || 5))
+          .map((e) => `<div class="widget-recent__item widget-recent3d__item"><span class="widget-recent__dot" data-kind="${escapeAttr(e.kind)}"></span><span class="widget-recent3d__text">${recentTextPreview(e)}</span></div>`)
+          .join("");
+        return `<div class="widget-recent widget-recent3d"><div class="widget-recent__title">${t("preview.recentTitle")}</div><div class="widget-recent__list widget-recent3d__list">${items}</div></div>`;
+      }
       case "recent": {
         const max = Math.min(3, config.maxItems || 5);
         const items = SAMPLE_RECENT.slice(0, max)
