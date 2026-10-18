@@ -21,8 +21,11 @@
   <meta charset="utf-8" />
   <title>Open Stream Environment — splash</title>
   <!-- Заставка открывается внутри OBS, поэтому внешние шрифты недоступны:
-       берём встроенный Roboto (тот же, что в логотипе), а не Segoe UI из системы. -->
-  <link rel="stylesheet" href="/shared/fonts.css" />
+       theme.css подключает встроенные шрифты и токены по умолчанию, а
+       актуальную тему пришлёт шина вместе с состоянием. scene.css даёт тот же
+       фон, что у сцены выбранной темы, — переход не выглядит чужим кадром. -->
+  <link rel="stylesheet" href="/shared/theme.css" />
+  <link rel="stylesheet" href="scene.css" />
   <style>
     html,
     body {
@@ -47,27 +50,50 @@
     .splash-default {
       position: fixed;
       inset: 0;
+      z-index: 2;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 32px;
-      background: #111318;
+      background: transparent;
     }
     .splash-default__orb {
+      position: relative;
       width: 120px;
       height: 120px;
       border-radius: 50%;
-      background: radial-gradient(circle at 32% 28%, #386595, #005faf 58%, #0b0c0e);
-      box-shadow: 0 0 70px rgba(0, 95, 175, 0.55);
+      background:
+        radial-gradient(
+          circle at 32% 28%,
+          color-mix(in srgb, var(--md-primary) 62%, #fff),
+          var(--md-primary) 58%,
+          var(--md-surface-dim)
+        );
+      box-shadow: 0 0 70px color-mix(in srgb, var(--md-primary) 55%, transparent);
       animation: splash-pulse 1.6s ease-in-out infinite;
     }
     .splash-default__label {
-      font-family: "Roboto", "Segoe UI", Arial, sans-serif;
+      font-family: var(--font-display);
       font-weight: 700;
       font-size: 20px;
       letter-spacing: 6px;
-      color: #ffffff;
+      line-height: 1.35;
+      color: var(--md-on-surface);
+      text-shadow: 0 0 24px color-mix(in srgb, var(--md-primary) 45%, transparent);
+      text-align: center;
+      max-width: 80vw;
+      padding: 0 24px;
+    }
+    /* Подпись продукта остаётся на встроенном Roboto: она не зависит от темы
+       и читается одинаково на любой заставке. */
+    .splash-default__brand {
+      font-family: "Roboto", "Segoe UI", Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      color: color-mix(in srgb, var(--md-on-surface) 52%, transparent);
       text-align: center;
       padding: 0 24px;
     }
@@ -85,13 +111,27 @@
   </style>
 </head>
 <body>
+  <!-- Тот же фон, что у сцены активной темы: звёзды, сетка, радар, аврора
+       и прочие мотивы задаются правилами [data-theme] в scene.css. -->
+  <div class="scene-wrapper splash-bg" aria-hidden="true">
+    <div class="bg-shape shape-1"></div>
+    <div class="bg-shape shape-2"></div>
+    <div class="bg-shape shape-3"></div>
+    <div class="grid-overlay">
+      <div class="grid-plane grid-plane--ceiling"><div class="grid-texture"></div></div>
+      <div class="grid-plane grid-plane--floor"><div class="grid-texture"></div></div>
+    </div>
+  </div>
+
   <div id="defaultSplash" class="splash-default" hidden>
     <div class="splash-default__orb"></div>
     <div class="splash-default__label" id="defaultLabel">OPEN STREAM ENVIRONMENT</div>
+    <div class="splash-default__brand" id="defaultBrand" hidden>OPEN STREAM ENVIRONMENT</div>
   </div>
   <img id="splashImage" hidden alt="" />
   <video id="splashVideo" playsinline hidden></video>
   <script src="/shared/events.js"></script>
+  <script src="retrowave-waves.js"></script>
   <script src="video-splash.js"></script>
 </body>
 </html>

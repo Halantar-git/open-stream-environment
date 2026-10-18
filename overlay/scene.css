@@ -1004,6 +1004,182 @@ body {
   mask-image: radial-gradient(circle at 76% 26%, #000 0 34%, transparent 58%);
 }
 
+/* ---------- Стандартная заставка перехода ----------
+   Фон берётся из тех же правил, что у сцены темы (см. выше), поэтому
+   переход не выглядит чужим кадром. Остальное подстраивается под характер
+   набора: от мягкой авроры до пиксельного дизеринга. */
+.splash-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+@keyframes splash-sweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes splash-hue {
+  from { filter: hue-rotate(0deg); }
+  to { filter: hue-rotate(360deg); }
+}
+
+/* Orbital — радиолокационный сектор вокруг орба. */
+[data-theme="orbital"] .splash-default__orb {
+  background: radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.28), transparent 70%);
+  border: 1px solid rgba(0, 240, 255, 0.55);
+  box-shadow: 0 0 70px rgba(0, 240, 255, 0.45), inset 0 0 28px rgba(0, 240, 255, 0.35);
+}
+[data-theme="orbital"] .splash-default__orb::after {
+  content: "";
+  position: absolute;
+  inset: -26px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, rgba(0, 240, 255, 0.65), transparent 24%);
+  -webkit-mask-image: radial-gradient(circle, transparent 0 58%, #000 60% 64%, transparent 66%);
+  mask-image: radial-gradient(circle, transparent 0 58%, #000 60% 64%, transparent 66%);
+  animation: splash-sweep 3.4s linear infinite;
+}
+
+/* Pixel Perfect — квадратный шахматный орб без скруглений. */
+[data-theme="pixel"] .splash-default__orb {
+  border-radius: 0;
+  background: repeating-conic-gradient(rgba(214, 182, 117, 0.85) 0% 25%, #151517 0% 50%);
+  background-size: 24px 24px;
+  box-shadow: 0 0 0 6px #101012, 0 0 0 8px rgba(214, 182, 117, 0.35), 0 0 50px rgba(214, 182, 117, 0.2);
+}
+
+/* Grim HEX — промышленный восьмиугольник в аварийную полоску. */
+[data-theme="grimhex"] .splash-default__orb {
+  border-radius: 0;
+  clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%);
+  background: repeating-linear-gradient(-45deg, rgba(255, 170, 0, 0.9) 0 10px, #0a141c 10px 20px);
+  box-shadow: none;
+  filter: drop-shadow(0 0 28px rgba(255, 170, 0, 0.4));
+}
+
+/* Nuclear — фосфорный шар под развёрткой ЭЛТ. */
+[data-theme="nuclear"] .splash-default__orb {
+  background: radial-gradient(circle at 50% 42%, #39ff14 0 16%, #167a12 46%, #0d100e 74%);
+  box-shadow: 0 0 60px rgba(57, 255, 20, 0.45), inset 0 0 26px rgba(0, 0, 0, 0.8);
+}
+[data-theme="nuclear"] .splash-default__orb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.55) 0 2px, transparent 2px 4px);
+  opacity: 0.6;
+}
+
+/* Super Four — четыре цвета в конусе, медленно меняют оттенок. */
+[data-theme="sf"] .splash-default__orb {
+  background: conic-gradient(from 0deg, #a855f7, #f59e0b, #22d3ee, #a855f7);
+  box-shadow: 0 0 70px rgba(168, 85, 247, 0.5);
+  animation: splash-pulse 1.6s ease-in-out infinite, splash-hue 7s linear infinite;
+}
+
+/* Retrowave — полосатое закатное солнце, как у алертов темы. */
+[data-theme="retrowave"] .splash-default__orb {
+  background: linear-gradient(180deg, #ffa24c 0%, #ff2d95 54%, #2de2e6 100%);
+  border: 1px solid rgba(45, 226, 230, 0.7);
+  box-shadow: 0 0 80px rgba(255, 45, 149, 0.55);
+}
+[data-theme="retrowave"] .splash-default__orb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: repeating-linear-gradient(0deg, rgba(13, 7, 25, 0.92) 0 3px, transparent 3px 8px);
+  clip-path: inset(48% 0 0 0);
+}
+
+/* Wardogs — тактический прицел с перекрестием. */
+[data-theme="wardogs"] .splash-default__orb {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(240, 169, 44, 0.16), transparent 70%),
+    repeating-radial-gradient(circle at 50% 50%, rgba(240, 169, 44, 0.75) 0 1px, transparent 1px 18px);
+  border: 1px solid rgba(240, 169, 44, 0.5);
+  box-shadow: 0 0 55px rgba(240, 169, 44, 0.35);
+}
+[data-theme="wardogs"] .splash-default__orb::before,
+[data-theme="wardogs"] .splash-default__orb::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: rgba(240, 169, 44, 0.8);
+  box-shadow: 0 0 8px rgba(240, 169, 44, 0.8);
+}
+[data-theme="wardogs"] .splash-default__orb::before {
+  width: 72%;
+  height: 1px;
+  transform: translate(-50%, -50%);
+}
+[data-theme="wardogs"] .splash-default__orb::after {
+  width: 1px;
+  height: 72%;
+  transform: translate(-50%, -50%);
+}
+
+/* TESO — золотая мандала-печать; у Ouroboros Seal добавляется внешнее кольцо. */
+[data-theme="teso"] .splash-default__orb,
+[data-theme="teso-seal"] .splash-default__orb {
+  background:
+    repeating-conic-gradient(from 0deg, rgba(199, 167, 92, 0.5) 0 0.5deg, transparent 0.5deg 12deg),
+    radial-gradient(circle at 50% 50%, rgba(199, 167, 92, 0.2), transparent 70%);
+  border: 2px solid rgba(199, 167, 92, 0.7);
+  box-shadow: 0 0 60px rgba(199, 167, 92, 0.4), inset 0 0 28px rgba(199, 167, 92, 0.16);
+}
+[data-theme="teso-seal"] .splash-default__orb {
+  box-shadow:
+    0 0 60px rgba(199, 167, 92, 0.4),
+    inset 0 0 28px rgba(199, 167, 92, 0.16),
+    0 0 0 10px rgba(199, 167, 92, 0.1);
+}
+
+/* Elite — оранжевый HUD-прицел. */
+[data-theme="elite"] .splash-default__orb {
+  background:
+    radial-gradient(circle at 50% 50%, transparent 0 46%, rgba(255, 118, 5, 0.9) 47% 49%, transparent 50%),
+    repeating-radial-gradient(circle at 50% 50%, rgba(255, 118, 5, 0.5) 0 1px, transparent 1px 14px);
+  border: 1px solid rgba(255, 118, 5, 0.45);
+  box-shadow: 0 0 60px rgba(255, 118, 5, 0.4);
+}
+[data-theme="elite"] .splash-default__orb::before,
+[data-theme="elite"] .splash-default__orb::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: rgba(0, 210, 255, 0.75);
+  box-shadow: 0 0 8px rgba(0, 210, 255, 0.7);
+}
+[data-theme="elite"] .splash-default__orb::before {
+  width: 64%;
+  height: 1px;
+  transform: translate(-50%, -50%);
+}
+[data-theme="elite"] .splash-default__orb::after {
+  width: 1px;
+  height: 64%;
+  transform: translate(-50%, -50%);
+}
+
+/* Cobra Mk II — циановый сканер с вращающимся пунктиром. */
+[data-theme="cobra-mk2"] .splash-default__orb {
+  background: repeating-radial-gradient(circle at 50% 50%, rgba(0, 210, 255, 0.6) 0 1px, transparent 1px 16px);
+  border: 1px solid rgba(0, 210, 255, 0.5);
+  box-shadow: 0 0 60px rgba(0, 210, 255, 0.4), inset 0 0 24px rgba(0, 210, 255, 0.2);
+}
+[data-theme="cobra-mk2"] .splash-default__orb::after {
+  content: "";
+  position: absolute;
+  inset: -20px;
+  border-radius: 50%;
+  border: 1px dashed rgba(0, 210, 255, 0.35);
+  animation: splash-sweep 9s linear infinite;
+}
+
 /* Фон — только оформление: при системном запрете на анимацию оставляем
    статичную картинку, ничего не теряя по смыслу. */
 @media (prefers-reduced-motion: reduce) {
@@ -1014,7 +1190,10 @@ body {
   [data-theme="orbital"] .scene-wrapper::after,
   [data-theme="sf"] .scene-wrapper::before,
   [data-theme="elite"] .bg-shape,
-  [data-theme="cobra-mk2"] .bg-shape {
-    animation: none;
+  [data-theme="cobra-mk2"] .bg-shape,
+  .splash-default__orb,
+  .splash-default__orb::before,
+  .splash-default__orb::after {
+    animation: none !important;
   }
 }

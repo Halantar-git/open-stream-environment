@@ -1499,7 +1499,7 @@
     "splashes": {
       "title": "Splashes",
       "p1": "A splash is a video, image or GIF played during scene transitions: when entering BRB, Talk, End, Wheel and Poll, and when returning to gameplay from these scenes or from Start (the stream intro).",
-      "p2": "Configured on the Splashes tab: one file for all scenes plus a file and duration per scene. Priority: the scene's file → the global file → the standard brand splash (when no file is set).",
+      "p2": "Configured on the Splashes tab: one file for all scenes plus a file and duration per scene. Priority: the scene's file → the global file → the standard brand splash (when no file is set). The standard splash follows the active theme.",
       "p3": "Duration is auto or 1–30 seconds: video always plays to the end, while an image/GIF with auto holds the default time. The switch to the target scene happens automatically — on the video's end or on the timer.",
       "p4": "Every scene has a toggle: a disabled scene skips its splash and switches immediately. It affects both entering the scene and returning from it to gameplay.",
       "p5": "Playback needs an OBS scene \"Opening\" with the http://localhost:8710/overlay/video-splash.html browser source (copy the link on the Splashes tab); the scene name is set in Settings → OBS WebSocket → Opening. Turn off “Shutdown source when not visible” in the source properties, otherwise the splash may not connect in time; if the source loads mid-splash, it is replayed so nothing is missed. If the Opening scene is missing, the transition goes straight to the target scene."

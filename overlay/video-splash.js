@@ -29,6 +29,7 @@
   const image = document.getElementById("splashImage");
   const defaultEl = document.getElementById("defaultSplash");
   const defaultLabel = document.getElementById("defaultLabel");
+  const defaultBrand = document.getElementById("defaultBrand");
 
   const DEFAULT_IMAGE_MS = 4000; // картинка / GIF, если длительность не задана
   const DEFAULT_HOLD_MS = 2500; // стандартная заставка
@@ -73,7 +74,10 @@
 
   function showDefault(title) {
     hideAll();
+    // Заголовок сцены — крупно шрифтом темы; если его нет, крупной остаётся
+    // сама подпись продукта, а дублирующая маленькая строка скрывается.
     defaultLabel.textContent = title || "OPEN STREAM ENVIRONMENT";
+    defaultBrand.hidden = !title;
     defaultEl.hidden = false;
     advanceTimer = setTimeout(notifyEnded, DEFAULT_HOLD_MS);
   }
@@ -116,7 +120,23 @@
     else showDefault(payload && payload.title);
   }
 
+  function applyTheme(appearance) {
+    if (!appearance || !appearance.tokens) return;
+    const root = document.documentElement;
+    Object.entries(appearance.tokens).forEach(([key, value]) => root.style.setProperty(key, value));
+    document.body.dataset.theme = appearance.activeThemeId || "";
+    document.body.dataset.decoration = appearance.tokens["--panel-decoration"] || "none";
+  }
+
   function handleMessage(msg) {
+    if (msg.type === EVENT_TYPES.STATE) {
+      applyTheme(msg.payload && msg.payload.appearance);
+      return;
+    }
+    if (msg.type === EVENT_TYPES.THEME_UPDATE) {
+      applyTheme(msg.payload);
+      return;
+    }
     if (msg.type === EVENT_TYPES.VIDEO_SPLASH_PLAY) play(msg.payload);
   }
 
