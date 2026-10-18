@@ -99,6 +99,7 @@
     "aspectRatio": "Соотношение",
     "layoutTarget": "Раскладка",
     "layoutMain": "Оверлей",
+    "obsSource": "OBS Browser Source",
     "perfBudget": "3D-анимация: {{count}} · {{area}}% экрана",
     "perfHint": "Сколько анимированных 3D-виджетов сейчас на сцене и какую долю площади они занимают. Комфортный ориентир — 2–3 таких виджета.",
     "copyUrl": "Скопировать URL для OBS",

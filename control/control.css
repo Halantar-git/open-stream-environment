@@ -202,6 +202,24 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .inspector__section { padding: 14px; border-bottom: 1px solid var(--md-outline-variant); }
 .inspector__title { font-family: var(--font-display); font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--md-on-surface-variant); margin-bottom: 10px; }
 
+/* Ссылка для OBS из нижней панели переехала в инспектор: сворачиваемый блок,
+   чтобы не занимать место, когда она не нужна. */
+.obs-source { padding: 14px; border-bottom: 1px solid var(--md-outline-variant); }
+.obs-source > summary {
+  cursor: pointer;
+  list-style: none;
+  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.obs-source > summary::-webkit-details-marker { display: none; }
+.obs-source > summary::before { content: "▸"; font-size: 10px; }
+.obs-source[open] > summary::before { content: "▾"; }
+.obs-source__body { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.obs-source__body .canvas-toolbar__url { white-space: normal; overflow-wrap: anywhere; font-size: 11px; flex: none; }
+.obs-source__body .md-button { width: 100%; justify-content: center; }
+
 .layers { display: flex; flex-direction: column; gap: 3px; }
 .layer-row { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: var(--shape-sm); cursor: pointer; font-size: 13px; }
 .layer-row:hover { background: var(--md-surface-container); }

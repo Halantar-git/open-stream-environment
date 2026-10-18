@@ -366,8 +366,6 @@
           <div class="canvas" id="canvas"></div>
         </div>
         <div class="canvas-toolbar">
-          <div class="canvas-toolbar__url" id="obsUrlLabel">http://localhost:8710/overlay/overlay.html</div>
-          <button class="md-button md-button--tonal" id="copyUrlBtn" data-i18n="editor.copyUrl">Скопировать URL для OBS</button>
           <label class="canvas-toolbar__grid">
             <span data-i18n="editor.grid">Сетка</span>
             <select id="gridSizeSelect">
@@ -410,6 +408,13 @@
       </div>
 
       <aside class="inspector">
+        <details class="obs-source">
+          <summary class="inspector__title" data-i18n="editor.obsSource">OBS Browser Source</summary>
+          <div class="obs-source__body">
+            <div class="canvas-toolbar__url" id="obsUrlLabel">http://localhost:8710/overlay/overlay.html</div>
+            <button class="md-button md-button--tonal" id="copyUrlBtn" data-i18n="editor.copyUrl">Скопировать URL для OBS</button>
+          </div>
+        </details>
         <div class="inspector__section">
           <div class="inspector__title" data-i18n="editor.layers">Слои</div>
           <div class="layers" id="layers"></div>
