@@ -110,6 +110,7 @@
       // Уникальные ключи: одинаковые события на одной миллисекунде не должны
       // переиспользовать один и тот же DOM-узел.
       const desired = [];
+      const entering = [];
       const seen = new Map();
       for (const event of events) {
         const base = eventKey(event);
@@ -139,6 +140,7 @@
         if (!node) {
           node = this.createItem(event, !immediate);
           this.nodes.set(key, node);
+          if (!immediate) entering.push(node);
         } else {
           // Локаль или данные события могли измениться — обновляем текст, не
           // трогая уже показанную карточку и её анимацию.
@@ -167,11 +169,10 @@
 
       // Новые карточки стартуют с классом is-entering; снимаем его следующим
       // кадром, чтобы браузер успел отрисовать начальное состояние.
-      for (const { key } of desired) {
-        const node = this.nodes.get(key);
-        if (node && node.classList.contains("is-entering")) {
-          nextFrame(() => node.classList.remove("is-entering"));
-        }
+      for (const node of entering) {
+        nextFrame(() => {
+          if (node.isConnected) node.classList.remove("is-entering");
+        });
       }
 
       this.renderedKeys = desired.map((item) => item.key);

@@ -88,7 +88,9 @@ body {
 }
 
 /* ---- Recent-events row fade-in ---- */
-.widget-recent__item {
+/* Только для 2D-виджета: у 3D-варианта карточки въезжают слева на transition,
+   а animation перебивает transition независимо от специфичности и порядка. */
+.widget-recent:not(.widget-recent3d) .widget-recent__item {
   animation: recent-in 260ms var(--easing-standard) both;
 }
 @keyframes recent-in {
