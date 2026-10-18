@@ -24,7 +24,6 @@
   const sceneType = params.get("type") || "brb";
   const isTalk = sceneType === "talk";
   const isPause = sceneType === "pause";
-  const MAX_CHAT = 50;
 
   let recentEvents = [];
   let topDonation = { user: "", amount: 0, currency: "RUB" };
@@ -49,9 +48,6 @@
     evTopDonation: document.getElementById("evTopDonation"),
     socialsFooter: document.getElementById("socialsFooter"),
     sceneCard: document.querySelector(".scene-card"),
-    sceneChat: document.getElementById("sceneChat"),
-    sceneChatTitle: document.getElementById("sceneChatTitle"),
-    sceneChatList: document.getElementById("sceneChatList"),
     pauseMedia: document.getElementById("pauseMedia"),
     pauseVideo: document.getElementById("pauseVideo"),
     pauseImage: document.getElementById("pauseImage"),
@@ -63,9 +59,6 @@
 
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  }
-  function escapeAttr(s) {
-    return String(s).replace(/"/g, "&quot;");
   }
   function formatMoney(n) {
     const locale = (window.I18n && window.I18n.getLang() === "ru") ? "ru-RU" : "en-US";
@@ -111,7 +104,6 @@
     els.statusLabel.textContent = localizedField("statusLabel", scene.statusLabel);
     els.title.textContent = localizedField("title", scene.title);
     els.subtitle.textContent = localizedField("subtitle", scene.subtitle);
-    if (isTalk) els.sceneChatTitle.textContent = localizedField("title", scene.title);
   }
 
   function renderScene(scene) {
@@ -129,13 +121,13 @@
     }
 
     if (isTalk) {
+      // «Разговор» — чистый холст: чат и прочее оформление ставятся
+      // виджетами на канвасе сцены.
       els.sceneCard.hidden = true;
-      els.sceneChat.hidden = false;
       sceneTimer.stop();
       return;
     }
 
-    els.sceneChat.hidden = true;
     els.sceneCard.hidden = false;
     els.eventsGrid.hidden = !scene.showEvents;
     els.socialsFooter.hidden = !scene.showSocials;
@@ -154,7 +146,6 @@
   }
 
   function renderPause(scene) {
-    els.sceneChat.hidden = true;
     els.sceneCard.hidden = true;
     els.eventsGrid.hidden = true;
     els.socialsFooter.hidden = true;
@@ -196,27 +187,6 @@
     els.evFollower.textContent = follow ? follow.user : t("scene.notYet");
     els.evSubscriber.textContent = sub ? sub.user : t("scene.notYet");
     els.evTopDonation.textContent = topDonation.amount > 0 ? `${topDonation.user} (${formatMoney(topDonation.amount)} ${currencySymbol(topDonation.currency)})` : t("scene.notYet");
-  }
-
-  function pushChat(msg) {
-    const row = document.createElement("div");
-    row.className = "scene-chat__msg";
-    const badges = (msg.badges || [])
-      .slice(0, 3)
-      .map((b, i) => {
-        const url = msg.badgeImages && msg.badgeImages[i];
-        return url
-          ? `<img class="scene-chat__badge" src="${escapeAttr(url)}" alt="" title="${escapeAttr(String(b))}" style="padding:0;background:none;object-fit:contain" />`
-          : `<span class="scene-chat__badge" data-role="${escapeAttr(String(b))}">${escapeHtml(String(b).slice(0, 1).toUpperCase())}</span>`;
-      })
-      .join("");
-    const text = window.TwitchEmotes && window.TwitchEmotes.renderEmotes
-      ? window.TwitchEmotes.renderEmotes(msg.message, msg.emotes)
-      : escapeHtml(msg.message);
-    row.innerHTML = `${badges}<span class="scene-chat__user" style="color:${escapeAttr(msg.color || "#c9c1d6")}">${escapeHtml(msg.user)}</span><span class="scene-chat__colon">:</span><span class="scene-chat__text">${text}</span>`;
-    els.sceneChatList.appendChild(row);
-    while (els.sceneChatList.children.length > MAX_CHAT) els.sceneChatList.removeChild(els.sceneChatList.firstChild);
-    els.sceneChatList.scrollTop = els.sceneChatList.scrollHeight;
   }
 
   // Обратный отсчёт привязан к моменту активации сцены (sceneStartedAt), а не к
@@ -291,9 +261,6 @@
       case EVENT_TYPES.RECENT_EVENT:
         recentEvents = [msg.payload, ...recentEvents].slice(0, 15);
         renderEvents();
-        break;
-      case EVENT_TYPES.CHAT_MESSAGE:
-        if (isTalk) pushChat(msg.payload);
         break;
       case EVENT_TYPES.CAMERA_STREAM_CONFIG:
         if (window.SceneCamera) window.SceneCamera.handleConfig(msg.payload || {});
