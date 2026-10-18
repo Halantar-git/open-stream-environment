@@ -228,23 +228,20 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   color: var(--md-on-surface-variant);
 }
 .obs-source__scenes { display: flex; flex-direction: column; gap: 8px; }
-.obs-source__scene { display: flex; flex-direction: column; gap: 3px; }
+.obs-source__scene { display: flex; flex-direction: column; gap: 4px; }
 .obs-source__scene-name { font-size: 11px; color: var(--md-on-surface); }
-.obs-source__scene-row { display: flex; align-items: center; gap: 6px; }
 .obs-source__scene-url {
-  flex: 1;
-  min-width: 0;
   font-family: var(--font-mono);
   font-size: 10px;
+  line-height: 1.45;
   color: var(--md-on-surface-variant);
   background: var(--md-surface-container-highest);
   padding: 5px 7px;
   border-radius: var(--shape-sm);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
-.obs-source__scene-copy { flex: none; padding: 4px 8px; font-size: 11px; }
+.obs-source__body .obs-source__scene-copy { width: auto; align-self: flex-end; padding: 2px 8px; font-size: 11px; }
 
 .layers { display: flex; flex-direction: column; gap: 3px; }
 .layer-row { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: var(--shape-sm); cursor: pointer; font-size: 13px; }

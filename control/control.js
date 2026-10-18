@@ -3264,10 +3264,8 @@ const { EVENT_TYPES } = window.SharedEvents;
         const url = sceneUrl(def.id);
         return `<div class="obs-source__scene">
           <span class="obs-source__scene-name">${escapeHtml(t("scene." + def.id + "Label"))}</span>
-          <div class="obs-source__scene-row">
-            <code class="obs-source__scene-url" title="${escapeAttr(url)}">${escapeHtml(url)}</code>
-            <button class="md-button md-button--text obs-source__scene-copy" type="button" data-copy-scene="${escapeAttr(def.id)}">${escapeHtml(t("common.copy"))}</button>
-          </div>
+          <code class="obs-source__scene-url" title="${escapeAttr(url)}">${escapeHtml(url)}</code>
+          <button class="md-button md-button--text obs-source__scene-copy" type="button" data-copy-scene="${escapeAttr(def.id)}">${escapeHtml(t("common.copy"))}</button>
         </div>`;
       })
       .join("");
