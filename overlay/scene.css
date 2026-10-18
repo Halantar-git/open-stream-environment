@@ -508,27 +508,72 @@ body {
 }
 
 /* ---------- Retrowave: neon night, starfield and perspective grid ---------- */
-[data-decoration="retrowave"] .bg-shape { display: none; }
+/* Звёзды живут в двух отдельных слоях: так они мерцают не синхронно и могут
+   дрейфовать в разные стороны. Слои шире вьюпорта, поэтому сдвиг на плитку
+   320px не открывает край, а повторяющийся рисунок делает стык незаметным. */
+[data-decoration="retrowave"] .bg-shape {
+  display: block;
+  top: -25%;
+  left: -25%;
+  right: -25%;
+  bottom: -25%;
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  filter: none;
+  opacity: 0.9;
+  pointer-events: none;
+  background-color: transparent;
+  background-repeat: repeat;
+  background-size: 320px 320px;
+  will-change: transform, opacity;
+}
+[data-decoration="retrowave"] .shape-1 {
+  background-image:
+    radial-gradient(1.3px 1.3px at 22px 40px, rgba(255, 255, 255, 0.95), transparent 2px),
+    radial-gradient(1px 1px at 128px 18px, rgba(255, 255, 255, 0.8), transparent 1.7px),
+    radial-gradient(0.9px 0.9px at 212px 94px, rgba(45, 226, 230, 0.9), transparent 1.6px),
+    radial-gradient(1.1px 1.1px at 298px 162px, rgba(255, 255, 255, 0.75), transparent 1.9px),
+    radial-gradient(0.8px 0.8px at 68px 214px, rgba(45, 226, 230, 0.7), transparent 1.5px),
+    radial-gradient(1px 1px at 248px 282px, rgba(255, 255, 255, 0.7), transparent 1.7px);
+  animation:
+    retrowave-stars-drift 180s linear infinite,
+    retrowave-stars-twinkle 9s ease-in-out infinite;
+}
+[data-decoration="retrowave"] .shape-2 {
+  background-image:
+    radial-gradient(1.2px 1.2px at 52px 136px, rgba(255, 255, 255, 0.85), transparent 1.9px),
+    radial-gradient(0.9px 0.9px at 146px 250px, rgba(255, 45, 149, 0.85), transparent 1.6px),
+    radial-gradient(1px 1px at 236px 54px, rgba(255, 255, 255, 0.7), transparent 1.7px),
+    radial-gradient(0.8px 0.8px at 300px 210px, rgba(255, 255, 255, 0.6), transparent 1.5px),
+    radial-gradient(1.1px 1.1px at 104px 300px, rgba(255, 255, 255, 0.8), transparent 1.8px),
+    radial-gradient(0.9px 0.9px at 198px 112px, rgba(45, 226, 230, 0.65), transparent 1.6px);
+  animation:
+    retrowave-stars-drift-reverse 240s linear infinite,
+    retrowave-stars-twinkle 13s ease-in-out infinite -4s;
+}
+[data-decoration="retrowave"] .shape-3 { display: none; }
+
+@keyframes retrowave-stars-drift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(320px, 0, 0); }
+}
+@keyframes retrowave-stars-drift-reverse {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-320px, 0, 0); }
+}
+@keyframes retrowave-stars-twinkle {
+  0%, 100% { opacity: 0.9; }
+  50% { opacity: 0.45; }
+}
 
 [data-decoration="retrowave"] .scene-wrapper {
   background-color: #05020b;
   background-image:
-    radial-gradient(1.1px 1.1px at 18px 32px, rgba(255, 255, 255, 0.9), transparent 1.8px),
-    radial-gradient(0.9px 0.9px at 74px 12px, rgba(255, 255, 255, 0.7), transparent 1.6px),
-    radial-gradient(1.3px 1.3px at 132px 28px, rgba(255, 255, 255, 0.8), transparent 2px),
-    radial-gradient(0.8px 0.8px at 196px 48px, rgba(45, 226, 230, 0.8), transparent 1.5px),
-    radial-gradient(1px 1px at 40px 96px, rgba(255, 255, 255, 0.6), transparent 1.7px),
-    radial-gradient(0.9px 0.9px at 110px 84px, rgba(255, 45, 149, 0.75), transparent 1.6px),
-    radial-gradient(1.2px 1.2px at 170px 110px, rgba(255, 255, 255, 0.75), transparent 1.9px),
-    radial-gradient(0.8px 0.8px at 230px 92px, rgba(255, 255, 255, 0.55), transparent 1.5px),
     radial-gradient(ellipse at 50% 28%, rgba(255, 45, 149, 0.20), transparent 56%),
     radial-gradient(ellipse at 20% 44%, rgba(45, 226, 230, 0.10), transparent 50%),
     radial-gradient(ellipse at 82% 38%, rgba(105, 55, 210, 0.18), transparent 56%),
     linear-gradient(180deg, #04010a 0%, #0d0719 58%, #190a2c 100%);
-  background-size:
-    260px 260px, 260px 260px, 260px 260px, 260px 260px,
-    260px 260px, 260px 260px, 260px 260px, 260px 260px,
-    auto, auto, auto, auto;
 }
 
 /* Pink horizon line behind the scene card — the retrowave sunset strip. */
@@ -551,6 +596,14 @@ body {
   );
   box-shadow: 0 0 22px rgba(255, 45, 149, 0.45);
   opacity: 0.6;
+  animation: retrowave-horizon 6s ease-in-out infinite;
+}
+
+/* Дышащая линия горизонта — единственный элемент, который меняет яркость:
+   анимируем только opacity, чтобы не перерисовывать всё полотно сцены. */
+@keyframes retrowave-horizon {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.85; }
 }
 
 /* Perspective grid floor and ceiling. Large planes + a long perspective
@@ -576,11 +629,24 @@ body {
   background-size: 80px 60px;
   opacity: 0.45;
   filter: drop-shadow(0 0 3px rgba(255, 45, 149, 0.35));
+  animation: retrowave-grid-floor 7s linear infinite;
+  will-change: background-position;
+}
+/* Сетка едет к зрителю: на полу — вниз по локальной оси, на потолке — вверх.
+   Шаг анимации равен шагу фоновой плитки (60px), поэтому цикл бесшовный. */
+@keyframes retrowave-grid-floor {
+  from { background-position: 0 0; }
+  to { background-position: 0 60px; }
+}
+@keyframes retrowave-grid-ceiling {
+  from { background-position: 0 0; }
+  to { background-position: 0 -60px; }
 }
 [data-decoration="retrowave"] .grid-overlay::before {
   top: 0;
   transform: perspective(2000px) rotateX(-55deg);
   transform-origin: top center;
+  animation-name: retrowave-grid-ceiling;
   -webkit-mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.7) 45%, transparent 82%);
   mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.7) 45%, transparent 82%);
 }
@@ -633,4 +699,15 @@ body {
   background: rgba(45, 226, 230, 0.10);
   color: var(--md-secondary);
   box-shadow: inset 0 0 0 1px rgba(45, 226, 230, 0.5), 0 0 12px rgba(45, 226, 230, 0.18);
+}
+
+/* Фон — только оформление: при системном запрете на анимацию оставляем
+   статичную картинку, ничего не теряя по смыслу. */
+@media (prefers-reduced-motion: reduce) {
+  [data-decoration="retrowave"] .bg-shape,
+  [data-decoration="retrowave"] .grid-overlay::before,
+  [data-decoration="retrowave"] .grid-overlay::after,
+  [data-decoration="retrowave"] .scene-wrapper::after {
+    animation: none;
+  }
 }
