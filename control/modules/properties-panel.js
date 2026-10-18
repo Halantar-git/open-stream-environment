@@ -258,6 +258,7 @@ export function initPropertiesPanel({
         ${sourceToggle("pTickerSourceFollows", "follows", "properties.tickerSourceFollows")}
         ${sourceToggle("pTickerSourceSubs", "subs", "properties.tickerSourceSubs")}
         ${sourceToggle("pTickerSourceRewards", "rewards", "properties.tickerSourceRewards")}
+        <div class="properties__toggle-row"><label>${t("properties.tickerRewardsBreaking")}</label>${switchHtml("pTickerRewardsBreaking", config.rewardsBreaking !== false)}</div>
         ${sourceToggle("pTickerSourceChat", "chat", "properties.tickerSourceChat")}
         ${sourceToggle("pTickerSourceGoal", "goal", "properties.tickerSourceGoal")}
         ${sourceToggle("pTickerSourceTop", "top", "properties.tickerSourceTop")}
@@ -664,6 +665,7 @@ export function initPropertiesPanel({
       wireSwitch(propertiesEl.querySelector("#pTickerSourceFollows"), (on) => setSource("follows", on));
       wireSwitch(propertiesEl.querySelector("#pTickerSourceSubs"), (on) => setSource("subs", on));
       wireSwitch(propertiesEl.querySelector("#pTickerSourceRewards"), (on) => setSource("rewards", on));
+      wireSwitch(propertiesEl.querySelector("#pTickerRewardsBreaking"), (on) => patchTicker({ rewardsBreaking: on }));
       wireSwitch(propertiesEl.querySelector("#pTickerSourceChat"), (on) => setSource("chat", on));
       wireSwitch(propertiesEl.querySelector("#pTickerSourceGoal"), (on) => setSource("goal", on));
       wireSwitch(propertiesEl.querySelector("#pTickerSourceTop"), (on) => setSource("top", on));

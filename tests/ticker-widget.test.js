@@ -349,9 +349,9 @@ describe("WidgetTicker", () => {
     jest.useRealTimers();
   });
 
-  test("награда за баллы канала показывает название и ввод", () => {
+  test("награда без срочной полосы идёт в обычную строку", () => {
     const ctx = makeContext();
-    const w = new WidgetTicker(item(), ctx);
+    const w = new WidgetTicker(item("ticker", { rewardsBreaking: false }), ctx);
     w.mount(makeEl("div"));
 
     ctx.bus.emit(EVENT_TYPES.REWARD_REDEEM, {
@@ -373,7 +373,7 @@ describe("WidgetTicker", () => {
 
   test("награда из алерта берёт ввод зрителя, а не шаблон сообщения", () => {
     const ctx = makeContext();
-    const w = new WidgetTicker(item(), ctx);
+    const w = new WidgetTicker(item("ticker", { rewardsBreaking: false }), ctx);
     w.mount(makeEl("div"));
 
     ctx.bus.emit(EVENT_TYPES.ALERT, {
@@ -385,6 +385,47 @@ describe("WidgetTicker", () => {
     });
 
     expect(w._items()[0].text).toBe("bob — Песня — включи");
+
+    w.unmount();
+  });
+
+  test("награда по умолчанию показывается срочной полосой", () => {
+    jest.useFakeTimers();
+    const ctx = makeContext();
+    const w = new WidgetTicker(item(), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.REWARD_REDEEM, {
+      kind: "reward",
+      user: "bob",
+      rewardTitle: "Сменить сцену",
+      message: "brb",
+      userInput: "brb",
+    });
+
+    expect(w.breakingEl.classList.contains("is-visible")).toBe(true);
+    expect(w.breakingTextEl.textContent).toBe("bob — Сменить сцену — brb");
+    expect(w._items()).toHaveLength(0);
+
+    jest.advanceTimersByTime(6000);
+    expect(w.breakingEl.classList.contains("is-visible")).toBe(false);
+
+    w.unmount();
+    jest.useRealTimers();
+  });
+
+  test("прошлые награды не всплывают в строке при срочной полосе", () => {
+    const ctx = makeContext({
+      state: {
+        recentEvents: [{ kind: "reward", user: "bob", rewardTitle: "Старая" }],
+        goal: null,
+        topDonation: null,
+      },
+    });
+    const w = new WidgetTicker(item(), ctx);
+    w.mount(makeEl("div"));
+
+    expect(w._items()).toHaveLength(0);
 
     w.unmount();
   });

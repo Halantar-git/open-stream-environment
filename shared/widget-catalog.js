@@ -40,6 +40,9 @@
     label: "",
     showLabel: true,
     maxItems: 24,
+    // Награды за баллы канала показываются срочной полосой: их замечают
+    // быстрее, чем бегущую строку. Переключатель — в инспекторе.
+    rewardsBreaking: true,
     sources: {
       donations: true,
       follows: true,

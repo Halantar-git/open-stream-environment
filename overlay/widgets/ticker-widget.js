@@ -50,7 +50,10 @@
   const DEFAULT_MAX_ITEMS = 24;
   const MAX_ITEMS_LIMIT = 60;
   const CHAT_TEXT_LIMIT = 140;
-  const CHAT_MIN_INTERVAL_MS = 1200;
+  const CHAT_MIN_INTERVAL_MS = 800;
+  // Награда за баллы канала висит на срочной полосе дольше обычного сообщения:
+  // зритель должен успеть прочитать, что именно он купил.
+  const REWARD_BREAKING_MS = 6000;
   const SEPARATOR = "◆";
 
   function clamp(value, min, max) {
@@ -82,6 +85,7 @@
       this._breakingQueue = [];
       this._breakingTimer = null;
       this._breakingActive = false;
+      this.rewardsBreaking = true;
 
       this._offset = 0;
       this._cycle = 0;
@@ -122,9 +126,13 @@
       this.element.appendChild(this.breakingEl);
 
       const E = this.context.EVENT_TYPES;
-      this.subscribe(E.ALERT, (alert) => this._ingestAlert(alert));
+      this.subscribe(E.ALERT, (alert) =>
+        this._ingestAlert(alert, { breaking: alert && alert.kind === "reward" && this.rewardsBreaking })
+      );
       this.subscribe(E.CHAT_MESSAGE, (msg) => this._ingestChat(msg));
-      this.subscribe(E.REWARD_REDEEM, (reward) => this._ingestAlert(reward));
+      this.subscribe(E.REWARD_REDEEM, (reward) =>
+        this._ingestAlert(reward, { breaking: this.rewardsBreaking })
+      );
       this.subscribe(E.TICKER_MESSAGE, (message) => this._ingestTickerMessage(message));
       this.subscribe(E.GOAL_UPDATE, (goal) => {
         this._goal = goal || null;
@@ -142,8 +150,8 @@
         this._rebuild(true);
       });
 
-      this._seedFromState();
       this._applyConfig();
+      this._seedFromState();
       this._rebuild(true);
 
       this.on(document, "visibilitychange", () => this._syncLoop());
@@ -215,7 +223,12 @@
       recent
         .slice(0, this._maxItems())
         .reverse()
-        .forEach((event) => this._ingestAlert(event, { rebuild: false }));
+        .forEach((event) => {
+          // Если награды идут срочной полосой, они не должны всплывать в
+          // обычной строке после перезагрузки: срочность — разовое событие.
+          if (this.rewardsBreaking && event && event.kind === "reward") return;
+          this._ingestAlert(event, { rebuild: false });
+        });
       if (state.goal) this._goal = state.goal;
       if (state.topDonation) this._top = state.topDonation;
     }
@@ -263,6 +276,10 @@
         tier: alert.tier,
         count: Number(alert.count) || 0,
       };
+      if (options && options.breaking) {
+        this._showBreaking(this._textOf(raw), REWARD_BREAKING_MS);
+        return;
+      }
       this._push(raw, options && options.rebuild === false ? false : true);
     }
 
@@ -290,14 +307,22 @@
         .slice(0, 300);
       if (!text) return;
       if (String(message.priority || "") === "breaking") {
-        this._breakingQueue.push({
-          text,
-          durationMs: clamp(Math.round(Number(message.durationMs) || 9000), 2000, 60000),
-        });
-        if (!this._breakingActive) this._nextBreaking();
+        this._showBreaking(text, message.durationMs);
         return;
       }
       this._push({ kind: "message", message: text, count: ++this._messageSeq });
+    }
+
+    _showBreaking(text, durationMs) {
+      const body = String(text || "")
+        .trim()
+        .slice(0, 300);
+      if (!body) return;
+      this._breakingQueue.push({
+        text: body,
+        durationMs: clamp(Math.round(Number(durationMs) || 9000), 2000, 60000),
+      });
+      if (!this._breakingActive) this._nextBreaking();
     }
 
     _nextBreaking() {
@@ -450,6 +475,7 @@
       this._speed = clamp(Math.round(Number(config.speed) || DEFAULT_SPEED), SPEED_MIN, SPEED_MAX);
       this._direction = config.direction === "right" ? "right" : "left";
       this._perspective = clamp(Number(config.perspective) || 0, 0, 100);
+      this.rewardsBreaking = config.rewardsBreaking !== false;
 
       const label = config.showLabel === false ? "" : String(config.label || "").trim() || this.t("ticker.label");
       this._label = label;

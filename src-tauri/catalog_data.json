@@ -1,5 +1,5 @@
 {
-  "sourceHash": "12669f2ed5b41d8c",
+  "sourceHash": "b15230543eaf77c6",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -111,6 +111,7 @@
         "label": "",
         "showLabel": true,
         "maxItems": 24,
+        "rewardsBreaking": true,
         "sources": {
           "donations": true,
           "follows": true,
@@ -525,6 +526,7 @@
         "label": "",
         "showLabel": true,
         "maxItems": 24,
+        "rewardsBreaking": true,
         "sources": {
           "donations": true,
           "follows": true,
@@ -657,6 +659,7 @@
         "label": "",
         "showLabel": true,
         "maxItems": 24,
+        "rewardsBreaking": true,
         "sources": {
           "donations": true,
           "follows": true,
@@ -856,6 +859,7 @@
         "label": "",
         "showLabel": true,
         "maxItems": 24,
+        "rewardsBreaking": true,
         "sources": {
           "donations": true,
           "follows": true,
@@ -988,6 +992,7 @@
         "label": "",
         "showLabel": true,
         "maxItems": 24,
+        "rewardsBreaking": true,
         "sources": {
           "donations": true,
           "follows": true,
@@ -1121,6 +1126,7 @@
         "label": "",
         "showLabel": true,
         "maxItems": 24,
+        "rewardsBreaking": true,
         "sources": {
           "donations": true,
           "follows": true,
@@ -1253,6 +1259,7 @@
         "label": "",
         "showLabel": true,
         "maxItems": 24,
+        "rewardsBreaking": true,
         "sources": {
           "donations": true,
           "follows": true,
@@ -1385,6 +1392,7 @@
         "label": "",
         "showLabel": true,
         "maxItems": 24,
+        "rewardsBreaking": true,
         "sources": {
           "donations": true,
           "follows": true,
@@ -1519,6 +1527,7 @@
         "label": "",
         "showLabel": true,
         "maxItems": 24,
+        "rewardsBreaking": true,
         "sources": {
           "donations": true,
           "follows": true,
