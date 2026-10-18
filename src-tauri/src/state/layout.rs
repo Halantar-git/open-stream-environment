@@ -29,11 +29,13 @@ const FALLBACK_MIN_H: f64 = 5.0;
 const PRESET_NAME_LIMIT: usize = 60;
 
 /// Полноэкранные сцены, у которых может быть своя раскладка виджетов.
-pub const SCENE_IDS: [&str; 7] = ["start", "brb", "talk", "end", "wheel", "poll", "pause"];
+/// Остальные сцены (начало, BRB, окончание, пауза) — только собственное
+/// оформление и камера.
+pub const WIDGET_SCENE_IDS: [&str; 3] = ["talk", "wheel", "poll"];
 
 /// Цель раскладки: `main` — оверлей, иначе id сцены.
 pub fn is_scene_target(target: &str) -> bool {
-    SCENE_IDS.contains(&target)
+    WIDGET_SCENE_IDS.contains(&target)
 }
 
 /// Раскладка оверлея.
@@ -69,7 +71,7 @@ pub fn has_timer_widget(db: &Database, config: &ConfigFile) -> bool {
             && catalog::widget_role(widget_type(widget)).as_deref() == Some("timer")
     };
     widgets(db, config).iter().any(is_timer)
-        || SCENE_IDS
+        || WIDGET_SCENE_IDS
             .iter()
             .any(|scene| scene_widgets(config, scene).iter().any(is_timer))
 }
@@ -908,8 +910,9 @@ mod tests {
         assert_eq!(layout(&db, &config).len(), 1);
         // У других сцен своей раскладки нет.
         assert!(scene_widgets(&config, "brb").is_empty());
-        // Незнакомая цель не создаёт виджет.
+        // Незнакомая цель и сцены без канваса не создают виджет.
         assert!(add_scene_widget(&mut config, "нет-такой", "chat").is_none());
+        assert!(add_scene_widget(&mut config, "brb", "chat").is_none());
 
         let scene_id = scene["id"].as_str().unwrap().to_string();
         update_scene_widget(

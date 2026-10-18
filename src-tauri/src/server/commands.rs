@@ -1220,11 +1220,18 @@ fn broadcast_layout(diagnostics: &Diagnostics, target: &str) {
 }
 
 /// Цель раскладки из команды: `main` по умолчанию, иначе id сцены.
+/// Незнакомую или неподдерживаемую сцену не превращаем в оверлей молча —
+/// просто адресуем основную раскладку, чтобы команда не потерялась.
 fn layout_target(payload: &Value) -> &str {
-    payload
+    let target = payload
         .get("target")
         .and_then(Value::as_str)
-        .unwrap_or("main")
+        .unwrap_or("main");
+    if layout::is_scene_target(target) {
+        target
+    } else {
+        "main"
+    }
 }
 
 /// Состояние целиком — самый частый ответ на правку настроек.

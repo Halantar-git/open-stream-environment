@@ -39,7 +39,11 @@
 
   if (!EVENT_TYPES || !WidgetManager || !bus) return;
 
+  // Канвас виджетов есть только у трёх сцен: разговор, голосование, колесо.
+  const WIDGET_SCENE_IDS = ["talk", "wheel", "poll"];
+
   let sceneType = "";
+  let enabled = false;
   let sendCommand = null;
   let root = null;
   let manager = null;
@@ -305,6 +309,7 @@
   // ---- messages ----
 
   function handleMessage(msg) {
+    if (!enabled) return;
     switch (msg.type) {
       case EVENT_TYPES.STATE: {
         const payload = msg.payload || {};
@@ -411,7 +416,7 @@
   }
 
   function handleBinary(data) {
-    if (!data) return;
+    if (!enabled || !data) return;
     const h264 = window.CameraFrame && window.CameraFrame.decodeH264(data);
     if (h264) {
       bus.emit(EVENT_TYPES.CAMERA_VIDEO_FRAME, h264);
@@ -428,8 +433,9 @@
 
   function init(id, send) {
     sceneType = String(id || "");
+    enabled = WIDGET_SCENE_IDS.includes(sceneType);
     sendCommand = typeof send === "function" ? send : null;
-    ensureManager();
+    if (enabled) ensureManager();
   }
 
   window.SceneCanvas = { init, handleMessage, handleBinary };

@@ -72,6 +72,8 @@ const { EVENT_TYPES } = window.SharedEvents;
     EVENT_TYPES.CMD_REORDER_WIDGET,
     EVENT_TYPES.CMD_SAVE_LAYOUT,
   ]);
+  // Раскладка виджетов есть только у этих сцен.
+  const WIDGET_SCENE_IDS = new Set(["talk", "wheel", "poll"]);
   const send = (type, payload) => {
     const next = LAYOUT_COMMANDS.has(type)
       ? { ...(payload || {}), target: state.layoutTarget || "main" }
@@ -3227,7 +3229,9 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (!layoutTargetSelect) return;
     const defs = (window.SceneCatalog && window.SceneCatalog.SCENE_DEFS) || {};
     const options = [`<option value="main">${escapeHtml(t("editor.layoutMain"))}</option>`].concat(
-      Object.values(defs).map((def) => `<option value="${escapeAttr(def.id)}">${escapeHtml(t("scene." + def.id + "Label"))}</option>`)
+      Object.values(defs)
+        .filter((def) => WIDGET_SCENE_IDS.has(def.id))
+        .map((def) => `<option value="${escapeAttr(def.id)}">${escapeHtml(t("scene." + def.id + "Label"))}</option>`)
     );
     layoutTargetSelect.innerHTML = options.join("");
     layoutTargetSelect.value = state.layoutTarget;
@@ -3255,6 +3259,7 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   function setLayoutTarget(target) {
     if (!target || target === state.layoutTarget) return;
+    if (target !== "main" && !WIDGET_SCENE_IDS.has(target)) return;
     state.setLayoutTarget(target);
     renderLayoutTargetOptions();
     renderLayoutPresets();
@@ -4217,6 +4222,10 @@ const { EVENT_TYPES } = window.SharedEvents;
     switch (msg.type) {
       case EVENT_TYPES.STATE:
         state.applySnapshot(msg.payload);
+        if (state.layoutTarget !== "main" && !WIDGET_SCENE_IDS.has(state.layoutTarget)) {
+          state.layoutTarget = "main";
+          state.layout = state.layouts.main || [];
+        }
         renderLayoutTargetOptions();
         updateEditorTargetUrl();
         applyQueuePayload(msg.payload.alertQueue, null);
