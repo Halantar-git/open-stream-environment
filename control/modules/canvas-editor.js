@@ -245,9 +245,30 @@ export function initCanvasEditor({
     </div>`;
   }
 
+  function tickerPreview(is3d) {
+    const label = escapeHtml(t("ticker.label"));
+    const item = (kind, tagKey, text) =>
+      `<span class="ticker__item" data-kind="${kind}"><span class="ticker__tag">${escapeHtml(t(tagKey))}</span><span class="ticker__text">${escapeHtml(text)}</span><span class="ticker__sep">◆</span></span>`;
+    const items = [
+      item("donation", "ticker.tagDonation", t("ticker.donation", { user: "star_gazer", amount: `+${formatMoney(750)} ${currencySymbol("RUB")}` })),
+      item("follow", "ticker.tagFollow", t("ticker.follow", { user: "neon_rider" })),
+      item("sub", "ticker.tagSub", t("ticker.sub", { user: "pixelwave", tier: "2" })),
+    ].join("");
+    return `<div class="ticker${is3d ? " ticker--3d" : ""}" style="--ticker-font:12px;--ticker-tilt:${is3d ? "3deg" : "0deg"}">
+      <div class="ticker__frame">
+        <span class="ticker__label">${label}</span>
+        <div class="ticker__rail"><div class="ticker__track"><div class="ticker__group">${items}</div></div></div>
+      </div>
+    </div>`;
+  }
+
   function buildPreviewHtml(inst) {
     const config = inst.config || {};
-    switch (effectiveType(inst)) {
+    const previewType = effectiveType(inst);
+    if (previewType === "ticker" || previewType.endsWith("-ticker")) {
+      return tickerPreview(previewType !== "ticker");
+    }
+    switch (previewType) {
       case "goal": {
         const pct = state.goal.target ? Math.min(100, Math.round((state.goal.current / state.goal.target) * 100)) : 0;
         const noBg = config.showBackground === false ? " widget-goal--no-bg" : "";

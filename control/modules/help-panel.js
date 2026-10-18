@@ -96,6 +96,8 @@ const SECTIONS = [
       { type: "p", key: "help.widgets.p3" },
       { type: "p", key: "help.widgets.p4" },
       { type: "p", key: "help.widgets.p5" },
+      { type: "p", key: "help.widgets.p6" },
+      { type: "p", key: "help.widgets.p7" },
     ],
   },
   {

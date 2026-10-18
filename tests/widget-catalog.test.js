@@ -27,6 +27,8 @@ describe("widget-catalog helpers", () => {
     expect(isAnimatedWidget("md3-orb")).toBe(true);
     expect(isAnimatedWidget("pixel-cube")).toBe(true);
     expect(isAnimatedWidget("teso-seal")).toBe(true);
+    expect(isAnimatedWidget("ticker")).toBe(true);
+    expect(isAnimatedWidget("retrowave-ticker")).toBe(true);
 
     // Лёгкие: DOM-only, без цикла.
     expect(isAnimatedWidget("chat")).toBe(false);
@@ -51,18 +53,22 @@ describe("widget-catalog helpers", () => {
 
     // Таймер: 3D-вариант заменяет 2D-таймер по роли.
     expect(replacedBy3d("grimhex-timer")).toBe("timer");
+
+    // Новостная лента: 3D-вариант заменяет 2D-ленту.
+    expect(replacedBy3d("retrowave-ticker")).toBe("ticker");
+    expect(replacedBy3d("nuclear-ticker")).toBe("ticker");
   });
 
   test("widgetsForTheme возвращает 3D-виджеты темы", () => {
     const md3 = widgetsForTheme("nebula").map((d) => d.type);
-    expect(md3).toEqual(expect.arrayContaining(["md3-orb", "md3-chat", "md3-goal", "md3-holo-alert"]));
-    expect(md3).toHaveLength(4);
+    expect(md3).toEqual(expect.arrayContaining(["md3-orb", "md3-chat", "md3-goal", "md3-holo-alert", "md3-ticker"]));
+    expect(md3).toHaveLength(5);
 
     const grimhex = widgetsForTheme("grimhex").map((d) => d.type);
-    expect(grimhex).toEqual(expect.arrayContaining(["grimhex", "musain", "grimhex-chat", "grimhex-goal", "grimhex-holo-alert", "grimhex-radar"]));
+    expect(grimhex).toEqual(expect.arrayContaining(["grimhex", "musain", "grimhex-chat", "grimhex-goal", "grimhex-holo-alert", "grimhex-radar", "grimhex-ticker"]));
 
     const retrowave = widgetsForTheme("retrowave").map((d) => d.type);
-    expect(retrowave).toEqual(expect.arrayContaining(["retrowave-goal", "retrowave-chat", "retrowave-holo-alert", "retrowave-symbol"]));
+    expect(retrowave).toEqual(expect.arrayContaining(["retrowave-goal", "retrowave-chat", "retrowave-holo-alert", "retrowave-symbol", "retrowave-ticker"]));
 
     expect(widgetsForTheme("")).toEqual([]);
   });
@@ -112,6 +118,11 @@ describe("widget-catalog helpers", () => {
     expect(widgetRole("timer")).toBe("timer");
     expect(widgetRole("grimhex-timer")).toBe("timer");
 
+    // Новостная лента: 2D-база и 3D-варианты — одна роль.
+    expect(widgetRole("ticker")).toBe("ticker");
+    expect(widgetRole("retrowave-ticker")).toBe("ticker");
+    expect(widgetRole("md3-ticker")).toBe("ticker");
+
     // Декоративные 3D-виджеты (основные вывески) имеют роль для кросс-темной
     // замены. Вторичные вывески (musain/elite-sign) остаются без роли — они
     // аддитивные и просто скрываются при смене темы, а не подменяются.
@@ -158,6 +169,10 @@ describe("widget-catalog helpers", () => {
     // 2D-таймер подменяется Grim HEX-вариантом при активной 3D-теме.
     expect(resolveTypeForTheme("timer", "grimhex", {})).toBe("grimhex-timer");
     expect(resolveTypeForTheme("timer", "", {})).toBe("timer");
+
+    // Новостная лента так же следит за активной 3D-темой.
+    expect(resolveTypeForTheme("ticker", "retrowave", {})).toBe("retrowave-ticker");
+    expect(resolveTypeForTheme("ticker", "", {})).toBe("ticker");
   });
 
   test("resolveTypeForTheme с явным набором 3D-виджетов (своя тема)", () => {

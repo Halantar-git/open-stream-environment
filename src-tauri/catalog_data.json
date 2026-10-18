@@ -1,5 +1,5 @@
 {
-  "sourceHash": "3f14b91fb6e0d44e",
+  "sourceHash": "12669f2ed5b41d8c",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -84,6 +84,42 @@
       "minH": 12,
       "defaultConfig": {
         "maxItems": 5
+      }
+    },
+    "ticker": {
+      "type": "ticker",
+      "label": "Новостная лента",
+      "description": "Бегущая строка событий стрима: донаты, фоллоу, сабы и чат",
+      "icon": "widgetTicker",
+      "services": [
+        "twitchEvents",
+        "twitchChat",
+        "donationAlerts",
+        "youtube"
+      ],
+      "defaultGeometry": {
+        "x": 3,
+        "y": 92,
+        "w": 94,
+        "h": 6
+      },
+      "minW": 30,
+      "minH": 4,
+      "defaultConfig": {
+        "speed": 80,
+        "direction": "left",
+        "label": "",
+        "showLabel": true,
+        "maxItems": 24,
+        "sources": {
+          "donations": true,
+          "follows": true,
+          "subs": true,
+          "rewards": true,
+          "chat": false,
+          "goal": false,
+          "top": false
+        }
       }
     },
     "custom": {
@@ -461,6 +497,46 @@
         "opacity": 100
       }
     },
+    "grimhex-ticker": {
+      "type": "grimhex-ticker",
+      "label": "Лента Grim HEX",
+      "description": "Бегущая строка событий в HUD Grim HEX (только для темы Grim HEX)",
+      "icon": "widgetTicker",
+      "services": [
+        "twitchEvents",
+        "twitchChat",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "grimhex",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 92,
+        "w": 94,
+        "h": 6
+      },
+      "minW": 30,
+      "minH": 4,
+      "defaultConfig": {
+        "speed": 80,
+        "direction": "left",
+        "label": "",
+        "showLabel": true,
+        "maxItems": 24,
+        "sources": {
+          "donations": true,
+          "follows": true,
+          "subs": true,
+          "rewards": true,
+          "chat": false,
+          "goal": false,
+          "top": false
+        },
+        "perspective": 35
+      }
+    },
     "nuclear": {
       "type": "nuclear",
       "label": "Знак радиации",
@@ -552,6 +628,46 @@
       "minW": 16,
       "minH": 8,
       "defaultConfig": {}
+    },
+    "nuclear-ticker": {
+      "type": "nuclear-ticker",
+      "label": "Лента Nuclear",
+      "description": "Бегущая строка событий в радиоактивном HUD (только для темы Nuclear)",
+      "icon": "widgetTicker",
+      "services": [
+        "twitchEvents",
+        "twitchChat",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "nuclear",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 92,
+        "w": 94,
+        "h": 6
+      },
+      "minW": 30,
+      "minH": 4,
+      "defaultConfig": {
+        "speed": 80,
+        "direction": "left",
+        "label": "",
+        "showLabel": true,
+        "maxItems": 24,
+        "sources": {
+          "donations": true,
+          "follows": true,
+          "subs": true,
+          "rewards": true,
+          "chat": false,
+          "goal": false,
+          "top": false
+        },
+        "perspective": 35
+      }
     },
     "cobra": {
       "type": "cobra",
@@ -712,6 +828,46 @@
         "opacity": 100
       }
     },
+    "cobra-ticker": {
+      "type": "cobra-ticker",
+      "label": "Лента Cobra",
+      "description": "Бегущая строка событий в оранжевом HUD (только для темы Cobra Mk II)",
+      "icon": "widgetTicker",
+      "services": [
+        "twitchEvents",
+        "twitchChat",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "cobra-mk2",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 92,
+        "w": 94,
+        "h": 6
+      },
+      "minW": 30,
+      "minH": 4,
+      "defaultConfig": {
+        "speed": 80,
+        "direction": "left",
+        "label": "",
+        "showLabel": true,
+        "maxItems": 24,
+        "sources": {
+          "donations": true,
+          "follows": true,
+          "subs": true,
+          "rewards": true,
+          "chat": false,
+          "goal": false,
+          "top": false
+        },
+        "perspective": 35
+      }
+    },
     "teso-seal": {
       "type": "teso-seal",
       "label": "Печать Уроборос",
@@ -803,6 +959,46 @@
       "minW": 16,
       "minH": 8,
       "defaultConfig": {}
+    },
+    "teso-ticker": {
+      "type": "teso-ticker",
+      "label": "Лента TESO",
+      "description": "Бегущая строка событий в золотом HUD (только для темы TESO)",
+      "icon": "widgetTicker",
+      "services": [
+        "twitchEvents",
+        "twitchChat",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "teso-seal",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 92,
+        "w": 94,
+        "h": 6
+      },
+      "minW": 30,
+      "minH": 4,
+      "defaultConfig": {
+        "speed": 80,
+        "direction": "left",
+        "label": "",
+        "showLabel": true,
+        "maxItems": 24,
+        "sources": {
+          "donations": true,
+          "follows": true,
+          "subs": true,
+          "rewards": true,
+          "chat": false,
+          "goal": false,
+          "top": false
+        },
+        "perspective": 35
+      }
     },
     "wardogs-goal": {
       "type": "wardogs-goal",
@@ -897,6 +1093,46 @@
         "motion": true
       }
     },
+    "wardogs-ticker": {
+      "type": "wardogs-ticker",
+      "label": "Лента Wardogs",
+      "description": "Бегущая строка событий в HUD WarDogs (только для темы Wardogs)",
+      "icon": "widgetTicker",
+      "services": [
+        "twitchEvents",
+        "twitchChat",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "wardogs",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 92,
+        "w": 94,
+        "h": 6
+      },
+      "minW": 30,
+      "minH": 4,
+      "defaultConfig": {
+        "speed": 80,
+        "direction": "left",
+        "label": "",
+        "showLabel": true,
+        "maxItems": 24,
+        "sources": {
+          "donations": true,
+          "follows": true,
+          "subs": true,
+          "rewards": true,
+          "chat": false,
+          "goal": false,
+          "top": false
+        },
+        "perspective": 35
+      }
+    },
     "md3-orb": {
       "type": "md3-orb",
       "label": "Сфера Material You",
@@ -989,6 +1225,46 @@
       "minH": 8,
       "defaultConfig": {}
     },
+    "md3-ticker": {
+      "type": "md3-ticker",
+      "label": "Лента Material You",
+      "description": "Бегущая строка событий на мягкой карточке Material You (только для темы Material You)",
+      "icon": "widgetTicker",
+      "services": [
+        "twitchEvents",
+        "twitchChat",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "nebula",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 92,
+        "w": 94,
+        "h": 6
+      },
+      "minW": 30,
+      "minH": 4,
+      "defaultConfig": {
+        "speed": 80,
+        "direction": "left",
+        "label": "",
+        "showLabel": true,
+        "maxItems": 24,
+        "sources": {
+          "donations": true,
+          "follows": true,
+          "subs": true,
+          "rewards": true,
+          "chat": false,
+          "goal": false,
+          "top": false
+        },
+        "perspective": 30
+      }
+    },
     "pixel-cube": {
       "type": "pixel-cube",
       "label": "Куб Pixel Perfect",
@@ -1080,6 +1356,46 @@
       "minW": 16,
       "minH": 8,
       "defaultConfig": {}
+    },
+    "pixel-ticker": {
+      "type": "pixel-ticker",
+      "label": "Лента Pixel Perfect",
+      "description": "Бегущая строка событий на пиксельной панели (только для темы Pixel Perfect)",
+      "icon": "widgetTicker",
+      "services": [
+        "twitchEvents",
+        "twitchChat",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "pixel",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 92,
+        "w": 94,
+        "h": 6
+      },
+      "minW": 30,
+      "minH": 4,
+      "defaultConfig": {
+        "speed": 80,
+        "direction": "left",
+        "label": "",
+        "showLabel": true,
+        "maxItems": 24,
+        "sources": {
+          "donations": true,
+          "follows": true,
+          "subs": true,
+          "rewards": true,
+          "chat": false,
+          "goal": false,
+          "top": false
+        },
+        "perspective": 25
+      }
     },
     "retrowave-goal": {
       "type": "retrowave-goal",
@@ -1175,6 +1491,46 @@
         "perspective": 0
       }
     },
+    "retrowave-ticker": {
+      "type": "retrowave-ticker",
+      "label": "Лента Retrowave",
+      "description": "Неоновая бегущая строка событий с косой кромкой (только для темы Retrowave)",
+      "icon": "widgetTicker",
+      "services": [
+        "twitchEvents",
+        "twitchChat",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "retrowave",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 92,
+        "w": 94,
+        "h": 6
+      },
+      "minW": 30,
+      "minH": 4,
+      "defaultConfig": {
+        "speed": 80,
+        "direction": "left",
+        "label": "",
+        "showLabel": true,
+        "maxItems": 24,
+        "sources": {
+          "donations": true,
+          "follows": true,
+          "subs": true,
+          "rewards": true,
+          "chat": false,
+          "goal": false,
+          "top": false
+        },
+        "perspective": 45
+      }
+    },
     "donatex-ai": {
       "type": "donatex-ai",
       "label": "ИИ-персонаж DonateX",
@@ -1246,6 +1602,15 @@
     "pixel-cube",
     "pixel-goal",
     "retrowave-goal",
-    "retrowave-symbol"
+    "retrowave-symbol",
+    "ticker",
+    "grimhex-ticker",
+    "nuclear-ticker",
+    "cobra-ticker",
+    "teso-ticker",
+    "wardogs-ticker",
+    "md3-ticker",
+    "pixel-ticker",
+    "retrowave-ticker"
   ]
 }

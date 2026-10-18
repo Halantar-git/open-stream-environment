@@ -358,6 +358,169 @@
 .widget-recent__item b { font-weight: 700; }
 .widget-recent__empty { font-size: 12px; color: var(--md-on-surface-variant); opacity: 0.7; }
 
+/* ---------- News ticker (бегущая строка) ----------
+   Одна полоса на все темы: оформление берётся из токенов, поэтому в
+   Retrowave лента неоновая, в Wardogs — плоская, в Pixel — пиксельная.
+   Тематические 3D-варианты отличаются только наклоном и глубиной. */
+.ticker {
+  --ticker-font: clamp(12px, 2vh, 20px);
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  font-family: var(--font-body, "Rajdhani", "Segoe UI", sans-serif);
+  color: var(--md-on-surface, #dcebf5);
+  pointer-events: none;
+}
+
+.ticker__frame {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.9em;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  padding: 0 1.2em 0 1.2em;
+  box-sizing: border-box;
+  background: var(--panel-bg, rgba(8, 14, 20, 0.92));
+  backdrop-filter: blur(var(--panel-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--panel-blur, 0px));
+  border: var(--panel-border, 1px solid rgba(0, 240, 255, 0.35));
+  border-radius: var(--panel-radius, 0px);
+  clip-path: var(--panel-clip, none);
+  box-shadow: var(--elev-1), var(--panel-glow, 0 0 0 rgba(0, 0, 0, 0));
+  overflow: hidden;
+}
+
+.ticker__label {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  height: 1.9em;
+  padding: 0 0.8em;
+  font-family: var(--font-display, "Orbitron", "Segoe UI", sans-serif);
+  font-size: calc(var(--ticker-font) * 0.7);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--md-on-primary, #04161b);
+  background: var(--md-primary, #00f0ff);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--md-primary, #00f0ff) 55%, transparent);
+  clip-path: polygon(0.5em 0, 100% 0, 100% 100%, 0 100%);
+}
+.ticker--no-label .ticker__label { display: none; }
+
+.ticker__rail {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 2.5%, #000 97.5%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 2.5%, #000 97.5%, transparent 100%);
+}
+
+.ticker__track {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  height: 100%;
+  will-change: transform;
+}
+
+.ticker__group {
+  display: flex;
+  align-items: center;
+  flex: none;
+  height: 100%;
+}
+
+.ticker__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55em;
+  padding-right: 2.1em;
+  font-size: var(--ticker-font);
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--md-on-surface, #dcebf5);
+}
+
+.ticker__tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28em 0.6em;
+  border: 1px solid currentColor;
+  color: var(--md-secondary, #2de2e6);
+  font-family: var(--font-display, "Orbitron", "Segoe UI", sans-serif);
+  font-size: calc(var(--ticker-font) * 0.58);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ticker__text { font-weight: 600; letter-spacing: 0.02em; }
+.ticker__sep { color: var(--md-primary, #ff2d95); opacity: 0.75; font-size: calc(var(--ticker-font) * 0.62); }
+
+.ticker__item[data-kind="donation"] .ticker__tag,
+.ticker__item[data-kind="top"] .ticker__tag { color: var(--md-primary, #ff2d95); }
+.ticker__item[data-kind="cheer"] .ticker__tag,
+.ticker__item[data-kind="reward"] .ticker__tag { color: var(--md-tertiary, #ff8a3d); }
+.ticker__item[data-kind="sub"] .ticker__tag,
+.ticker__item[data-kind="gift_sub"] .ticker__tag,
+.ticker__item[data-kind="goal"] .ticker__tag { color: var(--md-secondary, #2de2e6); }
+.ticker__item[data-kind="chat"] .ticker__tag,
+.ticker__item[data-kind="system"] .ticker__tag { color: var(--md-on-surface-variant, #8ab4d0); }
+.ticker__item[data-kind="empty"] .ticker__text { opacity: 0.55; }
+
+/* 3D-вариант: та же лента в лёгкой перспективе с глубиной и блик по верхней
+   кромке. Наклон задаёт настройка `perspective` (0–100 → 0–22°). */
+.ticker--3d { perspective: 900px; }
+.ticker--3d .ticker__frame {
+  transform: rotateX(var(--ticker-tilt, 3deg)) translateZ(0);
+  transform-origin: center bottom;
+  box-shadow:
+    var(--elev-3, var(--elev-1)),
+    var(--panel-glow, 0 0 0 rgba(0, 0, 0, 0)),
+    0 1.1em 2.2em rgba(0, 0, 0, 0.45);
+}
+.ticker--3d .ticker__frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.14),
+    transparent 26%,
+    transparent 70%,
+    rgba(0, 0, 0, 0.24)
+  );
+}
+.ticker--3d .ticker__text {
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.5),
+    0 0 10px color-mix(in srgb, var(--md-primary, #ff2d95) 30%, transparent);
+}
+
+/* Retrowave: косой срез и неоновые канты, как у остальных панелей темы. */
+[data-decoration="retrowave"] .ticker__frame { padding-left: 2.4em; }
+[data-decoration="retrowave"] .ticker__frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(90deg, rgba(45, 226, 230, 0.95), rgba(255, 45, 149, 0.85) 62%, transparent),
+    linear-gradient(270deg, rgba(255, 45, 149, 0.95), rgba(45, 226, 230, 0.8) 62%, transparent);
+  background-repeat: no-repeat;
+  background-size: 46% 1px, 46% 1px;
+  background-position: top 0 left 0, bottom 0 right 0;
+  filter: drop-shadow(0 0 4px rgba(255, 45, 149, 0.6));
+  opacity: 0.85;
+}
+
 /* ---------- Positioned instance wrapper (shared by overlay + editor) ---------- */
 .widget-instance {
   position: absolute;

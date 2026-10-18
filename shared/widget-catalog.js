@@ -32,6 +32,48 @@
     showTelemetry: true,
   };
 
+  // Общие настройки новостной ленты: одинаковые у 2D-виджета и 3D-вариантов,
+  // различается только наклон.
+  const TICKER_DEFAULT_CONFIG = {
+    speed: 80,
+    direction: "left",
+    label: "",
+    showLabel: true,
+    maxItems: 24,
+    sources: {
+      donations: true,
+      follows: true,
+      subs: true,
+      rewards: true,
+      chat: false,
+      goal: false,
+      top: false,
+    },
+  };
+
+  // 3D-вариант новостной ленты: один и тот же движок, отличается только
+  // наклоном и привязкой к набору темы.
+  function ticker3d(type, label, description, theme, perspective) {
+    return {
+      type,
+      label,
+      description,
+      icon: "widgetTicker",
+      services: ["twitchEvents", "twitchChat", "donationAlerts", "youtube"],
+      dimension: "3d",
+      theme,
+      renderType: "2d",
+      defaultGeometry: { x: 3, y: 92, w: 94, h: 6 },
+      minW: 30,
+      minH: 4,
+      defaultConfig: {
+        ...TICKER_DEFAULT_CONFIG,
+        perspective,
+        sources: { ...TICKER_DEFAULT_CONFIG.sources },
+      },
+    };
+  }
+
   const WIDGET_TYPES = {
     // ---- Общие 2D-виджеты (доступны в любой теме) ----
     alerts: {
@@ -77,6 +119,20 @@
       minW: 14,
       minH: 12,
       defaultConfig: { maxItems: 5 },
+    },
+    ticker: {
+      type: "ticker",
+      label: "Новостная лента",
+      description: "Бегущая строка событий стрима: донаты, фоллоу, сабы и чат",
+      icon: "widgetTicker",
+      services: ["twitchEvents", "twitchChat", "donationAlerts", "youtube"],
+      defaultGeometry: { x: 3, y: 92, w: 94, h: 6 },
+      minW: 30,
+      minH: 4,
+      defaultConfig: {
+        ...TICKER_DEFAULT_CONFIG,
+        sources: { ...TICKER_DEFAULT_CONFIG.sources },
+      },
     },
     custom: {
       type: "custom",
@@ -306,6 +362,24 @@
       minH: 12,
       defaultConfig: { opacity: 100 },
     },
+    "grimhex-ticker": {
+      type: "grimhex-ticker",
+      label: "Лента Grim HEX",
+      description: "Бегущая строка событий в HUD Grim HEX (только для темы Grim HEX)",
+      icon: "widgetTicker",
+      services: ["twitchEvents", "twitchChat", "donationAlerts", "youtube"],
+      dimension: "3d",
+      theme: "grimhex",
+      renderType: "2d",
+      defaultGeometry: { x: 3, y: 92, w: 94, h: 6 },
+      minW: 30,
+      minH: 4,
+      defaultConfig: {
+        ...TICKER_DEFAULT_CONFIG,
+        perspective: 35,
+        sources: { ...TICKER_DEFAULT_CONFIG.sources },
+      },
+    },
 
     // ---- Nuclear (3D) ----
     nuclear: {
@@ -363,6 +437,14 @@
       minH: 8,
       defaultConfig: {},
     },
+
+    "nuclear-ticker": ticker3d(
+      "nuclear-ticker",
+      "Лента Nuclear",
+      "Бегущая строка событий в радиоактивном HUD (только для темы Nuclear)",
+      "nuclear",
+      35
+    ),
 
     // ---- Cobra Mk II (3D) ----
     cobra: {
@@ -461,6 +543,14 @@
       defaultConfig: { opacity: 100 },
     },
 
+    "cobra-ticker": ticker3d(
+      "cobra-ticker",
+      "Лента Cobra",
+      "Бегущая строка событий в оранжевом HUD (только для темы Cobra Mk II)",
+      "cobra-mk2",
+      35
+    ),
+
     // ---- TESO (3D) ----
     "teso-seal": {
       type: "teso-seal",
@@ -517,6 +607,14 @@
       minH: 8,
       defaultConfig: {},
     },
+
+    "teso-ticker": ticker3d(
+      "teso-ticker",
+      "Лента TESO",
+      "Бегущая строка событий в золотом HUD (только для темы TESO)",
+      "teso-seal",
+      35
+    ),
 
     // ---- Wardogs (3D) ----
     "wardogs-goal": {
@@ -575,6 +673,14 @@
       defaultConfig: { perspective: 0, motion: true },
     },
 
+    "wardogs-ticker": ticker3d(
+      "wardogs-ticker",
+      "Лента Wardogs",
+      "Бегущая строка событий в HUD WarDogs (только для темы Wardogs)",
+      "wardogs",
+      35
+    ),
+
     // ---- Material You (3D) ----
     "md3-orb": {
       type: "md3-orb",
@@ -631,6 +737,14 @@
       minH: 8,
       defaultConfig: {},
     },
+
+    "md3-ticker": ticker3d(
+      "md3-ticker",
+      "Лента Material You",
+      "Бегущая строка событий на мягкой карточке Material You (только для темы Material You)",
+      "nebula",
+      30
+    ),
 
     // ---- Pixel Perfect (3D) ----
     "pixel-cube": {
@@ -689,6 +803,14 @@
       defaultConfig: {},
     },
 
+    "pixel-ticker": ticker3d(
+      "pixel-ticker",
+      "Лента Pixel Perfect",
+      "Бегущая строка событий на пиксельной панели (только для темы Pixel Perfect)",
+      "pixel",
+      25
+    ),
+
     // ---- Retrowave (3D) ----
     "retrowave-goal": {
       type: "retrowave-goal",
@@ -745,6 +867,14 @@
       minH: 6,
       defaultConfig: { perspective: 0 },
     },
+
+    "retrowave-ticker": ticker3d(
+      "retrowave-ticker",
+      "Лента Retrowave",
+      "Неоновая бегущая строка событий с косой кромкой (только для темы Retrowave)",
+      "retrowave",
+      45
+    ),
 
     // ---- Интеграции DonateX ----
     "donatex-ai": {
@@ -805,6 +935,7 @@
     if (widgetType.endsWith("-goal")) return "goal";
     if (widgetType.endsWith("-holo-alert")) return "alerts";
     if (widgetType.endsWith("-timer")) return "timer";
+    if (widgetType.endsWith("-ticker")) return "ticker";
     return null;
   }
 
@@ -815,7 +946,7 @@
   // another. Widgets without a role are strictly theme-bound (additive).
   function widgetRole(widgetType) {
     if (!widgetType) return null;
-    if (widgetType === "chat" || widgetType === "goal" || widgetType === "alerts" || widgetType === "timer") return widgetType;
+    if (widgetType === "chat" || widgetType === "goal" || widgetType === "alerts" || widgetType === "timer" || widgetType === "ticker") return widgetType;
     const r3d = replacedBy3d(widgetType);
     if (r3d) return r3d;
     const def = WIDGET_TYPES[widgetType];
@@ -884,6 +1015,15 @@
     "pixel-goal",
     "retrowave-goal",
     "retrowave-symbol",
+    "ticker",
+    "grimhex-ticker",
+    "nuclear-ticker",
+    "cobra-ticker",
+    "teso-ticker",
+    "wardogs-ticker",
+    "md3-ticker",
+    "pixel-ticker",
+    "retrowave-ticker",
   ]);
 
   function isAnimatedWidget(type) {

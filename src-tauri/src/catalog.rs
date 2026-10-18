@@ -197,6 +197,9 @@ pub fn replaced_by_3d(kind: &str) -> Option<&'static str> {
     if kind.ends_with("-timer") {
         return Some("timer");
     }
+    if kind.ends_with("-ticker") {
+        return Some("ticker");
+    }
     None
 }
 
@@ -208,7 +211,7 @@ pub fn widget_role(kind: &str) -> Option<String> {
     if kind.is_empty() {
         return None;
     }
-    if matches!(kind, "chat" | "goal" | "alerts" | "timer") {
+    if matches!(kind, "chat" | "goal" | "alerts" | "timer" | "ticker") {
         return Some(kind.to_string());
     }
     if let Some(replaced) = replaced_by_3d(kind) {
@@ -355,6 +358,8 @@ mod tests {
             "md3-orb",
             "pixel-cube",
             "teso-seal",
+            "ticker",
+            "retrowave-ticker",
         ] {
             assert!(is_animated(kind), "{kind}");
         }
@@ -386,13 +391,23 @@ mod tests {
 
         // Таймер: 3D-вариант заменяет 2D-таймер по роли.
         assert_eq!(replaced_by_3d("grimhex-timer"), Some("timer"));
+
+        // Новостная лента: 3D-вариант заменяет 2D-ленту.
+        assert_eq!(replaced_by_3d("retrowave-ticker"), Some("ticker"));
+        assert_eq!(replaced_by_3d("nuclear-ticker"), Some("ticker"));
     }
 
     #[test]
     fn widgets_for_theme_returns_the_theme_three_d_widgets() {
         let md3 = types_of(&widgets_for_theme("nebula"));
-        assert_eq!(md3.len(), 4, "{md3:?}");
-        for kind in ["md3-orb", "md3-chat", "md3-goal", "md3-holo-alert"] {
+        assert_eq!(md3.len(), 5, "{md3:?}");
+        for kind in [
+            "md3-orb",
+            "md3-chat",
+            "md3-goal",
+            "md3-holo-alert",
+            "md3-ticker",
+        ] {
             assert!(md3.iter().any(|item| item == kind), "{kind} в {md3:?}");
         }
 
@@ -404,6 +419,7 @@ mod tests {
             "grimhex-goal",
             "grimhex-holo-alert",
             "grimhex-radar",
+            "grimhex-ticker",
         ] {
             assert!(
                 grimhex.iter().any(|item| item == kind),
@@ -435,6 +451,11 @@ mod tests {
         // Таймер: 2D-база и 3D-вариант — одна роль.
         assert_eq!(widget_role("timer").as_deref(), Some("timer"));
         assert_eq!(widget_role("grimhex-timer").as_deref(), Some("timer"));
+
+        // Новостная лента: 2D-база и 3D-варианты — одна роль.
+        assert_eq!(widget_role("ticker").as_deref(), Some("ticker"));
+        assert_eq!(widget_role("retrowave-ticker").as_deref(), Some("ticker"));
+        assert_eq!(widget_role("md3-ticker").as_deref(), Some("ticker"));
 
         // Декоративные вывески роль имеют, вторичные — нет: они аддитивные и при
         // смене темы просто скрываются.
@@ -520,6 +541,16 @@ mod tests {
             "grimhex-timer"
         );
         assert_eq!(resolve_type_for_theme("timer", builtin(""), None), "timer");
+
+        // Новостная лента так же следит за активной 3D-темой.
+        assert_eq!(
+            resolve_type_for_theme("ticker", builtin("retrowave"), None),
+            "retrowave-ticker"
+        );
+        assert_eq!(
+            resolve_type_for_theme("ticker", builtin(""), None),
+            "ticker"
+        );
     }
 
     #[test]

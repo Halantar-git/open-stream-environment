@@ -229,6 +229,41 @@ export function initPropertiesPanel({
         <div class="md-field"><label>${t("properties.opacity")}: <span id="pOpacityValue">${config.opacity ?? 100}%</span></label><input type="range" id="pOpacity" min="0" max="100" step="1" value="${config.opacity ?? 100}"></div>`;
     } else if (inst.type === "recent") {
       extraHtml = `<div class="md-field"><label>${t("properties.maxItems")}</label><input type="number" id="pMaxItems" min="1" max="15" value="${config.maxItems || 5}"></div>`;
+    } else if (inst.type === "ticker" || inst.type.endsWith("-ticker")) {
+      const sources = {
+        donations: true,
+        follows: true,
+        subs: true,
+        rewards: true,
+        chat: false,
+        goal: false,
+        top: false,
+        ...(config.sources || {}),
+      };
+      const ticker3d = inst.type.endsWith("-ticker") || String(type).endsWith("-ticker");
+      const sourceToggle = (id, key, labelKey) =>
+        `<div class="properties__toggle-row"><label>${t(labelKey)}</label>${switchHtml(id, sources[key] === true)}</div>`;
+      extraHtml = `
+        <div class="md-field"><label>${t("properties.tickerSpeed")}</label><input type="number" id="pTickerSpeed" min="20" max="200" step="5" value="${config.speed || 80}"></div>
+        <div class="md-field"><label>${t("properties.tickerDirection")}</label>
+          <select id="pTickerDirection">
+            <option value="left" ${(config.direction || "left") === "left" ? "selected" : ""}>${t("properties.tickerDirectionLeft")}</option>
+            <option value="right" ${config.direction === "right" ? "selected" : ""}>${t("properties.tickerDirectionRight")}</option>
+          </select>
+        </div>
+        <div class="md-field"><label>${t("properties.tickerLabel")}</label><input type="text" id="pTickerLabel" value="${escapeAttr(config.label || "")}" placeholder="${escapeAttr(t("ticker.label"))}"></div>
+        <div class="properties__toggle-row"><label>${t("properties.tickerShowLabel")}</label>${switchHtml("pTickerShowLabel", config.showLabel !== false)}</div>
+        <div class="md-field"><label>${t("properties.tickerSources")}</label></div>
+        ${sourceToggle("pTickerSourceDonations", "donations", "properties.tickerSourceDonations")}
+        ${sourceToggle("pTickerSourceFollows", "follows", "properties.tickerSourceFollows")}
+        ${sourceToggle("pTickerSourceSubs", "subs", "properties.tickerSourceSubs")}
+        ${sourceToggle("pTickerSourceRewards", "rewards", "properties.tickerSourceRewards")}
+        ${sourceToggle("pTickerSourceChat", "chat", "properties.tickerSourceChat")}
+        ${sourceToggle("pTickerSourceGoal", "goal", "properties.tickerSourceGoal")}
+        ${sourceToggle("pTickerSourceTop", "top", "properties.tickerSourceTop")}
+        <div class="md-field"><label>${t("properties.tickerMaxItems")}</label><input type="number" id="pTickerMaxItems" min="1" max="60" value="${config.maxItems || 24}"></div>
+        ${ticker3d ? `<div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>` : ""}
+        <p class="properties__hint">${t("properties.tickerHint")}</p>`;
     } else if (inst.type === "stat") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.statMetric")}</label>
@@ -605,6 +640,43 @@ export function initPropertiesPanel({
       });
     } else if (inst.type === "recent") {
       propertiesEl.querySelector("#pMaxItems").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { maxItems: Number(e.target.value) } } }));
+    } else if (inst.type === "ticker" || inst.type.endsWith("-ticker")) {
+      const patchTicker = (configPatch) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: configPatch } });
+      const sources = {
+        donations: true,
+        follows: true,
+        subs: true,
+        rewards: true,
+        chat: false,
+        goal: false,
+        top: false,
+        ...(config.sources || {}),
+      };
+      const setSource = (key, on) => {
+        sources[key] = on;
+        patchTicker({ sources: { ...sources } });
+      };
+      propertiesEl.querySelector("#pTickerSpeed").addEventListener("change", (e) => patchTicker({ speed: Math.max(20, Math.min(200, Number(e.target.value) || 80)) }));
+      propertiesEl.querySelector("#pTickerDirection").addEventListener("change", (e) => patchTicker({ direction: e.target.value }));
+      propertiesEl.querySelector("#pTickerLabel").addEventListener("change", (e) => patchTicker({ label: e.target.value.trim() }));
+      wireSwitch(propertiesEl.querySelector("#pTickerShowLabel"), (on) => patchTicker({ showLabel: on }));
+      wireSwitch(propertiesEl.querySelector("#pTickerSourceDonations"), (on) => setSource("donations", on));
+      wireSwitch(propertiesEl.querySelector("#pTickerSourceFollows"), (on) => setSource("follows", on));
+      wireSwitch(propertiesEl.querySelector("#pTickerSourceSubs"), (on) => setSource("subs", on));
+      wireSwitch(propertiesEl.querySelector("#pTickerSourceRewards"), (on) => setSource("rewards", on));
+      wireSwitch(propertiesEl.querySelector("#pTickerSourceChat"), (on) => setSource("chat", on));
+      wireSwitch(propertiesEl.querySelector("#pTickerSourceGoal"), (on) => setSource("goal", on));
+      wireSwitch(propertiesEl.querySelector("#pTickerSourceTop"), (on) => setSource("top", on));
+      propertiesEl.querySelector("#pTickerMaxItems").addEventListener("change", (e) => patchTicker({ maxItems: Math.max(1, Math.min(60, Number(e.target.value) || 24)) }));
+      const perspective = propertiesEl.querySelector("#pPerspective");
+      if (perspective) {
+        perspective.addEventListener("input", (e) => {
+          const value = Number(e.target.value);
+          const label = propertiesEl.querySelector("#pPerspectiveValue");
+          if (label) label.textContent = String(value);
+          patchTicker({ perspective: value });
+        });
+      }
     } else if (inst.type === "stat") {
       propertiesEl.querySelector("#pStatMetric").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { metric: e.target.value } } }));
       propertiesEl.querySelector("#pStatLabel").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { label: e.target.value } } }));
