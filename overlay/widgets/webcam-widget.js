@@ -105,7 +105,14 @@
 
       const accent = SAFE_ACCENT.test(String(cfg.color || "").trim()) ? String(cfg.color).trim() : "var(--md-primary)";
       const thickness = clamp(Math.round(num(cfg.thickness, 4)), 1, 16);
-      const radius = clamp(Math.round(num(cfg.radius, 16)), 0, 64);
+      // Старое значение 16px было дефолтом для всех тем; без явного
+      // переопределения (`radiusAuto: false`) считаем его автоматическим.
+      const legacyRadius = Number(cfg.radius) === 16 && cfg.radiusAuto !== false;
+      const radiusAuto = cfg.radius == null || legacyRadius;
+      // Без явного значения рамка берёт скругление темы: у Retrowave, Pixel
+      // и HUD-тем панели прямые, у Material You — мягкие. Ползунок в
+      // инспекторе перекрывает это значение, когда его трогают.
+      const radius = clamp(Math.round(radiusAuto ? this._themeRadius() : num(cfg.radius, this._themeRadius())), 0, 64);
       const position = LABEL_POSITIONS.includes(cfg.labelPosition) ? cfg.labelPosition : "top-left";
       const label = String(cfg.label == null ? "LIVE" : cfg.label).trim();
       const showLabel = cfg.showLabel !== false && label.length > 0;
@@ -326,6 +333,15 @@
       const drawWidth = imageWidth * scale;
       const drawHeight = imageHeight * scale;
       ctx.drawImage(source, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
+    }
+
+    // Скругление по умолчанию из темы: `--panel-radius` уже задаёт характер
+    // панелей (0 у HUD-тем, 24 у Material You, 6 у Super Four).
+    _themeRadius() {
+      const read = this.context.readCssVar;
+      const raw = read && read("--panel-radius");
+      const n = parseFloat(raw);
+      return Number.isFinite(n) ? clamp(Math.round(n), 0, 64) : 16;
     }
 
     // Тот же наклон, что у микрофона, 3D-целей и таймера: сила 0–100 и

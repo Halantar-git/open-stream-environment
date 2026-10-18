@@ -365,8 +365,25 @@ fn widget_is_known(widget: &Value) -> bool {
 fn clean_widgets(list: &[Value]) -> Vec<Value> {
     list.iter()
         .filter(|widget| widget_is_known(widget))
-        .cloned()
+        .map(migrated_widget)
         .collect()
+}
+
+/// Рамка камеры раньше всегда рождалась с `radius: 16`. Пока пользователь не
+/// трогал ползунок (`radiusAuto: false`), это значение считается старым
+/// дефолтом и убирается из выдачи: тогда рамка берёт скругление активной темы.
+/// В базе значение остаётся до первой правки — миграция только для чтения.
+fn migrated_widget(widget: &Value) -> Value {
+    let mut copy = widget.clone();
+    if widget_type(&copy) == "webcam" {
+        if let Some(config) = copy.get_mut("config").and_then(Value::as_object_mut) {
+            let manual = config.get("radiusAuto").and_then(Value::as_bool) == Some(false);
+            if !manual && config.get("radius").and_then(Value::as_f64) == Some(16.0) {
+                config.remove("radius");
+            }
+        }
+    }
+    copy
 }
 
 /// Раскладка прошлых версий, лежавшая в настройках.
@@ -564,6 +581,32 @@ mod tests {
         // Незнакомый тип не создаётся.
         assert!(add_widget(&db, "нет-такого").is_none());
         assert_eq!(layout(&db, &config).len(), 2);
+    }
+
+    #[test]
+    fn the_old_webcam_radius_becomes_automatic() {
+        let fixture = Fixture::new("webcam-radius");
+        let (db, config) = (fixture.db(), fixture.config());
+        let widget = add_widget(&db, "webcam").expect("рамка камеры");
+        let id = widget["id"].as_str().expect("id").to_string();
+
+        // Старый дефолт 16px без явного выбора считается автоматическим.
+        update_widget(&db, &id, &json!({ "config": { "radius": 16 } })).expect("старый радиус");
+        let auto = layout(&db, &config);
+        assert!(
+            auto[0]["config"].get("radius").is_none(),
+            "старый 16px должен брать скругление темы"
+        );
+
+        // Если пользователь выставил радиус вручную, значение сохраняется.
+        update_widget(
+            &db,
+            &id,
+            &json!({ "config": { "radius": 16, "radiusAuto": false } }),
+        )
+        .expect("ручной радиус");
+        let manual = layout(&db, &config);
+        assert_eq!(manual[0]["config"]["radius"], json!(16));
     }
 
     #[test]

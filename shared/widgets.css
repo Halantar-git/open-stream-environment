@@ -1155,6 +1155,236 @@
   .widget-webcam__dot { animation: none; }
 }
 
+/* ---------- Webcam framing per theme ----------
+   Рамка камеры — единственный виджет, который остаётся одинаковым во всех
+   темах, если его не перекрасить. Ниже каждый набор получает свой характер:
+   мягкие пилюли Material You, HUD-скобки Orbital/Elite, пиксельную рамку,
+   CRT-развёртку Nuclear, золото TESO, янтарный HUD Wardogs, двойной неон
+   Retrowave и фиолетовый Super Four. Цвета и шрифты берутся из токенов,
+   поэтому подтемы (Grim HEX, Cobra Mk II, TESO Seal) наследуют стиль семьи. */
+
+/* Material You: мягкие скругления, тональная плашка и точки вместо скобок. */
+[data-theme="nebula"] .widget-webcam__frame {
+  opacity: 0.55;
+  box-shadow: 0 0 0 6px rgba(148, 203, 249, 0.10), 0 0 26px rgba(148, 203, 249, 0.28);
+}
+[data-theme="nebula"] .widget-webcam__corner {
+  width: 9px;
+  height: 9px;
+  border: 0;
+  background: var(--md-primary);
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(148, 203, 249, 0.6);
+}
+[data-theme="nebula"] .widget-webcam__corner[data-corner="tl"] { top: 12px; left: 12px; }
+[data-theme="nebula"] .widget-webcam__corner[data-corner="tr"] { top: 12px; right: 12px; }
+[data-theme="nebula"] .widget-webcam__corner[data-corner="bl"] { bottom: 12px; left: 12px; }
+[data-theme="nebula"] .widget-webcam__corner[data-corner="br"] { bottom: 12px; right: 12px; }
+[data-theme="nebula"] .widget-webcam__label {
+  border: 0;
+  border-radius: 999px;
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  font-family: var(--font-body);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+[data-theme="nebula"] .widget-webcam__backdrop { opacity: 0.72; }
+
+/* Orbital / Grim HEX: терминальный HUD со сканлайнами и циановыми скобками. */
+[data-decoration="brackets4"] .widget-webcam__frame {
+  opacity: 0.7;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 0 16px rgba(0, 240, 255, 0.18);
+}
+[data-decoration="brackets4"] .widget-webcam__frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 3px);
+  opacity: 0.6;
+}
+[data-decoration="brackets4"] .widget-webcam__corner {
+  border-color: var(--md-primary);
+  filter: drop-shadow(0 0 6px rgba(0, 240, 255, 0.45));
+}
+[data-decoration="brackets4"] .widget-webcam__label {
+  border-radius: 0;
+  background: rgba(2, 10, 16, 0.84);
+  color: var(--md-primary);
+  font-family: var(--font-mono);
+  letter-spacing: 0.18em;
+}
+[data-theme="elite"] .widget-webcam__corner {
+  filter: drop-shadow(0 0 6px rgba(255, 118, 5, 0.5));
+}
+[data-theme="elite"] .widget-webcam__frame {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 0 16px rgba(255, 118, 5, 0.24);
+}
+[data-theme="elite"] .widget-webcam__label {
+  color: var(--md-primary);
+  font-family: var(--font-display);
+}
+
+/* Pixel Perfect: жёсткие углы, толстая рамка и пиксельные блоки по углам. */
+[data-theme="pixel"] .widget-webcam__frame {
+  opacity: 1;
+  box-shadow: 0 0 0 2px var(--md-surface-container-lowest), 0 0 0 3px rgba(214, 182, 117, 0.35);
+}
+[data-theme="pixel"] .widget-webcam__corner {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  background: var(--md-primary);
+  border-radius: 0;
+}
+[data-theme="pixel"] .widget-webcam__corner[data-corner="tl"] { top: 4px; left: 4px; }
+[data-theme="pixel"] .widget-webcam__corner[data-corner="tr"] { top: 4px; right: 4px; }
+[data-theme="pixel"] .widget-webcam__corner[data-corner="bl"] { bottom: 4px; left: 4px; }
+[data-theme="pixel"] .widget-webcam__corner[data-corner="br"] { bottom: 4px; right: 4px; }
+[data-theme="pixel"] .widget-webcam__label {
+  border-radius: 0;
+  border: 2px solid var(--md-primary);
+  background: var(--md-surface-container-lowest);
+  color: var(--md-on-surface);
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  box-shadow: none;
+}
+[data-theme="pixel"] .widget-webcam__backdrop { opacity: 1; }
+
+/* Nuclear: зелёный фосфор, сканлайны и терминальная плашка. */
+[data-decoration="nuclear"] .widget-webcam__frame {
+  opacity: 0.85;
+  box-shadow: 0 0 14px rgba(57, 255, 20, 0.35), inset 0 0 18px rgba(57, 255, 20, 0.10);
+}
+[data-decoration="nuclear"] .widget-webcam__frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(180deg, rgba(57, 255, 20, 0.10) 0 1px, transparent 1px 3px);
+  opacity: 0.55;
+}
+[data-decoration="nuclear"] .widget-webcam__corner {
+  border-color: var(--md-primary);
+  filter: drop-shadow(0 0 6px rgba(57, 255, 20, 0.6));
+}
+[data-decoration="nuclear"] .widget-webcam__label {
+  border-radius: 0;
+  background: rgba(4, 10, 4, 0.86);
+  color: var(--md-primary);
+  font-family: var(--font-mono);
+  letter-spacing: 0.18em;
+  text-shadow: 0 0 8px rgba(57, 255, 20, 0.55);
+  box-shadow: 0 0 12px rgba(57, 255, 20, 0.25);
+}
+[data-decoration="nuclear"] .widget-webcam__video-wrap { background: #031006; }
+[data-decoration="nuclear"] .widget-webcam__vignette {
+  box-shadow: inset 0 0 64px rgba(0, 0, 0, 0.7), inset 0 0 20px rgba(57, 255, 20, 0.08);
+}
+
+/* TESO: двойной золотой контур и книжный шрифт плашки. */
+[data-theme="teso"] .widget-webcam__frame {
+  opacity: 0.9;
+  box-shadow: inset 0 0 0 3px rgba(10, 8, 4, 0.6), inset 0 0 0 4px var(--md-primary), 0 0 20px rgba(214, 182, 117, 0.18);
+}
+[data-theme="teso"] .widget-webcam__corner {
+  border-color: var(--md-primary);
+  filter: drop-shadow(0 0 4px rgba(214, 182, 117, 0.45));
+}
+[data-theme="teso"] .widget-webcam__label {
+  border-radius: 2px;
+  border-color: var(--md-primary);
+  background: rgba(14, 10, 6, 0.88);
+  color: var(--md-primary);
+  font-family: var(--font-display);
+  letter-spacing: 0.1em;
+}
+[data-theme="teso"] .widget-webcam__vignette {
+  box-shadow: inset 0 0 54px rgba(0, 0, 0, 0.65), inset 0 0 18px rgba(214, 182, 117, 0.10);
+}
+
+/* Wardogs: янтарный HUD со скобками и плотной штриховкой по нижней кромке. */
+[data-theme="wardogs"] .widget-webcam__frame {
+  opacity: 0.8;
+  box-shadow: inset 0 0 0 1px rgba(240, 169, 44, 0.18), 0 0 12px rgba(240, 169, 44, 0.16);
+}
+[data-theme="wardogs"] .widget-webcam__frame::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  pointer-events: none;
+  background: repeating-linear-gradient(90deg, rgba(240, 169, 44, 0.55) 0 2px, transparent 2px 6px);
+  opacity: 0.7;
+}
+[data-theme="wardogs"] .widget-webcam__corner {
+  border-color: var(--md-primary);
+  filter: drop-shadow(0 0 4px rgba(240, 169, 44, 0.4));
+}
+[data-theme="wardogs"] .widget-webcam__label {
+  border-radius: 0;
+  border-color: rgba(240, 169, 44, 0.55);
+  background: rgba(9, 9, 9, 0.9);
+  color: var(--md-primary);
+  font-family: var(--font-display);
+  letter-spacing: 0.16em;
+}
+[data-theme="wardogs"] .widget-webcam__video-wrap { background: #080806; }
+
+/* Retrowave: толстая магента снаружи, тонкий циан внутри и сетка по кадру. */
+[data-decoration="retrowave"] .widget-webcam__frame {
+  opacity: 1;
+  box-shadow:
+    inset 0 0 0 2px rgba(45, 226, 230, 0.75),
+    inset 0 0 24px rgba(255, 45, 149, 0.12),
+    0 0 18px rgba(255, 45, 149, 0.45),
+    0 0 44px rgba(45, 226, 230, 0.15);
+}
+[data-decoration="retrowave"] .widget-webcam__frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(45, 226, 230, 0.06) 0 1px, transparent 1px 32px),
+    repeating-linear-gradient(0deg, rgba(255, 45, 149, 0.05) 0 1px, transparent 1px 32px);
+}
+[data-decoration="retrowave"] .widget-webcam__corner {
+  border-color: var(--md-secondary);
+  filter: drop-shadow(0 0 5px rgba(45, 226, 230, 0.8));
+}
+[data-decoration="retrowave"] .widget-webcam__label {
+  border-radius: 0;
+  clip-path: polygon(8px 0, 100% 0, 100% 100%, 0 100%);
+  border-color: var(--md-primary);
+  background: rgba(13, 7, 25, 0.92);
+  color: var(--md-secondary);
+  font-family: var(--font-mono);
+  letter-spacing: 0.18em;
+  box-shadow: 0 0 12px rgba(255, 45, 149, 0.35);
+}
+[data-decoration="retrowave"] .widget-webcam__video-wrap { background: #05020b; }
+
+/* Super Four: мягкая фиолетовая рамка с циановыми скобками. */
+[data-theme="sf"] .widget-webcam__frame {
+  opacity: 0.85;
+  box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.25), 0 0 22px rgba(168, 85, 247, 0.22);
+}
+[data-theme="sf"] .widget-webcam__corner {
+  border-color: var(--md-secondary);
+  filter: drop-shadow(0 0 5px rgba(168, 85, 247, 0.6));
+}
+[data-theme="sf"] .widget-webcam__label {
+  border-radius: 6px;
+  background: rgba(15, 12, 25, 0.9);
+  color: var(--md-on-surface);
+  font-family: var(--font-display);
+  letter-spacing: 0.14em;
+}
+
 /* ---------- Rotating social banner ---------- */
 .widget-social {
   width: 100%;

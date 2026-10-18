@@ -391,6 +391,11 @@ export function initPropertiesPanel({
       // «Живое видео» тянет кадры из моста панели. Подсказка в инспекторе
       // объясняет разницу, иначе легко решить, что виджет сломан.
       const themePrimary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#c6b8ff";
+      // Рамка без явного радиуса повторяет форму панелей темы.
+      const themeRadiusRaw = parseFloat((state.appearance.tokens && state.appearance.tokens["--panel-radius"]) || "");
+      const themeRadius = Number.isFinite(themeRadiusRaw) ? Math.max(0, Math.min(64, Math.round(themeRadiusRaw))) : 16;
+      const legacyRadius = Number(config.radius) === 16 && config.radiusAuto !== false;
+      const radius = config.radius == null || legacyRadius ? themeRadius : Math.max(0, Math.min(64, Math.round(Number(config.radius) || 0)));
       const label = config.label == null ? "LIVE" : config.label;
       const position = config.labelPosition || "top-left";
       const source = config.source === "camera" ? "camera" : "frame";
@@ -466,7 +471,7 @@ export function initPropertiesPanel({
         <div class="properties__toggle-row"><label>${t("properties.webcamShowBackground")}</label>${switchHtml("pWebcamShowBackground", !!config.showBackground)}</div>
         <div class="properties__toggle-row"><label>${t("properties.webcamShowVignette")}</label>${switchHtml("pWebcamShowVignette", !!config.showVignette)}</div>
         <div class="md-field"><label>${t("properties.webcamThickness")}: <span id="pWebcamThicknessValue">${config.thickness ?? 4}</span> px</label><input type="range" id="pWebcamThickness" min="1" max="16" step="1" value="${config.thickness ?? 4}"></div>
-        <div class="md-field"><label>${t("properties.webcamRadius")}: <span id="pWebcamRadiusValue">${config.radius ?? 16}</span> px</label><input type="range" id="pWebcamRadius" min="0" max="64" step="1" value="${config.radius ?? 16}"></div>
+        <div class="md-field"><label>${t("properties.webcamRadius")}: <span id="pWebcamRadiusValue">${radius}</span> px</label><input type="range" id="pWebcamRadius" min="0" max="64" step="1" value="${radius}"></div>
         <div class="md-field"><label>${t("properties.webcamColor")}</label>
           <div class="properties__color-row">
             <input type="color" id="pWebcamColor" value="${escapeAttr(config.color || themePrimary)}">
@@ -702,7 +707,7 @@ export function initPropertiesPanel({
         const value = Number(e.target.value);
         const label = propertiesEl.querySelector("#pWebcamRadiusValue");
         if (label) label.textContent = String(value);
-        patchWebcam({ radius: value });
+        patchWebcam({ radius: value, radiusAuto: false });
       });
       propertiesEl.querySelector("#pWebcamColor").addEventListener("input", (e) => patchWebcam({ color: e.target.value }));
       propertiesEl.querySelector("#pWebcamColorReset").addEventListener("click", () => patchWebcam({ color: "" }));

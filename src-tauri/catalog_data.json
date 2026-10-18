@@ -1,5 +1,5 @@
 {
-  "sourceHash": "6c6ef3d58b320263",
+  "sourceHash": "3f14b91fb6e0d44e",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -211,7 +211,6 @@
         "fit": "cover",
         "color": "",
         "thickness": 4,
-        "radius": 16,
         "perspective": 0,
         "perspectiveDirection": "left"
       }

@@ -387,7 +387,10 @@ export function initCanvasEditor({
           ? String(config.color).trim()
           : "var(--md-primary)";
         const thickness = Math.max(1, Math.min(16, Number(config.thickness) || 4));
-        const radius = Math.max(0, Math.min(64, Number(config.radius) || 0));
+        const themeRadiusRaw = parseFloat((state.appearance.tokens && state.appearance.tokens["--panel-radius"]) || "");
+        const themeRadius = Number.isFinite(themeRadiusRaw) ? Math.max(0, Math.min(64, Math.round(themeRadiusRaw))) : 16;
+        const legacyRadius = Number(config.radius) === 16 && config.radiusAuto !== false;
+        const radius = config.radius == null || legacyRadius ? themeRadius : Math.max(0, Math.min(64, Math.round(Number(config.radius) || 0)));
         const label = String(config.label == null ? "LIVE" : config.label).trim();
         const showLabel = config.showLabel !== false && label.length > 0;
         const position = ["top-left", "top-right", "bottom-left", "bottom-right"].includes(config.labelPosition) ? config.labelPosition : "top-left";

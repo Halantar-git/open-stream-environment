@@ -147,6 +147,44 @@ describe("WebcamWidget", () => {
     expect(w.host.style.values["--webcam-accent"]).toBe("var(--md-primary)");
   });
 
+  test("без явного радиуса повторяет скругление темы", () => {
+    const rounded = new WebcamWidget(makeItem({}), {
+      ...makeContext(),
+      readCssVar: (name) => (name === "--panel-radius" ? "24px" : ""),
+    });
+    rounded.mount(makeEl("div"));
+    expect(rounded.host.style.values["--webcam-radius"]).toBe("24px");
+    rounded.unmount();
+
+    const sharp = new WebcamWidget(makeItem({}), {
+      ...makeContext(),
+      readCssVar: (name) => (name === "--panel-radius" ? "0px" : ""),
+    });
+    sharp.mount(makeEl("div"));
+    expect(sharp.host.style.values["--webcam-radius"]).toBe("0px");
+    sharp.unmount();
+  });
+
+  test("явный радиус перекрывает тему", () => {
+    const w = new WebcamWidget(makeItem({ radius: 16, radiusAuto: false }), {
+      ...makeContext(),
+      readCssVar: () => "0px",
+    });
+    w.mount(makeEl("div"));
+    expect(w.host.style.values["--webcam-radius"]).toBe("16px");
+    w.unmount();
+  });
+
+  test("старый дефолт 16px считается автоматическим", () => {
+    const w = new WebcamWidget(makeItem({ radius: 16 }), {
+      ...makeContext(),
+      readCssVar: () => "0px",
+    });
+    w.mount(makeEl("div"));
+    expect(w.host.style.values["--webcam-radius"]).toBe("0px");
+    w.unmount();
+  });
+
   test("небезопасное значение цвета не попадает в CSS", () => {
     const w = mount({ color: 'red; background:url("x")' });
     expect(w.host.style.values["--webcam-accent"]).toBe("var(--md-primary)");
