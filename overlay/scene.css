@@ -556,109 +556,25 @@ body {
   z-index: 1;
 }
 
-/* Закатное солнце и горы-каркас — фон сцены по референсу. Оба слоя
-   создаёт retrowave-waves.js; у заставки (`splash-bg`) их нет. */
-.retrowave-sun,
-.retrowave-mountains,
-.retrowave-haze,
-.retrowave-road {
+/* Процедурный фон сцен: canvas создаёт retrowave-background.js. */
+.retrowave-background {
   display: none;
 }
-[data-decoration="retrowave"] .retrowave-sun,
-[data-decoration="retrowave"] .retrowave-mountains,
-[data-decoration="retrowave"] .retrowave-haze,
-[data-decoration="retrowave"] .retrowave-road {
+[data-decoration="retrowave"] .retrowave-background {
   display: block;
-}
-
-/* Тёплая дымка заката: медленно дышит и сдвигается, чтобы небо не выглядело
-   статичной заливкой. */
-[data-decoration="retrowave"] .retrowave-haze {
   position: absolute;
-  inset: 18% -12% 30%;
-  pointer-events: none;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   z-index: 0;
-  background:
-    radial-gradient(ellipse 44% 34% at 50% 78%, rgba(255, 96, 150, 0.34), transparent 72%),
-    radial-gradient(ellipse 28% 22% at 22% 82%, rgba(190, 80, 255, 0.2), transparent 74%),
-    radial-gradient(ellipse 32% 20% at 80% 80%, rgba(255, 45, 149, 0.2), transparent 74%);
-  animation: retrowave-haze-drift 80s ease-in-out infinite alternate;
-  will-change: transform;
-}
-@keyframes retrowave-haze-drift {
-  from { transform: translate3d(-1.5%, 0, 0) scale(1); }
-  to { transform: translate3d(1.5%, -1.2%, 0) scale(1.04); }
-}
-
-[data-decoration="retrowave"] .retrowave-sun {
-  position: absolute;
-  left: 50%;
-  bottom: 49.5%;
-  width: min(34vh, 30vw);
-  aspect-ratio: 1;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  overflow: hidden;
   pointer-events: none;
-  z-index: 2;
-  background:
-    radial-gradient(circle at 50% 14%, rgba(255, 255, 255, 0.55), transparent 40%),
-    linear-gradient(180deg, #fff27a 0%, #ffd24d 20%, #ff9a3d 42%, #ff4d9d 68%, #e01a7f 100%);
-  box-shadow:
-    0 0 70px rgba(255, 140, 80, 0.55),
-    0 0 200px rgba(255, 45, 149, 0.45);
-  animation: retrowave-sun-glow 8s ease-in-out infinite;
 }
-@keyframes retrowave-sun-glow {
-  0%, 100% {
-    box-shadow: 0 0 70px rgba(255, 140, 80, 0.55), 0 0 200px rgba(255, 45, 149, 0.45);
-  }
-  50% {
-    box-shadow: 0 0 100px rgba(255, 165, 90, 0.7), 0 0 280px rgba(255, 45, 149, 0.6);
-  }
-}
-/* Полосы-развёртка в нижней половине солнца: чем ниже, тем плотнее, как на
-   закатных принтах. Маска оставляет верхнюю часть чистой, а медленный сдвиг
-   узора делает диск «живым». */
-[data-decoration="retrowave"] .retrowave-sun::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    rgba(5, 2, 11, 0.88) 0 2px,
-    transparent 2px 11px
-  );
-  -webkit-mask-image: linear-gradient(to bottom, transparent 38%, rgba(0, 0, 0, 0.5) 48%, #000 100%);
-  mask-image: linear-gradient(to bottom, transparent 38%, rgba(0, 0, 0, 0.5) 48%, #000 100%);
-  animation: retrowave-sun-scan 9s linear infinite;
-}
-@keyframes retrowave-sun-scan {
-  from { background-position: 0 0; }
-  to { background-position: 0 22px; }
-}
-[data-decoration="retrowave"] .retrowave-mountains {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  /* Горы под сеткой: пол долины проходит поверх их основания. */
-  z-index: 3;
-  animation: retrowave-mountains-breathe 12s ease-in-out infinite;
-}
-/* Дорога — поверх сетки и гор, но под карточкой сцены. */
-[data-decoration="retrowave"] .retrowave-road {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 6;
-}
-@keyframes retrowave-mountains-breathe {
-  0%, 100% { opacity: 0.96; }
-  50% { opacity: 1; }
+/* На сценах всё рисует canvas — CSS-слои не нужны. Заставка (`splash-bg`)
+   сохраняет звёзды, сетку и волны: её композиция не меняется. */
+[data-decoration="retrowave"] .scene-wrapper:not(.splash-bg) .bg-shape,
+[data-decoration="retrowave"] .scene-wrapper:not(.splash-bg) .grid-overlay,
+[data-decoration="retrowave"] .scene-wrapper:not(.splash-bg)::after {
+  display: none;
 }
 
 /* Слой канваса сцены: виджеты из своей раскладки поверх фиксированного
@@ -691,6 +607,43 @@ body {
 @keyframes retrowave-grid-scroll {
   from { transform: translate3d(0, 0, 0); }
   to { transform: translate3d(0, 60px, 0); }
+}
+
+/* Заставка темы пока живёт по-старому: звёзды, сетка-комната и волны.
+   Сцены перешли на процедурный canvas, но эти правки её не касаются. */
+[data-decoration="retrowave"] .splash-bg {
+  background-image:
+    radial-gradient(ellipse at 50% 28%, rgba(255, 45, 149, 0.26), transparent 56%),
+    radial-gradient(ellipse at 20% 44%, rgba(45, 226, 230, 0.14), transparent 50%),
+    radial-gradient(ellipse at 82% 38%, rgba(105, 55, 210, 0.22), transparent 56%),
+    linear-gradient(180deg, #04010a 0%, #0d0719 58%, #190a2c 100%);
+}
+[data-decoration="retrowave"] .splash-bg .bg-shape {
+  background-size: auto;
+}
+[data-decoration="retrowave"] .splash-bg .shape-3 {
+  display: none;
+}
+[data-decoration="retrowave"] .splash-bg .grid-overlay {
+  z-index: auto;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+[data-decoration="retrowave"] .splash-bg .grid-plane {
+  opacity: 0.55;
+  filter: drop-shadow(0 0 6px rgba(255, 45, 149, 0.5));
+}
+[data-decoration="retrowave"] .splash-bg .grid-plane--floor {
+  background: none;
+}
+[data-decoration="retrowave"] .splash-bg .grid-texture {
+  background-image:
+    linear-gradient(rgba(45, 226, 230, 0.72) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 45, 149, 0.6) 1px, transparent 1px);
+  background-size: 80px 60px;
+}
+[data-decoration="retrowave"] .splash-bg .retrowave-waves {
+  z-index: 0;
 }
 
 /* Scene panels use a deeper chamfer than widget panels. */
@@ -1328,10 +1281,6 @@ body {
   [data-decoration="retrowave"] .bg-shape,
   [data-decoration="retrowave"] .grid-texture,
   [data-decoration="retrowave"] .scene-wrapper::after,
-  [data-decoration="retrowave"] .retrowave-haze,
-  [data-decoration="retrowave"] .retrowave-sun,
-  [data-decoration="retrowave"] .retrowave-sun::after,
-  [data-decoration="retrowave"] .retrowave-mountains,
   [data-theme="nebula"] .scene-wrapper::before,
   [data-theme="orbital"] .scene-wrapper::after,
   [data-theme="sf"] .scene-wrapper::before,
