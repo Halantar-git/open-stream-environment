@@ -125,7 +125,7 @@ describe("CI: файлы workflow", () => {
       const badIndent = source
         .split(/\r?\n/)
         .map((line, index) => ({ line, number: index + 1 }))
-        .filter(({ line }) => line.trim() && /^ +/.test(line) && (line.match(/^ +/)[0].length % 2 !== 0))
+        .filter(({ line }) => line.trim() && /^ +/.test(line) && line.match(/^ +/)[0].length % 2 !== 0)
         .map(({ line, number }) => `${name}:${number}: ${line.trim().slice(0, 40)}`);
       expect(badIndent).toEqual([]);
       expect(source.trim().endsWith(":") || source.split(/\r?\n/).length > 10).toBe(true);
@@ -192,6 +192,22 @@ describe("CI: файлы workflow", () => {
     });
 
     expect(publishers).toEqual(["release.yml"]);
+  });
+
+  test("фид автообновления собирается одной джобой после сборок", () => {
+    /*
+      `latest.json` — единственное, что читает установленное приложение, когда
+      проверяет обновление. В 4.2.1 файла в релизе не оказалось: его писали все
+      три джобы матрицы сразу, и параллельная перезапись оставила ассет
+      удалённым — обновление у всех отдавало 404, хотя релиз опубликован.
+    */
+    expect(release).toContain("uploadUpdaterJson: false");
+    expect(release).toContain("updater-feed:");
+    expect(release).toContain("needs: [verify, publish]");
+    expect(release).toContain("gh release upload");
+    expect(release).toContain("latest.json");
+    // Финальная сверка: без неё такой же релиз снова уедет молча.
+    expect(release).toMatch(/grep -qx 'latest\.json'/);
   });
 
   test("после публикации релиза сайт просят пересобраться", () => {
