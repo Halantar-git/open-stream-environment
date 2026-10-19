@@ -146,26 +146,30 @@ impl Hud {
         let url = page_url(port, "/overlay/overlay.html", &[]);
         // Без моста: оверлей получает раскладку и режим по WebSocket, а лишний
         // мост в окне поверх игры — только лишняя поверхность (как в JS).
-        let built = WebviewWindowBuilder::new(&self.app, HUD_LABEL, WebviewUrl::External(url))
-            .title("Open Stream Environment — HUD")
-            // В режиме редактирования HUD ловит мышь; браузерное меню по правой
-            // кнопке здесь так же лишнее, как и в панели. Мост окну не нужен,
-            // поэтому обходимся одним обработчиком.
-            .initialization_script(
-                "window.addEventListener('contextmenu', (event) => event.preventDefault());",
-            )
-            .position(x, y)
-            .inner_size(width, height)
-            .transparent(true)
-            .decorations(false)
-            .always_on_top(true)
-            .shadow(false)
-            .resizable(false)
-            .maximizable(false)
-            .minimizable(false)
-            .skip_taskbar(true)
-            .visible(false)
-            .build();
+        let mut builder =
+            WebviewWindowBuilder::new(&self.app, HUD_LABEL, WebviewUrl::External(url))
+                .title("Open Stream Environment — HUD")
+                // В режиме редактирования HUD ловит мышь; браузерное меню по правой
+                // кнопке здесь так же лишнее, как и в панели. Мост окну не нужен,
+                // поэтому обходимся одним обработчиком.
+                .initialization_script(
+                    "window.addEventListener('contextmenu', (event) => event.preventDefault());",
+                )
+                .position(x, y)
+                .inner_size(width, height)
+                .transparent(true)
+                .decorations(false)
+                .always_on_top(true)
+                .shadow(false)
+                .resizable(false)
+                .maximizable(false)
+                .minimizable(false)
+                .skip_taskbar(true)
+                .visible(false);
+        if let Some(dir) = crate::instance::webview_dir(&self.app) {
+            builder = builder.data_directory(dir);
+        }
+        let built = builder.build();
         match built {
             Ok(window) => {
                 let _ = window.set_ignore_cursor_events(true);
@@ -233,24 +237,28 @@ impl Hud {
                 ("fontSize", &font),
             ],
         );
-        let built = WebviewWindowBuilder::new(&self.app, CHAT_HUD_LABEL, WebviewUrl::External(url))
-            .title("Open Stream Environment — чат")
-            .initialization_script(include_str!("../preload-tauri.js"))
-            .position(x, y)
-            .inner_size(width, height)
-            .transparent(true)
-            .decorations(false)
-            .always_on_top(true)
-            .shadow(false)
-            .resizable(false)
-            .maximizable(false)
-            .minimizable(false)
-            .skip_taskbar(true)
-            // Чат только читается и не должен выдёргивать фокус из игры
-            // (`focusable: false` в `main.js`).
-            .focusable(false)
-            .visible(false)
-            .build();
+        let mut builder =
+            WebviewWindowBuilder::new(&self.app, CHAT_HUD_LABEL, WebviewUrl::External(url))
+                .title("Open Stream Environment — чат")
+                .initialization_script(include_str!("../preload-tauri.js"))
+                .position(x, y)
+                .inner_size(width, height)
+                .transparent(true)
+                .decorations(false)
+                .always_on_top(true)
+                .shadow(false)
+                .resizable(false)
+                .maximizable(false)
+                .minimizable(false)
+                .skip_taskbar(true)
+                // Чат только читается и не должен выдёргивать фокус из игры
+                // (`focusable: false` в `main.js`).
+                .focusable(false)
+                .visible(false);
+        if let Some(dir) = crate::instance::webview_dir(&self.app) {
+            builder = builder.data_directory(dir);
+        }
+        let built = builder.build();
         match built {
             Ok(window) => {
                 // Чат только читается — мышь не перехватываем.

@@ -1105,7 +1105,7 @@ fn build_window(
     top: bool,
     maximized: bool,
 ) -> tauri::Result<()> {
-    WebviewWindowBuilder::new(app, label, WebviewUrl::External(url))
+    let mut builder = WebviewWindowBuilder::new(app, label, WebviewUrl::External(url))
         // Заголовок задаём явно: иначе окно носит имя по умолчанию ("Tauri App"),
         // а заголовок страницы в заголовок окна не переносится.
         .title(title)
@@ -1116,9 +1116,11 @@ fn build_window(
         .inner_size(size.0, size.1)
         .min_inner_size(min.0, min.1)
         .always_on_top(top)
-        .maximized(maximized)
-        .build()
-        .map(|_| ())
+        .maximized(maximized);
+    if let Some(dir) = crate::instance::webview_dir(app) {
+        builder = builder.data_directory(dir);
+    }
+    builder.build().map(|_| ())
 }
 
 /// Метка окна Tauri допускает не всё, а `widgetId` приходит из настроек.

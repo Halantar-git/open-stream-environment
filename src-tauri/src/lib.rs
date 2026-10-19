@@ -13,6 +13,7 @@ pub mod catalog;
 pub mod desktop;
 pub mod diagnostics;
 pub mod hud;
+pub mod instance;
 pub mod integrations;
 pub mod protocol;
 pub mod server;
@@ -53,11 +54,16 @@ pub fn run() {
     let session_slot: Arc<Mutex<Option<Arc<Diagnostics>>>> = Arc::new(Mutex::new(None));
     let setup_slot = Arc::clone(&session_slot);
 
-    let app = tauri::Builder::default()
-        // Один экземпляр: второй запуск показывает главное окно и уходит.
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+    let mut builder = tauri::Builder::default();
+    // Один экземпляр — обычный режим: второй запуск показывает главное окно
+    // и уходит. `OSE_SECOND_INSTANCE=1` оставляет lock первой копии и разрешает
+    // этой работать рядом, иначе гостевые камеры на одной машине не проверить.
+    if !instance::second_instance() {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             show_main(app);
-        }))
+        }));
+    }
+    let app = builder
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -74,7 +80,12 @@ pub fn run() {
             _ => PermissionResponse::Default,
         })
         // Состояние окон (позиция, размер, развёрнутость) переживает перезапуск.
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        // У второй копии файл свой: иначе она утащила бы окна хоста.
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_filename(instance::window_state_file())
+                .build(),
+        )
         .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             desktop::get_info,
@@ -142,6 +153,13 @@ pub fn run() {
             let user_data = app.path().app_data_dir()?;
             let config_dir =
                 resolve_config_dir(&template_dir, packaged, portable.as_deref(), &user_data);
+            // Проверочная копия пишет отдельно: настройки, база и логи хоста
+            // остаются нетронутыми.
+            let config_dir = if instance::second_instance() {
+                instance::data_dir(&user_data)
+            } else {
+                config_dir
+            };
             let storage = Storage::new(template_dir, config_dir);
             // Каталог данных на первом запуске может не существовать (свежий
             // `%APPDATA%\com.openstreamenvironment.app`) — создаём, как
@@ -231,7 +249,13 @@ pub fn run() {
                 "main",
                 WebviewUrl::External(tauri::Url::parse(&url)?),
             )
-            .title("Open Stream Environment — панель управления")
+            // Пометка нужна, когда рядом работают две копии: по заголовку
+            // в панели задач видно, где хост, а где гость.
+            .title(if instance::second_instance() {
+                "Open Stream Environment — панель (вторая копия)"
+            } else {
+                "Open Stream Environment — панель управления"
+            })
             // Мост `window.desktop.*`: панель остаётся тем же JS.
             .initialization_script(include_str!("../preload-tauri.js"))
             .inner_size(1440.0, 900.0)
@@ -269,6 +293,10 @@ pub fn run() {
                     }
                 });
             });
+            let mut builder = builder;
+            if let Some(dir) = instance::webview_dir(app.handle()) {
+                builder = builder.data_directory(dir);
+            }
             let main_window = builder.build()?;
 
             if has_splash {
@@ -607,7 +635,7 @@ fn create_splash(
     );
     let url = tauri::Url::parse(&url).ok()?;
     let handle = app.clone();
-    WebviewWindowBuilder::new(app, "splash", WebviewUrl::External(url))
+    let mut builder = WebviewWindowBuilder::new(app, "splash", WebviewUrl::External(url))
         .title("Open Stream Environment")
         .inner_size(600.0, 400.0)
         .transparent(true)
@@ -632,9 +660,11 @@ fn create_splash(
                 }
             }
             try_finish_startup(&handle, &gate);
-        })
-        .build()
-        .ok()
+        });
+    if let Some(dir) = instance::webview_dir(app) {
+        builder = builder.data_directory(dir);
+    }
+    builder.build().ok()
 }
 
 /// Закончить старт: убрать заставку, развернуть и показать панель — как
