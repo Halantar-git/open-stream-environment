@@ -268,6 +268,8 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .properties { display: flex; flex-direction: column; gap: 12px; }
 .properties__row { display: flex; gap: 8px; }
 .properties__row .md-field { flex: 1; }
+.properties__actions { display: flex; gap: 8px; }
+.properties__actions .md-button { flex: 1; font-size: 12px; padding: 8px 10px; white-space: nowrap; }
 .properties__color-row { display: flex; align-items: center; gap: 8px; }
 .properties__color-row input[type="color"] { flex: 1; min-width: 0; height: 40px; padding: 2px; }
 .properties__toggle-row { display: flex; align-items: center; justify-content: space-between; }

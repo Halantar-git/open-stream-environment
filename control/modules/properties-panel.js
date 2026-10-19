@@ -52,7 +52,7 @@ export function initPropertiesPanel({
   wireSwitch,
   escapeAttr,
   round1,
-  micOrientationPatch,
+  micRotationPatch,
   sendMicCaptureConfig,
   refreshMicDevices,
   sendCameraCaptureConfig,
@@ -203,10 +203,13 @@ export function initPropertiesPanel({
       type === "mic"
         ? (raw.config && raw.config.visualizer_mode) || (state.micConfig && state.micConfig.visualizer_mode) || ""
         : "";
+    // Поворот меняет не только рисунок, но и подпись под кнопками — без него
+    // рендер с активной кнопкой в панели пропускался бы и состояние отставало.
+    const micRotation = type === "mic" ? Number(raw.config && raw.config.rotation) || 0 : "";
     const webcamSource = type === "webcam" ? (raw.config && raw.config.source) || "frame" : "";
     const cameraCodec = type === "webcam" ? (state.cameraConfig && state.cameraConfig.codec) || "auto" : "";
     const guestSlotsSig = type === "webcam" ? (state.guestSlots || []).map((s) => `${s.slot}:${s.state}`).join(",") : "";
-    const sig = `${raw.id}|${raw.type}|${type}|${micMode}|${webcamSource}|${cameraCodec}|${(raw.config && raw.config.guestSlot) || ""}|${guestSlotsSig}|${(state.micDevices || []).length}|${(state.cameraDevices || []).length}`;
+    const sig = `${raw.id}|${raw.type}|${type}|${micMode}|${micRotation}|${webcamSource}|${cameraCodec}|${(raw.config && raw.config.guestSlot) || ""}|${guestSlotsSig}|${(state.micDevices || []).length}|${(state.cameraDevices || []).length}`;
     if (!force && sig === lastSig && propertiesEl.contains(document.activeElement)) return;
     lastSig = sig;
     const def = WIDGET_TYPES[type] || {};
@@ -366,6 +369,7 @@ export function initPropertiesPanel({
       const rawRotation = Number(config.rotation);
       const rotation = rawRotation === 90 || rawRotation === 180 || rawRotation === 270 ? rawRotation : 0;
       const vertical = rotation === 90 || rotation === 270;
+      const reversed = rotation >= 180;
       const themePrimary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#0060A8";
       const micColor = config.color || state.micConfig.color || themePrimary;
       const deviceId = state.micConfig.deviceId || "";
@@ -447,13 +451,11 @@ export function initPropertiesPanel({
             <option value="ring" ${mode === "ring" ? "selected" : ""}>${t("mic.modeRing")}</option>
           </select>
         </div>
-        <div class="md-field"><label>${t("mic.orientation")}</label>
-          <select id="pMicOrientation">
-            <option value="horizontal" ${vertical ? "" : "selected"}>${t("mic.orientationHorizontal")}</option>
-            <option value="vertical" ${vertical ? "selected" : ""}>${t("mic.orientationVertical")}</option>
-          </select>
-          <p class="properties__hint" style="margin:6px 0 0;">${t("mic.orientationHint")}</p>
+        <div class="properties__actions">
+          <button class="md-button md-button--tonal" id="pMicRotate" title="${t("mic.rotateHint")}">↻ ${t("mic.rotateAction")}</button>
+          <button class="md-button md-button--tonal" id="pMicFlip" title="${t("mic.directionHint")}">⇄ ${t("mic.directionAction")}</button>
         </div>
+        <p class="properties__hint" style="margin:0;">${vertical ? t("mic.orientationVertical") : t("mic.orientationHorizontal")} · ${reversed ? t("mic.directionReverse") : t("mic.directionNormal")}</p>
         ${fields}
         ${captureHtml}`;
     } else if (inst.type === "death") {
@@ -795,19 +797,23 @@ export function initPropertiesPanel({
     } else if (inst.type === "mic") {
       // Настройки отображения пишем в конфиг виджета (per-widget).
       const setMic = (key, value) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { [key]: value } } });
-      // Ориентация — это не только поворот рисунка: в широком виджете
-      // вертикальная волна всё равно осталась бы тонкой полоской по центру,
-      // а столбики — узкой полосой у края. Поэтому меняем стороны виджета
-      // местами вокруг его центра — вертикальный виджет становится высоким.
-      const setMicOrientation = (isVertical) => {
+      // Поворот и направление — быстрые действия. «Поворот» каждый раз
+      // добавляет 90° и меняет стороны рамки: горизонтальный виджет становится
+      // вертикальным и наоборот. «Направление» разворачивает рисунок на 180°,
+      // не трогая рамку. Угол читаем из живого пункта раскладки, а не из
+      // замыкания: быстрые щелчки до перерисовки панели иначе считали бы от
+      // одного и того же значения.
+      const rotateMic = (delta) => {
         const item = state.layout.find((w) => w.id === inst.id) || inst;
-        const rect = micOrientationPatch(item, isVertical);
+        const current = Number(item.config && item.config.rotation);
+        const base = current === 90 || current === 180 || current === 270 ? current : 0;
+        const rect = micRotationPatch(item, (base + delta) % 360);
         const geo = rect.swapped
           ? { x: round1(rect.x), y: round1(rect.y), w: round1(rect.w), h: round1(rect.h) }
           : null;
         const patch = { config: { rotation: rect.rotation } };
         if (geo) Object.assign(patch, geo);
-        // Подгоняем снимок сразу, иначе следующий рендер откатит селект.
+        // Подгоняем снимок сразу, иначе следующий рендер откатит состояние.
         item.config = Object.assign({}, item.config, { rotation: rect.rotation });
         if (geo) Object.assign(item, geo);
         send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch });
@@ -824,8 +830,10 @@ export function initPropertiesPanel({
       };
       const modeEl = propertiesEl.querySelector("#pMicMode");
       if (modeEl) modeEl.addEventListener("change", (e) => setMic("visualizer_mode", e.target.value));
-      const micOrientationEl = propertiesEl.querySelector("#pMicOrientation");
-      if (micOrientationEl) micOrientationEl.addEventListener("change", (e) => setMicOrientation(e.target.value === "vertical"));
+      const micRotateEl = propertiesEl.querySelector("#pMicRotate");
+      if (micRotateEl) micRotateEl.addEventListener("click", () => rotateMic(90));
+      const micFlipEl = propertiesEl.querySelector("#pMicFlip");
+      if (micFlipEl) micFlipEl.addEventListener("click", () => rotateMic(180));
       onMicRange("pMicSensitivity", "pMicSensitivityValue", (v) => v.toFixed(1), (v) => setMic("sensitivity", v));
       onMicRange("pMicLineWidth", "pMicLineWidthValue", (v) => v.toFixed(1), (v) => setMic("lineWidth", v));
       onMicRange("pMicBarCount", "pMicBarCountValue", (v) => String(Math.round(v)), (v) => setMic("barCount", Math.round(v)));
