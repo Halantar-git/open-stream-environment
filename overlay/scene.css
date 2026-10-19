@@ -395,10 +395,6 @@ body {
     radial-gradient(1.1px 1.1px at 298px 162px, rgba(255, 255, 255, 0.75), transparent 1.9px),
     radial-gradient(0.8px 0.8px at 68px 214px, rgba(45, 226, 230, 0.7), transparent 1.5px),
     radial-gradient(1px 1px at 248px 282px, rgba(255, 255, 255, 0.7), transparent 1.7px);
-  /* Плитка 320px повторяется по всему небу: иначе на кадре было бы всего
-     шесть звёзд, а дрейф на плитку оставлял бы пустые полосы. */
-  background-size: 320px 320px;
-  background-repeat: repeat;
   animation:
     retrowave-stars-drift 240s linear infinite,
     retrowave-stars-twinkle 14s ease-in-out infinite;
@@ -411,29 +407,11 @@ body {
     radial-gradient(0.8px 0.8px at 300px 210px, rgba(255, 255, 255, 0.6), transparent 1.5px),
     radial-gradient(1.1px 1.1px at 104px 300px, rgba(255, 255, 255, 0.8), transparent 1.8px),
     radial-gradient(0.9px 0.9px at 198px 112px, rgba(45, 226, 230, 0.65), transparent 1.6px);
-  background-size: 320px 320px;
-  background-repeat: repeat;
   animation:
     retrowave-stars-drift-reverse 320s linear infinite,
     retrowave-stars-twinkle 19s ease-in-out infinite -6s;
 }
-[data-decoration="retrowave"] .shape-3 {
-  display: block;
-  background-image:
-    radial-gradient(0.8px 0.8px at 36px 58px, rgba(255, 255, 255, 0.7), transparent 1.5px),
-    radial-gradient(0.7px 0.7px at 118px 174px, rgba(180, 220, 255, 0.6), transparent 1.4px),
-    radial-gradient(0.9px 0.9px at 204px 22px, rgba(255, 255, 255, 0.65), transparent 1.6px),
-    radial-gradient(0.7px 0.7px at 286px 128px, rgba(255, 160, 220, 0.6), transparent 1.4px),
-    radial-gradient(0.8px 0.8px at 84px 262px, rgba(255, 255, 255, 0.55), transparent 1.5px),
-    radial-gradient(0.6px 0.6px at 252px 304px, rgba(180, 220, 255, 0.5), transparent 1.3px),
-    radial-gradient(0.9px 0.9px at 168px 96px, rgba(255, 255, 255, 0.6), transparent 1.6px),
-    radial-gradient(0.7px 0.7px at 12px 206px, rgba(255, 160, 220, 0.5), transparent 1.4px);
-  background-size: 320px 320px;
-  background-repeat: repeat;
-  animation:
-    retrowave-stars-drift 380s linear infinite,
-    retrowave-stars-twinkle 26s ease-in-out infinite -11s;
-}
+[data-decoration="retrowave"] .shape-3 { display: none; }
 
 @keyframes retrowave-stars-drift {
   from { transform: translate3d(0, 0, 0); }
@@ -451,16 +429,10 @@ body {
 [data-decoration="retrowave"] .scene-wrapper {
   background-color: #05020b;
   background-image:
-    /* Тёплая полоса у горизонта: закат просвечивает между горами. */
-    radial-gradient(ellipse 62% 16% at 50% 50%, rgba(255, 130, 120, 0.36), transparent 72%),
-    radial-gradient(ellipse at 50% 32%, rgba(255, 45, 149, 0.34), transparent 58%),
-    radial-gradient(ellipse at 18% 48%, rgba(120, 70, 220, 0.24), transparent 52%),
-    radial-gradient(ellipse at 84% 42%, rgba(92, 52, 190, 0.26), transparent 56%),
-    linear-gradient(180deg, #030008 0%, #0b0517 36%, #1a0a2e 47%, #2a0a3a 52%, #150822 72%, #0a0416 100%);
-  /* Неоновая дымка по краям кадра: эфир не обрывается в чёрное одним шагом. */
-  box-shadow:
-    inset 0 0 180px rgba(255, 45, 149, 0.16),
-    inset 0 0 70px rgba(45, 226, 230, 0.08);
+    radial-gradient(ellipse at 50% 28%, rgba(255, 45, 149, 0.2), transparent 56%),
+    radial-gradient(ellipse at 20% 44%, rgba(45, 226, 230, 0.1), transparent 50%),
+    radial-gradient(ellipse at 82% 38%, rgba(105, 55, 210, 0.18), transparent 56%),
+    linear-gradient(180deg, #04010a 0%, #0d0719 58%, #190a2c 100%);
 }
 
 /* Pink horizon line behind the scene card — the retrowave sunset strip. */
@@ -481,16 +453,16 @@ body {
     rgba(255, 45, 149, 0.5) 78%,
     transparent
   );
-  box-shadow: 0 0 30px rgba(255, 45, 149, 0.6), 0 0 70px rgba(45, 226, 230, 0.16);
-  opacity: 0.7;
+  box-shadow: 0 0 22px rgba(255, 45, 149, 0.45);
+  opacity: 0.6;
   animation: retrowave-horizon 10s ease-in-out infinite;
 }
 
 /* Дышащая линия горизонта — единственный элемент, который меняет яркость:
    анимируем только opacity, чтобы не перерисовывать всё полотно сцены. */
 @keyframes retrowave-horizon {
-  0%, 100% { opacity: 0.62; }
-  50% { opacity: 0.9; }
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.8; }
 }
 
 /* Perspective grid floor and ceiling. The plane only supplies the 3D tilt and
@@ -504,13 +476,8 @@ body {
   display: block;
   position: absolute;
   inset: 0;
-  z-index: 4;
   pointer-events: none;
   overflow: hidden;
-  /* Сетка — пол в долине: к краям она уходит под склоны гор, как на
-     референсе, а не просвечивает сквозь каркас. */
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 18%, #000 82%, transparent 100%);
-  mask-image: linear-gradient(90deg, transparent 0%, #000 18%, #000 82%, transparent 100%);
 }
 [data-decoration="retrowave"] .grid-plane {
   display: block;
@@ -519,8 +486,8 @@ body {
   right: -20%;
   height: 100vh;
   overflow: hidden;
-  opacity: 0.72;
-  filter: drop-shadow(0 0 8px rgba(45, 226, 230, 0.55)) drop-shadow(0 0 18px rgba(255, 45, 149, 0.36));
+  opacity: 0.45;
+  filter: drop-shadow(0 0 3px rgba(255, 45, 149, 0.35));
 }
 [data-decoration="retrowave"] .grid-plane--ceiling {
   top: 0;
@@ -528,18 +495,11 @@ body {
   transform-origin: top center;
   -webkit-mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.7) 45%, transparent 82%);
   mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.7) 45%, transparent 82%);
-  /* Сцена — открытое небо с закатом. Потолочная сетка остаётся только у
-     заставки (`splash-bg`): её композиция — замкнутая неоновая комната. */
-  display: none;
-}
-[data-decoration="retrowave"] .splash-bg .grid-plane--ceiling {
-  display: block;
 }
 [data-decoration="retrowave"] .grid-plane--floor {
   bottom: 0;
   transform: perspective(2000px) rotateX(55deg);
   transform-origin: bottom center;
-  background: linear-gradient(180deg, rgba(255, 45, 149, 0.16), rgba(45, 20, 90, 0.08) 42%, transparent 72%);
   -webkit-mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.7) 45%, transparent 82%);
   mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.7) 45%, transparent 82%);
 }
@@ -552,40 +512,7 @@ body {
   height: 40%;
   width: 100%;
   pointer-events: none;
-  /* Волны — атмосфера неба: солнце и горы их перекрывают. */
-  z-index: 1;
-}
-
-/* Процедурный фон сцен: canvas создаёт retrowave-background.js. */
-.retrowave-background {
-  display: none;
-}
-[data-decoration="retrowave"] .retrowave-background {
-  display: block;
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
   z-index: 0;
-  pointer-events: none;
-}
-.retrowave-vignette {
-  display: none;
-}
-[data-decoration="retrowave"] .retrowave-vignette {
-  display: block;
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background: radial-gradient(ellipse at 50% 55%, rgba(6, 0, 24, 0) 38%, rgba(6, 0, 24, 0.5) 100%);
-}
-/* На сценах всё рисует canvas — CSS-слои не нужны. Заставка (`splash-bg`)
-   сохраняет звёзды, сетку и волны: её композиция не меняется. */
-[data-decoration="retrowave"] .scene-wrapper:not(.splash-bg) .bg-shape,
-[data-decoration="retrowave"] .scene-wrapper:not(.splash-bg) .grid-overlay,
-[data-decoration="retrowave"] .scene-wrapper:not(.splash-bg)::after {
-  display: none;
 }
 
 /* Слой канваса сцены: виджеты из своей раскладки поверх фиксированного
@@ -603,9 +530,9 @@ body {
   top: -100%;
   bottom: -100%;
   background-image:
-    linear-gradient(rgba(140, 240, 255, 0.92) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(45, 226, 230, 0.68) 1px, transparent 1px);
-  background-size: 72px 50px;
+    linear-gradient(rgba(45, 226, 230, 0.6) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 45, 149, 0.5) 1px, transparent 1px);
+  background-size: 80px 60px;
   will-change: transform;
   animation: retrowave-grid-scroll 12s linear infinite;
 }
@@ -618,43 +545,6 @@ body {
 @keyframes retrowave-grid-scroll {
   from { transform: translate3d(0, 0, 0); }
   to { transform: translate3d(0, 60px, 0); }
-}
-
-/* Заставка темы пока живёт по-старому: звёзды, сетка-комната и волны.
-   Сцены перешли на процедурный canvas, но эти правки её не касаются. */
-[data-decoration="retrowave"] .splash-bg {
-  background-image:
-    radial-gradient(ellipse at 50% 28%, rgba(255, 45, 149, 0.26), transparent 56%),
-    radial-gradient(ellipse at 20% 44%, rgba(45, 226, 230, 0.14), transparent 50%),
-    radial-gradient(ellipse at 82% 38%, rgba(105, 55, 210, 0.22), transparent 56%),
-    linear-gradient(180deg, #04010a 0%, #0d0719 58%, #190a2c 100%);
-}
-[data-decoration="retrowave"] .splash-bg .bg-shape {
-  background-size: auto;
-}
-[data-decoration="retrowave"] .splash-bg .shape-3 {
-  display: none;
-}
-[data-decoration="retrowave"] .splash-bg .grid-overlay {
-  z-index: auto;
-  -webkit-mask-image: none;
-  mask-image: none;
-}
-[data-decoration="retrowave"] .splash-bg .grid-plane {
-  opacity: 0.55;
-  filter: drop-shadow(0 0 6px rgba(255, 45, 149, 0.5));
-}
-[data-decoration="retrowave"] .splash-bg .grid-plane--floor {
-  background: none;
-}
-[data-decoration="retrowave"] .splash-bg .grid-texture {
-  background-image:
-    linear-gradient(rgba(45, 226, 230, 0.72) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 45, 149, 0.6) 1px, transparent 1px);
-  background-size: 80px 60px;
-}
-[data-decoration="retrowave"] .splash-bg .retrowave-waves {
-  z-index: 0;
 }
 
 /* Scene panels use a deeper chamfer than widget panels. */
