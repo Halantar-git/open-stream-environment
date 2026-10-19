@@ -616,12 +616,32 @@
     }
   }
 
+  // Источник OBS держит страницу открытой сутками: после перезапуска OSE она
+  // переподключается к шине, но продолжает работать со старым скриптом —
+  // новый режим виджета оказывается ей незнаком, и визуализатор рисует
+  // запасную волну. Живое соединение, оборвавшееся после нормальной работы,
+  // значит перезапуск сервера: в этот момент страницу пора перезагрузить.
+  // Короткие обрывы (сервер не поднялся) перезагрузку не запускают, иначе
+  // неудачный handshake зациклил бы её.
+  const STABLE_CONNECTION_MS = 5000;
+  let connectedAt = 0;
+  let serverRestarted = false;
+  let reloading = false;
+
   function connect() {
     const proto = location.protocol === "https:" ? "wss" : "ws";
     ws = new WebSocket(`${proto}://${location.host}/ws?role=overlay`);
     // Микрокадры приходят бинарно — принимаем их как ArrayBuffer, чтобы не
     // создавать Blob на каждый кадр.
     ws.binaryType = "arraybuffer";
+    ws.onopen = () => {
+      if (serverRestarted && !reloading) {
+        reloading = true;
+        location.reload();
+        return;
+      }
+      connectedAt = performance.now();
+    };
     ws.onmessage = (ev) => {
       if (typeof ev.data !== "string") {
         // Кадры камеры и микрофона идут одним бинарным каналом и различаются
@@ -646,7 +666,13 @@
         /* ignore malformed frame */
       }
     };
-    ws.onclose = () => setTimeout(connect, 2000);
+    ws.onclose = () => {
+      if (connectedAt && performance.now() - connectedAt > STABLE_CONNECTION_MS) {
+        serverRestarted = true;
+      }
+      connectedAt = 0;
+      setTimeout(connect, 2000);
+    };
     ws.onerror = () => ws.close();
   }
 
