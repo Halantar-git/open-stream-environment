@@ -395,6 +395,10 @@ body {
     radial-gradient(1.1px 1.1px at 298px 162px, rgba(255, 255, 255, 0.75), transparent 1.9px),
     radial-gradient(0.8px 0.8px at 68px 214px, rgba(45, 226, 230, 0.7), transparent 1.5px),
     radial-gradient(1px 1px at 248px 282px, rgba(255, 255, 255, 0.7), transparent 1.7px);
+  /* Плитка 320px повторяется по всему небу: иначе на кадре было бы всего
+     шесть звёзд, а дрейф на плитку оставлял бы пустые полосы. */
+  background-size: 320px 320px;
+  background-repeat: repeat;
   animation:
     retrowave-stars-drift 240s linear infinite,
     retrowave-stars-twinkle 14s ease-in-out infinite;
@@ -407,11 +411,29 @@ body {
     radial-gradient(0.8px 0.8px at 300px 210px, rgba(255, 255, 255, 0.6), transparent 1.5px),
     radial-gradient(1.1px 1.1px at 104px 300px, rgba(255, 255, 255, 0.8), transparent 1.8px),
     radial-gradient(0.9px 0.9px at 198px 112px, rgba(45, 226, 230, 0.65), transparent 1.6px);
+  background-size: 320px 320px;
+  background-repeat: repeat;
   animation:
     retrowave-stars-drift-reverse 320s linear infinite,
     retrowave-stars-twinkle 19s ease-in-out infinite -6s;
 }
-[data-decoration="retrowave"] .shape-3 { display: none; }
+[data-decoration="retrowave"] .shape-3 {
+  display: block;
+  background-image:
+    radial-gradient(0.8px 0.8px at 36px 58px, rgba(255, 255, 255, 0.7), transparent 1.5px),
+    radial-gradient(0.7px 0.7px at 118px 174px, rgba(180, 220, 255, 0.6), transparent 1.4px),
+    radial-gradient(0.9px 0.9px at 204px 22px, rgba(255, 255, 255, 0.65), transparent 1.6px),
+    radial-gradient(0.7px 0.7px at 286px 128px, rgba(255, 160, 220, 0.6), transparent 1.4px),
+    radial-gradient(0.8px 0.8px at 84px 262px, rgba(255, 255, 255, 0.55), transparent 1.5px),
+    radial-gradient(0.6px 0.6px at 252px 304px, rgba(180, 220, 255, 0.5), transparent 1.3px),
+    radial-gradient(0.9px 0.9px at 168px 96px, rgba(255, 255, 255, 0.6), transparent 1.6px),
+    radial-gradient(0.7px 0.7px at 12px 206px, rgba(255, 160, 220, 0.5), transparent 1.4px);
+  background-size: 320px 320px;
+  background-repeat: repeat;
+  animation:
+    retrowave-stars-drift 380s linear infinite,
+    retrowave-stars-twinkle 26s ease-in-out infinite -11s;
+}
 
 @keyframes retrowave-stars-drift {
   from { transform: translate3d(0, 0, 0); }
@@ -429,10 +451,12 @@ body {
 [data-decoration="retrowave"] .scene-wrapper {
   background-color: #05020b;
   background-image:
-    radial-gradient(ellipse at 50% 28%, rgba(255, 45, 149, 0.26), transparent 56%),
-    radial-gradient(ellipse at 20% 44%, rgba(45, 226, 230, 0.14), transparent 50%),
-    radial-gradient(ellipse at 82% 38%, rgba(105, 55, 210, 0.22), transparent 56%),
-    linear-gradient(180deg, #04010a 0%, #0d0719 58%, #190a2c 100%);
+    /* Тёплая полоса у горизонта: закат просвечивает между горами. */
+    radial-gradient(ellipse 62% 16% at 50% 50%, rgba(255, 130, 120, 0.36), transparent 72%),
+    radial-gradient(ellipse at 50% 32%, rgba(255, 45, 149, 0.34), transparent 58%),
+    radial-gradient(ellipse at 18% 48%, rgba(120, 70, 220, 0.24), transparent 52%),
+    radial-gradient(ellipse at 84% 42%, rgba(92, 52, 190, 0.26), transparent 56%),
+    linear-gradient(180deg, #030008 0%, #0b0517 36%, #1a0a2e 47%, #2a0a3a 52%, #150822 72%, #0a0416 100%);
   /* Неоновая дымка по краям кадра: эфир не обрывается в чёрное одним шагом. */
   box-shadow:
     inset 0 0 180px rgba(255, 45, 149, 0.16),
@@ -480,8 +504,13 @@ body {
   display: block;
   position: absolute;
   inset: 0;
+  z-index: 4;
   pointer-events: none;
   overflow: hidden;
+  /* Сетка — пол в долине: к краям она уходит под склоны гор, как на
+     референсе, а не просвечивает сквозь каркас. */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 18%, #000 82%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 18%, #000 82%, transparent 100%);
 }
 [data-decoration="retrowave"] .grid-plane {
   display: block;
@@ -490,8 +519,8 @@ body {
   right: -20%;
   height: 100vh;
   overflow: hidden;
-  opacity: 0.55;
-  filter: drop-shadow(0 0 6px rgba(255, 45, 149, 0.5));
+  opacity: 0.72;
+  filter: drop-shadow(0 0 8px rgba(45, 226, 230, 0.55)) drop-shadow(0 0 18px rgba(255, 45, 149, 0.36));
 }
 [data-decoration="retrowave"] .grid-plane--ceiling {
   top: 0;
@@ -499,11 +528,18 @@ body {
   transform-origin: top center;
   -webkit-mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.7) 45%, transparent 82%);
   mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.7) 45%, transparent 82%);
+  /* Сцена — открытое небо с закатом. Потолочная сетка остаётся только у
+     заставки (`splash-bg`): её композиция — замкнутая неоновая комната. */
+  display: none;
+}
+[data-decoration="retrowave"] .splash-bg .grid-plane--ceiling {
+  display: block;
 }
 [data-decoration="retrowave"] .grid-plane--floor {
   bottom: 0;
   transform: perspective(2000px) rotateX(55deg);
   transform-origin: bottom center;
+  background: linear-gradient(180deg, rgba(255, 45, 149, 0.16), rgba(45, 20, 90, 0.08) 42%, transparent 72%);
   -webkit-mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.7) 45%, transparent 82%);
   mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.7) 45%, transparent 82%);
 }
@@ -516,7 +552,102 @@ body {
   height: 40%;
   width: 100%;
   pointer-events: none;
+  /* Волны — атмосфера неба: солнце и горы их перекрывают. */
+  z-index: 1;
+}
+
+/* Закатное солнце и горы-каркас — фон сцены по референсу. Оба слоя
+   создаёт retrowave-waves.js; у заставки (`splash-bg`) их нет. */
+.retrowave-sun,
+.retrowave-mountains,
+.retrowave-haze {
+  display: none;
+}
+[data-decoration="retrowave"] .retrowave-sun,
+[data-decoration="retrowave"] .retrowave-mountains,
+[data-decoration="retrowave"] .retrowave-haze {
+  display: block;
+}
+
+/* Тёплая дымка заката: медленно дышит и сдвигается, чтобы небо не выглядело
+   статичной заливкой. */
+[data-decoration="retrowave"] .retrowave-haze {
+  position: absolute;
+  inset: 18% -12% 30%;
+  pointer-events: none;
   z-index: 0;
+  background:
+    radial-gradient(ellipse 44% 34% at 50% 78%, rgba(255, 96, 150, 0.34), transparent 72%),
+    radial-gradient(ellipse 28% 22% at 22% 82%, rgba(190, 80, 255, 0.2), transparent 74%),
+    radial-gradient(ellipse 32% 20% at 80% 80%, rgba(255, 45, 149, 0.2), transparent 74%);
+  animation: retrowave-haze-drift 80s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes retrowave-haze-drift {
+  from { transform: translate3d(-1.5%, 0, 0) scale(1); }
+  to { transform: translate3d(1.5%, -1.2%, 0) scale(1.04); }
+}
+
+[data-decoration="retrowave"] .retrowave-sun {
+  position: absolute;
+  left: 50%;
+  bottom: 49.5%;
+  width: min(34vh, 30vw);
+  aspect-ratio: 1;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+  background:
+    radial-gradient(circle at 50% 14%, rgba(255, 255, 255, 0.55), transparent 40%),
+    linear-gradient(180deg, #fff27a 0%, #ffd24d 20%, #ff9a3d 42%, #ff4d9d 68%, #e01a7f 100%);
+  box-shadow:
+    0 0 70px rgba(255, 140, 80, 0.55),
+    0 0 200px rgba(255, 45, 149, 0.45);
+  animation: retrowave-sun-glow 8s ease-in-out infinite;
+}
+@keyframes retrowave-sun-glow {
+  0%, 100% {
+    box-shadow: 0 0 70px rgba(255, 140, 80, 0.55), 0 0 200px rgba(255, 45, 149, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 100px rgba(255, 165, 90, 0.7), 0 0 280px rgba(255, 45, 149, 0.6);
+  }
+}
+/* Полосы-развёртка в нижней половине солнца: чем ниже, тем плотнее, как на
+   закатных принтах. Маска оставляет верхнюю часть чистой, а медленный сдвиг
+   узора делает диск «живым». */
+[data-decoration="retrowave"] .retrowave-sun::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(5, 2, 11, 0.88) 0 2px,
+    transparent 2px 11px
+  );
+  -webkit-mask-image: linear-gradient(to bottom, transparent 38%, rgba(0, 0, 0, 0.5) 48%, #000 100%);
+  mask-image: linear-gradient(to bottom, transparent 38%, rgba(0, 0, 0, 0.5) 48%, #000 100%);
+  animation: retrowave-sun-scan 9s linear infinite;
+}
+@keyframes retrowave-sun-scan {
+  from { background-position: 0 0; }
+  to { background-position: 0 22px; }
+}
+[data-decoration="retrowave"] .retrowave-mountains {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  /* Горы под сеткой: пол долины проходит поверх их основания. */
+  z-index: 3;
+  animation: retrowave-mountains-breathe 12s ease-in-out infinite;
+}
+@keyframes retrowave-mountains-breathe {
+  0%, 100% { opacity: 0.96; }
+  50% { opacity: 1; }
 }
 
 /* Слой канваса сцены: виджеты из своей раскладки поверх фиксированного
@@ -534,9 +665,9 @@ body {
   top: -100%;
   bottom: -100%;
   background-image:
-    linear-gradient(rgba(45, 226, 230, 0.72) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 45, 149, 0.6) 1px, transparent 1px);
-  background-size: 80px 60px;
+    linear-gradient(rgba(140, 240, 255, 0.92) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(45, 226, 230, 0.68) 1px, transparent 1px);
+  background-size: 72px 50px;
   will-change: transform;
   animation: retrowave-grid-scroll 12s linear infinite;
 }
@@ -1186,6 +1317,10 @@ body {
   [data-decoration="retrowave"] .bg-shape,
   [data-decoration="retrowave"] .grid-texture,
   [data-decoration="retrowave"] .scene-wrapper::after,
+  [data-decoration="retrowave"] .retrowave-haze,
+  [data-decoration="retrowave"] .retrowave-sun,
+  [data-decoration="retrowave"] .retrowave-sun::after,
+  [data-decoration="retrowave"] .retrowave-mountains,
   [data-theme="nebula"] .scene-wrapper::before,
   [data-theme="orbital"] .scene-wrapper::after,
   [data-theme="sf"] .scene-wrapper::before,
