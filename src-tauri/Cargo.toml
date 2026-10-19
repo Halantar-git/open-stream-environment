@@ -54,6 +54,9 @@ rustfft = "6"
 # `wss`: на Windows — schannel (без внешних сборок и OpenSSL), на macOS —
 # Security.framework, на Linux — системный OpenSSL.
 tokio-tungstenite = { version = "0.29", features = ["native-tls"] }
+# TLS-коннектор нужен напрямую: signaling сам выбирает адрес (IPv4 раньше
+# IPv6), а потом отдаёт уже открытый TCP-сокет в `client_async_tls_with_config`.
+native-tls = "0.2"
 futures-util = "0.3"
 # HTTP для Twitch Helix (отправка в чат, модерация, клип/маркер) и обмена
 # токенов. TLS — тот же `native-tls`, что и у сокета.

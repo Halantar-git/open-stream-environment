@@ -4,9 +4,11 @@
 #   cd signal
 #   npx wrangler deploy
 #
-# После первого деплоя добавьте свой домен:
+# Рабочий адрес: wss://ose-signal.halantar.workers.dev (он же — умолчание
+# в приложении). Свой домен можно привязать позже:
 #   signal.ose-overlay.ru  ->  worker ose-signal
-# (Workers → ose-signal → Settings → Domains & Routes)
+# (Workers → ose-signal → Settings → Domains & Routes; зона должна быть
+# в том же аккаунте Cloudflare)
 #
 # Видимое имя воркера можно поменять; адрес сервиса задаётся в настройках
 # приложения («Настройки → Гостевые камеры → Адрес signaling»).

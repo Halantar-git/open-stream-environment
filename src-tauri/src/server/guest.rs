@@ -755,6 +755,84 @@ impl GuestHub {
     }
 }
 
+/// Сокет signaling после завершения upgrade.
+type SignalingSocket =
+    tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
+
+/*
+  Подключение к signaling с предпочтением IPv4.
+
+  `connect_async` берёт первый адрес из системного резолвера. На Windows это
+  обычно IPv6, а у части провайдеров маршрут до Cloudflare по IPv6 обрывается
+  на TLS: TCP открывается, рукопожатие — нет. IPv4 при этом жив, поэтому адреса
+  перебираем сами, IPv4 раньше IPv6. Таймаут на адрес короткий: зависший SYN
+  не должен съедать весь бюджет подключения у вызывающей стороны.
+*/
+async fn connect_signaling(url: &str) -> Result<SignalingSocket, String> {
+    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+
+    let request = url
+        .into_client_request()
+        .map_err(|error| error.to_string())?;
+    let uri = request.uri().clone();
+    let host = uri
+        .host()
+        .ok_or_else(|| "адрес без хоста".to_string())?
+        .trim_start_matches('[')
+        .trim_end_matches(']')
+        .to_string();
+    let secure = uri.scheme_str() == Some("wss");
+    let port = uri.port_u16().unwrap_or(if secure { 443 } else { 80 });
+
+    let addrs = tokio::net::lookup_host((host.as_str(), port))
+        .await
+        .map_err(|error| error.to_string())?;
+    let addrs = ipv4_first(addrs.collect());
+
+    let connector = if secure {
+        let tls = native_tls::TlsConnector::new().map_err(|error| error.to_string())?;
+        Some(tokio_tungstenite::Connector::NativeTls(tls))
+    } else {
+        None
+    };
+
+    let mut last_error = "адрес не разрешён".to_string();
+    for addr in addrs {
+        let connected =
+            tokio::time::timeout(Duration::from_secs(3), tokio::net::TcpStream::connect(addr))
+                .await;
+        let tcp = match connected {
+            Ok(Ok(tcp)) => tcp,
+            Ok(Err(error)) => {
+                last_error = format!("{addr}: {error}");
+                continue;
+            }
+            Err(_) => {
+                last_error = format!("{addr}: таймаут");
+                continue;
+            }
+        };
+        match tokio_tungstenite::client_async_tls_with_config(
+            request.clone(),
+            tcp,
+            None,
+            connector.clone(),
+        )
+        .await
+        {
+            Ok((socket, _)) => return Ok(socket),
+            Err(error) => last_error = format!("{addr}: {error}"),
+        }
+    }
+    Err(last_error)
+}
+
+/// Резолвер отдаёт адреса в порядке системы; IPv6 уводим в конец.
+fn ipv4_first(mut addrs: Vec<std::net::SocketAddr>) -> Vec<std::net::SocketAddr> {
+    addrs.sort_by_key(|addr| addr.is_ipv6());
+    addrs
+}
+
 /// Гостевая ссылка (LAN или облако) с переподключением.
 ///
 /// Панель может отменить соединение в любой момент: `rx` закрывается, и
@@ -774,12 +852,9 @@ fn guest_link_loop(
             if !hub.outgoing_is(slot, generation) {
                 break;
             }
-            let connected = tokio::time::timeout(
-                Duration::from_secs(10),
-                tokio_tungstenite::connect_async(url.as_str()),
-            )
-            .await;
-            let Ok(Ok((socket, _))) = connected else {
+            let connected =
+                tokio::time::timeout(Duration::from_secs(10), connect_signaling(&url)).await;
+            let Ok(Ok(socket)) = connected else {
                 failures += 1;
                 if failures >= 5 {
                     hub.clear_outgoing(slot, generation);
@@ -877,12 +952,9 @@ fn cloud_link_loop(
             if !hub.has_cloud(slot, generation) {
                 break;
             }
-            let connected = tokio::time::timeout(
-                Duration::from_secs(10),
-                tokio_tungstenite::connect_async(url.as_str()),
-            )
-            .await;
-            let Ok(Ok((socket, _))) = connected else {
+            let connected =
+                tokio::time::timeout(Duration::from_secs(10), connect_signaling(&url)).await;
+            let Ok(Ok(socket)) = connected else {
                 sleep(Duration::from_secs(2)).await;
                 continue;
             };
@@ -1216,6 +1288,17 @@ mod tests {
         assert_eq!(valid_signal("wss://signal.ose-overlay.ru?x=1"), None);
         assert!(valid_room("a1b2c3d4e5f60718"));
         assert!(!valid_room("short"));
+    }
+
+    #[test]
+    fn signaling_addresses_prefer_ipv4() {
+        let v4: std::net::SocketAddr = "104.21.58.161:443".parse().unwrap();
+        let v6: std::net::SocketAddr = "[2606:4700::1]:443".parse().unwrap();
+        // Резолвер может вернуть IPv6 первым — тогда TLS у части провайдеров
+        // не поднимается, хотя IPv4 отвечает.
+        assert_eq!(ipv4_first(vec![v6, v4]), vec![v4, v6]);
+        assert_eq!(ipv4_first(vec![v4, v6]), vec![v4, v6]);
+        assert_eq!(ipv4_first(vec![v6]), vec![v6]);
     }
 
     #[test]

@@ -2862,6 +2862,7 @@ dependencies = [
  "futures-util",
  "http-body-util",
  "if-addrs",
+ "native-tls",
  "reqwest",
  "rustfft",
  "serde",

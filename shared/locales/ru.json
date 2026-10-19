@@ -404,7 +404,7 @@
     "guestModeCloud": "Интернет",
     "guestModeLan": "Локальная сеть",
     "guestSignal": "Адрес signaling",
-    "guestSignalPlaceholder": "wss://signal.ose-overlay.ru",
+    "guestSignalPlaceholder": "wss://ose-signal.halantar.workers.dev",
     "guestConnect": "Подключиться к стримеру",
     "guestConnectDesc": "Вставьте приглашение, которое прислал хост. Ваша камера и микрофон будут отправлены только после его подтверждения.",
     "guestInvite": "Приглашение",

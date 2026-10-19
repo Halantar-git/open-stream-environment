@@ -31,7 +31,11 @@ use crate::storage::history::{js_number, js_number_or_zero, js_truthy, number_va
 
 /// Публичный signaling гостевых камер по умолчанию. Меняется в настройках:
 /// после деплоя Worker'а можно указать свой домен или локальный адрес.
-pub const DEFAULT_GUEST_SIGNAL_URL: &str = "wss://signal.ose-overlay.ru";
+pub const DEFAULT_GUEST_SIGNAL_URL: &str = "wss://ose-signal.halantar.workers.dev";
+
+/// Адрес из первых сборок фичи: домен так и не подняли, поэтому точное
+/// совпадение с ним при загрузке конфига заменяется на рабочий.
+const LEGACY_GUEST_SIGNAL_URL: &str = "wss://signal.ose-overlay.ru";
 
 /// Уровни доступа команд бота — как `BOT_LEVELS`.
 const BOT_LEVELS: [&str; 4] = ["everyone", "subscriber", "moderator", "broadcaster"];
@@ -819,6 +823,13 @@ pub fn normalize_config(config: &mut ConfigFile) {
         signal
     } else {
         DEFAULT_GUEST_SIGNAL_URL.to_string()
+    };
+    // Старый адрес по умолчанию не резолвится: без этой замены обновившийся
+    // пользователь так и сидел бы с мёртвым доменом в настройках.
+    let signal = if signal == LEGACY_GUEST_SIGNAL_URL {
+        DEFAULT_GUEST_SIGNAL_URL.to_string()
+    } else {
+        signal
     };
     config.set("guest_signal_url", Value::from(signal));
 

@@ -39,18 +39,25 @@ npx wrangler login
 npx wrangler deploy
 ```
 
-Затем в Cloudflare: **Workers → ose-signal → Settings → Domains & Routes** —
-добавить `signal.ose-overlay.ru` и CNAME на `ose-signal.<account>.workers.dev`.
+Рабочий адрес — `wss://ose-signal.halantar.workers.dev` (аккаунт Cloudflare
+`halantar`). Свой домен привязывается в **Workers → ose-signal → Settings →
+Domains & Routes**; зона должна быть в том же аккаунте Cloudflare (для
+`signal.ose-overlay.ru` это значит перенести DNS домена в Cloudflare).
 
 Проверка:
 
 ```bash
+curl -4 -i https://ose-signal.halantar.workers.dev/healthz     # 200 OSE signal
+curl -4 -i https://ose-signal.halantar.workers.dev/ws          # 426 websocket required
 npx wrangler dev          # локально, http://127.0.0.1:8787
-curl http://127.0.0.1:8787/healthz
 ```
 
+Флаг `-4` не случаен: у части провайдеров IPv6-маршрут до Cloudflare
+обрывается на TLS, хотя IPv4 отвечает. Клиент в приложении сам ставит IPv4
+вперёд по той же причине.
+
 В приложении адрес задаётся в «Настройки → Гостевые камеры → Адрес signaling»:
-по умолчанию `wss://signal.ose-overlay.ru`, для локальной проверки —
+по умолчанию `wss://ose-signal.halantar.workers.dev`, для локальной проверки —
 `ws://127.0.0.1:8787`.
 
 GitHub Pages сюда не подходит: статический хостинг не умеет WebSocket.
