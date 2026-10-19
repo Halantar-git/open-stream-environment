@@ -74,8 +74,6 @@
       this.audioCtx = null;
       this.stream = null;
       this.micError = null;
-      this._eqBars = null;
-      this._eqLast = null;
       this._bands = null;
       this._bandValues = null;
       this._bandBins = 0;

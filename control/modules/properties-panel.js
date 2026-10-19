@@ -52,6 +52,7 @@ export function initPropertiesPanel({
   wireSwitch,
   escapeAttr,
   round1,
+  micOrientationPatch,
   sendMicCaptureConfig,
   refreshMicDevices,
   sendCameraCaptureConfig,
@@ -364,6 +365,7 @@ export function initPropertiesPanel({
       const mode = micDef("visualizer_mode", "sine");
       const rawRotation = Number(config.rotation);
       const rotation = rawRotation === 90 || rawRotation === 180 || rawRotation === 270 ? rawRotation : 0;
+      const vertical = rotation === 90 || rotation === 270;
       const themePrimary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#0060A8";
       const micColor = config.color || state.micConfig.color || themePrimary;
       const deviceId = state.micConfig.deviceId || "";
@@ -445,13 +447,12 @@ export function initPropertiesPanel({
             <option value="ring" ${mode === "ring" ? "selected" : ""}>${t("mic.modeRing")}</option>
           </select>
         </div>
-        <div class="md-field"><label>${t("mic.rotation")}</label>
-          <select id="pMicRotation">
-            <option value="0" ${rotation === 0 ? "selected" : ""}>${t("mic.rotationNone")}</option>
-            <option value="90" ${rotation === 90 ? "selected" : ""}>${t("mic.rotation90")}</option>
-            <option value="180" ${rotation === 180 ? "selected" : ""}>${t("mic.rotation180")}</option>
-            <option value="270" ${rotation === 270 ? "selected" : ""}>${t("mic.rotation270")}</option>
+        <div class="md-field"><label>${t("mic.orientation")}</label>
+          <select id="pMicOrientation">
+            <option value="horizontal" ${vertical ? "" : "selected"}>${t("mic.orientationHorizontal")}</option>
+            <option value="vertical" ${vertical ? "selected" : ""}>${t("mic.orientationVertical")}</option>
           </select>
+          <p class="properties__hint" style="margin:6px 0 0;">${t("mic.orientationHint")}</p>
         </div>
         ${fields}
         ${captureHtml}`;
@@ -794,6 +795,23 @@ export function initPropertiesPanel({
     } else if (inst.type === "mic") {
       // Настройки отображения пишем в конфиг виджета (per-widget).
       const setMic = (key, value) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { [key]: value } } });
+      // Ориентация — это не только поворот рисунка: в широком виджете
+      // вертикальная волна всё равно осталась бы тонкой полоской по центру,
+      // а столбики — узкой полосой у края. Поэтому меняем стороны виджета
+      // местами вокруг его центра — вертикальный виджет становится высоким.
+      const setMicOrientation = (isVertical) => {
+        const item = state.layout.find((w) => w.id === inst.id) || inst;
+        const rect = micOrientationPatch(item, isVertical);
+        const geo = rect.swapped
+          ? { x: round1(rect.x), y: round1(rect.y), w: round1(rect.w), h: round1(rect.h) }
+          : null;
+        const patch = { config: { rotation: rect.rotation } };
+        if (geo) Object.assign(patch, geo);
+        // Подгоняем снимок сразу, иначе следующий рендер откатит селект.
+        item.config = Object.assign({}, item.config, { rotation: rect.rotation });
+        if (geo) Object.assign(item, geo);
+        send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch });
+      };
       const onMicRange = (id, labelId, fmt, apply) => {
         const input = propertiesEl.querySelector("#" + id);
         if (!input) return;
@@ -806,8 +824,8 @@ export function initPropertiesPanel({
       };
       const modeEl = propertiesEl.querySelector("#pMicMode");
       if (modeEl) modeEl.addEventListener("change", (e) => setMic("visualizer_mode", e.target.value));
-      const micRotationEl = propertiesEl.querySelector("#pMicRotation");
-      if (micRotationEl) micRotationEl.addEventListener("change", (e) => setMic("rotation", Number(e.target.value)));
+      const micOrientationEl = propertiesEl.querySelector("#pMicOrientation");
+      if (micOrientationEl) micOrientationEl.addEventListener("change", (e) => setMicOrientation(e.target.value === "vertical"));
       onMicRange("pMicSensitivity", "pMicSensitivityValue", (v) => v.toFixed(1), (v) => setMic("sensitivity", v));
       onMicRange("pMicLineWidth", "pMicLineWidthValue", (v) => v.toFixed(1), (v) => setMic("lineWidth", v));
       onMicRange("pMicBarCount", "pMicBarCountValue", (v) => String(Math.round(v)), (v) => setMic("barCount", Math.round(v)));

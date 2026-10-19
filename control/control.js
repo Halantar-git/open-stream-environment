@@ -38,6 +38,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const CameraFrame = window.CameraFrame;
   const { ICONS } = window.SharedIcons;
   const { safeCssColor, createCaptureGeneration } = window.ControlGuards;
+  const { micOrientationPatch } = window.ControlMicOrientation;
   const { cameraOutputSize } = window.ControlCamera;
   const { WIDGET_TYPES, widgetsForTheme, themeAllowsWidget, replacedBy3d, widgetRole, resolveTypeForTheme, isAnimatedWidget } = window.WidgetCatalog;
   const t = (key, params) => (window.I18n ? window.I18n.t(key, params) : key);
@@ -2693,6 +2694,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     wireSwitch,
     escapeAttr,
     round1,
+    micOrientationPatch,
     sendMicCaptureConfig,
     refreshMicDevices,
     sendCameraCaptureConfig,
