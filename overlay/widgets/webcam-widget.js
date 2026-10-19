@@ -28,6 +28,11 @@
     * "camera" — живое видео из моста. Панель управления захватывает камеру и
       шлёт JPEG-кадры по бинарному каналу, сервер пересылает их оверлею, а
       виджет рисует их на canvas внутри той же рамки.
+
+    * "remote" — гостевая камера. Виджет — WebRTC-приёмник: панель гостя
+      кодирует камеру и микрофон, сигналинг идёт через сервер, медиа — напрямую.
+      Соединение живёт в экземпляре виджета, поэтому смена рамки или раскладки
+      его не рвёт.
 */
 (function (root, factory) {
   const BaseWidget =
@@ -74,6 +79,15 @@
       this.videoDecoder = null;
       this._streamConfig = null;
       this._reportedDecodeFailure = false;
+      // Гостевая камера (WebRTC). Соединение и поток живут в экземпляре, а не
+      // в DOM: render() может пересобрать разметку в любой момент.
+      this._guestSlot = "";
+      this._guestPeer = null;
+      this._guestStream = null;
+      this._guestState = "idle";
+      this._guestSubscribed = false;
+      this._guestQueuedCandidates = [];
+      this._guestApplying = false;
 
       const { EVENT_TYPES } = this.context;
       if (EVENT_TYPES && EVENT_TYPES.CAMERA_VIDEO_FRAME) {
@@ -84,6 +98,18 @@
       }
       if (EVENT_TYPES && EVENT_TYPES.OVERLAY_CAMERA_CONFIG) {
         this.subscribe(EVENT_TYPES.OVERLAY_CAMERA_CONFIG, (payload) => this._onCameraConfig(payload));
+      }
+      if (EVENT_TYPES && EVENT_TYPES.GUEST_ACCEPTED) {
+        this.subscribe(EVENT_TYPES.GUEST_ACCEPTED, (payload) => this._onGuestAccepted(payload));
+      }
+      if (EVENT_TYPES && EVENT_TYPES.GUEST_SIGNAL) {
+        this.subscribe(EVENT_TYPES.GUEST_SIGNAL, (payload) => this._onGuestSignal(payload));
+      }
+      if (EVENT_TYPES && EVENT_TYPES.GUEST_LEFT) {
+        this.subscribe(EVENT_TYPES.GUEST_LEFT, (payload) => this._onGuestLeft(payload));
+      }
+      if (EVENT_TYPES && EVENT_TYPES.GUEST_DECLINED) {
+        this.subscribe(EVENT_TYPES.GUEST_DECLINED, (payload) => this._onGuestLeft(payload));
       }
       this._applyPerspective();
     }
@@ -103,14 +129,21 @@
     }
 
     onUpdate(prev, next) {
+      if (prev.source !== next.source || prev.guestSlot !== next.guestSlot) {
+        this._teardownGuest();
+      }
       if (prev.perspective !== next.perspective || prev.perspectiveDirection !== next.perspectiveDirection) {
         this._applyPerspective();
+      }
+      if (this.audioElement && prev.volume !== next.volume) {
+        this.audioElement.volume = clamp(num(next.volume, 100) / 100, 0, 1);
       }
     }
 
     onUnmount() {
       // Декодирование, начатое до удаления виджета, должно молча завершиться:
       // ссылки на canvas к этому моменту уже нет.
+      this._teardownGuest();
       this._closeDecoder();
       this._decoding = false;
       this.videoCanvas = null;
@@ -122,6 +155,22 @@
       const { escapeHtml, escapeAttr, t } = this.context;
       const cfg = this.config;
       const camera = cfg.source === "camera";
+      const remote = cfg.source === "remote";
+      if (remote) {
+        // Состояние нужно до сборки разметки: заглушка пишется в HTML сразу.
+        const protocol = typeof window !== "undefined" ? window.GuestProtocol : null;
+        const slot = protocol ? protocol.normalizeSlot(cfg.guestSlot) : String(cfg.guestSlot || "");
+        if (!slot) {
+          this._guestState = "no-slot";
+        } else if (
+          !this._guestStream &&
+          this._guestState !== "connecting" &&
+          this._guestState !== "offline" &&
+          this._guestState !== "error"
+        ) {
+          this._guestState = "waiting";
+        }
+      }
 
       const accent = SAFE_ACCENT.test(String(cfg.color || "").trim()) ? String(cfg.color).trim() : "var(--md-primary)";
       const thickness = clamp(Math.round(num(cfg.thickness, 4)), 1, 16);
@@ -152,6 +201,18 @@
             noSignal +
             `</div>`
         );
+      } else if (remote) {
+        // Видео и звук — разные элементы: видео всегда беззвучное, иначе
+        // браузер блокирует автозапуск; громкость гостя живёт на audio.
+        const emptyKey = this._guestEmptyKey();
+        const placeholder = `<div class="widget-webcam__empty">${escapeHtml(t(emptyKey))}</div>`;
+        parts.push(
+          `<div class="widget-webcam__video-wrap" data-fit="${escapeAttr(cfg.fit === "contain" ? "contain" : "cover")}">` +
+            `<video class="widget-webcam__video" autoplay playsinline muted></video>` +
+            `<audio class="widget-webcam__audio" autoplay></audio>` +
+            placeholder +
+            `</div>`
+        );
       }
       if (cfg.showBorder !== false) parts.push(`<div class="widget-webcam__frame"></div>`);
       if (cfg.showCorners !== false) {
@@ -172,11 +233,229 @@
       // Ссылки на canvas после перерисовки новые: кадр нарисуется на
       // следующем тике моста (≤ 83 мс при 12 FPS).
       this.videoCanvas = camera ? this.host.querySelector(".widget-webcam__video") : null;
-      this.emptyEl = camera ? this.host.querySelector(".widget-webcam__empty") : null;
+      this.videoElement = remote ? this.host.querySelector(".widget-webcam__video") : null;
+      this.audioElement = remote ? this.host.querySelector(".widget-webcam__audio") : null;
+      this.emptyEl = camera || remote ? this.host.querySelector(".widget-webcam__empty") : null;
       if (this.videoCanvas) {
         this.videoCanvas.style.transform = cfg.mirror ? "scaleX(-1)" : "";
       }
+      if (this.videoElement) {
+        this.videoElement.style.objectFit = cfg.fit === "contain" ? "contain" : "cover";
+        this.videoElement.style.transform = cfg.mirror ? "scaleX(-1)" : "";
+      }
+      if (this.audioElement) {
+        this.audioElement.volume = clamp(num(cfg.volume, 100) / 100, 0, 1);
+      }
+      // Для гостя декодер JPEG/H.264 не нужен: другой источник кадров.
       if (!camera) this._closeDecoder();
+      if (remote) this._syncGuest();
+    }
+
+    // ---- гостевая камера (WebRTC) ------------------------------------
+
+    // Виджет хоста — принимающая сторона: offer приходит от панели гостя.
+    // Повторный offer (перезагрузка OBS у гостя, новое подключение) всегда
+    // разбираем на новом peer, иначе старые ICE-пары тянули бы в прошлое.
+    _onGuestAccepted(payload) {
+      const slot = payload && payload.slot;
+      if (!slot || slot !== this._guestSlot) return;
+      this._createGuestPeer();
+      this._guestState = "connecting";
+      this._updateGuestEmpty();
+    }
+
+    _onGuestSignal(payload) {
+      if (!payload || payload.slot !== this._guestSlot) return;
+      const signal = payload.payload;
+      if (!signal) return;
+      if (signal.type === "offer") {
+        this._applyGuestOffer(signal.sdp);
+        return;
+      }
+      if (signal.type === "candidate" && signal.candidate) {
+        const peer = this._guestPeer;
+        if (!peer) return;
+        if (peer.remoteDescription) {
+          peer.addIceCandidate(signal.candidate).catch(() => {});
+        } else {
+          this._guestQueuedCandidates.push(signal.candidate);
+        }
+      }
+    }
+
+    _onGuestLeft(payload) {
+      if (payload && payload.slot && payload.slot !== this._guestSlot) return;
+      this._closeGuestPeer();
+      this._guestStream = null;
+      this._guestState = "offline";
+      this._updateGuestEmpty();
+    }
+
+    async _applyGuestOffer(sdp) {
+      if (!sdp || this._guestApplying) return;
+      this._guestApplying = true;
+      let peer = this._guestPeer;
+      if (peer && peer.remoteDescription) {
+        this._createGuestPeer();
+        peer = this._guestPeer;
+      }
+      if (!peer) return;
+      try {
+        await peer.setRemoteDescription({ type: "offer", sdp });
+        for (const candidate of this._guestQueuedCandidates) {
+          try {
+            await peer.addIceCandidate(candidate);
+          } catch (_) {
+            /* устаревший кандидат */
+          }
+        }
+        this._guestQueuedCandidates = [];
+        const answer = await peer.createAnswer();
+        await peer.setLocalDescription(answer);
+        if (this._guestPeer !== peer) return;
+        this._sendGuestSignal({ type: "answer", sdp: peer.localDescription.sdp });
+      } catch (_) {
+        this._guestState = "error";
+        this._updateGuestEmpty();
+      } finally {
+        this._guestApplying = false;
+      }
+    }
+
+    _createGuestPeer() {
+      this._closeGuestPeer();
+      if (typeof RTCPeerConnection !== "function") {
+        this._guestState = "error";
+        this._updateGuestEmpty();
+        return;
+      }
+      const peer = new RTCPeerConnection({ iceServers: [] });
+      this._guestPeer = peer;
+      this._guestQueuedCandidates = [];
+      peer.onicecandidate = (event) => {
+        if (!event.candidate) return;
+        this._sendGuestSignal({ type: "candidate", candidate: event.candidate.toJSON() });
+      };
+      peer.ontrack = (event) => {
+        const stream = event.streams && event.streams[0];
+        if (!stream) return;
+        this._guestStream = stream;
+        this._attachGuestStream();
+        this._guestState = "live";
+        this._updateGuestEmpty();
+      };
+      peer.onconnectionstatechange = () => {
+        if (this._guestPeer !== peer) return;
+        const state = peer.connectionState;
+        if (state === "connected") {
+          this._guestState = "live";
+        } else if (state === "disconnected" || state === "connecting") {
+          this._guestState = "connecting";
+        } else if (state === "failed" || state === "closed") {
+          this._guestState = "offline";
+        }
+        this._updateGuestEmpty();
+      };
+    }
+
+    _sendGuestSignal(payload) {
+      const { EVENT_TYPES, send } = this.context;
+      if (!EVENT_TYPES || !EVENT_TYPES.GUEST_SIGNAL || typeof send !== "function") return;
+      send(EVENT_TYPES.GUEST_SIGNAL, { slot: this._guestSlot, payload });
+    }
+
+    _closeGuestPeer() {
+      if (!this._guestPeer) return;
+      this._guestPeer.onicecandidate = null;
+      this._guestPeer.ontrack = null;
+      this._guestPeer.onconnectionstatechange = null;
+      try {
+        this._guestPeer.close();
+      } catch (_) {
+        /* уже закрыт */
+      }
+      this._guestPeer = null;
+      this._guestQueuedCandidates = [];
+    }
+
+    _syncGuest() {
+      const protocol = typeof window !== "undefined" ? window.GuestProtocol : null;
+      const slot = protocol ? protocol.normalizeSlot(this.config.guestSlot) : String(this.config.guestSlot || "");
+      if (!slot) {
+        this._teardownGuest();
+        this._guestState = "no-slot";
+        this._updateGuestEmpty();
+        return;
+      }
+      if (this._guestSlot !== slot) {
+        this._teardownGuest();
+        this._guestSlot = slot;
+      }
+      if (this._guestStream) {
+        this._guestState = "live";
+      } else if (this._guestState !== "connecting" && this._guestState !== "offline" && this._guestState !== "error") {
+        this._guestState = "waiting";
+      }
+      this._updateGuestEmpty();
+      this._attachGuestStream();
+      this._subscribeGuest();
+    }
+
+    _subscribeGuest() {
+      if (this._guestSubscribed || !this._guestSlot) return;
+      const { EVENT_TYPES, send } = this.context;
+      if (!EVENT_TYPES || !EVENT_TYPES.CMD_GUEST_SUBSCRIBE || typeof send !== "function") return;
+      this._guestSubscribed = true;
+      send(EVENT_TYPES.CMD_GUEST_SUBSCRIBE, { slot: this._guestSlot });
+    }
+
+    _teardownGuest() {
+      if (this._guestSubscribed) {
+        const { EVENT_TYPES, send } = this.context;
+        if (EVENT_TYPES && EVENT_TYPES.CMD_GUEST_SUBSCRIBE && typeof send === "function") {
+          // Пустой слот — «я больше не принимаю этот поток».
+          send(EVENT_TYPES.CMD_GUEST_SUBSCRIBE, { slot: "" });
+        }
+      }
+      this._guestSubscribed = false;
+      this._closeGuestPeer();
+      this._guestStream = null;
+      this._guestSlot = "";
+      this._guestState = "idle";
+    }
+
+    _attachGuestStream() {
+      const stream = this._guestStream;
+      if (!stream) return;
+      if (this.videoElement) {
+        if (this.videoElement.srcObject !== stream) this.videoElement.srcObject = stream;
+        const played = this.videoElement.play();
+        if (played && typeof played.catch === "function") played.catch(() => {});
+      }
+      if (this.audioElement) {
+        if (this.audioElement.srcObject !== stream) this.audioElement.srcObject = stream;
+        const played = this.audioElement.play();
+        if (played && typeof played.catch === "function") played.catch(() => {});
+      }
+    }
+
+    _guestEmptyKey() {
+      if (this._guestState === "no-slot") return "webcam.guestNoSlot";
+      if (this._guestState === "connecting") return "webcam.guestConnecting";
+      if (this._guestState === "offline" || this._guestState === "error") return "webcam.guestOffline";
+      return "webcam.guestWaiting";
+    }
+
+    _updateGuestEmpty() {
+      if (this.config.source !== "remote" || !this.host) return;
+      const el = this.host.querySelector(".widget-webcam__empty");
+      if (!el) return;
+      if (this._guestState === "live") {
+        el.style.display = "none";
+        return;
+      }
+      el.style.display = "";
+      el.textContent = this.context.t(this._guestEmptyKey());
     }
 
     // Кадр приходит Blob'ом (JPEG). Декодируем через Image: это работает и в

@@ -432,7 +432,7 @@ fn header_text(headers: &HeaderMap, name: &str) -> Option<String> {
 /// параметр, а не разбор URL целиком. Процентное кодирование понимаем — код
 /// доступа едет в адресе пульта через `encodeURIComponent`, — иначе `%2D` в коде
 /// не совпал бы с сохранённым.
-fn query_param(query: &str, name: &str) -> Option<String> {
+pub fn query_param(query: &str, name: &str) -> Option<String> {
     for pair in query.split('&') {
         let (key, value) = match pair.split_once('=') {
             Some((key, value)) => (key, value),

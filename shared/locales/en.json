@@ -398,6 +398,15 @@
     "run": "Run",
     "test": "Test",
     "remoteHint": "Web Remote — open from your phone on the same Wi-Fi network",
+    "guests": "Guest cameras",
+    "guestsDesc": "Extra cameras from other computers: invite by link, confirm on your side, video and audio go directly. Guest audio is heard in OBS when the Browser Source has “Control audio via OBS” enabled.",
+    "guestConnect": "Connect to a streamer",
+    "guestConnectDesc": "Paste the invite the host sent you. Your camera and microphone are sent only after the host confirms.",
+    "guestInvite": "Invite",
+    "guestInvitePlaceholder": "ose-join://v1?...",
+    "guestYourName": "Your name",
+    "guestJoin": "Connect",
+    "guestLeave": "Disconnect",
     "cameraAngles": "Camera angles (Multicam)",
     "cameraAnglesDesc": "Permanently switch the active camera via Twitch points or manually (no timer).",
     "addCameraAngle": "+ Add angle",
@@ -705,7 +714,7 @@
     "mic": "Microphone visualizer",
     "micDesc": "Animated sound wave",
     "webcam": "Webcam frame",
-    "webcamDesc": "Camera frame: decoration only or live video through the control panel",
+    "webcamDesc": "Camera frame: decoration, live video through the panel, or a guest camera via invite",
     "death": "Death Counter",
     "deathDesc": "Big death counter for challenge streams",
     "soundboard": "Soundboard",
@@ -1118,6 +1127,10 @@
     "webcamDeviceFallback": "Camera {{n}}",
     "webcamDeviceRefresh": "Refresh device list",
     "webcamWidth": "Frame width",
+    "webcamSourceRemote": "Guest camera",
+    "webcamGuestSlot": "Guest slot",
+    "webcamGuestVolume": "Guest volume",
+    "webcamGuestNoSlot": "Choose a slot",
     "webcamStreamSize": "Stream: {{size}}",
     "webcamStreamIdle": "Stream: not running",
     "webcamFps": "Frames per second",
@@ -1134,9 +1147,56 @@
     "soundboardShowBackground": "Popup background",
     "soundboardShowBorder": "Popup border"
   },
+  "guests": {
+    "slot": {
+      "cam2": "Camera 2",
+      "cam3": "Camera 3",
+      "cam4": "Camera 4"
+    },
+    "state": {
+      "free": "free",
+      "open": "invite active",
+      "waiting": "awaiting approval",
+      "accepted": "waiting for widget",
+      "connected": "live"
+    },
+    "status": {
+      "idle": "",
+      "joining": "Connecting…",
+      "invalid": "This is not an OSE invite",
+      "accepted": "Host confirmed, waiting for the screen",
+      "capture": "Opening the camera…",
+      "connecting": "Connecting…",
+      "live": "Live",
+      "disconnected": "Connection lost",
+      "declined": "The host declined the connection",
+      "left": "Connection closed",
+      "error": "Could not connect",
+      "unsupported": "WebRTC is unavailable"
+    },
+    "error": {
+      "NotReadableError": "the camera or microphone is busy in another app",
+      "NotAllowedError": "camera and microphone permission is missing",
+      "NotFoundError": "device not found",
+      "OverconstrainedError": "the device does not support the selected mode",
+      "connection": "could not establish the connection",
+      "offer": "could not create the offer",
+      "answer": "could not negotiate the connection"
+    },
+    "invite": "Invite",
+    "accept": "Allow",
+    "decline": "Decline",
+    "revoke": "Disconnect",
+    "copy": "Copy",
+    "noLanAddress": "This machine has no LAN address — the guest cannot connect. Check Wi-Fi or Ethernet."
+  },
   "webcam": {
     "noSignal": "No camera signal",
     "cameraOff": "Camera off",
+    "guestWaiting": "Waiting for guest",
+    "guestConnecting": "Connecting guest…",
+    "guestOffline": "Guest is not connected",
+    "guestNoSlot": "No slot selected",
     "previewLive": "Live camera preview"
   },
   "preview": {
@@ -1473,6 +1533,13 @@
       "p5": "Microphone settings are split in two: display (mode, color, opacity, perspective) is per widget, while the device, echo cancellation and noise suppression are global because the microphone is opened once.",
       "p6": "The webcam frame has two modes. Frame only is decoration: corners, a thin border and a LIVE badge in the current theme color; the camera is a separate OBS source. Live video from the panel makes the control panel capture the camera and send frames to the overlay; device, frame width, FPS (up to 60), codec, bitrate or JPEG quality are configurable, plus mirror and fit. H.264 through WebCodecs is used by default; if the browser or hardware cannot handle it, the panel falls back to JPEG. The OBS browser source itself has no camera access.",
       "p7": "The news ticker is a scrolling line of stream events: donations, follows, subs, rewards, and optionally chat, the goal and the top donation. Speed is set in pixels per second and does not depend on message length; direction and sources are toggled in the inspector. There is a flat 2D variant and 3D tickers in the theme sets with a slight perspective."
+    },
+    "guests": {
+      "title": "Guest cameras",
+      "p1": "In Settings → Guest cameras each slot has an Invite button: it creates a one-time ose-join:// link.",
+      "p2": "Send the link to the guest. They paste it into OSE, enter a name and wait — the camera starts only after you press Allow. The link lives for 15 minutes and survives a dropped connection.",
+      "p3": "In the layout pick the camera widget, the Guest camera source and a slot. Several slots give several cameras in frame; each volume is adjusted in the properties.",
+      "p4": "For the guest's voice to reach the stream, enable “Control audio via OBS” on the Browser Source. Only the local network is supported so far: both machines must be on the same Wi-Fi/Ethernet."
     },
     "presets": {
       "title": "Layout presets",

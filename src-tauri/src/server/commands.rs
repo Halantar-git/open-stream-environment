@@ -32,6 +32,7 @@ use crate::diagnostics::Diagnostics;
 use crate::integrations::twitch_chat::test_chat_messages;
 use crate::protocol::event_types;
 use crate::server::cli;
+use crate::server::guest;
 use crate::server::locales::{self, Locales};
 use crate::server::remote;
 use crate::state::{appearance, config, donation_media, layout, poll, scenes};
@@ -1116,6 +1117,120 @@ pub fn handle_message(
                 config::set_streamdeck_config(&mut config, &patch);
             }
             broadcast_state(diagnostics);
+        }
+        // ---- Гостевые камеры ----
+        event_types::CMD_GUEST_INVITE => {
+            let slot = payload.get("slot").and_then(Value::as_str).unwrap_or("");
+            let name = payload.get("name").and_then(Value::as_str).unwrap_or("");
+            if let Some(mut invite) = diagnostics.guests().create(slot, name) {
+                // Адрес хоста в локальной сети: гость подключится к нему
+                // напрямую, без посредников и проброса портов.
+                let host = diagnostics.lan_host();
+                invite["loopback"] = Value::Bool(host.starts_with("127."));
+                invite["host"] = Value::from(host);
+                invite["port"] = Value::from(diagnostics.port());
+                let frame = json!({ "type": event_types::GUEST_INVITE, "payload": invite });
+                if let Some(id) = client {
+                    diagnostics.clients().send_text(id, &frame.to_string());
+                }
+            }
+            guest::broadcast_status(diagnostics);
+        }
+        event_types::CMD_GUEST_ACCEPT => {
+            let slot = payload.get("slot").and_then(Value::as_str).unwrap_or("");
+            if let Some((slot, guest_id)) = diagnostics.guests().accept(slot) {
+                let accepted =
+                    json!({ "type": event_types::GUEST_ACCEPTED, "payload": { "slot": slot } })
+                        .to_string();
+                diagnostics.clients().send_text(guest_id, &accepted);
+                // Приёмник уже подписан — сообщаем ему и гостю, что можно
+                // начинать обмен SDP.
+                if let Some(receiver) = diagnostics.guests().receiver_client(&slot) {
+                    diagnostics.clients().send_text(receiver, &accepted);
+                    let ready = json!({
+                        "type": event_types::GUEST_RECEIVER_READY,
+                        "payload": { "slot": slot },
+                    })
+                    .to_string();
+                    diagnostics.clients().send_text(guest_id, &ready);
+                }
+            }
+            guest::broadcast_status(diagnostics);
+        }
+        event_types::CMD_GUEST_DECLINE | event_types::CMD_GUEST_REVOKE => {
+            let slot = payload.get("slot").and_then(Value::as_str).unwrap_or("");
+            if let Some((slot, guest_id)) = diagnostics.guests().decline(slot) {
+                if guest_id != 0 {
+                    let declined = json!({
+                        "type": event_types::GUEST_DECLINED,
+                        "payload": { "slot": slot },
+                    })
+                    .to_string();
+                    diagnostics.clients().send_text(guest_id, &declined);
+                }
+                // Виджет хоста тоже должен закрыть peer и погасить кадр.
+                broadcast(
+                    diagnostics,
+                    event_types::GUEST_DECLINED,
+                    json!({ "slot": slot }),
+                );
+            }
+            guest::broadcast_status(diagnostics);
+        }
+        event_types::CMD_GUEST_JOIN => {
+            let host = payload.get("host").and_then(Value::as_str).unwrap_or("");
+            let port = payload.get("port").and_then(Value::as_u64).unwrap_or(0) as u16;
+            let slot = payload.get("slot").and_then(Value::as_str).unwrap_or("");
+            let token = payload.get("token").and_then(Value::as_str).unwrap_or("");
+            let name = payload
+                .get("name")
+                .or_else(|| payload.get("displayName"))
+                .and_then(Value::as_str)
+                .unwrap_or("");
+            diagnostics
+                .guests_arc()
+                .join(diagnostics.clients_arc(), host, port, slot, token, name);
+            guest::broadcast_status(diagnostics);
+        }
+        event_types::CMD_GUEST_LEAVE => {
+            if let Some(slot) = diagnostics.guests().leave() {
+                guest::broadcast_control(
+                    diagnostics,
+                    event_types::GUEST_LEFT,
+                    json!({ "slot": slot, "local": true }),
+                );
+            }
+            guest::broadcast_status(diagnostics);
+        }
+        event_types::CMD_GUEST_SUBSCRIBE => {
+            if let Some(id) = client {
+                let slot = payload.get("slot").and_then(Value::as_str).unwrap_or("");
+                // Пустой слот — виджет размонтирован и больше не принимает поток.
+                if slot.is_empty() {
+                    diagnostics.guests().unsubscribe(id);
+                    guest::broadcast_status(diagnostics);
+                    return;
+                }
+                if let Some((slot, guest_id, ready)) = diagnostics.guests().subscribe(slot, id) {
+                    if ready {
+                        // Виджет смонтировался уже после подтверждения: гостю
+                        // пора собирать offer, а приёмнику — создавать peer.
+                        let accepted = json!({
+                            "type": event_types::GUEST_ACCEPTED,
+                            "payload": { "slot": slot },
+                        })
+                        .to_string();
+                        diagnostics.clients().send_text(id, &accepted);
+                        let ready = json!({
+                            "type": event_types::GUEST_RECEIVER_READY,
+                            "payload": { "slot": slot },
+                        })
+                        .to_string();
+                        diagnostics.clients().send_text(guest_id, &ready);
+                    }
+                }
+                guest::broadcast_status(diagnostics);
+            }
         }
         event_types::CMD_SET_TWITCH_REWARDS => {
             {

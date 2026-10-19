@@ -108,6 +108,13 @@ export function createStateManager() {
     // Фактический кадр моста: что отдаёт устройство и что уходит в эфир.
     // Живёт только в панели, серверу не нужен.
     cameraStreamInfo: null,
+    // Гостевые камеры: слоты хоста, приглашения и состояние исходящего
+    // подключения (гость). Ссылки живут только в панели до перезапуска.
+    guestSlots: [],
+    guestInvites: {},
+    guestPending: {},
+    guestOutgoing: null,
+    guestShare: { slot: "", status: "idle", detail: "" },
     // Последний снимок конфига Longshot (Executive Hangar), если получен.
     longshot: null,
   };

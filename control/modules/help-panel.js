@@ -102,6 +102,16 @@ const SECTIONS = [
     ],
   },
   {
+    id: "guests",
+    title: "help.guests.title",
+    blocks: [
+      { type: "p", key: "help.guests.p1" },
+      { type: "p", key: "help.guests.p2" },
+      { type: "p", key: "help.guests.p3" },
+      { type: "p", key: "help.guests.p4" },
+    ],
+  },
+  {
     id: "presets",
     title: "help.presets.title",
     blocks: [

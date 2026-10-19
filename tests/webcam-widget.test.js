@@ -69,6 +69,10 @@ function makeEl(tag) {
         if (!this._videoCanvas) this._videoCanvas = makeEl("canvas");
         return this._videoCanvas;
       }
+      if (selector === ".widget-webcam__audio") {
+        if (!this._audioEl) this._audioEl = makeEl("audio");
+        return this._audioEl;
+      }
       if (selector === ".widget-webcam__empty") {
         if (!this._emptyEl) this._emptyEl = makeEl("div");
         return this._emptyEl;
@@ -248,6 +252,72 @@ describe("WebcamWidget", () => {
   test("в режиме рамки видео-слоя нет", () => {
     const w = mount({ source: "frame" });
     expect(w.host.innerHTML).not.toContain("widget-webcam__video-wrap");
+  });
+
+  test("гостевая камера подписывается на выбранный слот", () => {
+    const w = mount({ source: "remote", guestSlot: "cam2" });
+
+    expect(w.host.innerHTML).toContain("<video");
+    expect(w.host.innerHTML).toContain("widget-webcam__audio");
+    expect(w.context.send).toHaveBeenCalledWith(EVENT_TYPES.CMD_GUEST_SUBSCRIBE, { slot: "cam2" });
+  });
+
+  test("гостевая камера без слота просит его выбрать и не подписывается", () => {
+    const w = mount({ source: "remote", guestSlot: "" });
+
+    expect(w.host.innerHTML).toContain("webcam.guestNoSlot");
+    expect(w.context.send).not.toHaveBeenCalledWith(EVENT_TYPES.CMD_GUEST_SUBSCRIBE, { slot: "" });
+  });
+
+  test("подтверждение гостя создаёт peer, а offer получает answer", async () => {
+    const created = [];
+    class FakePeer {
+      constructor() {
+        this.remoteDescription = null;
+        this.localDescription = null;
+        this.connectionState = "new";
+        created.push(this);
+      }
+      close() {}
+      setRemoteDescription(desc) {
+        this.remoteDescription = desc;
+        return Promise.resolve();
+      }
+      createAnswer() {
+        return Promise.resolve({ type: "answer", sdp: "v=0 answer" });
+      }
+      setLocalDescription(desc) {
+        this.localDescription = desc;
+        return Promise.resolve();
+      }
+      addIceCandidate() {
+        return Promise.resolve();
+      }
+    }
+    const previous = global.RTCPeerConnection;
+    global.RTCPeerConnection = FakePeer;
+    try {
+      const w = mount({ source: "remote", guestSlot: "cam2" });
+      w.context.bus.emit(EVENT_TYPES.GUEST_ACCEPTED, { slot: "cam2" });
+      expect(created).toHaveLength(1);
+
+      w.context.bus.emit(EVENT_TYPES.GUEST_SIGNAL, {
+        slot: "cam2",
+        payload: { type: "offer", sdp: "v=0 offer" },
+      });
+      // `_applyGuestOffer` асинхронный: даём ему завершить цепочку promise.
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(created[0].remoteDescription).toEqual({ type: "offer", sdp: "v=0 offer" });
+      expect(w.context.send).toHaveBeenCalledWith(EVENT_TYPES.GUEST_SIGNAL, {
+        slot: "cam2",
+        payload: { type: "answer", sdp: "v=0 answer" },
+      });
+    } finally {
+      global.RTCPeerConnection = previous;
+    }
   });
 
   test("зеркало применяется к canvas и снимается при обновлении", () => {

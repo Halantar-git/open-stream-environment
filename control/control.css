@@ -1588,6 +1588,67 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   margin-top: 12px;
 }
 
+/* Гостевые камеры: слоты хоста и подключение к чужому стриму. */
+.guest-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+.guest-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-sm);
+  background: var(--md-surface-container-high);
+}
+.guest-slot__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.guest-slot__name {
+  font-weight: 600;
+}
+.guest-slot__guest {
+  font-size: 12px;
+  color: var(--md-on-surface-variant);
+}
+.guest-slot__state {
+  margin-left: auto;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--md-on-surface-variant);
+}
+.guest-slot__state[data-state="waiting"] {
+  color: var(--md-primary);
+}
+.guest-slot__state[data-state="accepted"] {
+  color: var(--md-secondary);
+}
+.guest-slot__state[data-state="connected"] {
+  color: #4ade80;
+}
+.guest-slot__actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.guest-slot__link-row {
+  display: flex;
+  gap: 6px;
+}
+.guest-slot__link {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
 .soundboard-item {
   display: grid;
   grid-template-columns: minmax(120px, 0.8fr) minmax(150px, 1fr) minmax(150px, 1fr) minmax(150px, 1fr) auto auto;

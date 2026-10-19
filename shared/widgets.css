@@ -1399,6 +1399,10 @@
   width: 100%;
   height: 100%;
 }
+/* Гостевой звук: элемент нужен для воспроизведения, но не для показа. */
+.widget-webcam__audio {
+  display: none;
+}
 .widget-webcam__empty {
   position: absolute;
   inset: 0;

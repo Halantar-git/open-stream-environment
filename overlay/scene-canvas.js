@@ -428,6 +428,13 @@
       case EVENT_TYPES.CAMERA_STREAM_CONFIG:
         bus.emit(EVENT_TYPES.CAMERA_STREAM_CONFIG, msg.payload || {});
         break;
+      // Гостевые камеры на сценах работают так же, как на оверлее.
+      case EVENT_TYPES.GUEST_ACCEPTED:
+      case EVENT_TYPES.GUEST_SIGNAL:
+      case EVENT_TYPES.GUEST_LEFT:
+      case EVENT_TYPES.GUEST_DECLINED:
+        bus.emit(msg.type, msg.payload || {});
+        break;
       case EVENT_TYPES.LOCALES:
         if (window.I18n) {
           window.I18n.setLocales(msg.payload && msg.payload.locales);

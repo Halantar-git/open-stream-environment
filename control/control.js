@@ -31,6 +31,7 @@ import { initWsClient } from "./modules/ws-client.js";
 import { createStateManager } from "./modules/state-manager.js";
 import { initPropertiesPanel } from "./modules/properties-panel.js";
 import { initCanvasEditor } from "./modules/canvas-editor.js";
+import { initGuestPanel } from "./modules/guest-panel.js";
 
 const { EVENT_TYPES } = window.SharedEvents;
   const MicFrame = window.MicFrame;
@@ -2683,6 +2684,16 @@ const { EVENT_TYPES } = window.SharedEvents;
   refreshCameraDevices();
 
   // ---- canvas editor (extracted module) ----
+  const guestPanel = initGuestPanel({
+    state,
+    t,
+    send,
+    EVENT_TYPES,
+    // `copyText` объявлен ниже, но вызов идёт только по клику — к этому
+    // моменту он уже проинициализирован.
+    copyText: (text) => copyText(text),
+  });
+
   const canvasEditor = initCanvasEditor({
     state,
     t,
@@ -3981,6 +3992,9 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   // ---- websocket ----
   function handleMessage(msg) {
+    // Гостевые события разбирает отдельный модуль: они не относятся к
+    // раскладке и не должны разрастаться в общий switch.
+    guestPanel.handleMessage(msg);
     switch (msg.type) {
       case EVENT_TYPES.STATE:
         state.applySnapshot(msg.payload);

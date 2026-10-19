@@ -78,6 +78,15 @@
     CHAT_HUD_CONFIG_UPDATE: "chat_hud_config_update", // { config } — chat HUD window geometry/opacity/font (after save)
     REWARD_TTS: "reward_tts", // { text } — server -> overlay: speak a channel-point reward phrase
     TWITCH_ACTION_RESULT: "twitch_action_result", // { action, ok, message?, error? } — server -> control: clip/marker feedback
+    // Гостевые камеры. Сигналинг WebRTC идёт через сервер, медиа — напрямую.
+    GUEST_STATUS: "guest_status", // { slots: [{ slot, name, state, guest? }] } — server -> все локальные окна
+    GUEST_INVITE: "guest_invite", // { slot, token, host, port } — server -> панель после создания приглашения
+    GUEST_JOIN_REQUEST: "guest_join_request", // { slot, name? } — гость подключился, нужно подтверждение
+    GUEST_ACCEPTED: "guest_accepted", // { slot } — хост пустил гостя
+    GUEST_DECLINED: "guest_declined", // { slot } — хост отклонил или отозвал приглашение
+    GUEST_LEFT: "guest_left", // { slot } — гость отключился
+    GUEST_RECEIVER_READY: "guest_receiver_ready", // { slot } — виджет на хосте готов принять поток
+    GUEST_SIGNAL: "guest_signal", // { slot, payload } — SDP/ICE в обе стороны (сервер не разбирает)
 
     // control -> server commands
     CMD_ADD_WIDGET: "cmd_add_widget", // { type }
@@ -172,7 +181,15 @@
     CMD_SET_TTS_CONFIG: "cmd_set_tts_config", // { config: { enabled?, volume?, rate?, lang? } }
     CMD_SET_DONATION_VOICE: "cmd_set_donation_voice", // { config: { donationAlerts?, volume? } }
     CMD_TEST_SOUNDBOARD: "cmd_test_soundboard", // { soundId }
-    CMD_SET_STREAMDECK_CONFIG: "cmd_set_streamdeck_config", // { config }
+    CMD_SET_STREAMDECK_CONFIG: "cmd_set_streamdeck_config",
+    // Гостевые камеры: приглашения, подтверждение и сигналинг.
+    CMD_GUEST_INVITE: "cmd_guest_invite", // { slot, name? }
+    CMD_GUEST_ACCEPT: "cmd_guest_accept", // { slot }
+    CMD_GUEST_DECLINE: "cmd_guest_decline", // { slot }
+    CMD_GUEST_REVOKE: "cmd_guest_revoke", // { slot }
+    CMD_GUEST_JOIN: "cmd_guest_join", // { host, port, slot, token, name? }
+    CMD_GUEST_LEAVE: "cmd_guest_leave", // {}
+    CMD_GUEST_SUBSCRIBE: "cmd_guest_subscribe", // { slot } — какой виджет принимает поток // { config }
     CMD_RUN_OBS_COMMAND: "cmd_run_obs_command", // { id }
     CMD_SET_CAMERA_ANGLE: "cmd_set_camera_angle", // { angleId }
     CMD_TRIGGER_CAMERA_FILTER: "cmd_trigger_camera_filter", // { filterId }

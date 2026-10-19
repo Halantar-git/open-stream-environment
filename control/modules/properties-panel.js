@@ -204,7 +204,8 @@ export function initPropertiesPanel({
         : "";
     const webcamSource = type === "webcam" ? (raw.config && raw.config.source) || "frame" : "";
     const cameraCodec = type === "webcam" ? (state.cameraConfig && state.cameraConfig.codec) || "auto" : "";
-    const sig = `${raw.id}|${raw.type}|${type}|${micMode}|${webcamSource}|${cameraCodec}|${(state.micDevices || []).length}|${(state.cameraDevices || []).length}`;
+    const guestSlotsSig = type === "webcam" ? (state.guestSlots || []).map((s) => `${s.slot}:${s.state}`).join(",") : "";
+    const sig = `${raw.id}|${raw.type}|${type}|${micMode}|${webcamSource}|${cameraCodec}|${(raw.config && raw.config.guestSlot) || ""}|${guestSlotsSig}|${(state.micDevices || []).length}|${(state.cameraDevices || []).length}`;
     if (!force && sig === lastSig && propertiesEl.contains(document.activeElement)) return;
     lastSig = sig;
     const def = WIDGET_TYPES[type] || {};
@@ -466,8 +467,20 @@ export function initPropertiesPanel({
       const radius = config.radius == null || legacyRadius ? themeRadius : Math.max(0, Math.min(64, Math.round(Number(config.radius) || 0)));
       const label = config.label == null ? "LIVE" : config.label;
       const position = config.labelPosition || "top-left";
-      const source = config.source === "camera" ? "camera" : "frame";
+      const source = config.source === "remote" ? "remote" : config.source === "camera" ? "camera" : "frame";
       const cameraCfg = state.cameraConfig || {};
+      const guestSlot = config.guestSlot || "";
+      const guestSlots = Array.isArray(state.guestSlots) && state.guestSlots.length
+        ? state.guestSlots
+        : ["cam2", "cam3", "cam4"].map((slot) => ({ slot, state: "free" }));
+      const guestVolume = Math.round(Math.min(100, Math.max(0, Number(config.volume) || (config.volume === 0 ? 0 : 100))));
+      const guestSlotOptions = guestSlots
+        .map((item) => {
+          const label = t(`guests.slot.${item.slot}`);
+          const stateLabel = t(`guests.state.${item.state || "free"}`);
+          return `<option value="${escapeAttr(item.slot)}" ${guestSlot === item.slot ? "selected" : ""}>${escapeHtml(label)} — ${escapeHtml(stateLabel)}</option>`;
+        })
+        .join("");
       const devices = Array.isArray(state.cameraDevices) ? state.cameraDevices : [];
       const deviceId = cameraCfg.deviceId || "";
       const deviceOptions = [
@@ -525,8 +538,18 @@ export function initPropertiesPanel({
           <select id="pWebcamSource">
             <option value="frame" ${source === "frame" ? "selected" : ""}>${t("properties.webcamSourceFrame")}</option>
             <option value="camera" ${source === "camera" ? "selected" : ""}>${t("properties.webcamSourceCamera")}</option>
+            <option value="remote" ${source === "remote" ? "selected" : ""}>${t("properties.webcamSourceRemote")}</option>
           </select>
         </div>
+        ${source === "remote"
+            ? `<div class="md-field"><label>${t("properties.webcamGuestSlot")}</label>
+                 <select id="pWebcamGuestSlot">
+                   <option value="" ${guestSlot ? "" : "selected"}>${t("properties.webcamGuestNoSlot")}</option>
+                   ${guestSlotOptions}
+                 </select>
+               </div>
+               <div class="md-field"><label>${t("properties.webcamGuestVolume")}: <span id="pWebcamGuestVolumeValue">${guestVolume}%</span></label><input type="range" id="pWebcamGuestVolume" min="0" max="100" step="1" value="${guestVolume}"></div>`
+            : ""}
         <div class="md-field"><label>${t("properties.webcamLabel")}</label><input type="text" id="pWebcamLabel" value="${escapeAttr(label)}" placeholder="LIVE"></div>
         <div class="properties__toggle-row"><label>${t("properties.webcamShowLabel")}</label>${switchHtml("pWebcamShowLabel", config.showLabel !== false)}</div>
         <div class="md-field"><label>${t("properties.webcamLabelPosition")}</label>
@@ -849,6 +872,19 @@ export function initPropertiesPanel({
       });
       propertiesEl.querySelector("#pWebcamColor").addEventListener("input", (e) => patchWebcam({ color: e.target.value }));
       propertiesEl.querySelector("#pWebcamColorReset").addEventListener("click", () => patchWebcam({ color: "" }));
+      const guestSlotSelect = propertiesEl.querySelector("#pWebcamGuestSlot");
+      if (guestSlotSelect) {
+        guestSlotSelect.addEventListener("change", (e) => patchWebcam({ guestSlot: e.target.value }));
+      }
+      const guestVolumeRange = propertiesEl.querySelector("#pWebcamGuestVolume");
+      if (guestVolumeRange) {
+        guestVolumeRange.addEventListener("input", (e) => {
+          const value = Number(e.target.value);
+          const label = propertiesEl.querySelector("#pWebcamGuestVolumeValue");
+          if (label) label.textContent = `${value}%`;
+          patchWebcam({ volume: value });
+        });
+      }
       wireSwitch(propertiesEl.querySelector("#pCameraEnabled"), (on) => sendCameraCaptureConfig({ enabled: on }));
       const cameraDevice = propertiesEl.querySelector("#pCameraDevice");
       if (cameraDevice) {

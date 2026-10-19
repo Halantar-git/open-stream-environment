@@ -453,11 +453,16 @@ export function initCanvasEditor({
           ? ["tl", "tr", "bl", "br"].map((corner) => `<span class="widget-webcam__corner" data-corner="${corner}"></span>`).join("")
           : "";
         const camera = config.source === "camera";
+        const remote = config.source === "remote";
         const videoHtml = camera
           ? `<div class="widget-webcam__video-wrap" data-fit="${escapeAttr(config.fit === "contain" ? "contain" : "cover")}">` +
             `<div class="widget-webcam__empty">${escapeHtml(t("webcam.previewLive"))}</div>` +
             `</div>`
-          : "";
+          : remote
+            ? `<div class="widget-webcam__video-wrap" data-fit="${escapeAttr(config.fit === "contain" ? "contain" : "cover")}">` +
+              `<div class="widget-webcam__empty">${escapeHtml(t(config.guestSlot ? "webcam.guestWaiting" : "webcam.guestNoSlot"))}</div>` +
+              `</div>`
+            : "";
         const html = `<div class="widget-webcam" style="--webcam-accent:${escapeAttr(accent)};--webcam-thickness:${thickness}px;--webcam-radius:${radius}px;">
           ${config.showBackground ? `<div class="widget-webcam__backdrop"></div>` : ""}
           ${videoHtml}

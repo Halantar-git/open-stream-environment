@@ -20,6 +20,7 @@ pub mod access;
 pub mod bus;
 pub mod cli;
 pub mod commands;
+pub mod guest;
 pub mod locales;
 pub mod oauth;
 pub mod remote;
@@ -290,6 +291,27 @@ async fn websocket(
     upgrade: WebSocketUpgrade,
 ) -> Response {
     let incoming = access::Incoming::new(address.ip(), &headers, query.as_deref());
+    let role = access::role_from_query(query.as_deref(), "other");
+
+    // Гость приходит не из браузера, а из другого экземпляра OSE и
+    // подтверждает доступ одноразовым токеном приглашения, а не кодом пульта.
+    if role == "guest" {
+        let query = query.as_deref().unwrap_or_default();
+        let slot = access::query_param(query, "slot").unwrap_or_default();
+        let name = access::query_param(query, "name").unwrap_or_default();
+        let token = incoming.presented_token();
+        if !access::is_allowed_ws_origin(incoming.origin().as_deref(), bus.diagnostics.port())
+            || !bus.diagnostics.guests().open(&slot, &token, &name)
+        {
+            bus.diagnostics.access().increment_denied_upgrade();
+            eprintln!("[ose] гостевое подключение отклонено");
+            return (StatusCode::FORBIDDEN, "403").into_response();
+        }
+        let external = !access::is_loopback_addr(&address.ip());
+        return upgrade
+            .on_upgrade(move |socket| handle_socket(socket, bus, role, external, Some(slot)));
+    }
+
     let expected = bus.diagnostics.remote_token();
     let decision = incoming.check_upgrade(bus.diagnostics.port(), &|given| {
         access::tokens_match(&expected, given)
@@ -304,61 +326,95 @@ async fn websocket(
         return (StatusCode::FORBIDDEN, "403").into_response();
     }
 
-    let role = access::role_from_query(query.as_deref(), "other");
     let external = decision.external;
-    upgrade.on_upgrade(move |socket| handle_socket(socket, bus, role, external))
+    upgrade.on_upgrade(move |socket| handle_socket(socket, bus, role, external, None))
 }
 
 /// Соединение с клиентом: отправка очереди кадров и чтение команд.
-async fn handle_socket(mut socket: WebSocket, bus: Bus, role: String, external: bool) {
+async fn handle_socket(
+    mut socket: WebSocket,
+    bus: Bus,
+    role: String,
+    external: bool,
+    guest_slot: Option<String>,
+) {
     let (sender, mut receiver) = mpsc::unbounded_channel::<Message>();
     let id = bus
         .diagnostics
         .clients()
         .add(role.clone(), external, sender);
 
+    // Гостю не отдаём ни состояние, ни раскладку, ни настройки: через этот
+    // сокет идут только SDP и ICE. Привязка к слоту — единственное, что его
+    // касается.
+    if let Some(slot) = &guest_slot {
+        if !bus.diagnostics.guests().bind(slot, id) {
+            bus.diagnostics.guests().cancel(slot);
+            bus.diagnostics.clients().remove(id);
+            return;
+        }
+        guest::broadcast_status(&bus.diagnostics);
+        guest::broadcast_control(
+            &bus.diagnostics,
+            event_types::GUEST_JOIN_REQUEST,
+            json!({
+                "slot": slot,
+                "name": bus.diagnostics.guests().guest_name(slot),
+            }),
+        );
+    }
+
     // Первыми кадрами — словари и состояние: без них клиент остался бы с пустым
     // интерфейсом (панель ждёт `state`, оверлей — тему и раскладку).
-    if let Some(locales) = &bus.locales {
+    if guest_slot.is_none() {
+        if let Some(locales) = &bus.locales {
+            send_frame(
+                &mut socket,
+                event_types::LOCALES,
+                locales.payload(bus.diagnostics.language()),
+            )
+            .await;
+        }
         send_frame(
             &mut socket,
-            event_types::LOCALES,
-            locales.payload(bus.diagnostics.language()),
+            event_types::STATE,
+            bus.diagnostics.state_snapshot(),
         )
         .await;
-    }
-    send_frame(
-        &mut socket,
-        event_types::STATE,
-        bus.diagnostics.state_snapshot(),
-    )
-    .await;
 
-    // Настройки колеса, микрофона и камеры — сразу после состояния, как в JS:
-    // иначе панель и оверлей остаются с умолчаниями, а первая же правка затирает
-    // сохранённое значение дефолтом (перезагрузка источника в OBS сбрасывала
-    // позицию/скорость колеса и настройки захвата).
-    {
-        let database = bus.diagnostics.database();
-        for (kind, config) in [
-            (event_types::WHEEL_CONFIG, database.wheel_config()),
-            (
-                event_types::WHEEL_SPEED_CONFIG,
-                database.wheel_speed_config(),
-            ),
-            (event_types::OVERLAY_MIC_CONFIG, database.mic_config()),
-            (event_types::OVERLAY_CAMERA_CONFIG, database.camera_config()),
-        ] {
-            send_frame(&mut socket, kind, json!({ "config": config })).await;
+        // Настройки колеса, микрофона и камеры — сразу после состояния, как в JS:
+        // иначе панель и оверлей остаются с умолчаниями, а первая же правка затирает
+        // сохранённое значение дефолтом (перезагрузка источника в OBS сбрасывала
+        // позицию/скорость колеса и настройки захвата).
+        {
+            let database = bus.diagnostics.database();
+            for (kind, config) in [
+                (event_types::WHEEL_CONFIG, database.wheel_config()),
+                (
+                    event_types::WHEEL_SPEED_CONFIG,
+                    database.wheel_speed_config(),
+                ),
+                (event_types::OVERLAY_MIC_CONFIG, database.mic_config()),
+                (event_types::OVERLAY_CAMERA_CONFIG, database.camera_config()),
+            ] {
+                send_frame(&mut socket, kind, json!({ "config": config })).await;
+            }
         }
-    }
+        // Слоты гостевых камер: панель должна знать их до первого события.
+        send_frame(
+            &mut socket,
+            event_types::GUEST_STATUS,
+            bus.diagnostics.guests().snapshot(),
+        )
+        .await;
 
-    // Перезагрузка страницы OBS не должна съедать то, что играет: очередь знает
-    // текущий алерт, поэтому отдаём его заново — как в JS.
-    if role == "overlay" {
-        let current = bus.diagnostics.queue_snapshot()["now"].clone();
-        if !current.is_null() {
-            send_frame(&mut socket, event_types::ALERT, current).await;
+        // Перезагрузка страницы OBS не должна съедать то, что играет: очередь знает
+        // текущий алерт, поэтому отдаём его заново — как в JS.
+        if role == "overlay" {
+            let current = bus.diagnostics.queue_snapshot()["now"].clone();
+            if !current.is_null() {
+                send_frame(&mut socket, event_types::ALERT, current).await;
+            }
         }
     }
 
@@ -374,7 +430,11 @@ async fn handle_socket(mut socket: WebSocket, bus: Bus, role: String, external: 
             },
             incoming = socket.recv() => match incoming {
                 Some(Ok(Message::Text(text))) => {
-                    handle_client_message(&bus, id, &role, external, text.as_str())
+                    if let Some(slot) = &guest_slot {
+                        handle_guest_message(&bus, slot, text.as_str());
+                    } else {
+                        handle_client_message(&bus, id, &role, external, text.as_str());
+                    }
                 }
                 // Микрокадры: бинарный кадр от панели идёт оверлеям и сценам
                 // как есть — сервер только проверяет магию и длину
@@ -382,19 +442,22 @@ async fn handle_socket(mut socket: WebSocket, bus: Bus, role: String, external: 
                 // виджет микрофона можно поставить на канвас сцены, а
                 // `getUserMedia` там недоступен.
                 Some(Ok(Message::Binary(data))) => {
-                    if crate::audio::frame::is_frame(&data) {
-                        bus.diagnostics
-                            .clients()
-                            .broadcast_binary_to_roles(&["overlay", "scene"], data.to_vec());
-                    } else if role == "control"
-                        && (crate::camera_frame::is_frame(&data)
-                            || crate::camera_frame::is_h264_frame(&data))
-                    {
-                        // Кадры камеры шлёт только панель: их ждут и оверлей,
-                        // и полноэкранные сцены (там теперь тоже есть камера).
-                        bus.diagnostics
-                            .clients()
-                            .broadcast_binary_to_roles(&["overlay", "scene"], data.to_vec());
+                    // Гостю двоичный канал не положен: только signaling.
+                    if guest_slot.is_none() {
+                        if crate::audio::frame::is_frame(&data) {
+                            bus.diagnostics
+                                .clients()
+                                .broadcast_binary_to_roles(&["overlay", "scene"], data.to_vec());
+                        } else if role == "control"
+                            && (crate::camera_frame::is_frame(&data)
+                                || crate::camera_frame::is_h264_frame(&data))
+                        {
+                            // Кадры камеры шлёт только панель: их ждут и оверлей,
+                            // и полноэкранные сцены (там теперь тоже есть камера).
+                            bus.diagnostics
+                                .clients()
+                                .broadcast_binary_to_roles(&["overlay", "scene"], data.to_vec());
+                        }
                     }
                 }
                 Some(Ok(Message::Close(_))) | None => break,
@@ -405,6 +468,58 @@ async fn handle_socket(mut socket: WebSocket, bus: Bus, role: String, external: 
     }
 
     bus.diagnostics.clients().remove(id);
+    if let Some(slot) = guest_slot {
+        if bus.diagnostics.guests().unbind(id).is_some() {
+            guest::broadcast_status(&bus.diagnostics);
+            // Не только панели: виджет должен погасить последний кадр.
+            let frame = json!({
+                "type": event_types::GUEST_LEFT,
+                "payload": { "slot": slot },
+            })
+            .to_string();
+            bus.diagnostics.clients().broadcast_text(&frame);
+        }
+    } else {
+        // Оверлей или сцена могли быть приёмником: снимаем подписку.
+        bus.diagnostics.guests().unsubscribe(id);
+    }
+}
+
+/// Кадр от гостя: только `guest_signal` и только для своего слота.
+/// SDP и ICE не разбираются — их получает подписанный виджет хоста.
+fn handle_guest_message(bus: &Bus, slot: &str, raw: &str) {
+    let Ok(value) = serde_json::from_str::<Value>(raw) else {
+        return;
+    };
+    if value.get("type").and_then(Value::as_str) != Some(event_types::GUEST_SIGNAL) {
+        return;
+    }
+    let frame_slot = value
+        .get("payload")
+        .and_then(|payload| payload.get("slot"))
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    if frame_slot != slot {
+        return;
+    }
+    if let Some(receiver) = bus.diagnostics.guests().receiver_client(slot) {
+        bus.diagnostics.clients().send_text(receiver, raw);
+    }
+}
+
+/// Сигнал от локального окна (панели или виджета): хосту — своему гостю,
+/// гостю — исходящему соединению.
+fn handle_local_guest_signal(diagnostics: &Diagnostics, message: &Value) {
+    let slot = message
+        .get("payload")
+        .and_then(|payload| payload.get("slot"))
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    if let Some(guest) = diagnostics.guests().guest_client(slot) {
+        diagnostics.clients().send_text(guest, &message.to_string());
+    } else {
+        diagnostics.guests().send_outgoing(&message.to_string());
+    }
 }
 
 /// Один входящий кадр: разбор, журнал, ограничитель частоты, команда.
@@ -427,6 +542,18 @@ fn handle_client_message(bus: &Bus, id: u64, role: &str, external: bool, raw: &s
     // Автодополнение CLI отвечает прямо отправителю и не попадает ни в
     // ограничитель частоты, ни в журнал команд — как в JS: Tab не должен
     // упираться в лимит, а журнал — забиваться мусором от каждого нажатия.
+    // Сигналинг WebRTC — не команда: ICE-кандидаты приходят пачками, и
+    // ограничитель частоты не должен их резать. Получателя выбирает хаб:
+    // на хосте — подключённый гость, у гостя — исходящее соединение.
+    if kind == event_types::GUEST_SIGNAL {
+        // Только локальные окна: пульт с телефона не должен управлять
+        // чужим SDP, а гость вообще не доходит до этого разбора.
+        if !external && matches!(role, "control" | "overlay" | "scene") {
+            handle_local_guest_signal(&bus.diagnostics, &message);
+        }
+        return;
+    }
+
     if kind == event_types::EXEC_CLI_COMPLETION {
         commands::handle_message(
             bus.diagnostics.as_ref(),

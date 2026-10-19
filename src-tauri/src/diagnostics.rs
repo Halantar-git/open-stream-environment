@@ -152,6 +152,9 @@ pub struct Diagnostics {
     youtube: YoutubeLiveControl,
     /// Текущая сессия стрима (или `None`): её время — граница «этого стрима».
     current_session: Arc<Mutex<Option<Value>>>,
+    /// Гостевые камеры: приглашения и signaling. Под `Arc`: исходящее
+    /// соединение гостя живёт в фоновой задаче.
+    guests: Arc<crate::server::guest::GuestHub>,
     /// OBS WebSocket: подключение и запросы.
     obs: Arc<ObsClient>,
     /// Очередь алертов: одна на приложение, отдаёт алерты по одному.
@@ -372,6 +375,7 @@ impl Diagnostics {
             donatex,
             youtube,
             current_session: Arc::new(Mutex::new(None)),
+            guests: Arc::new(crate::server::guest::GuestHub::new()),
             obs,
             alert_queue,
             pending_video: Mutex::new(None),
@@ -439,6 +443,16 @@ impl Diagnostics {
     /// Реестр клиентов под `Arc` — нужен фоновым задачам для рассылки.
     pub fn clients_arc(&self) -> Arc<ClientRegistry> {
         Arc::clone(&self.clients)
+    }
+
+    /// Слоты гостевых камер и их приглашения.
+    pub fn guests(&self) -> &crate::server::guest::GuestHub {
+        &self.guests
+    }
+
+    /// Тот же хаб под `Arc` — для фонового исходящего соединения гостя.
+    pub fn guests_arc(&self) -> Arc<crate::server::guest::GuestHub> {
+        Arc::clone(&self.guests)
     }
 
     /// Цикл колеса — общее состояние для команд панели и действий пульта.
@@ -1246,6 +1260,12 @@ impl Diagnostics {
     /// осталось ни одной копии старого значения.
     pub fn port(&self) -> u16 {
         self.effective_port()
+    }
+
+    /// Адрес этой машины в локальной сети — без порта и кода доступа. По нему
+    /// гость подключается к серверу хоста напрямую.
+    pub fn lan_host(&self) -> String {
+        local_ip()
     }
 
     /// Адрес пульта для доступа из локальной сети — как `buildRemoteUrl` в JS.

@@ -136,10 +136,16 @@ impl ClientRegistry {
             .map(|client| client.external)
     }
 
-    /// Отправить текстовый кадр всем.
+    /// Отправить текстовый кадр всем локальным окнам.
+    ///
+    /// Гостевые подключения исключены: это чужая машина, и ей положены только
+    /// адресные кадры signaling, а не состояние стрима, раскладка и чат.
     pub fn broadcast_text(&self, text: &str) {
         let registry = self.lock();
         for client in &registry.clients {
+            if client.role == "guest" {
+                continue;
+            }
             let _ = client.sender.send(Message::Text(text.to_string().into()));
         }
     }
@@ -154,10 +160,14 @@ impl ClientRegistry {
         }
     }
 
-    /// Отправить двоичный кадр всем: микрокадры идут мимо JSON.
+    /// Отправить двоичный кадр всем локальным окнам: микрокадры идут мимо JSON.
+    /// Гостю медиа не транслируется — у него свой канал WebRTC.
     pub fn broadcast_binary(&self, data: Vec<u8>) {
         let registry = self.lock();
         for client in &registry.clients {
+            if client.role == "guest" {
+                continue;
+            }
             let _ = client.sender.send(Message::Binary(data.clone().into()));
         }
     }
@@ -279,6 +289,25 @@ mod tests {
         // Порядок ролей — по первому появлению.
         let roles: Vec<&str> = by_role.keys().map(String::as_str).collect();
         assert_eq!(roles, ["overlay", "control"]);
+    }
+
+    #[test]
+    fn broadcasts_skip_guest_connections() {
+        // Гость — чужая машина: состояние и медиа ей не рассылаются.
+        let (registry, mut receivers) = registry_with(&[("overlay", false), ("guest", true)]);
+        registry.broadcast_text("{\"type\":\"state\"}");
+        assert_eq!(
+            text_of(receivers[0].try_recv().unwrap()),
+            "{\"type\":\"state\"}"
+        );
+        assert!(receivers[1].try_recv().is_err());
+
+        registry.broadcast_binary(vec![1, 2, 3]);
+        match receivers[0].try_recv().unwrap() {
+            Message::Binary(data) => assert_eq!(data.as_ref(), &[1, 2, 3]),
+            other => panic!("ожидался бинарный кадр, пришло {other:?}"),
+        }
+        assert!(receivers[1].try_recv().is_err());
     }
 
     #[test]
