@@ -320,6 +320,67 @@ describe("WebcamWidget", () => {
     }
   });
 
+  test("повторное обновление повторяет подписку на слот", () => {
+    const w = mount({ source: "remote", guestSlot: "cam2" });
+    const count = () =>
+      w.context.send.mock.calls.filter(([type]) => type === EVENT_TYPES.CMD_GUEST_SUBSCRIBE).length;
+    const before = count();
+
+    // Снимок состояния приходит и после перезапуска сервера: подписка должна
+    // восстановиться сама, а не ждать перезагрузки OBS.
+    w.update({ config: { label: "LIVE" } });
+
+    expect(count()).toBeGreaterThan(before);
+  });
+
+  test("offer без подтверждения создаёт peer сам", async () => {
+    const created = [];
+    class FakePeer {
+      constructor() {
+        this.remoteDescription = null;
+        this.localDescription = null;
+        this.connectionState = "new";
+        created.push(this);
+      }
+      close() {}
+      setRemoteDescription(desc) {
+        this.remoteDescription = desc;
+        return Promise.resolve();
+      }
+      createAnswer() {
+        return Promise.resolve({ type: "answer", sdp: "v=0 answer" });
+      }
+      setLocalDescription(desc) {
+        this.localDescription = desc;
+        return Promise.resolve();
+      }
+      addIceCandidate() {
+        return Promise.resolve();
+      }
+    }
+    const previous = global.RTCPeerConnection;
+    global.RTCPeerConnection = FakePeer;
+    try {
+      const w = mount({ source: "remote", guestSlot: "cam2" });
+      // Приёмник подписался уже после подтверждения: `guest_accepted` он не видел.
+      w.context.bus.emit(EVENT_TYPES.GUEST_SIGNAL, {
+        slot: "cam2",
+        payload: { type: "offer", sdp: "v=0 offer" },
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(created).toHaveLength(1);
+      expect(w.context.send).toHaveBeenCalledWith(EVENT_TYPES.GUEST_SIGNAL, {
+        slot: "cam2",
+        payload: { type: "answer", sdp: "v=0 answer" },
+      });
+    } finally {
+      global.RTCPeerConnection = previous;
+    }
+  });
+
   test("зеркало применяется к canvas и снимается при обновлении", () => {
     const w = mount({ source: "camera", mirror: true });
     expect(w.videoCanvas.style.transform).toBe("scaleX(-1)");

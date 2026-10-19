@@ -190,7 +190,8 @@ impl GuestHub {
         entry.created = Instant::now();
         entry.client = None;
         entry.guest_name.clear();
-        entry.receiver = None;
+        // Подписку приёмника не сбрасываем: виджет в оверлее уже смонтирован
+        // и ждёт гостя, а о сбросе он не узнает — повторно подписываться не будет.
         entry.pending = false;
         entry.pending_at = None;
         entry.state = State::Open;
@@ -237,7 +238,7 @@ impl GuestHub {
             entry.created = Instant::now();
             entry.client = None;
             entry.guest_name.clear();
-            entry.receiver = None;
+            // См. `create`: подписка виджета переживает новое приглашение.
             entry.pending = false;
             entry.pending_at = None;
             entry.state = State::Open;
@@ -329,8 +330,9 @@ impl GuestHub {
                 entry.client = None;
                 entry.pending = false;
                 entry.pending_at = None;
-                entry.receiver = None;
                 entry.guest_name.clear();
+                // Виджет остаётся на месте и после переподключения гостя
+                // должен получить `receiver_ready` — поэтому подписку не трогаем.
                 // Приглашение остаётся действительным до TTL: оборвавшаяся
                 // связь не должна требовать новой ссылки. Отозвать его можно
                 // явно — через `decline`.
@@ -376,7 +378,8 @@ impl GuestHub {
         entry.client = None;
         entry.pending = false;
         entry.pending_at = None;
-        entry.receiver = None;
+        // Подписка виджета остаётся: он всё ещё на слоте и готов принять
+        // следующего гостя без перезагрузки оверлея.
         entry.guest_name.clear();
         entry.token.clear();
         entry.state = State::Free;
@@ -389,9 +392,14 @@ impl GuestHub {
         let slot = valid_slot(slot)?;
         let mut inner = self.lock();
         let entry = inner.slots.get_mut(slot)?;
+        let previous = entry.receiver;
         entry.receiver = Some(client);
-        let ready = entry.state == State::Accepted;
-        if ready {
+        // Повторная подписка того же окна приходит на каждый снимок состояния
+        // и не должна перезапускать поток. Готовность нужна, когда приёмник
+        // только появился или сменился (перезагрузка OBS, новый клиент).
+        let ready = entry.state == State::Accepted
+            || (entry.state == State::Ready && previous != Some(client));
+        if entry.state == State::Accepted {
             entry.state = State::Ready;
         }
         let guest = entry.client;
@@ -1240,6 +1248,75 @@ mod tests {
         assert_eq!(hub.receiver_client("cam2"), Some(21));
         assert_eq!(hub.guest_client("cam2"), Some(11));
         assert_eq!(hub.snapshot()["slots"][0]["state"], json!("connected"));
+    }
+
+    #[test]
+    fn a_widget_subscribed_before_the_invite_stays_the_receiver() {
+        let hub = hub();
+        // Оверлей открыт раньше приглашения: виджет подписался на пустой слот.
+        let (_, _, ready) = hub.subscribe("cam2", 21).expect("подписка");
+        assert!(!ready);
+
+        let token = invite(&hub, "cam2");
+        assert!(hub.open("cam2", &token, "Аня"));
+        assert!(hub.bind("cam2", 11));
+        assert!(hub.accept("cam2").is_some());
+        // Подписка пережила создание приглашения — иначе готовый виджет молчал бы.
+        assert_eq!(hub.receiver_client("cam2"), Some(21));
+        assert_eq!(hub.snapshot()["slots"][0]["state"], json!("connected"));
+    }
+
+    #[test]
+    fn a_reconnecting_guest_does_not_lose_the_receiver() {
+        let hub = hub();
+        hub.subscribe("cam2", 21);
+        let token = invite(&hub, "cam2");
+        assert!(hub.open("cam2", &token, "Аня"));
+        assert!(hub.bind("cam2", 11));
+        assert!(hub.accept("cam2").is_some());
+
+        // Гость оборвался и вернулся по той же ссылке.
+        assert_eq!(hub.unbind(11), Some("cam2".to_string()));
+        assert!(hub.open("cam2", &token, "Аня"));
+        assert!(hub.bind("cam2", 12));
+        assert!(hub.accept("cam2").is_some());
+        assert_eq!(hub.receiver_client("cam2"), Some(21));
+    }
+
+    #[test]
+    fn a_declined_guest_leaves_the_widget_subscribed() {
+        let hub = hub();
+        hub.subscribe("cam2", 21);
+        let token = invite(&hub, "cam2");
+        assert!(hub.open("cam2", &token, "Аня"));
+        assert!(hub.bind("cam2", 11));
+        assert_eq!(hub.decline("cam2"), Some(("cam2".to_string(), Some(11))));
+
+        // Новое приглашение на тот же слот: виджет перезагружать не нужно.
+        let token = invite(&hub, "cam2");
+        assert!(hub.open("cam2", &token, "Боря"));
+        assert!(hub.bind("cam2", 12));
+        assert!(hub.accept("cam2").is_some());
+        assert_eq!(hub.receiver_client("cam2"), Some(21));
+    }
+
+    #[test]
+    fn a_new_receiver_restarts_the_stream_and_the_same_one_does_not() {
+        let hub = hub();
+        let token = invite(&hub, "cam2");
+        assert!(hub.open("cam2", &token, "Аня"));
+        assert!(hub.bind("cam2", 11));
+        assert!(hub.accept("cam2").is_some());
+
+        let (_, _, ready) = hub.subscribe("cam2", 21).expect("подписка");
+        assert!(ready);
+        // Каждый снимок состояния повторяет подписку того же окна — поток не перезапускается.
+        let (_, _, ready) = hub.subscribe("cam2", 21).expect("повторная подписка");
+        assert!(!ready);
+        // Оверлей перезагрузили: у нового приёмника свой номер клиента.
+        let (_, _, ready) = hub.subscribe("cam2", 22).expect("новый приёмник");
+        assert!(ready);
+        assert_eq!(hub.receiver_client("cam2"), Some(22));
     }
 
     #[test]

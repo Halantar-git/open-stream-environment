@@ -295,11 +295,20 @@
       if (!sdp || this._guestApplying) return;
       this._guestApplying = true;
       let peer = this._guestPeer;
-      if (peer && peer.remoteDescription) {
+      // Приёмник мог не получить `guest_accepted`: оверлей перезагрузили уже
+      // после подтверждения. Peer создаём сами — иначе первый же offer
+      // пришлось бы выбросить.
+      if (!peer) {
+        this._createGuestPeer();
+        peer = this._guestPeer;
+      } else if (peer.remoteDescription) {
         this._createGuestPeer();
         peer = this._guestPeer;
       }
-      if (!peer) return;
+      if (!peer) {
+        this._guestApplying = false;
+        return;
+      }
       try {
         await peer.setRemoteDescription({ type: "offer", sdp });
         for (const candidate of this._guestQueuedCandidates) {
@@ -402,9 +411,13 @@
     }
 
     _subscribeGuest() {
-      if (this._guestSubscribed || !this._guestSlot) return;
+      if (!this._guestSlot) return;
       const { EVENT_TYPES, send } = this.context;
       if (!EVENT_TYPES || !EVENT_TYPES.CMD_GUEST_SUBSCRIBE || typeof send !== "function") return;
+      // Подписка повторяется на каждом рендере: после перезапуска приложения
+      // или обрыва шины у сервера нет прежнего клиента, и молчание виджета
+      // оставило бы гостя на «ждём экран». Сервер повторную подписку того же
+      // окна игнорирует и поток не перезапускает.
       this._guestSubscribed = true;
       send(EVENT_TYPES.CMD_GUEST_SUBSCRIBE, { slot: this._guestSlot });
     }
