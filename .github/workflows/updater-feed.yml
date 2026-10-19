@@ -1,0 +1,81 @@
+name: Updater feed
+
+# `latest.json` — единственное, что читает установленное приложение, когда
+# проверяет обновление (`plugins.updater.endpoints` в `tauri.conf.json`).
+#
+# Вызывается из release.yml после всех сборок. Запускать вручную тоже можно —
+# чтобы починить фид уже собранного релиза: полная пересборка под три ОС для
+# одного JSON-файла не нужна.
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: "Тег релиза, для которого собирается фид"
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Тег собранного релиза (например, v4.2.2)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  feed:
+    name: Build latest.json
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.12.0"
+
+      # Подписи уже лежат в релизе — сами установщики качать незачем.
+      - name: Download signatures
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/sigs"
+          gh release download "$TAG" --pattern "*.sig" --dir "$RUNNER_TEMP/sigs"
+          ls -1 "$RUNNER_TEMP/sigs"
+
+      # `releases/tags/{tag}` для черновика отдаёт 404 даже с правами на запись,
+      # а в общем списке черновики видны — поэтому релиз ищется там.
+      - name: Build latest.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq ".[] | select(.tag_name == \"$TAG\")" > "$RUNNER_TEMP/release.json"
+          if [ ! -s "$RUNNER_TEMP/release.json" ]; then
+            echo "::error::релиз $TAG не виден в списке релизов"
+            exit 1
+          fi
+          node .github/scripts/updater-json.js \
+            --version "${TAG#v}" \
+            --notes "Список изменений — в CHANGELOG.md." \
+            --assets "$RUNNER_TEMP/release.json" \
+            --signatures "$RUNNER_TEMP/sigs" \
+            --out "$RUNNER_TEMP/latest.json"
+
+      - name: Upload latest.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+        run: gh release upload "$TAG" "$RUNNER_TEMP/latest.json" --clobber
+
+      # Без этой проверки релиз снова уедет молча: автообновление просто никогда
+      # не сработает, и заметить это можно только по 404.
+      - name: The feed is in the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+        run: gh release view "$TAG" --json assets --jq '.assets[].name' | grep -qx 'latest.json'

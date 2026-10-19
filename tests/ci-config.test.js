@@ -58,6 +58,7 @@ function workflow(name) {
 
 const ci = workflow("ci.yml");
 const release = workflow("release.yml");
+const updaterFeed = workflow("updater-feed.yml");
 const notify = workflow("notify-site.yml");
 
 // Все «npm run <скрипт>» и «script: <скрипт>» из workflow (matrix передаёт имя
@@ -119,6 +120,7 @@ describe("CI: файлы workflow", () => {
     [
       ["ci.yml", ci],
       ["release.yml", release],
+      ["updater-feed.yml", updaterFeed],
       ["notify-site.yml", notify],
     ].forEach(([name, source]) => {
       expect({ name, tabs: source.includes("\t") }).toEqual({ name, tabs: false });
@@ -194,7 +196,7 @@ describe("CI: файлы workflow", () => {
     expect(publishers).toEqual(["release.yml"]);
   });
 
-  test("фид автообновления собирается одной джобой после сборок", () => {
+  test("фид автообновления собирается после сборок и чинится отдельно", () => {
     /*
       `latest.json` — единственное, что читает установленное приложение, когда
       проверяет обновление. В 4.2.1 файла в релизе не оказалось: его писали все
@@ -202,12 +204,18 @@ describe("CI: файлы workflow", () => {
       удалённым — обновление у всех отдавало 404, хотя релиз опубликован.
     */
     expect(release).toContain("uploadUpdaterJson: false");
-    expect(release).toContain("updater-feed:");
+    expect(release).toContain("uses: ./.github/workflows/updater-feed.yml");
     expect(release).toContain("needs: [verify, publish]");
-    expect(release).toContain("gh release upload");
-    expect(release).toContain("latest.json");
+
+    // Сборщик живёт отдельно: его же запускают вручную, чтобы починить фид уже
+    // собранного релиза без пересборки установщиков.
+    expect(updaterFeed).toContain("workflow_call:");
+    expect(updaterFeed).toContain("workflow_dispatch:");
+    expect(updaterFeed).toContain("gh release upload");
     // Финальная сверка: без неё такой же релиз снова уедет молча.
-    expect(release).toMatch(/grep -qx 'latest\.json'/);
+    expect(updaterFeed).toMatch(/grep -qx 'latest\.json'/);
+    // `releases/tags/{tag}` для черновика отдаёт 404 — релиз ищется в списке.
+    expect(updaterFeed).toContain("/releases?per_page=100");
   });
 
   test("после публикации релиза сайт просят пересобраться", () => {
