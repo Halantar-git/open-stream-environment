@@ -569,6 +569,17 @@ body {
   z-index: 0;
   pointer-events: none;
 }
+.retrowave-vignette {
+  display: none;
+}
+[data-decoration="retrowave"] .retrowave-vignette {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 55%, rgba(6, 0, 24, 0) 38%, rgba(6, 0, 24, 0.5) 100%);
+}
 /* На сценах всё рисует canvas — CSS-слои не нужны. Заставка (`splash-bg`)
    сохраняет звёзды, сетку и волны: её композиция не меняется. */
 [data-decoration="retrowave"] .scene-wrapper:not(.splash-bg) .bg-shape,
@@ -650,6 +661,10 @@ body {
 [data-decoration="retrowave"] .scene-card {
   position: relative;
   clip-path: polygon(48px 0, 100% 0, 100% 100%, 0 100%);
+  /* За карточкой летит анимированный canvas; blur(0px) из темы всё равно
+     создаёт backdrop-слой и мешает композитору. Панель и так полупрозрачная. */
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
   background-image:
     repeating-linear-gradient(90deg, rgba(45, 226, 230, 0.05) 0 1px, transparent 1px 34px),
     repeating-linear-gradient(0deg, rgba(255, 45, 149, 0.04) 0 1px, transparent 1px 34px);

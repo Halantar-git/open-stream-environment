@@ -27,6 +27,13 @@
   canvas.setAttribute("aria-hidden", "true");
   wrapper.insertBefore(canvas, wrapper.firstChild);
 
+  // Виньетка статична: рисуем её CSS-слоем, а не полным градиентом на canvas
+  // каждый кадр — композитору дешевле, а картинка та же.
+  const vignette = document.createElement("div");
+  vignette.className = "retrowave-vignette";
+  vignette.setAttribute("aria-hidden", "true");
+  wrapper.insertBefore(vignette, canvas.nextSibling);
+
   const ctx = canvas.getContext("2d", { alpha: false });
   if (!ctx) return;
 
@@ -35,12 +42,15 @@
   // цикл всё равно останавливается.
   const FPS = 60;
   const DPR_LIMIT = 1.5;
+  // Внутреннее разрешение: фон мягкий, лишние пиксели не видны, а fill-rate
+  // сцены падает почти вдвое. 1440 хватает и на 1080p.
+  const MAX_WIDTH = 1440;
   const SPEED = 1;
   const STARS = 240;
 
   // --- геометрия сцены (мировые единицы) ---
-  const COLS = 80;
-  const ROWS = 44;
+  const COLS = 72;
+  const ROWS = 38;
   const XW = 60;
   const DZ = 1.7;
   const ZN = 3;
@@ -65,6 +75,10 @@
   const PY = new Float32Array((ROWS + 1) * (COLS + 1));
   const PH = new Float32Array((ROWS + 1) * (COLS + 1));
   const Z = new Float32Array(ROWS + 1);
+  // Высоты мировых рядов не меняются между шагами камеры: пересчитываем
+  // сетку не каждый кадр, а только когда камера перешла на новый ряд.
+  const HEIGHTS = Array.from({ length: ROWS + 1 }, () => new Float32Array(COLS + 1));
+  let cachedFirstRow = NaN;
   const sunCache = document.createElement("canvas");
 
   let rafId = 0;
@@ -115,7 +129,7 @@
   const CELL = 16;
   const FOOT = 0.28;
 
-  function height(x, zw, z) {
+  function heightAt(x, zw) {
     const ax = Math.abs(x);
     if (ax < ROAD) return 0;
     const cx = Math.floor(x / CELL);
@@ -157,14 +171,31 @@
     const f2 = vnoise(x * 0.2 + offset, zw * 0.2 + 300);
     const foot = (0.75 * f1 + 0.25 * f2) * FOOT * smooth(ROAD, ROAD + 12, ax);
     const total = mountain + foot * (1 - mountain);
-    const near = 0.45 + 0.55 * smooth(5, 20, z);
-    return total * AMP * near * smooth(ROAD, ROAD + 3, ax);
+    return total * AMP * smooth(ROAD, ROAD + 3, ax);
+  }
+
+  function ensureHeights(firstRow) {
+    if (cachedFirstRow === firstRow) return;
+    cachedFirstRow = firstRow;
+    const dxStep = (2 * XW) / COLS;
+    for (let i = 0; i <= ROWS; i += 1) {
+      const row = HEIGHTS[i];
+      const zw = (firstRow + i) * DZ;
+      for (let c = 0; c <= COLS; c += 1) {
+        row[c] = heightAt(-XW + c * dxStep, zw);
+      }
+    }
   }
 
   function resize() {
     const dpr = Math.min(DPR_LIMIT, window.devicePixelRatio || 1);
-    W = canvas.width = Math.max(2, Math.round((canvas.clientWidth || 2) * dpr));
-    H = canvas.height = Math.max(2, Math.round((canvas.clientHeight || 2) * dpr));
+    const cssWidth = canvas.clientWidth || 2;
+    const cssHeight = canvas.clientHeight || 2;
+    // Внутреннее разрешение не выше MAX_WIDTH: мягкий неон и летящая сетка
+    // не требуют пиксельной точности, а композитору легче.
+    const scale = Math.min(dpr, MAX_WIDTH / Math.max(1, cssWidth));
+    W = canvas.width = Math.max(2, Math.round(cssWidth * scale));
+    H = canvas.height = Math.max(2, Math.round(cssHeight * scale));
     hy = H * 0.55;
     f = ((H - hy) * ZN) / CAMY;
     U = H / 900;
@@ -293,15 +324,18 @@
     ctx.fillRect(0, hy, W, H - hy);
 
     const firstRow = Math.floor((cameraZ + ZN) / DZ);
+    ensureHeights(firstRow);
     const dxStep = (2 * XW) / COLS;
     for (let i = 0; i <= ROWS; i += 1) {
       const zw = (firstRow + i) * DZ;
       const z = zw - cameraZ;
       Z[i] = z;
       const scale = f / z;
+      const near = 0.45 + 0.55 * smooth(5, 20, z);
+      const row = HEIGHTS[i];
       for (let c = 0; c <= COLS; c += 1) {
         const x = -XW + c * dxStep;
-        const h = height(x, zw, z);
+        const h = row[c] * near;
         const idx = i * (COLS + 1) + c;
         PX[idx] = W / 2 + x * scale;
         PY[idx] = hy + (CAMY - h) * scale;
@@ -319,12 +353,21 @@
       const fog = Math.min(1, Z[i] / ZFAR);
       const fade = Math.pow(fog, 1.5);
 
+      // Заливка полосы между этим рядом и ближним, а не всего экрана вниз:
+      // 38 полноэкранных заливок на кадр давали ту же картинку, но в разы
+      // больше overdraw. Полосы покрывают ровно поверхность между рядами.
       ctx.beginPath();
-      ctx.moveTo(0, PY[base]);
-      for (let c = 0; c <= COLS; c += 1) ctx.lineTo(PX[base + c], PY[base + c]);
-      ctx.lineTo(W, PY[base + COLS]);
-      ctx.lineTo(W, H + 2);
-      ctx.lineTo(0, H + 2);
+      if (i > 0) {
+        const nextBase = (i - 1) * (COLS + 1);
+        ctx.moveTo(PX[base], PY[base]);
+        for (let c = 1; c <= COLS; c += 1) ctx.lineTo(PX[base + c], PY[base + c]);
+        for (let c = COLS; c >= 0; c -= 1) ctx.lineTo(PX[nextBase + c], PY[nextBase + c]);
+      } else {
+        ctx.moveTo(PX[base], PY[base]);
+        for (let c = 1; c <= COLS; c += 1) ctx.lineTo(PX[base + c], PY[base + c]);
+        ctx.lineTo(W, H + 2);
+        ctx.lineTo(PX[base], H + 2);
+      }
       ctx.closePath();
       ctx.fillStyle =
         "rgb(" +
@@ -361,20 +404,28 @@
 
       const alpha = Math.pow(1 - fog, 1.2) * 0.95 + 0.04;
       const lineWidth = Math.min(2.6, Math.max(0.7, 5 / Z[i])) * U * 1.1;
-      ctx.globalCompositeOperation = "lighter";
+      // Широкий glow нужен только ближним рядам: у дальних его не видно, а
+      // fill-rate он съедает заметно. Чёткие линии — source-over, дешевле.
+      if (Z[i] < 28) {
+        ctx.globalCompositeOperation = "lighter";
+        for (let k = 0; k < 4; k += 1) {
+          if (!used[k]) continue;
+          const color = COLORS[k];
+          const rgb = color[0] + "," + color[1] + "," + color[2];
+          ctx.lineWidth = lineWidth * 3.2;
+          ctx.strokeStyle = `rgba(${rgb},${(alpha * 0.18).toFixed(3)})`;
+          ctx.stroke(paths[k]);
+        }
+      }
+      ctx.globalCompositeOperation = "source-over";
       for (let k = 0; k < 4; k += 1) {
         if (!used[k]) continue;
         const color = COLORS[k];
         const rgb = color[0] + "," + color[1] + "," + color[2];
-        // Широкий полупрозрачный след — свечение неона; поверх него чёткая линия.
-        ctx.lineWidth = lineWidth * 3.2;
-        ctx.strokeStyle = `rgba(${rgb},${(alpha * 0.18).toFixed(3)})`;
-        ctx.stroke(paths[k]);
         ctx.lineWidth = lineWidth;
         ctx.strokeStyle = `rgba(${rgb},${alpha.toFixed(3)})`;
         ctx.stroke(paths[k]);
       }
-      ctx.globalCompositeOperation = "source-over";
     }
   }
 
@@ -385,12 +436,6 @@
     haze.addColorStop(1, "rgba(255,70,200,0)");
     ctx.fillStyle = haze;
     ctx.fillRect(0, hy - H * 0.03, W, H * 0.17);
-
-    const vignette = ctx.createRadialGradient(W / 2, H * 0.55, H * 0.4, W / 2, H * 0.55, H * 1.1);
-    vignette.addColorStop(0, "rgba(6,0,24,0)");
-    vignette.addColorStop(1, "rgba(6,0,24,0.5)");
-    ctx.fillStyle = vignette;
-    ctx.fillRect(0, 0, W, H);
   }
 
   function drawScene() {
