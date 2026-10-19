@@ -1122,13 +1122,29 @@ pub fn handle_message(
         event_types::CMD_GUEST_INVITE => {
             let slot = payload.get("slot").and_then(Value::as_str).unwrap_or("");
             let name = payload.get("name").and_then(Value::as_str).unwrap_or("");
-            if let Some(mut invite) = diagnostics.guests().create(slot, name) {
-                // Адрес хоста в локальной сети: гость подключится к нему
-                // напрямую, без посредников и проброса портов.
-                let host = diagnostics.lan_host();
-                invite["loopback"] = Value::Bool(host.starts_with("127."));
-                invite["host"] = Value::from(host);
-                invite["port"] = Value::from(diagnostics.port());
+            let mode = payload
+                .get("mode")
+                .and_then(Value::as_str)
+                .unwrap_or("cloud");
+            let invite = if mode == "lan" {
+                diagnostics.guests().create(slot, name).map(|mut invite| {
+                    // Адрес хоста в локальной сети: гость подключится к нему
+                    // напрямую, без посредников и проброса портов.
+                    let host = diagnostics.lan_host();
+                    invite["loopback"] = Value::Bool(host.starts_with("127."));
+                    invite["host"] = Value::from(host);
+                    invite["port"] = Value::from(diagnostics.port());
+                    invite
+                })
+            } else {
+                diagnostics.guests_arc().create_cloud(
+                    diagnostics.clients_arc(),
+                    slot,
+                    name,
+                    &diagnostics.guest_signal_url(),
+                )
+            };
+            if let Some(invite) = invite {
                 let frame = json!({ "type": event_types::GUEST_INVITE, "payload": invite });
                 if let Some(id) = client {
                     diagnostics.clients().send_text(id, &frame.to_string());
@@ -1138,11 +1154,15 @@ pub fn handle_message(
         }
         event_types::CMD_GUEST_ACCEPT => {
             let slot = payload.get("slot").and_then(Value::as_str).unwrap_or("");
-            if let Some((slot, guest_id)) = diagnostics.guests().accept(slot) {
+            if let Some((slot, _guest_id)) = diagnostics.guests().accept(slot) {
                 let accepted =
                     json!({ "type": event_types::GUEST_ACCEPTED, "payload": { "slot": slot } })
                         .to_string();
-                diagnostics.clients().send_text(guest_id, &accepted);
+                // Номер клиента есть только у LAN-гостя, облачный уйдёт по
+                // ссылке signaling; `send_to_guest` выбирает сам.
+                diagnostics
+                    .guests()
+                    .send_to_guest(&slot, &accepted, diagnostics.clients());
                 // Приёмник уже подписан — сообщаем ему и гостю, что можно
                 // начинать обмен SDP.
                 if let Some(receiver) = diagnostics.guests().receiver_client(&slot) {
@@ -1152,7 +1172,9 @@ pub fn handle_message(
                         "payload": { "slot": slot },
                     })
                     .to_string();
-                    diagnostics.clients().send_text(guest_id, &ready);
+                    diagnostics
+                        .guests()
+                        .send_to_guest(&slot, &ready, diagnostics.clients());
                 }
             }
             guest::broadcast_status(diagnostics);
@@ -1160,14 +1182,19 @@ pub fn handle_message(
         event_types::CMD_GUEST_DECLINE | event_types::CMD_GUEST_REVOKE => {
             let slot = payload.get("slot").and_then(Value::as_str).unwrap_or("");
             if let Some((slot, guest_id)) = diagnostics.guests().decline(slot) {
-                if guest_id != 0 {
-                    let declined = json!({
-                        "type": event_types::GUEST_DECLINED,
-                        "payload": { "slot": slot },
-                    })
-                    .to_string();
-                    diagnostics.clients().send_text(guest_id, &declined);
+                let declined = json!({
+                    "type": event_types::GUEST_DECLINED,
+                    "payload": { "slot": slot },
+                })
+                .to_string();
+                if let Some(id) = guest_id {
+                    diagnostics.clients().send_text(id, &declined);
                 }
+                // Облачный гость получит отказ по signaling-ссылке.
+                diagnostics
+                    .guests()
+                    .send_to_guest(&slot, &declined, diagnostics.clients());
+                diagnostics.guests().remove_cloud(&slot);
                 // Виджет хоста тоже должен закрыть peer и погасить кадр.
                 broadcast(
                     diagnostics,
@@ -1178,8 +1205,6 @@ pub fn handle_message(
             guest::broadcast_status(diagnostics);
         }
         event_types::CMD_GUEST_JOIN => {
-            let host = payload.get("host").and_then(Value::as_str).unwrap_or("");
-            let port = payload.get("port").and_then(Value::as_u64).unwrap_or(0) as u16;
             let slot = payload.get("slot").and_then(Value::as_str).unwrap_or("");
             let token = payload.get("token").and_then(Value::as_str).unwrap_or("");
             let name = payload
@@ -1187,9 +1212,30 @@ pub fn handle_message(
                 .or_else(|| payload.get("displayName"))
                 .and_then(Value::as_str)
                 .unwrap_or("");
-            diagnostics
-                .guests_arc()
-                .join(diagnostics.clients_arc(), host, port, slot, token, name);
+            let mode = payload.get("mode").and_then(Value::as_str).unwrap_or("lan");
+            if mode == "cloud" {
+                let signal = payload.get("signal").and_then(Value::as_str).unwrap_or("");
+                let room = payload.get("room").and_then(Value::as_str).unwrap_or("");
+                diagnostics.guests_arc().join_cloud(
+                    diagnostics.clients_arc(),
+                    signal,
+                    room,
+                    token,
+                    slot,
+                    name,
+                );
+            } else {
+                let host = payload.get("host").and_then(Value::as_str).unwrap_or("");
+                let port = payload.get("port").and_then(Value::as_u64).unwrap_or(0) as u16;
+                diagnostics.guests_arc().join(
+                    diagnostics.clients_arc(),
+                    host,
+                    port,
+                    slot,
+                    token,
+                    name,
+                );
+            }
             guest::broadcast_status(diagnostics);
         }
         event_types::CMD_GUEST_LEAVE => {
@@ -1211,7 +1257,7 @@ pub fn handle_message(
                     guest::broadcast_status(diagnostics);
                     return;
                 }
-                if let Some((slot, guest_id, ready)) = diagnostics.guests().subscribe(slot, id) {
+                if let Some((slot, _guest_id, ready)) = diagnostics.guests().subscribe(slot, id) {
                     if ready {
                         // Виджет смонтировался уже после подтверждения: гостю
                         // пора собирать offer, а приёмнику — создавать peer.
@@ -1226,7 +1272,9 @@ pub fn handle_message(
                             "payload": { "slot": slot },
                         })
                         .to_string();
-                        diagnostics.clients().send_text(guest_id, &ready);
+                        diagnostics
+                            .guests()
+                            .send_to_guest(&slot, &ready, diagnostics.clients());
                     }
                 }
                 guest::broadcast_status(diagnostics);

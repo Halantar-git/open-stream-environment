@@ -29,6 +29,10 @@ use crate::storage::config_file::ConfigFile;
 use crate::storage::db::Database;
 use crate::storage::history::{js_number, js_number_or_zero, js_truthy, number_value};
 
+/// Публичный signaling гостевых камер по умолчанию. Меняется в настройках:
+/// после деплоя Worker'а можно указать свой домен или локальный адрес.
+pub const DEFAULT_GUEST_SIGNAL_URL: &str = "wss://signal.ose-overlay.ru";
+
 /// Уровни доступа команд бота — как `BOT_LEVELS`.
 const BOT_LEVELS: [&str; 4] = ["everyone", "subscriber", "moderator", "broadcaster"];
 
@@ -133,6 +137,15 @@ pub fn set_app_config(config: &mut ConfigFile, patch: &Value) {
         let raw = js_number_or_zero(Some(port));
         let port = if raw == 0.0 { 8710.0 } else { raw };
         config.set("port", number_value(port.clamp(1024.0, 65535.0)));
+    }
+    if let Some(signal) = patch.get("guestSignalUrl") {
+        let text = js_string(signal).trim().trim_end_matches('/').to_string();
+        let value = if text.starts_with("ws://") || text.starts_with("wss://") {
+            text
+        } else {
+            DEFAULT_GUEST_SIGNAL_URL.to_string()
+        };
+        config.set("guest_signal_url", Value::from(value));
     }
     if let Some(donatex) = patch.get("donatex") {
         let mut service = section(config, "donatex");
@@ -793,6 +806,21 @@ pub fn normalize_config(config: &mut ConfigFile) {
         "chat_hud_display_id",
         display_value(config.get("chat_hud_display_id")),
     );
+
+    // Публичный signaling гостевых камер.
+    let signal = config
+        .get("guest_signal_url")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .unwrap_or("")
+        .trim_end_matches('/')
+        .to_string();
+    let signal = if signal.starts_with("ws://") || signal.starts_with("wss://") {
+        signal
+    } else {
+        DEFAULT_GUEST_SIGNAL_URL.to_string()
+    };
+    config.set("guest_signal_url", Value::from(signal));
 
     // Уведомления.
     config.set(

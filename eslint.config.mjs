@@ -83,4 +83,13 @@ export default [
       globals: sharedGlobals,
     },
   },
+  {
+    // Публичный signaling — отдельный ES-модуль для Cloudflare Workers.
+    // `WebSocketPair` и `Response` даёт рантайм воркера, а не браузер.
+    files: ["signal/worker.js"],
+    languageOptions: {
+      sourceType: "module",
+      globals: { ...sharedGlobals, WebSocketPair: "readonly" },
+    },
+  },
 ];

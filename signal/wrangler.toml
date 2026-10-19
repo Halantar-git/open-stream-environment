@@ -1,0 +1,24 @@
+# Публичный signaling OSE (Cloudflare Workers).
+#
+# Деплой:
+#   cd signal
+#   npx wrangler deploy
+#
+# После первого деплоя добавьте свой домен:
+#   signal.ose-overlay.ru  ->  worker ose-signal
+# (Workers → ose-signal → Settings → Domains & Routes)
+#
+# Видимое имя воркера можно поменять; адрес сервиса задаётся в настройках
+# приложения («Настройки → Гостевые камеры → Адрес signaling»).
+name = "ose-signal"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+# SQLite-backed Durable Objects доступны на бесплатном плане Workers.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room"]

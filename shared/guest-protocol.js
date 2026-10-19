@@ -33,9 +33,12 @@
   "use strict";
 
   const SCHEME = "ose-join://v1";
+  const CLOUD_SCHEME = "ose-join://v2";
   const SLOTS = ["cam2", "cam3", "cam4"];
   const HOST_PATTERN = /^[a-z0-9.-]+$/i;
   const TOKEN_PATTERN = /^[a-z0-9_-]{16,64}$/i;
+  const SIGNAL_PATTERN = /^wss?:\/\/[a-z0-9.:[\]-]+(?:\/[a-z0-9._~/-]*)?$/i;
+  const ROOM_PATTERN = /^[a-z0-9_-]{16,64}$/i;
 
   function normalizeSlot(value) {
     const slot = String(value == null ? "" : value)
@@ -95,25 +98,68 @@
   }
 
   /*
+    Приглашение через публичный signaling: адрес сервиса, комната и токен.
+    Хост и гость подключаются к сервису сами, поэтому адрес хоста в ссылке не
+    нужен — это и делает интернет-приглашение независимым от NAT.
+  */
+  function normalizeSignal(value) {
+    const signal = String(value == null ? "" : value).trim();
+    if (!signal || signal.length > 200) return "";
+    return SIGNAL_PATTERN.test(signal) ? signal.replace(/\/+$/, "") : "";
+  }
+
+  function normalizeRoom(value) {
+    const room = String(value == null ? "" : value).trim();
+    return ROOM_PATTERN.test(room) ? room : "";
+  }
+
+  function createCloudInvite(fields) {
+    const input = fields || {};
+    const signal = normalizeSignal(input.signal);
+    const room = normalizeRoom(input.room);
+    const slot = normalizeSlot(input.slot);
+    const token = normalizeToken(input.token);
+    if (!signal || !room || !slot || !token) return "";
+    const params = new URLSearchParams();
+    params.set("signal", signal);
+    params.set("room", room);
+    params.set("slot", slot);
+    params.set("token", token);
+    const name = normalizeName(input.name);
+    if (name) params.set("name", name);
+    return `${CLOUD_SCHEME}?${params.toString()}`;
+  }
+
+  /*
     Разобрать приглашение. `null` — строка не наша, повреждена или содержит
     недопустимые поля; частично валидные приглашения не принимаем, иначе
     ошибка всплывёт уже в сетевом соединении.
   */
   function parseInvite(text) {
     const raw = String(text == null ? "" : text).trim();
-    if (!raw.toLowerCase().startsWith(`${SCHEME}?`)) return null;
+    const lower = raw.toLowerCase();
+    const cloud = lower.startsWith(`${CLOUD_SCHEME}?`);
+    if (!cloud && !lower.startsWith(`${SCHEME}?`)) return null;
     let params;
     try {
-      params = new URLSearchParams(raw.slice(SCHEME.length + 1));
+      params = new URLSearchParams(raw.slice(raw.indexOf("?") + 1));
     } catch (_) {
       return null;
     }
-    const host = normalizeHost(params.get("host"));
-    const port = normalizePort(params.get("port"));
     const slot = normalizeSlot(params.get("slot"));
     const token = normalizeToken(params.get("token"));
-    if (!host || !port || !slot || !token) return null;
-    return { host, port, slot, token, name: normalizeName(params.get("name")) };
+    if (!slot || !token) return null;
+    const name = normalizeName(params.get("name"));
+    if (cloud) {
+      const signal = normalizeSignal(params.get("signal"));
+      const room = normalizeRoom(params.get("room"));
+      if (!signal || !room) return null;
+      return { mode: "cloud", signal, room, slot, token, name };
+    }
+    const host = normalizeHost(params.get("host"));
+    const port = normalizePort(params.get("port"));
+    if (!host || !port) return null;
+    return { mode: "lan", host, port, slot, token, name };
   }
 
   /*
@@ -135,9 +181,13 @@
 
   const api = {
     SCHEME,
+    CLOUD_SCHEME,
     SLOTS,
     createInvite,
+    createCloudInvite,
     parseInvite,
+    normalizeSignal,
+    normalizeRoom,
     inviteWsUrl,
     normalizeSlot,
     normalizeName,

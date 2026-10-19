@@ -44,12 +44,42 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
   const joinBtn = document.getElementById("guestJoinBtn");
   const leaveBtn = document.getElementById("guestLeaveBtn");
   const statusEl = document.getElementById("guestJoinStatus");
+  const modeSelect = document.getElementById("guestInviteMode");
+  const signalInput = document.getElementById("guestSignalUrl");
   if (!list || !joinInput || !joinBtn) return { handleMessage() {}, render() {} };
 
   if (!state.guestSlots || !state.guestSlots.length) state.guestSlots = defaultSlots();
   if (!state.guestInvites) state.guestInvites = {};
   if (!state.guestPending) state.guestPending = {};
   if (!state.guestShare) state.guestShare = { slot: "", status: "idle", detail: "" };
+  if (!state.guestSignalUrl) state.guestSignalUrl = "";
+  if (modeSelect) {
+    try {
+      const saved = localStorage.getItem("ose.guestInviteMode");
+      if (saved === "lan" || saved === "cloud") modeSelect.value = saved;
+    } catch (_) {
+      /* приватный режим */
+    }
+    modeSelect.addEventListener("change", () => {
+      try {
+        localStorage.setItem("ose.guestInviteMode", modeSelect.value);
+      } catch (_) {
+        /* приватный режим */
+      }
+    });
+  }
+  if (signalInput) {
+    signalInput.addEventListener("change", () => {
+      const value = signalInput.value.trim();
+      // Пустое значение — вернуться к адресу по умолчанию.
+      if (value && !/^wss?:\/\//i.test(value)) {
+        signalInput.value = state.guestSignalUrl || "";
+        return;
+      }
+      state.guestSignalUrl = value;
+      send(EVENT_TYPES.CMD_SET_APP_CONFIG, { guestSignalUrl: value });
+    });
+  }
 
   const share = createGuestShare({
     state,
@@ -151,6 +181,9 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
       ? `<p class="settings__hint">${escapeHtml(t("guests.noLanAddress"))}</p>`
       : "";
     list.innerHTML = rows.map(slotRow).join("") + localHint;
+    if (signalInput && document.activeElement !== signalInput) {
+      signalInput.value = state.guestSignalUrl || "";
+    }
 
     const outgoing = state.guestOutgoing;
     if (statusEl) {
@@ -182,7 +215,10 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
     const slot = button.dataset.slot;
     switch (button.dataset.action) {
       case "invite":
-        send(EVENT_TYPES.CMD_GUEST_INVITE, { slot });
+        send(EVENT_TYPES.CMD_GUEST_INVITE, {
+          slot,
+          mode: modeSelect ? modeSelect.value || "cloud" : "cloud",
+        });
         break;
       case "accept":
         send(EVENT_TYPES.CMD_GUEST_ACCEPT, { slot });
@@ -215,13 +251,25 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
     }
     state.guestShare = { slot: invite.slot, status: "joining", detail: "" };
     render();
-    send(EVENT_TYPES.CMD_GUEST_JOIN, {
-      host: invite.host,
-      port: invite.port,
-      slot: invite.slot,
-      token: invite.token,
-      name,
-    });
+    if (invite.mode === "cloud") {
+      send(EVENT_TYPES.CMD_GUEST_JOIN, {
+        mode: "cloud",
+        signal: invite.signal,
+        room: invite.room,
+        slot: invite.slot,
+        token: invite.token,
+        name,
+      });
+    } else {
+      send(EVENT_TYPES.CMD_GUEST_JOIN, {
+        mode: "lan",
+        host: invite.host,
+        port: invite.port,
+        slot: invite.slot,
+        token: invite.token,
+        name,
+      });
+    }
   });
 
   leaveBtn.addEventListener("click", () => {
@@ -244,6 +292,7 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
       case EVENT_TYPES.GUEST_STATUS:
         state.guestSlots = Array.isArray(payload.slots) ? payload.slots : [];
         state.guestOutgoing = payload.outgoing || null;
+        if (typeof payload.signalUrl === "string") state.guestSignalUrl = payload.signalUrl;
         // Освободившийся слот больше не должен показывать старую ссылку:
         // сервер уже аннулировал её токен.
         for (const item of state.guestSlots) {
@@ -253,7 +302,11 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
         break;
       case EVENT_TYPES.GUEST_INVITE: {
         const protocol = typeof window !== "undefined" ? window.GuestProtocol : null;
-        const text = protocol ? protocol.createInvite(payload) : "";
+        const text = protocol
+          ? payload.mode === "cloud"
+            ? protocol.createCloudInvite(payload)
+            : protocol.createInvite(payload)
+          : "";
         if (text && payload.slot) {
           state.guestInvites[payload.slot] = text;
           state.guestInviteLoopback = !!payload.loopback;

@@ -114,6 +114,7 @@ export function createStateManager() {
     guestInvites: {},
     guestPending: {},
     guestOutgoing: null,
+    guestSignalUrl: "",
     guestShare: { slot: "", status: "idle", detail: "" },
     // Последний снимок конфига Longshot (Executive Hangar), если получен.
     longshot: null,

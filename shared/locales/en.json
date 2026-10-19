@@ -400,10 +400,15 @@
     "remoteHint": "Web Remote — open from your phone on the same Wi-Fi network",
     "guests": "Guest cameras",
     "guestsDesc": "Extra cameras from other computers: invite by link, confirm on your side, video and audio go directly. Guest audio is heard in OBS when the Browser Source has “Control audio via OBS” enabled.",
+    "guestInviteMode": "Invite method",
+    "guestModeCloud": "Internet",
+    "guestModeLan": "Local network",
+    "guestSignal": "Signaling address",
+    "guestSignalPlaceholder": "wss://signal.ose-overlay.ru",
     "guestConnect": "Connect to a streamer",
     "guestConnectDesc": "Paste the invite the host sent you. Your camera and microphone are sent only after the host confirms.",
     "guestInvite": "Invite",
-    "guestInvitePlaceholder": "ose-join://v1?...",
+    "guestInvitePlaceholder": "ose-join://…",
     "guestYourName": "Your name",
     "guestJoin": "Connect",
     "guestLeave": "Disconnect",
@@ -1539,7 +1544,7 @@
       "p1": "In Settings → Guest cameras each slot has an Invite button: it creates a one-time ose-join:// link.",
       "p2": "Send the link to the guest. They paste it into OSE, enter a name and wait — the camera starts only after you press Allow. The link lives for 15 minutes and survives a dropped connection.",
       "p3": "In the layout pick the camera widget, the Guest camera source and a slot. Several slots give several cameras in frame; each volume is adjusted in the properties.",
-      "p4": "For the guest's voice to reach the stream, enable “Control audio via OBS” on the Browser Source. Only the local network is supported so far: both machines must be on the same Wi-Fi/Ethernet."
+      "p4": "An invite can be created for the internet (through a signaling service) or for the local network. For the guest's voice to reach the stream, enable “Control audio via OBS” on the Browser Source. The signaling address is set in Settings; see signal/README.md for deploying your own service."
     },
     "presets": {
       "title": "Layout presets",

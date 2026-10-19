@@ -25,14 +25,18 @@
 
 const {
   SCHEME,
+  CLOUD_SCHEME,
   SLOTS,
   createInvite,
+  createCloudInvite,
   parseInvite,
   inviteWsUrl,
   normalizeSlot,
   normalizeHost,
   normalizePort,
   normalizeToken,
+  normalizeSignal,
+  normalizeRoom,
 } = require("../shared/guest-protocol");
 
 const TOKEN = "0123456789abcdef0123456789abcdef";
@@ -42,6 +46,7 @@ describe("guest-protocol: приглашение", () => {
     const invite = createInvite({ host: "192.168.1.10", port: 8710, slot: "cam2", token: TOKEN, name: "Аня" });
     expect(invite.startsWith(`${SCHEME}?`)).toBe(true);
     expect(parseInvite(invite)).toEqual({
+      mode: "lan",
       host: "192.168.1.10",
       port: 8710,
       slot: "cam2",
@@ -56,6 +61,36 @@ describe("guest-protocol: приглашение", () => {
 
     const long = createInvite({ host: "ose.local", port: 8710, slot: "cam3", token: TOKEN, name: "я".repeat(80) });
     expect(parseInvite(long).name.length).toBe(40);
+  });
+
+  test("облачное приглашение несёт адрес сервиса и комнату", () => {
+    const invite = createCloudInvite({
+      signal: "wss://signal.ose-overlay.ru/",
+      room: "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+      slot: "cam3",
+      token: TOKEN,
+      name: "Боря",
+    });
+    expect(invite.startsWith(`${CLOUD_SCHEME}?`)).toBe(true);
+    expect(parseInvite(invite)).toEqual({
+      mode: "cloud",
+      signal: "wss://signal.ose-overlay.ru",
+      room: "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+      slot: "cam3",
+      token: TOKEN,
+      name: "Боря",
+    });
+  });
+
+  test("адрес signaling и комната проверяются", () => {
+    expect(normalizeSignal("wss://signal.ose-overlay.ru/")).toBe("wss://signal.ose-overlay.ru");
+    expect(normalizeSignal("http://signal.ose-overlay.ru")).toBe("");
+    expect(normalizeSignal("wss://signal.ose-overlay.ru?x=1")).toBe("");
+    expect(normalizeRoom("a1b2c3d4e5f60718")).toBe("a1b2c3d4e5f60718");
+    expect(normalizeRoom("short")).toBe("");
+    expect(
+      createCloudInvite({ signal: "https://x", room: "a1b2c3d4e5f60718", slot: "cam2", token: TOKEN })
+    ).toBe("");
   });
 
   test("чужой или повреждённый текст не принимается", () => {

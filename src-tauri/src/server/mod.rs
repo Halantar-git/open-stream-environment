@@ -404,7 +404,7 @@ async fn handle_socket(
         send_frame(
             &mut socket,
             event_types::GUEST_STATUS,
-            bus.diagnostics.guests().snapshot(),
+            guest::status_payload(&bus.diagnostics),
         )
         .await;
 
@@ -515,11 +515,11 @@ fn handle_local_guest_signal(diagnostics: &Diagnostics, message: &Value) {
         .and_then(|payload| payload.get("slot"))
         .and_then(Value::as_str)
         .unwrap_or_default();
-    if let Some(guest) = diagnostics.guests().guest_client(slot) {
-        diagnostics.clients().send_text(guest, &message.to_string());
-    } else {
-        diagnostics.guests().send_outgoing(&message.to_string());
-    }
+    // На хосте — входящему LAN-гостю или облачной ссылке, у гостя —
+    // исходящему соединению. Модуль комнат выбирает канал сам.
+    diagnostics
+        .guests()
+        .send_local_signal(slot, &message.to_string(), diagnostics.clients());
 }
 
 /// Один входящий кадр: разбор, журнал, ограничитель частоты, команда.

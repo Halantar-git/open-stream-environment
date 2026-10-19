@@ -455,6 +455,18 @@ impl Diagnostics {
         Arc::clone(&self.guests)
     }
 
+    /// Адрес публичного signaling для облачных приглашений.
+    pub fn guest_signal_url(&self) -> String {
+        self.config()
+            .get("guest_signal_url")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .unwrap_or(crate::state::config::DEFAULT_GUEST_SIGNAL_URL)
+            .trim_end_matches('/')
+            .to_string()
+    }
+
     /// Цикл колеса — общее состояние для команд панели и действий пульта.
     pub fn wheel(&self) -> &Arc<WheelCycle> {
         &self.wheel

@@ -911,6 +911,17 @@
             <h2 data-i18n="settings.guests">Гостевые камеры</h2>
           </div>
           <p class="settings__desc" data-i18n="settings.guestsDesc">Дополнительные камеры с других компьютеров: приглашение по ссылке, подтверждение на вашей стороне, видео и звук идут напрямую. Звук гостя слышен в OBS, если у Browser Source включено «Управлять аудио через OBS».</p>
+          <div class="md-field">
+            <label data-i18n="settings.guestInviteMode">Способ приглашения</label>
+            <select id="guestInviteMode">
+              <option value="cloud" data-i18n="settings.guestModeCloud">Интернет</option>
+              <option value="lan" data-i18n="settings.guestModeLan">Локальная</option> сеть</option>
+            </select>
+          </div>
+          <div class="md-field">
+            <label data-i18n="settings.guestSignal">Адрес signaling</label>
+            <input type="text" id="guestSignalUrl" data-i18n-placeholder="settings.guestSignalPlaceholder" placeholder="wss://signal.ose-overlay.ru" spellcheck="false" autocomplete="off" />
+          </div>
           <div class="guest-slots" id="guestSlotsList"></div>
           <div class="settings__subhead">
             <h3 data-i18n="settings.guestConnect">Подключиться к стримеру</h3>
@@ -918,7 +929,7 @@
           <p class="settings__desc" data-i18n="settings.guestConnectDesc">Вставьте приглашение, которое прислал хост. Ваша камера и микрофон будут отправлены только после его подтверждения.</p>
           <div class="md-field">
             <label data-i18n="settings.guestInvite">Приглашение</label>
-            <input type="text" id="guestJoinInvite" data-i18n-placeholder="settings.guestInvitePlaceholder" placeholder="ose-join://v1?..." spellcheck="false" autocomplete="off" />
+            <input type="text" id="guestJoinInvite" data-i18n-placeholder="settings.guestInvitePlaceholder" placeholder="ose-join://…" spellcheck="false" autocomplete="off" />
           </div>
           <div class="md-field">
             <label data-i18n="settings.guestYourName">Ваше имя</label>

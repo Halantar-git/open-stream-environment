@@ -1,5 +1,7 @@
 node_modules/
 release/
+# Локальное состояние `wrangler dev` (публичный signaling).
+signal/.wrangler/
 backup/
 config/config.json
 config/local-db.json
