@@ -48,10 +48,11 @@
     evTopDonation: document.getElementById("evTopDonation"),
     socialsFooter: document.getElementById("socialsFooter"),
     sceneCard: document.querySelector(".scene-card"),
-    pauseMedia: document.getElementById("pauseMedia"),
-    pauseVideo: document.getElementById("pauseVideo"),
-    pauseImage: document.getElementById("pauseImage"),
   };
+
+  const sceneBackground = window.SceneBackground
+    ? window.SceneBackground.create(document.querySelector(".scene-wrapper"))
+    : null;
 
   document.querySelectorAll(".event-icon[data-icon]").forEach((el) => {
     el.innerHTML = ICONS[el.dataset.icon] || "";
@@ -77,18 +78,6 @@
     document.body.dataset.theme = appearance.activeThemeId || "";
   }
 
-  function mediaKind(file) {
-    if (/\.(mp4|webm|mov)$/i.test(file)) return "video";
-    if (/\.(png|jpe?g|gif|webp)$/i.test(file)) return "image";
-    return "";
-  }
-
-  function resolveMediaUrl(p) {
-    if (!p) return "";
-    if (/^(https?:)?\/\//i.test(p) || p.startsWith("data:")) return p;
-    return location.origin + "/" + String(p).replace(/^\/+/, "");
-  }
-
   // Scene content lives in config as editable text, but its defaults come from
   // the (Russian) catalog. Localize the default values, but keep any user edits.
   function localizedField(field, value) {
@@ -109,10 +98,11 @@
   function renderScene(scene) {
     if (!scene) return;
     currentScene = scene;
+    if (sceneBackground) sceneBackground.apply(scene);
     renderSceneText(scene);
 
     if (isPause) {
-      renderPause(scene);
+      renderPause();
       return;
     }
 
@@ -141,40 +131,12 @@
       .join("");
   }
 
-  function renderPause(scene) {
+  function renderPause() {
     els.sceneCard.hidden = true;
     els.eventsGrid.hidden = true;
     els.socialsFooter.hidden = true;
     els.timerBox.hidden = true;
     sceneTimer.stop();
-
-    const file = scene.backgroundFile || "";
-    const kind = mediaKind(file);
-    const url = resolveMediaUrl(file);
-
-    if (kind === "video" && url) {
-      els.pauseVideo.src = url;
-      els.pauseVideo.hidden = false;
-      els.pauseImage.removeAttribute("src");
-      els.pauseImage.hidden = true;
-      els.pauseMedia.hidden = false;
-      const attempt = els.pauseVideo.play();
-      if (attempt && typeof attempt.catch === "function") attempt.catch(() => {});
-    } else if (kind === "image" && url) {
-      els.pauseImage.src = url;
-      els.pauseImage.hidden = false;
-      els.pauseVideo.pause();
-      els.pauseVideo.removeAttribute("src");
-      els.pauseVideo.hidden = true;
-      els.pauseMedia.hidden = false;
-    } else {
-      els.pauseVideo.pause();
-      els.pauseVideo.removeAttribute("src");
-      els.pauseVideo.hidden = true;
-      els.pauseImage.removeAttribute("src");
-      els.pauseImage.hidden = true;
-      els.pauseMedia.hidden = true;
-    }
   }
 
   function renderEvents() {

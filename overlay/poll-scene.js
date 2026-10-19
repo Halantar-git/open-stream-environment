@@ -32,6 +32,10 @@
   let ws;
   let poll = { active: false, command: "!poll", chartType: "bars", options: [], votes: {}, total: 0 };
 
+  const sceneBackground = window.SceneBackground
+    ? window.SceneBackground.create(document.querySelector(".scene-wrapper"))
+    : null;
+
   // ---------------- theme ----------------
 
   function applyTheme(appearance) {
@@ -191,9 +195,17 @@
     switch (msg.type) {
       case EVENT_TYPES.STATE:
         applyTheme(msg.payload.appearance);
+        if (sceneBackground && msg.payload.scenes && msg.payload.scenes.poll) {
+          sceneBackground.apply(msg.payload.scenes.poll);
+        }
         if (msg.payload.poll) {
           poll = msg.payload.poll;
           renderPoll();
+        }
+        break;
+      case EVENT_TYPES.SCENES_UPDATE:
+        if (sceneBackground && msg.payload && msg.payload.poll) {
+          sceneBackground.apply(msg.payload.poll);
         }
         break;
       case EVENT_TYPES.THEME_UPDATE:

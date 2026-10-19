@@ -235,7 +235,9 @@
     "splashDurationAuto": "auto",
     "sec": "sec",
     "splashPerScene": "Per scene",
-    "splashPerSceneHint": "The switch next to a scene enables the splash when entering it and when returning from it to the game. Without its own file the global splash is used.",
+    "splashPerSceneHint": "The switch per scene enables the splash when entering it and when returning from it to the game. Without its own file the global splash is used.",
+    "sceneBackgrounds": "Scene backgrounds",
+    "sceneBackgroundsHint": "Video or image behind the card and widgets. Empty — theme background.",
     "splashDurationHint": "auto — video plays to the end, image/GIF uses the default. 1–30 — fixed duration.",
     "splashSourceUrl": "OBS link (splash scene)",
     "splashSourceHint": "Add it as a 1920×1080 browser source to the OBS scene named in Settings → OBS WebSocket → Opening. Turn off “Shutdown source when not visible” in the source properties, otherwise the splash may not connect in time."
@@ -864,8 +866,8 @@
     "splashVideo": "Splash video",
     "splashDuration": "Splash duration, sec",
     "splashVideoHint": "Video, image or GIF plays on transition: Start → Main, → BRB and → End. Without a file a standard splash is shown. Requires an Opening OBS scene with the /overlay/video-splash.html browser source.",
-    "pauseBackground": "Background (video/image)",
-    "pauseBackgroundHint": "Empty — the default blurred theme background."
+    "pauseBackgroundMoved": "The pause background is configured on the Splashes tab together with the other scenes.",
+    "openSceneBackgrounds": "Open Splashes"
   },
   "themeEditor": {
     "themeName": "Theme name",
@@ -1579,7 +1581,8 @@
       "p2": "Configured on the Splashes tab: one file for all scenes plus a file and duration per scene. Priority: the scene's file → the global file → the standard brand splash (when no file is set). The standard splash follows the active theme.",
       "p3": "Duration is auto or 1–30 seconds: video always plays to the end, while an image/GIF with auto holds the default time. The switch to the target scene happens automatically — on the video's end or on the timer.",
       "p4": "Every scene has a toggle: a disabled scene skips its splash and switches immediately. It affects both entering the scene and returning from it to gameplay.",
-      "p5": "Playback needs an OBS scene \"Opening\" with the http://localhost:8710/overlay/video-splash.html browser source (copy the link on the Splashes tab); the scene name is set in Settings → OBS WebSocket → Opening. Turn off “Shutdown source when not visible” in the source properties, otherwise the splash may not connect in time; if the source loads mid-splash, it is replayed so nothing is missed. If the Opening scene is missing, the transition goes straight to the target scene."
+      "p5": "Playback needs an OBS scene \"Opening\" with the http://localhost:8710/overlay/video-splash.html browser source (copy the link on the Splashes tab); the scene name is set in Settings → OBS WebSocket → Opening. Turn off “Shutdown source when not visible” in the source properties, otherwise the splash may not connect in time; if the source loads mid-splash, it is replayed so nothing is missed. If the Opening scene is missing, the transition goes straight to the target scene.",
+      "p6": "Below you can set a background for each scene — video or image behind the card and widgets. Empty — the blurred theme background. For pause this is the only place to set it."
     },
     "hotkeys": {
       "title": "Hotkeys",

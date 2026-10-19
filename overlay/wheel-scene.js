@@ -37,6 +37,10 @@
   // момент перезагрузки страницы розыгрыш уже шёл (см. обработчик STATE).
   let firstStateSeen = false;
 
+  const sceneBackground = window.SceneBackground
+    ? window.SceneBackground.create(document.querySelector(".scene-wrapper"))
+    : null;
+
   // Длительность wheel-spin.mp3 (roulettevision) в мс — вращение подгоняется под неё.
   const WHEEL_SPIN_MS = 5300;
 
@@ -397,6 +401,9 @@
     switch (msg.type) {
       case EVENT_TYPES.STATE:
         applyTheme(msg.payload.appearance);
+        if (sceneBackground && msg.payload.scenes && msg.payload.scenes.wheel) {
+          sceneBackground.apply(msg.payload.scenes.wheel);
+        }
         if (msg.payload.giveaway) {
           participantsState = {
             count: msg.payload.giveaway.count || 0,
@@ -415,6 +422,11 @@
           }
         }
         firstStateSeen = true;
+        break;
+      case EVENT_TYPES.SCENES_UPDATE:
+        if (sceneBackground && msg.payload && msg.payload.wheel) {
+          sceneBackground.apply(msg.payload.wheel);
+        }
         break;
       case EVENT_TYPES.THEME_UPDATE:
         applyTheme(msg.payload);

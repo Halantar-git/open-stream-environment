@@ -272,20 +272,24 @@ body {
 }
 .pill-text { color: var(--md-on-surface); }
 
-/* ---- Pause scene: full-screen background media + badge ---- */
-.pause-media {
+/* ---- Scene background: video or image behind the card ---- */
+.scene-background {
   position: absolute;
   inset: 0;
-  z-index: 5;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
 }
-.pause-media video,
-.pause-media img {
+.scene-background video,
+.scene-background img {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
+/* Свой фон заменяет пятна темы: иначе они просвечивали бы сквозь картинку. */
+.scene-wrapper.has-scene-background .bg-shape { display: none; }
 
 [hidden] { display: none !important; }
 

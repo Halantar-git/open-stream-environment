@@ -1378,6 +1378,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (!splashSettingsFormEl) return;
     const splash = state.splash || { file: "", duration: 0 };
     const sceneIds = ["start", "brb", "talk", "end", "wheel", "poll"];
+    const backgroundIds = [...sceneIds, "pause"];
 
     let html = `
       <div class="md-field">
@@ -1417,6 +1418,19 @@ const { EVENT_TYPES } = window.SharedEvents;
       `;
     });
 
+    html += `
+      <div class="inspector__title" style="margin-top:10px;">${t("scenes.sceneBackgrounds")}</div>
+      <p class="properties__hint" style="margin:0 0 6px;">${t("scenes.sceneBackgroundsHint")}</p>
+    `;
+    backgroundIds.forEach((id) => {
+      html += `
+        <div class="md-field">
+          <label>${t("scene." + id + "Label")}</label>
+          <div id="backgroundFile_${id}"></div>
+        </div>
+      `;
+    });
+
     splashSettingsFormEl.innerHTML = html;
 
     const copySplashBtn = splashSettingsFormEl.querySelector("#copySplashUrlBtn");
@@ -1448,6 +1462,15 @@ const { EVENT_TYPES } = window.SharedEvents;
       );
       wireSwitch(splashSettingsFormEl.querySelector(`#splashEnabled_${id}`), (on) =>
         sendSceneConfigFor(id, { splashEnabled: on })
+      );
+    });
+
+    backgroundIds.forEach((id) => {
+      const sc = state.scenes[id] || {};
+      splashSettingsFormEl.querySelector(`#backgroundFile_${id}`).appendChild(
+        makeSoundFileInput(sc.backgroundFile || "", "media/...mp4/gif", "media", (v) =>
+          sendSceneConfigFor(id, { backgroundFile: v })
+        )
       );
     });
   }
@@ -3335,15 +3358,10 @@ const { EVENT_TYPES } = window.SharedEvents;
 
     if (state.activeSceneId === "pause") {
       sceneFormEl.innerHTML = `
-        <div class="md-field">
-          <label>${t("sceneForm.pauseBackground")}</label>
-          <div id="pauseBackgroundFile"></div>
-          <p class="properties__hint" style="margin:6px 0 0;">${t("sceneForm.pauseBackgroundHint")}</p>
-        </div>
+        <p class="properties__hint" style="margin:0;">${t("sceneForm.pauseBackgroundMoved")}</p>
+        <button class="md-button md-button--tonal" id="openSceneBackgroundsBtn" style="margin-top:10px;">${t("sceneForm.openSceneBackgrounds")}</button>
       `;
-      sceneFormEl.querySelector("#pauseBackgroundFile").appendChild(
-        makeSoundFileInput(scene.backgroundFile || "", "media/...mp4/gif", "media", (v) => sendSceneUpdate({ backgroundFile: v }))
-      );
+      sceneFormEl.querySelector("#openSceneBackgroundsBtn").addEventListener("click", () => switchView("splashes"));
       return;
     }
 

@@ -159,6 +159,7 @@ const SECTIONS = [
       { type: "p", key: "help.splashes.p3" },
       { type: "p", key: "help.splashes.p4" },
       { type: "p", key: "help.splashes.p5" },
+      { type: "p", key: "help.splashes.p6" },
     ],
   },
   {

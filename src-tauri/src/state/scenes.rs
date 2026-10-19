@@ -43,6 +43,7 @@ pub fn default_scenes() -> Value {
             "splashFile": "",
             "splashDuration": 0,
             "splashEnabled": true,
+            "backgroundFile": "",
             "showTimer": true,
             "timerDuration": 600,
             "timerDoneText": "Начинаем прямо сейчас!",
@@ -58,6 +59,7 @@ pub fn default_scenes() -> Value {
             "splashFile": "",
             "splashDuration": 0,
             "splashEnabled": true,
+            "backgroundFile": "",
             "showTimer": true,
             "timerDuration": 300,
             "timerDoneText": "Стрим возобновится прямо сейчас!",
@@ -73,6 +75,7 @@ pub fn default_scenes() -> Value {
             "splashFile": "",
             "splashDuration": 0,
             "splashEnabled": true,
+            "backgroundFile": "",
             "showTimer": false,
             "timerDuration": 0,
             "timerDoneText": "",
@@ -88,6 +91,7 @@ pub fn default_scenes() -> Value {
             "splashFile": "",
             "splashDuration": 0,
             "splashEnabled": true,
+            "backgroundFile": "",
             "showTimer": false,
             "timerDuration": 0,
             "timerDoneText": "",
@@ -103,6 +107,7 @@ pub fn default_scenes() -> Value {
             "splashFile": "",
             "splashDuration": 0,
             "splashEnabled": true,
+            "backgroundFile": "",
             "showTimer": false,
             "timerDuration": 0,
             "timerDoneText": "",
@@ -118,6 +123,7 @@ pub fn default_scenes() -> Value {
             "splashFile": "",
             "splashDuration": 0,
             "splashEnabled": true,
+            "backgroundFile": "",
             "showTimer": false,
             "timerDuration": 0,
             "timerDoneText": "",
@@ -315,12 +321,16 @@ fn plain(value: &Value) -> String {
     }
 }
 
-/// `String(x || "").slice(0, len)` или `String(x).slice(0, len)`.
+/// `String(x || "").trim().slice(0, len)` или `String(x).slice(0, len)`.
 ///
 /// `fallback_empty` — брать ли `|| ""` (подписи уходят в оверлей): у `splashFile`
 /// и соцсетей JS берёт `x || ""`, а у подписей сцены — просто `String(x)`.
 fn sliced(value: &Value, len: usize, raw: bool) -> Value {
-    let text = if raw { js_string(value) } else { plain(value) };
+    let text = if raw {
+        js_string(value)
+    } else {
+        plain(value).trim().to_string()
+    };
     Value::from(text.chars().take(len).collect::<String>())
 }
 
@@ -429,6 +439,7 @@ mod tests {
                 "timerDuration": 4.7,
                 "showTimer": false,
                 "splashDuration": 120,
+                "backgroundFile": "  media/bg.mp4  ",
                 "socials": [
                     { "platform": "TELEGRAM", "text": "t" },
                     { "platform": "DC", "text": "d" },
@@ -447,6 +458,7 @@ mod tests {
         assert_eq!(scene["showTimer"], json!(false));
         // Сплеш зажат до 30 секунд, а соцсети — до шести, платформа — до четырёх знаков.
         assert_eq!(scene["splashDuration"], json!(30));
+        assert_eq!(scene["backgroundFile"], json!("media/bg.mp4"));
         assert_eq!(scene["socials"].as_array().unwrap().len(), 6);
         assert_eq!(scene["socials"][0]["platform"], json!("TELE"));
         // Не тронутые поля остались умолчаниями.
