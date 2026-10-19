@@ -4498,7 +4498,9 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   function syncMicBridge() {
     const widgets = state.allLayoutWidgets ? state.allLayoutWidgets() : state.layout;
-    const hasMic = Array.isArray(widgets) && widgets.some((w) => w.type === "mic");
+    // Как и у камеры, захват нужен только видимому виджету: скрытый не
+    // показывает уровни, но держал бы микрофон занятым для других приложений.
+    const hasMic = Array.isArray(widgets) && widgets.some((w) => w.type === "mic" && w.visible !== false);
     if (hasMic) micBridge.start();
     else micBridge.stop();
   }
