@@ -126,6 +126,16 @@ describe("latest.json: сборка фида", () => {
     expect(() => manifest({ signatures })).toThrow(/нет ассета/);
   });
 
+  test("ссылки ведут на скачивание ассета, а не в API", () => {
+    // Плагин обновления качает файл сам, без заголовков авторизации: ссылка на
+    // `api.github.com/repos/.../assets/{id}` вернула бы анонимному клиенту 404,
+    // поэтому в фид попадает только `browser_download_url`.
+    const { platforms } = manifest();
+    for (const [key, value] of Object.entries(platforms)) {
+      expect({ key, download: value.url.startsWith(`${BASE}/`) }).toEqual({ key, download: true });
+    }
+  });
+
   test("архитектура читается из имени на каждой ОС", () => {
     expect(archOf("App_4.2.1_amd64.deb", "linux")).toBe("x86_64");
     expect(archOf("App-4.2.1-1.x86_64.rpm", "linux")).toBe("x86_64");
