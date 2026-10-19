@@ -63,10 +63,10 @@
     return `rgb(${m(r, target[0])}, ${m(g, target[1])}, ${m(b, target[2])})`;
   }
 
-  const DEFAULT_PRIMARY = "#94cbf9";
-  const DEFAULT_SECONDARY = "#aac6e3";
-  const DEFAULT_TERTIARY = "#94e9f9";
-  const DEFAULT_ON_PRIMARY = "#0f283d";
+  const DEFAULT_PRIMARY = "#d0bcff";
+  const DEFAULT_SECONDARY = "#ccc2dc";
+  const DEFAULT_TERTIARY = "#efb8c8";
+  const DEFAULT_ON_PRIMARY = "#381e72";
 
   class WidgetMd3Orb extends BaseWidget {
     constructor(config, context) {

@@ -150,9 +150,9 @@ mod tests {
         let tokens = tokens("nebula").expect("токены nebula");
 
         // Цвета, шрифты и форма — всё, чем оверлей рисует панели.
-        assert_eq!(tokens["--md-primary"], serde_json::json!("#94cbf9"));
-        assert_eq!(tokens["--md-on-primary"], serde_json::json!("#0f283d"));
-        assert_eq!(tokens["--md-surface"], serde_json::json!("#101114"));
+        assert_eq!(tokens["--md-primary"], serde_json::json!("#d0bcff"));
+        assert_eq!(tokens["--md-on-primary"], serde_json::json!("#381e72"));
+        assert_eq!(tokens["--md-surface"], serde_json::json!("#141218"));
         assert!(
             tokens["--font-display"]
                 .as_str()
