@@ -108,37 +108,32 @@ export function initCanvasEditor({
     return `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:transparent;color:#e8e1f0;font-family:sans-serif;}${cfg.css || ""}</style></head><body>${cfg.html || ""}<script>${cfg.js || ""}</script></body></html>`;
   }
 
-  function buildEqualizerPreview({ width, height, opacity, barCount = 24, gap = 2 }) {
-    const cellCount = 14;
-    const cellGap = 2;
-    const slotW = width / barCount;
-    const barW = Math.max(1, slotW - gap);
-    const cellH = Math.max(1, (height - (cellCount - 1) * cellGap) / cellCount);
-    const green = "#2ecc40";
-    const yellow = "#ffdc00";
-    const red = "#ff4136";
-    const off = "rgba(255,255,255,0.08)";
-    const colorFor = (c) => (c < (cellCount * 8) / 14 ? green : c < (cellCount * 12) / 14 ? yellow : red);
-    const levels = [];
-    for (let i = 0; i < barCount; i++) {
-      const v = Math.abs(Math.sin(i * 0.55) * 0.7 + Math.sin(i * 0.23) * 0.3);
-      const level = Math.round(v * cellCount);
-      const peak = Math.min(cellCount - 1, level + 1);
-      levels.push({ level, peak });
-    }
-    const rects = [];
-    for (let b = 0; b < barCount; b++) {
-      const x = b * slotW + (slotW - barW) / 2;
-      const { level, peak } = levels[b];
-      for (let c = 0; c < cellCount; c++) {
-        const y = height - (c + 1) * cellH - c * cellGap;
-        const on = c < level || c === peak;
-        rects.push(`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${cellH.toFixed(1)}" rx="1" fill="${on ? colorFor(c) : off}"/>`);
-      }
-    }
-    return `<div class="widget-mic widget-mic--preview">
-      <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="width:100%;height:100%;opacity:${opacity}">${rects.join("")}</svg>
-    </div>`;
+  // Поворот повторяет трансформацию живого виджета (см. `_draw` в
+  // mic-widget.js): при 90° и 270° ширина и высота области рисования
+  // меняются местами, и только потом картинка поворачивается — иначе
+  // превью вылезало бы за границы виджета.
+  function micRotation(value) {
+    const r = Number(value);
+    return r === 90 || r === 180 || r === 270 ? r : 0;
+  }
+
+  function micDrawSize(width, height, rotation) {
+    const r = micRotation(rotation);
+    return r === 90 || r === 270 ? { w: height, h: width } : { w: width, h: height };
+  }
+
+  function buildMicPreviewFrame(inner, width, height, opacity, rotation) {
+    const r = micRotation(rotation);
+    const wrap =
+      r === 90
+        ? `translate(${width},0) rotate(90)`
+        : r === 180
+        ? `translate(${width},${height}) rotate(180)`
+        : r === 270
+        ? `translate(0,${height}) rotate(-90)`
+        : "";
+    const body = wrap ? `<g transform="${wrap}">${inner}</g>` : inner;
+    return `<div class="widget-mic widget-mic--preview"><svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="width:100%;height:100%;opacity:${opacity}">${body}</svg></div>`;
   }
 
   // Per-widget mic setting with the global mic config as fallback.
@@ -171,26 +166,54 @@ export function initCanvasEditor({
     return `perspective(1200px) rotateY(${ry}deg) rotateX(${rx}deg)`;
   }
 
-  function buildBarsPreview({ width, height, opacity, color, barCount, gap }) {
+  function buildBarsPreview({ width, height, opacity, color, barCount, gap, rotation }) {
+    const { w: dw, h: dh } = micDrawSize(width, height, rotation);
     const n = Math.max(2, Math.round(barCount));
-    const slotW = width / n;
+    const slotW = dw / n;
     const barW = Math.max(1, slotW - gap);
     let rects = "";
     for (let i = 0; i < n; i++) {
       const v = Math.abs(Math.sin(i * 0.5) * 0.65 + Math.sin(i * 0.19) * 0.35);
-      const h = Math.max(1, v * height * 0.96);
+      const h = Math.max(1, v * dh * 0.96);
       const x = i * slotW + (slotW - barW) / 2;
-      const y = (height - h) / 2;
+      const y = (dh - h) / 2;
       rects += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${escapeAttr(color)}"/>`;
     }
-    return `<div class="widget-mic widget-mic--preview"><svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="width:100%;height:100%;opacity:${opacity}">${rects}</svg></div>`;
+    return buildMicPreviewFrame(rects, width, height, opacity, rotation);
   }
 
-  function buildRingPreview({ width, height, opacity, color, barCount, lineWidth }) {
+  function buildBarsUpPreview({ width, height, opacity, color, barCount, gap, rotation }) {
+    const { w: dw, h: dh } = micDrawSize(width, height, rotation);
     const n = Math.max(2, Math.round(barCount));
-    const cx = width / 2;
-    const cy = height / 2;
-    const maxR = Math.min(width, height) / 2 - 2;
+    const slotW = dw / n;
+    const barW = Math.max(1, slotW - gap);
+    let rects = "";
+    for (let i = 0; i < n; i++) {
+      const v = Math.abs(Math.sin(i * 0.5) * 0.65 + Math.sin(i * 0.19) * 0.35);
+      const h = Math.max(1, v * dh * 0.96);
+      const x = i * slotW + (slotW - barW) / 2;
+      rects += `<rect x="${x.toFixed(1)}" y="${(dh - h).toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${escapeAttr(color)}"/>`;
+    }
+    return buildMicPreviewFrame(rects, width, height, opacity, rotation);
+  }
+
+  function buildSinePreview({ width, height, opacity, color, lineWidth, rotation }) {
+    const { w: dw, h: dh } = micDrawSize(width, height, rotation);
+    const pts = [];
+    for (let x = 0; x <= dw; x += 6) {
+      const y = dh / 2 + Math.sin(x * 0.045) * dh * 0.28 + Math.sin(x * 0.012) * dh * 0.11;
+      pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+    }
+    const inner = `<path d="M${pts.join(" L")}" fill="none" stroke="${escapeAttr(color)}" stroke-width="${lineWidth}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+    return buildMicPreviewFrame(inner, width, height, opacity, rotation);
+  }
+
+  function buildRingPreview({ width, height, opacity, color, barCount, lineWidth, rotation }) {
+    const { w: dw, h: dh } = micDrawSize(width, height, rotation);
+    const n = Math.max(2, Math.round(barCount));
+    const cx = dw / 2;
+    const cy = dh / 2;
+    const maxR = Math.min(dw, dh) / 2 - 2;
     const minR = maxR * 0.35;
     let lines = "";
     for (let i = 0; i < n; i++) {
@@ -199,7 +222,7 @@ export function initCanvasEditor({
       const r = minR + (maxR - minR) * v;
       lines += `<line x1="${(cx + Math.cos(angle) * minR).toFixed(1)}" y1="${(cy + Math.sin(angle) * minR).toFixed(1)}" x2="${(cx + Math.cos(angle) * r).toFixed(1)}" y2="${(cy + Math.sin(angle) * r).toFixed(1)}" stroke="${escapeAttr(color)}" stroke-width="${lineWidth}" stroke-linecap="round"/>`;
     }
-    return `<div class="widget-mic widget-mic--preview"><svg viewBox="0 0 ${width} ${height}" style="width:100%;height:100%;opacity:${opacity}">${lines}</svg></div>`;
+    return buildMicPreviewFrame(lines, width, height, opacity, rotation);
   }
 
   // The type a widget renders as under the active theme — mirrors the overlay's
@@ -406,25 +429,14 @@ export function initCanvasEditor({
         const barCount = Number(micCfg(config, "barCount", 32)) || 32;
         const gap = Number(micCfg(config, "barGap", 2)) || 0;
         const lineWidth = Number(micCfg(config, "lineWidth", 2)) || 2;
+        const rotation = micRotation(config.rotation);
         const width = 400;
         const height = 80;
         let preview;
-        if (mode === "equalizer") preview = buildEqualizerPreview({ width, height, opacity, barCount, gap });
-        else if (mode === "bars") preview = buildBarsPreview({ width, height, opacity, color, barCount, gap });
-        else if (mode === "ring") preview = buildRingPreview({ width, height, opacity, color, barCount, lineWidth });
-        else {
-          const pts = [];
-          for (let x = 0; x <= width; x += 6) {
-            const y = height / 2 + Math.sin(x * 0.045) * 22 + Math.sin(x * 0.012) * 9;
-            pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
-          }
-          const d = "M" + pts.join(" L");
-          preview = `<div class="widget-mic widget-mic--preview">
-            <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="width:100%;height:100%;opacity:${opacity}">
-              <path d="${d}" fill="none" stroke="${escapeAttr(color)}" stroke-width="${lineWidth}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
-            </svg>
-          </div>`;
-        }
+        if (mode === "bars-up") preview = buildBarsUpPreview({ width, height, opacity, color, barCount, gap, rotation });
+        else if (mode === "bars") preview = buildBarsPreview({ width, height, opacity, color, barCount, gap, rotation });
+        else if (mode === "ring") preview = buildRingPreview({ width, height, opacity, color, barCount, lineWidth, rotation });
+        else preview = buildSinePreview({ width, height, opacity, color, lineWidth, rotation });
         const transform = micPerspectiveStyle(config);
         return transform
           ? `<div style="width:100%;height:100%;transform:${transform};transform-style:preserve-3d;">${preview}</div>`

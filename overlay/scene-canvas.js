@@ -62,7 +62,7 @@
     soundboardConfig: { volume: 0.8, queueMode: false },
     tts: { enabled: true, volume: 0.9, rate: 1, lang: "ru-RU", voice: "" },
     donationVoice: { donationAlerts: false, volume: 0.9 },
-    micConfig: { sensitivity: 1.5, lineWidth: 2, color: "", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2, peakFall: 2.5 },
+    micConfig: { sensitivity: 1.5, lineWidth: 2, color: "", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2 },
     remoteMicData: null,
     longshot: null,
     giveaway: { count: 0, participants: [] },

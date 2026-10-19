@@ -1,5 +1,5 @@
 {
-  "sourceHash": "baf0c5f52bd7de41",
+  "sourceHash": "6ff1096e44d8d6f3",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -240,7 +240,8 @@
       "minW": 10,
       "minH": 3,
       "defaultConfig": {
-        "perspective": 0
+        "perspective": 0,
+        "rotation": 0
       }
     },
     "webcam": {

@@ -16,15 +16,19 @@
  */
 
 /*
-  Microphone visualizer widget — a 2D <canvas> wave (sine / bars / ring /
-  equalizer) driven by Web Audio (getUserMedia) locally, or by the remote mic
-  bridge (MIC_AUDIO_DATA). Its rAF loop, microphone stream and AudioContext are
-  fully torn down in onUnmount().
+  Microphone visualizer widget — a 2D <canvas> wave (sine / centered bars /
+  bottom-up bars / ring) driven by Web Audio (getUserMedia) locally, or by the
+  remote mic bridge (MIC_AUDIO_DATA). Its rAF loop, microphone stream and
+  AudioContext are fully torn down in onUnmount().
 
   Display settings are read per widget (`config`) with the global mic config
   (state.micConfig) as fallback; capture settings (device, denoise flags) are
   global because the mic is opened once. Spectrum → bands uses the testable
   overlay/mic-dsp.js helpers (log scale, bin averaging, gate, smoothing).
+
+  `config.rotation` (0/90/180/270) поворачивает рисунок внутри холста. Квадрат
+  не нужен: при 90° и 270° ширина и высота области рисования меняются местами,
+  поэтому вертикальный виджет заполняется целиком, без обрезки.
 */
 (function (root, factory) {
   const isModule = typeof module !== "undefined" && module.exports;
@@ -249,12 +253,15 @@
       const smoothing = this._clamp(this._setting("smoothing", 0.35), 0, 1, 0.35);
       const bandCount = Math.round(this._clamp(this._setting("barCount", 32), 10, 64, 32));
       const gap = Math.max(0, Number(this._setting("barGap", 2)) || 0);
-      const peakFall = this._clamp(this._setting("peakFall", 2.5), 0.5, 10, 2.5);
 
-      const amp = (ch / 2) * 0.92 * sensitivity;
+      const rawRotation = Number(this.config.rotation) || 0;
+      const rotation = rawRotation === 90 || rawRotation === 180 || rawRotation === 270 ? rawRotation : 0;
+      const drawW = rotation === 90 || rotation === 270 ? ch : cw;
+      const drawH = rotation === 90 || rotation === 270 ? cw : ch;
+      const amp = (drawH / 2) * 0.92 * sensitivity;
       const elapsed = (now - this.t0) / 1000;
-      const dt = this._eqLast == null ? 0 : Math.min(0.1, (now - this._eqLast) / 1000);
-      this._eqLast = now;
+      const dt = this._lastDrawAt == null ? 0 : Math.min(0.1, (now - this._lastDrawAt) / 1000);
+      this._lastDrawAt = now;
 
       let level = 0;
       if (this.analyser && this.dataArray) {
@@ -321,16 +328,29 @@
         return;
       }
 
-      if (mode === "bars") {
-        this._drawBars(ctx, cw, ch, bandValues, gap);
-      } else if (mode === "ring") {
-        this._drawRing(ctx, cw, ch, bandValues);
-      } else if (mode === "equalizer") {
-        this._drawEqualizer(ctx, cw, ch, bandValues, gap, peakFall, dt);
-      } else {
-        this._drawSine(ctx, cw, ch, elapsed, amp, level);
+      ctx.save();
+      if (rotation === 90) {
+        ctx.translate(cw, 0);
+        ctx.rotate(Math.PI / 2);
+      } else if (rotation === 180) {
+        ctx.translate(cw, ch);
+        ctx.rotate(Math.PI);
+      } else if (rotation === 270) {
+        ctx.translate(0, ch);
+        ctx.rotate(-Math.PI / 2);
       }
 
+      if (mode === "bars") {
+        this._drawBars(ctx, drawW, drawH, bandValues, gap);
+      } else if (mode === "bars-up") {
+        this._drawBarsUp(ctx, drawW, drawH, bandValues, gap);
+      } else if (mode === "ring") {
+        this._drawRing(ctx, drawW, drawH, bandValues);
+      } else {
+        this._drawSine(ctx, drawW, drawH, elapsed, amp, level);
+      }
+
+      ctx.restore();
       ctx.globalAlpha = 1;
     }
 
@@ -368,68 +388,17 @@
       }
     }
 
-    _drawEqualizer(ctx, cw, ch, bands, gap, peakFall, dt) {
+    // Тот же спектр, но столбики растут от нижнего края вверх, а не от центра.
+    _drawBarsUp(ctx, cw, ch, bands, gap) {
       if (!bands || !bands.length) return;
-      const barCount = bands.length;
-
-      // Vertical LED segments: ~8px cells with 2px gaps, scaled to the host
-      // height. The classic palette (green → yellow → red) matches the reference.
-      const cellCount = Math.max(2, Math.round(ch / 10));
-      const cellGap = 2;
-      const cellH = Math.max(1, (ch - (cellCount - 1) * cellGap) / cellCount);
-      const GREEN = "#2ecc40";
-      const YELLOW = "#ffdc00";
-      const RED = "#ff4136";
-      const read = this.context.readCssVar;
-      const off = (read && read("--md-surface-container-high")) || "rgba(255,255,255,0.08)";
-
-      // Falling-peak physics, expressed in cells/second so it is independent of
-      // the host frame rate. `level` rises instantly to the live value and
-      // decays smoothly; `peak` holds for a moment, then falls back down.
-      const levelDecay = 10;
-      const holdSec = 0.54;
-
-      if (!this._eqBars || this._eqBars.length !== barCount) {
-        this._eqBars = [];
-        for (let i = 0; i < barCount; i++) this._eqBars.push({ level: 0, peak: 0, hold: 0 });
-      }
-
-      const slotW = cw / barCount;
+      const n = bands.length;
+      const slotW = cw / n;
       const barW = Math.max(1, slotW - gap);
-
-      for (let i = 0; i < barCount; i++) {
-        const target = bands[i] * cellCount;
-        const bar = this._eqBars[i];
-
-        if (target > bar.level) bar.level = target;
-        else bar.level = Math.max(target, bar.level - levelDecay * dt);
-
-        if (bar.level >= bar.peak) {
-          bar.peak = bar.level;
-          bar.hold = holdSec;
-        } else if (bar.hold > 0) {
-          bar.hold -= dt;
-        } else {
-          bar.peak = Math.max(bar.level, bar.peak - peakFall * dt);
-        }
-
+      for (let i = 0; i < n; i++) {
+        const h = Math.max(1, bands[i] * ch * 0.96);
         const x = i * slotW + (slotW - barW) / 2;
-        const lit = Math.round(bar.level);
-        const peakIndex = Math.round(bar.peak) - 1;
-
-        for (let c = 0; c < cellCount; c++) {
-          const y = ch - (c + 1) * cellH - c * cellGap;
-          const on = c < lit || c === peakIndex;
-          ctx.fillStyle = on ? this._eqColor(c, cellCount, GREEN, YELLOW, RED) : off;
-          ctx.fillRect(x, y, barW, cellH);
-        }
+        ctx.fillRect(x, ch - h, barW, h);
       }
-    }
-
-    _eqColor(c, count, green, yellow, red) {
-      if (c < (count * 8) / 14) return green;
-      if (c < (count * 12) / 14) return yellow;
-      return red;
     }
 
     _drawRing(ctx, cw, ch, bands) {

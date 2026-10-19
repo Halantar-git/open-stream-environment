@@ -362,6 +362,8 @@ export function initPropertiesPanel({
         return fallback;
       };
       const mode = micDef("visualizer_mode", "sine");
+      const rawRotation = Number(config.rotation);
+      const rotation = rawRotation === 90 || rawRotation === 180 || rawRotation === 270 ? rawRotation : 0;
       const themePrimary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#0060A8";
       const micColor = config.color || state.micConfig.color || themePrimary;
       const deviceId = state.micConfig.deviceId || "";
@@ -385,15 +387,11 @@ export function initPropertiesPanel({
       if (mode === "sine" || mode === "ring") {
         fields += `<div class="md-field"><label>${t("mic.lineWidth")}: <span id="pMicLineWidthValue">${num("lineWidth", 2)}</span></label><input type="range" id="pMicLineWidth" min="1" max="12" step="0.5" value="${num("lineWidth", 2)}"></div>`;
       }
-      if (mode === "bars" || mode === "ring" || mode === "equalizer") {
+      if (mode === "bars" || mode === "bars-up" || mode === "ring") {
         fields += `<div class="md-field"><label>${t("mic.barCount")}: <span id="pMicBarCountValue">${num("barCount", 32)}</span></label><input type="range" id="pMicBarCount" min="10" max="64" step="1" value="${num("barCount", 32)}"></div>`;
       }
-      if (mode === "bars" || mode === "equalizer") {
+      if (mode === "bars" || mode === "bars-up") {
         fields += `<div class="md-field"><label>${t("mic.barGap")}: <span id="pMicBarGapValue">${num("barGap", 2)}</span></label><input type="range" id="pMicBarGap" min="0" max="12" step="0.5" value="${num("barGap", 2)}"></div>`;
-      }
-      if (mode === "equalizer") {
-        fields += `<div class="md-field"><label>${t("mic.peakFall")}: <span id="pMicPeakFallValue">${num("peakFall", 2.5)}</span></label><input type="range" id="pMicPeakFall" min="0.5" max="10" step="0.1" value="${num("peakFall", 2.5)}"></div>
-          <p class="properties__hint" style="margin:0;">${t("mic.equalizerPalette")}</p>`;
       }
       if (mode !== "sine") {
         const scale = micDef("freqScale", "log") === "linear" ? "linear" : "log";
@@ -406,14 +404,12 @@ export function initPropertiesPanel({
       }
       fields += `<div class="md-field"><label>${t("mic.gain")}: <span id="pMicGainValue">${num("gain", 1).toFixed(1)}×</span></label><input type="range" id="pMicGain" min="0.1" max="5" step="0.1" value="${num("gain", 1)}"></div>`;
       fields += `<div class="md-field"><label>${t("mic.noiseGate")}: <span id="pMicNoiseGateValue">${Math.round(num("noiseGate", 0) * 100)}%</span></label><input type="range" id="pMicNoiseGate" min="0" max="0.5" step="0.01" value="${num("noiseGate", 0)}"></div>`;
-      if (mode !== "equalizer") {
-        fields += `<div class="md-field"><label>${t("mic.color")}</label>
+      fields += `<div class="md-field"><label>${t("mic.color")}</label>
           <div class="properties__color-row">
             <input type="color" id="pMicColor" value="${escapeAttr(micColor)}">
             <button class="md-button md-button--text" id="pMicColorReset" title="${t("mic.colorAuto")}">${t("mic.colorAuto")}</button>
           </div>
         </div>`;
-      }
       fields += `<div class="md-field"><label>${t("mic.opacity")}: <span id="pMicOpacityValue">${Math.round(num("opacity", 0.9) * 100)}%</span></label><input type="range" id="pMicOpacity" min="5" max="100" step="1" value="${Math.round(num("opacity", 0.9) * 100)}"></div>`;
       fields += `<div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>
         <div class="md-field"><label>${t("properties.perspectiveDirection")}</label>
@@ -445,8 +441,16 @@ export function initPropertiesPanel({
           <select id="pMicMode">
             <option value="sine" ${mode === "sine" ? "selected" : ""}>${t("mic.modeSine")}</option>
             <option value="bars" ${mode === "bars" ? "selected" : ""}>${t("mic.modeBars")}</option>
+            <option value="bars-up" ${mode === "bars-up" ? "selected" : ""}>${t("mic.modeBarsUp")}</option>
             <option value="ring" ${mode === "ring" ? "selected" : ""}>${t("mic.modeRing")}</option>
-            <option value="equalizer" ${mode === "equalizer" ? "selected" : ""}>${t("mic.modeEqualizer")}</option>
+          </select>
+        </div>
+        <div class="md-field"><label>${t("mic.rotation")}</label>
+          <select id="pMicRotation">
+            <option value="0" ${rotation === 0 ? "selected" : ""}>${t("mic.rotationNone")}</option>
+            <option value="90" ${rotation === 90 ? "selected" : ""}>${t("mic.rotation90")}</option>
+            <option value="180" ${rotation === 180 ? "selected" : ""}>${t("mic.rotation180")}</option>
+            <option value="270" ${rotation === 270 ? "selected" : ""}>${t("mic.rotation270")}</option>
           </select>
         </div>
         ${fields}
@@ -802,11 +806,12 @@ export function initPropertiesPanel({
       };
       const modeEl = propertiesEl.querySelector("#pMicMode");
       if (modeEl) modeEl.addEventListener("change", (e) => setMic("visualizer_mode", e.target.value));
+      const micRotationEl = propertiesEl.querySelector("#pMicRotation");
+      if (micRotationEl) micRotationEl.addEventListener("change", (e) => setMic("rotation", Number(e.target.value)));
       onMicRange("pMicSensitivity", "pMicSensitivityValue", (v) => v.toFixed(1), (v) => setMic("sensitivity", v));
       onMicRange("pMicLineWidth", "pMicLineWidthValue", (v) => v.toFixed(1), (v) => setMic("lineWidth", v));
       onMicRange("pMicBarCount", "pMicBarCountValue", (v) => String(Math.round(v)), (v) => setMic("barCount", Math.round(v)));
       onMicRange("pMicBarGap", "pMicBarGapValue", (v) => v.toFixed(1), (v) => setMic("barGap", v));
-      onMicRange("pMicPeakFall", "pMicPeakFallValue", (v) => v.toFixed(1), (v) => setMic("peakFall", v));
       onMicRange("pMicSmoothing", "pMicSmoothingValue", (v) => `${Math.round(v * 100)}%`, (v) => setMic("smoothing", v));
       onMicRange("pMicGain", "pMicGainValue", (v) => `${v.toFixed(1)}×`, (v) => setMic("gain", v));
       onMicRange("pMicNoiseGate", "pMicNoiseGateValue", (v) => `${Math.round(v * 100)}%`, (v) => setMic("noiseGate", v));

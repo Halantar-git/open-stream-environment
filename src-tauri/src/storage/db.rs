@@ -83,7 +83,6 @@ pub fn default_data() -> Map<String, Value> {
             "visualizer_mode": "sine",
             "barCount": 32,
             "barGap": 2,
-            "peakFall": 2.5,
             "freqScale": "log",
             "smoothing": 0.35,
             "gain": 1,
@@ -697,8 +696,8 @@ impl Database {
         // Известные режимы проходят как есть, всё прочее — «волна».
         let mode = match raw.get("visualizer_mode").and_then(Value::as_str) {
             Some("bars") => "bars",
+            Some("bars-up") => "bars-up",
             Some("ring") => "ring",
-            Some("equalizer") => "equalizer",
             _ => "sine",
         };
         json!({
@@ -710,7 +709,6 @@ impl Database {
             // `Math.round(Number(raw.barCount) || 32)` в пределах 10…64 — как JS.
             "barCount": num(clamp(coerced_number(raw.get("barCount"), 32.0).round(), 10.0, 64.0)),
             "barGap": number_or(raw.get("barGap"), 2.0),
-            "peakFall": num(clamp(coerced_number(raw.get("peakFall"), 2.5), 0.5, 10.0)),
             "freqScale": if raw.get("freqScale").and_then(Value::as_str) == Some("linear") { "linear" } else { "log" },
             "smoothing": num(clamp(raw_number(raw.get("smoothing"), 0.35), 0.0, 1.0)),
             "gain": num(clamp(raw_number(raw.get("gain"), 1.0), 0.1, 5.0)),
@@ -1664,13 +1662,27 @@ mod tests {
         assert_eq!(normalized["barCount"], json!(64));
         assert_eq!(normalized["smoothing"], json!(1));
         assert_eq!(normalized["echoCancellation"], json!(false));
-        // Мусор в режиме подменяется умолчанием.
+        // Мусор в режиме подменяется умолчанием, устаревший «эквалайзер» тоже.
         db.set_path(
             "overlay_mic_config",
             json!({ "visualizer_mode": "чужое", "freqScale": "linear" }),
         );
         assert_eq!(db.mic_config()["visualizer_mode"], json!("sine"));
         assert_eq!(db.mic_config()["freqScale"], json!("linear"));
+        db.set_path(
+            "overlay_mic_config",
+            json!({ "visualizer_mode": "equalizer" }),
+        );
+        assert_eq!(db.mic_config()["visualizer_mode"], json!("sine"));
+
+        // Столбики снизу вверх — отдельный режим.
+        db.set_path(
+            "overlay_mic_config",
+            json!({ "visualizer_mode": "bars-up" }),
+        );
+        assert_eq!(db.mic_config()["visualizer_mode"], json!("bars-up"));
+        // peakFall ушёл вместе с эквалайзером.
+        assert!(db.mic_config().get("peakFall").is_none());
     }
 
     #[test]

@@ -98,7 +98,7 @@ export function createStateManager() {
 
     wheelConfig: { musicVolume: 50, effectsVolume: 90, x: 960, y: 540 },
     wheelSpeedConfig: { speed: 3 },
-    micConfig: { sensitivity: 1.5, lineWidth: 2, color: "", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2, peakFall: 2.5 },
+    micConfig: { sensitivity: 1.5, lineWidth: 2, color: "", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2 },
     micDevices: [],
     cameraConfig: { deviceId: "", width: 960, fps: 12, quality: 0.6, codec: "auto", bitrateKbps: 4000, enabled: true },
     // Панель ждёт сохранённый флаг камеры, прежде чем открывать устройство:

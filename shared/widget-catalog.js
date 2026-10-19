@@ -225,7 +225,7 @@
       defaultGeometry: { x: 50, y: 82, w: 40, h: 12 },
       minW: 10,
       minH: 3,
-      defaultConfig: { perspective: 0 },
+      defaultConfig: { perspective: 0, rotation: 0 },
     },
     webcam: {
       type: "webcam",
