@@ -40,36 +40,19 @@ body {
   color: var(--md-on-surface);
 }
 
-/* ---- Ambient floating background blobs ---- */
+/* ---- Ambient background blobs ----
+   Единый фон сцен и заставок для всех тем: три размытых пятна, окрашенных
+   токенами темы (primary/tertiary/secondary). Не анимируются: в покое сцена
+   не выпускает кадров, и фон ничего не стоит. */
 .bg-shape {
   position: absolute;
   border-radius: 50%;
   filter: blur(90px);
   opacity: 0.35;
-  animation: float-shapes 12s infinite alternate ease-in-out;
 }
 .shape-1 { width: 500px; height: 500px; background: var(--md-primary); top: 10%; left: 15%; }
-.shape-2 { width: 600px; height: 600px; background: var(--md-tertiary); bottom: 5%; right: 15%; animation-delay: -4s; }
-.shape-3 { width: 400px; height: 400px; background: var(--md-secondary); bottom: 20%; left: 35%; animation-delay: -8s; }
-
-@keyframes float-shapes {
-  0% { transform: translate(0, 0) scale(1); }
-  100% { transform: translate(60px, 40px) scale(1.15); }
-}
-
-/* Orbital swaps the soft blur blobs for a technical grid texture */
-.grid-overlay { display: none; }
-[data-decoration="brackets4"] .bg-shape { display: none; }
-[data-decoration="brackets4"] .grid-overlay {
-  display: block;
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(var(--md-outline-variant) 1px, transparent 1px),
-    linear-gradient(90deg, var(--md-outline-variant) 1px, transparent 1px);
-  background-size: 60px 60px;
-  opacity: 0.12;
-}
+.shape-2 { width: 600px; height: 600px; background: var(--md-tertiary); bottom: 5%; right: 15%; }
+.shape-3 { width: 400px; height: 400px; background: var(--md-secondary); bottom: 20%; left: 35%; }
 
 /* ---- Corner brackets on the scene card itself ---- */
 [data-decoration="brackets2"] .scene-card,
@@ -306,34 +289,8 @@ body {
 
 [hidden] { display: none !important; }
 
-/* ---------- Nuclear: cold-war CRT terminal scene (neutral) ----------
-   Flat neutral metal, with the CRT effect (scanlines, grain, vignette)
-   applied as a neutral overlay — green stays an accent only. */
-[data-decoration="nuclear"] .bg-shape { display: none; }
-
-[data-decoration="nuclear"] .scene-wrapper {
-  background-color: #050605;
-}
-
-[data-decoration="nuclear"] .scene-wrapper::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 40;
-  pointer-events: none;
-  background:
-    repeating-linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.022) 0px,
-      rgba(255, 255, 255, 0.022) 1px,
-      transparent 1px,
-      transparent 3px
-    ),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E"),
-    radial-gradient(ellipse at 50% 50%, transparent 56%, rgba(0, 0, 0, 0.3) 100%);
-  animation: nuclear-crt-flicker 4.5s steps(1) infinite;
-}
-
+/* ---------- Nuclear: cold-war CRT terminal (neutral) ----------
+   Фон общий с остальными темами; характер задают панели и фосфорный акцент. */
 [data-decoration="nuclear"] .scene-card {
   border-color: rgba(167, 173, 168, 0.2);
 }
@@ -351,168 +308,12 @@ body {
   animation: nuclear-phosphor-flicker 6s steps(1) infinite;
 }
 
-@keyframes nuclear-crt-flicker {
-  0%, 100% { opacity: 0.85; }
-  4% { opacity: 0.78; }
-  6% { opacity: 0.85; }
-  50% { opacity: 0.8; }
-  52% { opacity: 0.85; }
-}
 @keyframes nuclear-phosphor-flicker {
   0%, 100% { opacity: 0.45; }
   8% { opacity: 0.32; }
   10% { opacity: 0.45; }
   52% { opacity: 0.38; }
   54% { opacity: 0.45; }
-}
-
-/* ---------- Retrowave: neon night, starfield and perspective grid ---------- */
-/* Звёзды живут в двух отдельных слоях: так они мерцают не синхронно и могут
-   дрейфовать в разные стороны. Слои шире вьюпорта, поэтому сдвиг на плитку
-   320px не открывает край, а повторяющийся рисунок делает стык незаметным. */
-[data-decoration="retrowave"] .bg-shape {
-  display: block;
-  top: -25%;
-  left: -25%;
-  right: -25%;
-  bottom: -25%;
-  width: auto;
-  height: auto;
-  border-radius: 0;
-  filter: none;
-  opacity: 0.9;
-  pointer-events: none;
-  background-color: transparent;
-  background-repeat: repeat;
-  background-size: 320px 320px;
-  will-change: transform, opacity;
-}
-[data-decoration="retrowave"] .shape-1 {
-  background-image:
-    radial-gradient(1.3px 1.3px at 22px 40px, rgba(255, 255, 255, 0.95), transparent 2px),
-    radial-gradient(1px 1px at 128px 18px, rgba(255, 255, 255, 0.8), transparent 1.7px),
-    radial-gradient(0.9px 0.9px at 212px 94px, rgba(45, 226, 230, 0.9), transparent 1.6px),
-    radial-gradient(1.1px 1.1px at 298px 162px, rgba(255, 255, 255, 0.75), transparent 1.9px),
-    radial-gradient(0.8px 0.8px at 68px 214px, rgba(45, 226, 230, 0.7), transparent 1.5px),
-    radial-gradient(1px 1px at 248px 282px, rgba(255, 255, 255, 0.7), transparent 1.7px);
-  animation:
-    retrowave-stars-drift 240s linear infinite,
-    retrowave-stars-twinkle 14s ease-in-out infinite;
-}
-[data-decoration="retrowave"] .shape-2 {
-  background-image:
-    radial-gradient(1.2px 1.2px at 52px 136px, rgba(255, 255, 255, 0.85), transparent 1.9px),
-    radial-gradient(0.9px 0.9px at 146px 250px, rgba(255, 45, 149, 0.85), transparent 1.6px),
-    radial-gradient(1px 1px at 236px 54px, rgba(255, 255, 255, 0.7), transparent 1.7px),
-    radial-gradient(0.8px 0.8px at 300px 210px, rgba(255, 255, 255, 0.6), transparent 1.5px),
-    radial-gradient(1.1px 1.1px at 104px 300px, rgba(255, 255, 255, 0.8), transparent 1.8px),
-    radial-gradient(0.9px 0.9px at 198px 112px, rgba(45, 226, 230, 0.65), transparent 1.6px);
-  animation:
-    retrowave-stars-drift-reverse 320s linear infinite,
-    retrowave-stars-twinkle 19s ease-in-out infinite -6s;
-}
-[data-decoration="retrowave"] .shape-3 { display: none; }
-
-@keyframes retrowave-stars-drift {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(320px, 0, 0); }
-}
-@keyframes retrowave-stars-drift-reverse {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(-320px, 0, 0); }
-}
-@keyframes retrowave-stars-twinkle {
-  0%, 100% { opacity: 0.95; }
-  50% { opacity: 0.65; }
-}
-
-[data-decoration="retrowave"] .scene-wrapper {
-  background-color: #05020b;
-  background-image:
-    radial-gradient(ellipse at 50% 28%, rgba(255, 45, 149, 0.2), transparent 56%),
-    radial-gradient(ellipse at 20% 44%, rgba(45, 226, 230, 0.1), transparent 50%),
-    radial-gradient(ellipse at 82% 38%, rgba(105, 55, 210, 0.18), transparent 56%),
-    linear-gradient(180deg, #04010a 0%, #0d0719 58%, #190a2c 100%);
-}
-
-/* Pink horizon line behind the scene card — the retrowave sunset strip. */
-[data-decoration="retrowave"] .scene-wrapper::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: 2px;
-  z-index: 1;
-  pointer-events: none;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 45, 149, 0.5) 22%,
-    rgba(45, 226, 230, 0.6) 50%,
-    rgba(255, 45, 149, 0.5) 78%,
-    transparent
-  );
-  box-shadow: 0 0 22px rgba(255, 45, 149, 0.45);
-  opacity: 0.6;
-  animation: retrowave-horizon 10s ease-in-out infinite;
-}
-
-/* Дышащая линия горизонта — единственный элемент, который меняет яркость:
-   анимируем только opacity, чтобы не перерисовывать всё полотно сцены. */
-@keyframes retrowave-horizon {
-  0%, 100% { opacity: 0.55; }
-  50% { opacity: 0.8; }
-}
-
-/* Perspective grid floor and ceiling. The plane only supplies the 3D tilt and
-   the mask; the repeating texture is a taller child that slides along the
-   plane with `transform`. Compositor animation stays sub-pixel smooth at any
-   refresh rate, while `background-position` is snapped to whole pixels and
-   makes the lines visibly step at 1080p. */
-.grid-plane { display: none; }
-
-[data-decoration="retrowave"] .grid-overlay {
-  display: block;
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-[data-decoration="retrowave"] .grid-plane {
-  display: block;
-  position: absolute;
-  left: -20%;
-  right: -20%;
-  height: 100vh;
-  overflow: hidden;
-  opacity: 0.45;
-  filter: drop-shadow(0 0 3px rgba(255, 45, 149, 0.35));
-}
-[data-decoration="retrowave"] .grid-plane--ceiling {
-  top: 0;
-  transform: perspective(2000px) rotateX(-55deg);
-  transform-origin: top center;
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.7) 45%, transparent 82%);
-  mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.7) 45%, transparent 82%);
-}
-[data-decoration="retrowave"] .grid-plane--floor {
-  bottom: 0;
-  transform: perspective(2000px) rotateX(55deg);
-  transform-origin: bottom center;
-  -webkit-mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.7) 45%, transparent 82%);
-  mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.7) 45%, transparent 82%);
-}
-/* Неоновые волны над горизонтом; canvas создаёт retrowave-waves.js. */
-.retrowave-waves {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 16%;
-  height: 40%;
-  width: 100%;
-  pointer-events: none;
-  z-index: 0;
 }
 
 /* Слой канваса сцены: виджеты из своей раскладки поверх фиксированного
@@ -523,36 +324,12 @@ body {
   z-index: 12;
   pointer-events: none;
 }
-[data-decoration="retrowave"] .grid-texture {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: -100%;
-  bottom: -100%;
-  background-image:
-    linear-gradient(rgba(45, 226, 230, 0.6) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 45, 149, 0.5) 1px, transparent 1px);
-  background-size: 80px 60px;
-  will-change: transform;
-  animation: retrowave-grid-scroll 12s linear infinite;
-}
-[data-decoration="retrowave"] .grid-plane--ceiling .grid-texture {
-  animation-direction: reverse;
-}
-/* Сетка едет к зрителю: на полу текстура уходит вниз по локальной оси,
-   на потолке — вверх (reverse). Шаг цикла равен шагу плитки (60px), а
-   рисунок повторяющийся, поэтому стык не виден. */
-@keyframes retrowave-grid-scroll {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(0, 60px, 0); }
-}
-
 /* Scene panels use a deeper chamfer than widget panels. */
 [data-decoration="retrowave"] .scene-card {
   position: relative;
   clip-path: polygon(48px 0, 100% 0, 100% 100%, 0 100%);
-  /* За карточкой летит анимированный canvas; blur(0px) из темы всё равно
-     создаёт backdrop-слой и мешает композитору. Панель и так полупрозрачная. */
+  /* Панель и так полупрозрачная: лишний backdrop-слой только мешает
+     композитору. */
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   background-image:
@@ -594,433 +371,13 @@ body {
   box-shadow: inset 0 0 0 1px rgba(45, 226, 230, 0.5), 0 0 14px rgba(45, 226, 230, 0.26);
 }
 
-/* ---------- Заставки тем ----------
-   У каждой темы свой фон сцены: он задаёт настроение заставки и не
-   повторяется у соседних наборов. Retrowave и Nuclear описаны выше —
-   у них уже были собственные сцены. */
-
-/* Material You — мягкая аврора за матовым стеклом карточки. */
-[data-theme="nebula"] .bg-shape { display: none; }
-[data-theme="nebula"] .scene-wrapper {
-  background:
-    radial-gradient(ellipse at 50% -10%, rgba(148, 203, 249, 0.24), transparent 58%),
-    radial-gradient(ellipse at 12% 92%, rgba(148, 233, 249, 0.16), transparent 55%),
-    radial-gradient(ellipse at 88% 78%, rgba(170, 198, 227, 0.13), transparent 52%),
-    linear-gradient(180deg, #0b0c0e, #101114 55%, #16181d);
-}
-[data-theme="nebula"] .scene-wrapper::before {
-  content: "";
-  position: absolute;
-  inset: -15%;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 32% 38%, rgba(148, 203, 249, 0.3), transparent 44%),
-    radial-gradient(circle at 70% 64%, rgba(148, 233, 249, 0.24), transparent 42%);
-  filter: blur(70px);
-  animation: nebula-drift 20s ease-in-out infinite alternate;
-}
-@keyframes nebula-drift {
-  from { transform: translate3d(-2%, 1%, 0) scale(1); opacity: 0.75; }
-  to { transform: translate3d(3%, -2%, 0) scale(1.12); opacity: 1; }
-}
-[data-theme="nebula"] .scene-wrapper::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background-image: radial-gradient(rgba(233, 234, 236, 0.09) 1px, transparent 1.4px);
-  background-size: 26px 26px;
-  -webkit-mask-image: radial-gradient(ellipse at 50% 50%, #000 0 45%, transparent 78%);
-  mask-image: radial-gradient(ellipse at 50% 50%, #000 0 45%, transparent 78%);
-  opacity: 0.55;
-}
-
-/* Orbital — радиолокационный планшет: кольца и медленный сектор сканера. */
-[data-theme="orbital"] .bg-shape { display: none; }
-[data-theme="orbital"] .scene-wrapper {
-  background:
-    radial-gradient(ellipse at 50% 50%, rgba(0, 240, 255, 0.1), transparent 62%),
-    radial-gradient(ellipse at 50% 120%, rgba(0, 240, 255, 0.08), transparent 58%),
-    linear-gradient(180deg, #02060a, #050b10 60%, #0a141c);
-}
-[data-theme="orbital"] .scene-wrapper::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-image: repeating-radial-gradient(
-    circle at 50% 50%,
-    rgba(0, 240, 255, 0.16) 0 1px,
-    transparent 1px 92px
-  );
-  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 0 58%, transparent 82%);
-  mask-image: radial-gradient(circle at 50% 50%, #000 0 58%, transparent 82%);
-  opacity: 0.5;
-}
-[data-theme="orbital"] .scene-wrapper::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 140vmax;
-  height: 140vmax;
-  z-index: 0;
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-  background: conic-gradient(from 0deg, rgba(0, 240, 255, 0.16), transparent 24%);
-  -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 0 22%, #000 24% 46%, transparent 48%);
-  mask-image: radial-gradient(circle at 50% 50%, transparent 0 22%, #000 24% 46%, transparent 48%);
-  animation: orbital-sweep 18s linear infinite;
-}
-@keyframes orbital-sweep {
-  from { transform: translate(-50%, -50%) rotate(0deg); }
-  to { transform: translate(-50%, -50%) rotate(360deg); }
-}
-
-/* Pixel Perfect — крупная пиксельная сетка и шахматный дизеринг. */
-[data-theme="pixel"] .bg-shape { display: none; }
-[data-theme="pixel"] .scene-wrapper {
-  background:
-    radial-gradient(ellipse at 50% 0%, rgba(214, 182, 117, 0.07), transparent 55%),
-    linear-gradient(180deg, #060607, #0b0b0c 55%, #151517);
-}
-[data-theme="pixel"] .scene-wrapper::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(230, 230, 230, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(230, 230, 230, 0.04) 1px, transparent 1px);
-  background-size: 8px 8px;
-}
-[data-theme="pixel"] .scene-wrapper::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background-image: repeating-conic-gradient(rgba(230, 230, 230, 0.04) 0% 25%, transparent 0% 50%);
-  background-size: 32px 32px;
-  -webkit-mask-image: radial-gradient(ellipse at 50% 50%, transparent 30%, #000 78%);
-  mask-image: radial-gradient(ellipse at 50% 50%, transparent 30%, #000 78%);
-  opacity: 0.7;
-}
-
-/* Grim HEX — промышленная станция: косые фермы, дуга и аварийная полоса. */
-[data-theme="grimhex"] .bg-shape { display: none; }
-[data-theme="grimhex"] .grid-overlay { display: none; }
-[data-theme="grimhex"] .scene-wrapper {
-  background:
-    radial-gradient(ellipse at 12% 88%, rgba(255, 170, 0, 0.13), transparent 52%),
-    radial-gradient(ellipse at 88% 8%, rgba(0, 240, 255, 0.09), transparent 55%),
-    linear-gradient(180deg, #02060a, #050b10 58%, #0a141c);
-}
-[data-theme="grimhex"] .scene-wrapper::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-image:
-    repeating-linear-gradient(-45deg, rgba(255, 170, 0, 0.055) 0 2px, transparent 2px 28px),
-    repeating-linear-gradient(45deg, rgba(0, 240, 255, 0.04) 0 1px, transparent 1px 36px);
-  -webkit-mask-image: radial-gradient(ellipse at 50% 50%, transparent 22%, #000 72%);
-  mask-image: radial-gradient(ellipse at 50% 50%, transparent 22%, #000 72%);
-}
-[data-theme="grimhex"] .scene-wrapper::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 72vmax;
-  height: 72vmax;
-  z-index: 0;
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  border: 1px solid rgba(0, 240, 255, 0.12);
-  box-shadow:
-    0 0 0 26px rgba(0, 240, 255, 0.02),
-    0 0 0 27px rgba(0, 240, 255, 0.08),
-    inset 0 0 140px rgba(255, 170, 0, 0.06);
-}
-[data-theme="grimhex"] .shape-1 {
-  display: block;
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  top: auto;
-  width: auto;
-  height: 12px;
-  border-radius: 0;
-  filter: none;
-  opacity: 0.5;
-  background: repeating-linear-gradient(-45deg, rgba(255, 170, 0, 0.75) 0 12px, #121517 12px 24px);
-  animation: none;
-}
-
-/* Super Four — четыре цветных луча и перламутровая штриховка. */
-[data-theme="sf"] .bg-shape { display: none; }
-[data-theme="sf"] .scene-wrapper {
-  background:
-    radial-gradient(ellipse at 50% 50%, rgba(168, 85, 247, 0.14), transparent 60%),
-    radial-gradient(ellipse at 15% 85%, rgba(34, 211, 238, 0.08), transparent 52%),
-    radial-gradient(ellipse at 85% 15%, rgba(245, 158, 11, 0.08), transparent 52%),
-    linear-gradient(180deg, #08060d, #0f0c19 58%, #17121f);
-}
-[data-theme="sf"] .scene-wrapper::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 120vmax;
-  height: 120vmax;
-  z-index: 0;
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-  background: conic-gradient(
-    from 0deg,
-    rgba(168, 85, 247, 0.16), transparent 16%,
-    rgba(245, 158, 11, 0.11) 25%, transparent 41%,
-    rgba(34, 211, 238, 0.11) 50%, transparent 66%,
-    rgba(168, 85, 247, 0.14) 75%, transparent 91%
-  );
-  filter: blur(30px);
-  animation: sf-rotate 48s linear infinite;
-}
-@keyframes sf-rotate {
-  from { transform: translate(-50%, -50%) rotate(0deg); }
-  to { transform: translate(-50%, -50%) rotate(360deg); }
-}
-[data-theme="sf"] .scene-wrapper::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background-image: repeating-linear-gradient(115deg, rgba(243, 232, 255, 0.05) 0 1px, transparent 1px 26px);
-  -webkit-mask-image: radial-gradient(ellipse at 50% 50%, transparent 20%, #000 70%);
-  mask-image: radial-gradient(ellipse at 50% 50%, transparent 20%, #000 70%);
-}
-
-/* Wardogs — тактическая карта: горизонтали, сетка координат и аварийная полоса. */
-[data-theme="wardogs"] .bg-shape { display: none; }
-[data-theme="wardogs"] .scene-wrapper {
-  background:
-    radial-gradient(ellipse at 50% 8%, rgba(240, 169, 44, 0.12), transparent 55%),
-    linear-gradient(180deg, #060504, #0b0a08 55%, #12110e);
-}
-[data-theme="wardogs"] .scene-wrapper::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-image:
-    repeating-radial-gradient(circle at 24% 66%, rgba(240, 169, 44, 0.1) 0 1px, transparent 1px 46px),
-    repeating-radial-gradient(circle at 78% 34%, rgba(63, 131, 230, 0.08) 0 1px, transparent 1px 58px);
-  -webkit-mask-image: radial-gradient(ellipse at 50% 50%, #000 0 55%, transparent 85%);
-  mask-image: radial-gradient(ellipse at 50% 50%, #000 0 55%, transparent 85%);
-}
-[data-theme="wardogs"] .scene-wrapper::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(240, 169, 44, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(240, 169, 44, 0.05) 1px, transparent 1px);
-  background-size: 80px 80px;
-}
-[data-theme="wardogs"] .shape-1 {
-  display: block;
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  top: auto;
-  width: auto;
-  height: 10px;
-  border-radius: 0;
-  filter: none;
-  opacity: 0.45;
-  background: repeating-linear-gradient(-45deg, rgba(240, 169, 44, 0.8) 0 10px, transparent 10px 20px);
-  animation: none;
-}
-
-/* TESO — компас-мандала и созвездия на тёмном пергаменте. */
-[data-theme="teso"] .bg-shape,
-[data-theme="teso-seal"] .bg-shape { display: none; }
-[data-theme="teso"] .scene-wrapper,
-[data-theme="teso-seal"] .scene-wrapper {
-  background:
-    radial-gradient(ellipse at 50% 42%, rgba(199, 167, 92, 0.14), transparent 58%),
-    radial-gradient(ellipse at 84% 88%, rgba(224, 96, 79, 0.08), transparent 50%),
-    linear-gradient(180deg, #050605, #0d110f 58%, #141a15);
-}
-[data-theme="teso"] .scene-wrapper::before,
-[data-theme="teso-seal"] .scene-wrapper::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 130vmax;
-  height: 130vmax;
-  z-index: 0;
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-  background-image: repeating-conic-gradient(
-    from 0deg,
-    rgba(199, 167, 92, 0.11) 0 0.4deg,
-    transparent 0.4deg 15deg
-  );
-  -webkit-mask-image: radial-gradient(
-    circle at 50% 50%,
-    transparent 0 18%, #000 21% 26%, transparent 29% 40%, #000 43% 44%, transparent 47%
-  );
-  mask-image: radial-gradient(
-    circle at 50% 50%,
-    transparent 0 18%, #000 21% 26%, transparent 29% 40%, #000 43% 44%, transparent 47%
-  );
-  opacity: 0.9;
-}
-[data-theme="teso-seal"] .scene-wrapper::before {
-  background-image:
-    repeating-conic-gradient(from 0deg, rgba(199, 167, 92, 0.1) 0 0.4deg, transparent 0.4deg 15deg),
-    repeating-radial-gradient(circle at 50% 50%, rgba(226, 196, 126, 0.12) 0 1px, transparent 1px 38px);
-}
-[data-theme="teso"] .scene-wrapper::after,
-[data-theme="teso-seal"] .scene-wrapper::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background-image:
-    radial-gradient(1.6px 1.6px at 14% 24%, rgba(226, 196, 126, 0.85), transparent 2.2px),
-    radial-gradient(1.2px 1.2px at 28% 12%, rgba(226, 196, 126, 0.6), transparent 1.8px),
-    radial-gradient(1.4px 1.4px at 76% 18%, rgba(199, 167, 92, 0.75), transparent 2px),
-    radial-gradient(1.1px 1.1px at 88% 34%, rgba(226, 196, 126, 0.55), transparent 1.6px),
-    radial-gradient(1.5px 1.5px at 66% 84%, rgba(199, 167, 92, 0.6), transparent 2px),
-    radial-gradient(1.1px 1.1px at 22% 78%, rgba(255, 216, 211, 0.5), transparent 1.7px);
-}
-
-/* Elite и Cobra Mk II — звёздное поле, полоса горизонта планеты и HUD. */
-[data-theme="elite"] .grid-overlay,
-[data-theme="cobra-mk2"] .grid-overlay { display: none; }
-[data-theme="elite"] .scene-wrapper {
-  background:
-    radial-gradient(ellipse at 50% 118%, rgba(255, 118, 5, 0.2), transparent 58%),
-    radial-gradient(ellipse at 50% -12%, rgba(0, 210, 255, 0.08), transparent 52%),
-    linear-gradient(180deg, #030303, #05080c 55%, #0a0f14);
-}
-[data-theme="cobra-mk2"] .scene-wrapper {
-  background:
-    radial-gradient(ellipse at 50% 118%, rgba(255, 118, 5, 0.16), transparent 58%),
-    radial-gradient(ellipse at 78% 24%, rgba(0, 210, 255, 0.1), transparent 52%),
-    linear-gradient(180deg, #030303, #05080c 55%, #0a0f14);
-}
-[data-theme="elite"] .bg-shape,
-[data-theme="cobra-mk2"] .bg-shape {
-  display: block;
-  inset: -25%;
-  width: auto;
-  height: auto;
-  border-radius: 0;
-  filter: none;
-  opacity: 0.9;
-  pointer-events: none;
-  background-color: transparent;
-  background-repeat: repeat;
-  background-size: 280px 280px;
-}
-[data-theme="elite"] .shape-1,
-[data-theme="cobra-mk2"] .shape-1 {
-  background-image:
-    radial-gradient(1.2px 1.2px at 40px 70px, rgba(255, 255, 255, 0.9), transparent 1.8px),
-    radial-gradient(1px 1px at 150px 24px, rgba(255, 255, 255, 0.7), transparent 1.6px),
-    radial-gradient(1.1px 1.1px at 210px 130px, rgba(255, 255, 255, 0.8), transparent 1.7px),
-    radial-gradient(0.9px 0.9px at 96px 196px, rgba(255, 255, 255, 0.6), transparent 1.5px),
-    radial-gradient(1px 1px at 260px 240px, rgba(255, 255, 255, 0.7), transparent 1.6px);
-  animation: elite-stars 320s linear infinite;
-}
-[data-theme="elite"] .shape-2,
-[data-theme="cobra-mk2"] .shape-2 {
-  background-image:
-    radial-gradient(1px 1px at 60px 120px, rgba(255, 255, 255, 0.75), transparent 1.6px),
-    radial-gradient(1.1px 1.1px at 176px 60px, rgba(255, 118, 5, 0.8), transparent 1.7px),
-    radial-gradient(0.9px 0.9px at 236px 168px, rgba(255, 255, 255, 0.6), transparent 1.5px),
-    radial-gradient(1.2px 1.2px at 28px 236px, rgba(0, 210, 255, 0.7), transparent 1.8px),
-    radial-gradient(0.9px 0.9px at 140px 286px, rgba(255, 255, 255, 0.55), transparent 1.5px);
-  animation: elite-stars-reverse 420s linear infinite;
-}
-[data-theme="cobra-mk2"] .shape-2 {
-  background-image:
-    radial-gradient(1px 1px at 60px 120px, rgba(255, 255, 255, 0.75), transparent 1.6px),
-    radial-gradient(1.1px 1.1px at 176px 60px, rgba(0, 210, 255, 0.85), transparent 1.7px),
-    radial-gradient(0.9px 0.9px at 236px 168px, rgba(255, 255, 255, 0.6), transparent 1.5px),
-    radial-gradient(1.2px 1.2px at 28px 236px, rgba(0, 210, 255, 0.7), transparent 1.8px),
-    radial-gradient(0.9px 0.9px at 140px 286px, rgba(255, 255, 255, 0.55), transparent 1.5px);
-}
-[data-theme="elite"] .shape-3,
-[data-theme="cobra-mk2"] .shape-3 { display: none; }
-@keyframes elite-stars {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(280px, 0, 0); }
-}
-@keyframes elite-stars-reverse {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(-280px, 0, 0); }
-}
-[data-theme="elite"] .scene-wrapper::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-image: repeating-linear-gradient(0deg, rgba(255, 118, 5, 0.09) 0 1px, transparent 1px 54px);
-  -webkit-mask-image: linear-gradient(90deg, #000 0 14%, transparent 20% 80%, #000 86% 100%);
-  mask-image: linear-gradient(90deg, #000 0 14%, transparent 20% 80%, #000 86% 100%);
-}
-[data-theme="cobra-mk2"] .scene-wrapper::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-image: repeating-radial-gradient(
-    circle at 76% 26%,
-    rgba(0, 210, 255, 0.14) 0 1px,
-    transparent 1px 54px
-  );
-  -webkit-mask-image: radial-gradient(circle at 76% 26%, #000 0 34%, transparent 58%);
-  mask-image: radial-gradient(circle at 76% 26%, #000 0 34%, transparent 58%);
-}
-
 /* ---------- Стандартная заставка перехода ----------
-   Фон берётся из тех же правил, что у сцены темы (см. выше), поэтому
-   переход не выглядит чужим кадром. Остальное подстраивается под характер
-   набора: от мягкой авроры до пиксельного дизеринга. */
+   Фон — те же размытые пятна MD3, что и у сцены, поэтому переход не
+   выглядит чужим кадром. Орб подстраивается под тему (см. ниже). */
 .splash-bg {
   position: fixed;
   inset: 0;
   z-index: 0;
-}
-
-@keyframes splash-sweep {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-@keyframes splash-hue {
-  from { filter: hue-rotate(0deg); }
-  to { filter: hue-rotate(360deg); }
 }
 
 /* Orbital — радиолокационный сектор вокруг орба. */
@@ -1037,7 +394,6 @@ body {
   background: conic-gradient(from 0deg, rgba(0, 240, 255, 0.65), transparent 24%);
   -webkit-mask-image: radial-gradient(circle, transparent 0 58%, #000 60% 64%, transparent 66%);
   mask-image: radial-gradient(circle, transparent 0 58%, #000 60% 64%, transparent 66%);
-  animation: splash-sweep 3.4s linear infinite;
 }
 
 /* Pixel Perfect — квадратный шахматный орб без скруглений. */
@@ -1071,11 +427,10 @@ body {
   opacity: 0.6;
 }
 
-/* Super Four — четыре цвета в конусе, медленно меняют оттенок. */
+/* Super Four — четыре цвета в конусе. */
 [data-theme="sf"] .splash-default__orb {
   background: conic-gradient(from 0deg, #a855f7, #f59e0b, #22d3ee, #a855f7);
   box-shadow: 0 0 70px rgba(168, 85, 247, 0.5);
-  animation: splash-pulse 1.6s ease-in-out infinite, splash-hue 7s linear infinite;
 }
 
 /* Retrowave — полосатое закатное солнце, как у алертов темы. */
@@ -1165,7 +520,7 @@ body {
   transform: translate(-50%, -50%);
 }
 
-/* Cobra Mk II — циановый сканер с вращающимся пунктиром. */
+/* Cobra Mk II — циановый сканер с пунктирным кольцом. */
 [data-theme="cobra-mk2"] .splash-default__orb {
   background: repeating-radial-gradient(circle at 50% 50%, rgba(0, 210, 255, 0.6) 0 1px, transparent 1px 16px);
   border: 1px solid rgba(0, 210, 255, 0.5);
@@ -1177,23 +532,4 @@ body {
   inset: -20px;
   border-radius: 50%;
   border: 1px dashed rgba(0, 210, 255, 0.35);
-  animation: splash-sweep 9s linear infinite;
-}
-
-/* Фон — только оформление: при системном запрете на анимацию оставляем
-   статичную картинку, ничего не теряя по смыслу. */
-@media (prefers-reduced-motion: reduce) {
-  [data-decoration="retrowave"] .bg-shape,
-  [data-decoration="retrowave"] .grid-texture,
-  [data-decoration="retrowave"] .scene-wrapper::after,
-  [data-theme="nebula"] .scene-wrapper::before,
-  [data-theme="orbital"] .scene-wrapper::after,
-  [data-theme="sf"] .scene-wrapper::before,
-  [data-theme="elite"] .bg-shape,
-  [data-theme="cobra-mk2"] .bg-shape,
-  .splash-default__orb,
-  .splash-default__orb::before,
-  .splash-default__orb::after {
-    animation: none !important;
-  }
 }

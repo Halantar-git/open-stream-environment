@@ -3194,13 +3194,6 @@ const { EVENT_TYPES } = window.SharedEvents;
     return `http://localhost:${port}/overlay/scene.html?type=${id}`;
   }
 
-  // Превью в панели не должно крутить полноэкранный фон: он живёт в OBS.
-  // Параметр `preview` просит страницу нарисовать один статичный кадр.
-  function scenePreviewUrl(id) {
-    const url = sceneUrl(id);
-    return `${url}${url.includes("?") ? "&" : "?"}preview=1`;
-  }
-
   // ---- выбор раскладки (оверлей или сцена) ----
 
   function renderLayoutTargetOptions() {
@@ -3301,8 +3294,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   function selectScene(id) {
     state.activeSceneId = id;
     const url = sceneUrl(id);
-    const preview = scenePreviewUrl(id);
-    if (scenesPreviewFrame.src !== preview) scenesPreviewFrame.src = preview;
+    if (scenesPreviewFrame.src !== url) scenesPreviewFrame.src = url;
     sceneUrlLabel.textContent = url;
     renderScenesNav();
     renderSceneForm();
