@@ -73,9 +73,15 @@
   let camZ = 0;
   let running = false;
 
+  // Панель показывает сцену в iframe для превью. Там фон должен быть
+  // статичным: второй анимированный canvas на той же машине отнимает
+  // CPU/GPU у источника OBS и делает его дёрганым.
+  const PREVIEW = new URLSearchParams(location.search).has("preview");
+
   const motionQuery = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
 
   // --- шум ---
+
   function hash(ix, iy) {
     let h = (Math.imul(ix, 374761393) + Math.imul(iy, 668265263)) | 0;
     h = Math.imul(h ^ (h >>> 13), 1274126177);
@@ -442,7 +448,8 @@
     }
     resize();
     if (!stars.length) makeStars();
-    if (reducedMotion()) {
+    if (PREVIEW || reducedMotion()) {
+      // Превью в панели и режим без анимации — один кадр, без цикла.
       stop();
       time = 0;
       camZ = 0;
@@ -459,7 +466,7 @@
   window.addEventListener("resize", () => {
     if (!isActive()) return;
     resize();
-    if (reducedMotion()) drawScene();
+    if (PREVIEW || reducedMotion()) drawScene();
   });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) stop();
