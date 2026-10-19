@@ -147,7 +147,10 @@ jobs:
           releaseBody: "Список изменений — в CHANGELOG.md."
           releaseDraft: true
           prerelease: false
-          uploadUpdaterJson: false
+          # Имя входа именно такое: у `@v0` это `includeUpdaterJson`, а свежий
+          # `uploadUpdaterJson` из ветки `dev` эта версия молча игнорирует —
+          # из-за этого фид в 4.2.2 всё равно писала матрица.
+          includeUpdaterJson: false
 
   # Фид автообновления — единственный файл, по которому обновляются установленные
   # копии (`plugins.updater.endpoints` в `tauri.conf.json`). Живёт отдельным

@@ -203,7 +203,11 @@ describe("CI: файлы workflow", () => {
       три джобы матрицы сразу, и параллельная перезапись оставила ассет
       удалённым — обновление у всех отдавало 404, хотя релиз опубликован.
     */
-    expect(release).toContain("uploadUpdaterJson: false");
+    expect(release).toContain("includeUpdaterJson: false");
+    // `uploadUpdaterJson` — вход из ветки `dev`; `@v0` его не знает и молча
+    // пропускает, поэтому фид снова начал бы писаться матрицей (в комментариях
+    // имя упомянуто нарочно, поэтому ищем именно использование).
+    expect(release).not.toContain("uploadUpdaterJson:");
     expect(release).toContain("uses: ./.github/workflows/updater-feed.yml");
     expect(release).toContain("needs: [verify, publish]");
 
