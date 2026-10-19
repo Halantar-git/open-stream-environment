@@ -66,6 +66,8 @@
   const isSplash = wrapper.classList.contains("splash-bg");
   let mountains = null;
   let mountainsCtx = null;
+  let road = null;
+  let roadCtx = null;
   if (!isSplash) {
     // Дымка у горизонта: тёплое пятно заката, поверх которого садится солнце.
     const haze = document.createElement("div");
@@ -83,6 +85,13 @@
     mountains.setAttribute("aria-hidden", "true");
     wrapper.appendChild(mountains);
     mountainsCtx = mountains.getContext("2d");
+
+    // Дорога лежит поверх сетки: у референса центр кадра — коридор к точке схода.
+    road = document.createElement("canvas");
+    road.className = "retrowave-road";
+    road.setAttribute("aria-hidden", "true");
+    wrapper.appendChild(road);
+    roadCtx = road.getContext("2d");
   }
 
   const palette = { primary: "#ff2d95", secondary: "#2de2e6", tertiary: "#ffa24c" };
@@ -92,6 +101,8 @@
   let height = 0;
   let mountainWidth = 0;
   let mountainHeight = 0;
+  let roadWidth = 0;
+  let roadHeight = 0;
   let running = false;
 
   const motionQuery = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
@@ -235,33 +246,27 @@
   const RIDGE_PROFILE = {
     left: [
       [0.0, 0.02],
-      [0.12, 0.03],
-      [0.22, 0.1],
-      [0.3, 0.2],
-      [0.36, 0.12],
-      [0.46, 0.16],
-      [0.54, 0.09],
-      [0.64, 0.14],
-      [0.72, 0.3],
-      [0.78, 0.18],
-      [0.86, 0.24],
-      [0.93, 0.38],
-      [1.0, 0.3],
+      [0.18, 0.04],
+      [0.32, 0.16],
+      [0.42, 0.24],
+      [0.52, 0.12],
+      [0.66, 0.18],
+      [0.78, 0.34],
+      [0.88, 0.22],
+      [0.96, 0.3],
+      [1.0, 0.26],
     ],
     right: [
       [0.0, 0.02],
-      [0.1, 0.04],
-      [0.18, 0.09],
-      [0.25, 0.16],
-      [0.33, 0.08],
-      [0.42, 0.12],
-      [0.52, 0.07],
-      [0.62, 0.13],
-      [0.7, 0.24],
-      [0.78, 0.14],
-      [0.86, 0.2],
-      [0.93, 0.16],
-      [1.0, 0.32],
+      [0.14, 0.05],
+      [0.26, 0.12],
+      [0.38, 0.2],
+      [0.5, 0.1],
+      [0.62, 0.16],
+      [0.74, 0.3],
+      [0.84, 0.18],
+      [0.92, 0.24],
+      [1.0, 0.3],
     ],
   };
 
@@ -275,14 +280,23 @@
       const [k0, h0] = profile[i];
       const [k1, h1] = profile[i + 1];
       if (k >= k0 && k <= k1) {
-        const f = (k - k0) / (k1 - k0);
+        // Косинусная интерполяция сглаживает углы между точками: у референса
+        // горы округлые, а не пилообразные.
+        const f = (1 - Math.cos(((k - k0) / (k1 - k0)) * Math.PI)) / 2;
         height = h0 + (h1 - h0) * f;
         break;
       }
     }
-    // Мелкая дрожь хребта: без неё каркас выглядит нарисованным по линейке.
-    const jag = Math.sin(k * 47 + (side === "left" ? 1.4 : 3.9)) * 0.005 * k;
-    return mountainHeight * (HORIZON - 0.015 - 0.05 * k - height * 0.82 - jag);
+    return mountainHeight * (HORIZON - 0.015 - 0.05 * k - height * 0.82);
+  }
+
+  // Подошва горы: у центра она на горизонте, к краю кадра уходит вниз —
+  // та же перспектива, что у сетки. Между подошвами остаётся долина с дорогой.
+  function baseY(x, side) {
+    const half = mountainWidth / 2;
+    const t = side === "left" ? (half - x) / half : (x - half) / half;
+    const k = Math.min(1, Math.max(0, t));
+    return mountainHeight * (HORIZON + k * 0.55);
   }
 
   function ridgePath(side) {
@@ -334,8 +348,10 @@
     const half = mountainWidth / 2;
 
     const fill = new Path2D(path);
-    fill.lineTo(end, mountainHeight);
-    fill.lineTo(half, mountainHeight);
+    fill.lineTo(end, baseY(end, side));
+    for (let x = end; side === "left" ? x <= half : x >= half; x -= dir) {
+      fill.lineTo(x, baseY(x, side));
+    }
     fill.closePath();
 
     const gradient = mountainsCtx.createLinearGradient(0, mountainHeight * 0.1, 0, mountainHeight);
@@ -348,25 +364,28 @@
     mountainsCtx.save();
     mountainsCtx.clip(fill);
 
-    // Вертикальные рёбра каркаса: к низу слегка расходятся, чтобы гора
-    // читалась объёмной.
+    // Вертикальные рёбра каркаса: от гребня к подошве и к зрителю — так
+    // поверхность читается наклонной, а не плоской ширмой.
     mountainsCtx.lineWidth = 1;
     mountainsCtx.strokeStyle = withAlpha(color, 0.3);
-    for (let x = half; side === "left" ? x >= end : x <= end; x += dir * 5) {
+    for (let x = half; side === "left" ? x >= end : x <= end; x += dir * 4) {
+      const bx = x + (x - half) * 0.42;
       mountainsCtx.beginPath();
       mountainsCtx.moveTo(x, ridgeY(x, side) + 2);
-      mountainsCtx.lineTo(x + (x - half) * 0.12, mountainHeight);
+      mountainsCtx.lineTo(bx, baseY(bx, side));
       mountainsCtx.stroke();
     }
 
-    // Горизонтальные контуры повторяют хребет с шагом вниз.
+    // Горизонтальные контуры повторяют хребет и тоже расходятся к зрителю,
+    // из-за чего поверхность выглядит наклонной.
     for (let row = 1; row <= 9; row += 1) {
       const offset = row * mountainHeight * 0.038;
+      const depth = offset / mountainHeight;
       mountainsCtx.beginPath();
       let x = half;
       mountainsCtx.moveTo(x, ridgeY(x, side) + offset);
       for (x += dir; side === "left" ? x >= end : x <= end; x += dir) {
-        mountainsCtx.lineTo(x, ridgeY(x, side) + offset);
+        mountainsCtx.lineTo(x + (x - half) * depth * 1.4, ridgeY(x, side) + offset);
       }
       mountainsCtx.strokeStyle = withAlpha(row % 2 ? color : palette.primary, 0.2);
       mountainsCtx.stroke();
@@ -393,6 +412,81 @@
     drawFarRidge();
     drawSide("left");
     drawSide("right");
+  }
+
+  // ---- дорога к точке схода -------------------------------------------
+
+  function resizeRoad() {
+    if (!road || !roadCtx) return;
+    const dpr = Math.min(DPR_LIMIT, window.devicePixelRatio || 1);
+    roadWidth = Math.max(1, Math.round(road.clientWidth || 0));
+    roadHeight = Math.max(1, Math.round(road.clientHeight || 0));
+    const pixelWidth = Math.round(roadWidth * dpr);
+    const pixelHeight = Math.round(roadHeight * dpr);
+    if (road.width !== pixelWidth || road.height !== pixelHeight) {
+      road.width = pixelWidth;
+      road.height = pixelHeight;
+    }
+    roadCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function drawRoad() {
+    if (!roadCtx || !roadWidth || !roadHeight) return;
+    const ctx2 = roadCtx;
+    ctx2.clearRect(0, 0, roadWidth, roadHeight);
+    const vx = roadWidth / 2;
+    const vy = roadHeight * HORIZON;
+    const halfTop = roadWidth * 0.006;
+    const halfBottom = roadWidth * 0.17;
+
+    // Полотно полупрозрачное: бегущая сетка просвечивает, и дорога живёт
+    // вместе с фоном, а не висит плоской заплаткой.
+    const path = new Path2D();
+    path.moveTo(vx - halfTop, vy);
+    path.lineTo(vx - halfBottom, roadHeight);
+    path.lineTo(vx + halfBottom, roadHeight);
+    path.lineTo(vx + halfTop, vy);
+    path.closePath();
+    const gradient = ctx2.createLinearGradient(0, vy, 0, roadHeight);
+    gradient.addColorStop(0, "rgba(36, 14, 66, 0.36)");
+    gradient.addColorStop(0.55, "rgba(20, 9, 40, 0.26)");
+    gradient.addColorStop(1, "rgba(8, 3, 20, 0.12)");
+    ctx2.fillStyle = gradient;
+    ctx2.fill(path);
+
+    // Кромки: левая циановая, правая магентовая — как рёбра гор.
+    for (const [color, sign] of [
+      [palette.secondary, -1],
+      [palette.primary, 1],
+    ]) {
+      ctx2.save();
+      ctx2.strokeStyle = withAlpha(color, 0.62);
+      ctx2.shadowColor = color;
+      ctx2.shadowBlur = 10;
+      ctx2.lineWidth = 2;
+      ctx2.beginPath();
+      ctx2.moveTo(vx + sign * halfTop, vy);
+      ctx2.lineTo(vx + sign * halfBottom, roadHeight);
+      ctx2.stroke();
+      ctx2.restore();
+    }
+
+    // Разметка: у горизонта штрихи короткие и частые, ближе к зрителю — длиннее.
+    ctx2.save();
+    ctx2.strokeStyle = withAlpha(palette.tertiary, 0.35);
+    ctx2.lineWidth = 2;
+    for (let i = 0; i < 14; i += 1) {
+      const t0 = 0.2 + i * 0.055;
+      const t1 = t0 + 0.018;
+      if (t1 > 1) break;
+      const y0 = vy + (roadHeight - vy) * t0 * t0;
+      const y1 = vy + (roadHeight - vy) * t1 * t1;
+      ctx2.beginPath();
+      ctx2.moveTo(vx, y0);
+      ctx2.lineTo(vx, y1);
+      ctx2.stroke();
+    }
+    ctx2.restore();
   }
 
   function stop() {
@@ -434,6 +528,10 @@
       resizeMountains();
       drawMountains();
     }
+    if (roadCtx) {
+      resizeRoad();
+      drawRoad();
+    }
     if (reducedMotion()) {
       stop();
       draw(0);
@@ -452,6 +550,10 @@
     if (mountainsCtx) {
       resizeMountains();
       drawMountains();
+    }
+    if (roadCtx) {
+      resizeRoad();
+      drawRoad();
     }
     if (reducedMotion()) draw(0);
   });
