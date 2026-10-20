@@ -2702,11 +2702,20 @@ const { EVENT_TYPES } = window.SharedEvents;
   });
 
   if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
-    navigator.mediaDevices.addEventListener("devicechange", refreshMicDevices);
-    navigator.mediaDevices.addEventListener("devicechange", refreshCameraDevices);
+    navigator.mediaDevices.addEventListener("devicechange", onDevicesChanged);
   }
   refreshMicDevices();
   refreshCameraDevices();
+
+  // USB-микрофон могут переподключить на ходу: набор устройств меняется,
+  // старый поток уже мёртв, а сохранённый выбор — исчезнуть. Пересобираем
+  // захват, иначе мост молча шлёт нули до перезапуска панели.
+  function onDevicesChanged() {
+    micBridge.autoPicked = "";
+    refreshMicDevices();
+    refreshCameraDevices();
+    syncMicBridge(true);
+  }
 
   // ---- canvas editor (extracted module) ----
   const guestPanel = initGuestPanel({
@@ -4584,13 +4593,19 @@ const { EVENT_TYPES } = window.SharedEvents;
     },
   };
 
-  function syncMicBridge() {
+  function syncMicBridge(restart = false) {
     const widgets = state.allLayoutWidgets ? state.allLayoutWidgets() : state.layout;
     // Как и у камеры, захват нужен только видимому виджету: скрытый не
     // показывает уровни, но держал бы микрофон занятым для других приложений.
     const hasMic = Array.isArray(widgets) && widgets.some((w) => w.type === "mic" && w.visible !== false);
-    if (hasMic) micBridge.start();
-    else micBridge.stop();
+    if (!hasMic) {
+      micBridge.stop();
+      return;
+    }
+    // Пересборка по devicechange нужна и работающему мосту: устройство могли
+    // выдернуть, а поток при этом не всегда завершается сам.
+    if (restart && micBridge.running) micBridge.restartIfRunning();
+    else micBridge.start();
   }
 
   // ---- camera bridge ---------------------------------------------------
