@@ -1365,6 +1365,11 @@ export function initCanvasEditor({
         box.style.opacity = !inst.visible ? "0.35" : replaced ? "0.3" : "1";
 
         const def = WIDGET_TYPES[effectiveType(inst)] || {};
+        // Угол поворота 3D-виджета: поворачиваем всю рамку, а не только
+        // картинку — иначе граница выделения и ручки остаются прямыми и не
+        // совпадают с тем, что уходит в эфир.
+        const angle = Math.round((((Number(inst.config && inst.config.angle) || 0) % 360) + 360) % 360);
+        if (angle) box.style.transform = `rotate(${angle}deg)`;
         const label = document.createElement("div");
         label.className = "canvas-widget__label";
         label.innerHTML = `${ICONS[def.icon] || ""}<span>${escapeHtml(widgetLabel(inst))}</span>`;
@@ -1372,13 +1377,7 @@ export function initCanvasEditor({
 
         const content = document.createElement("div");
         content.className = "canvas-widget__content";
-        const preview = buildPreviewHtml(inst);
-        // Угол поворота виден и в редакторе: без него ползунок выглядел бы
-        // неработающим до выхода в эфир.
-        const angle = Math.round((((Number(inst.config && inst.config.angle) || 0) % 360) + 360) % 360);
-        content.innerHTML = angle
-          ? `<div style="width:100%;height:100%;transform:rotate(${angle}deg);transform-origin:50% 50%;">${preview}</div>`
-          : preview;
+        content.innerHTML = buildPreviewHtml(inst);
         box.appendChild(content);
 
         canvasEl.appendChild(box);
@@ -1589,8 +1588,17 @@ export function initCanvasEditor({
         handle.setPointerCapture(e.pointerId);
 
         function onMove(ev) {
-          const dxPct = ((ev.clientX - startX) / canvasRect.width) * 100;
-          const dyPct = ((ev.clientY - startY) / canvasRect.height) * 100;
+          const rawDx = ev.clientX - startX;
+          const rawDy = ev.clientY - startY;
+          // Виджет может быть повёрнут: тянем ручку в его собственных осях,
+          // иначе угол не следует за курсором.
+          const radians = ((Number(cur.config && cur.config.angle) || 0) * Math.PI) / 180;
+          const cos = Math.cos(radians);
+          const sin = Math.sin(radians);
+          const dx = rawDx * cos + rawDy * sin;
+          const dy = -rawDx * sin + rawDy * cos;
+          const dxPct = (dx / canvasRect.width) * 100;
+          const dyPct = (dy / canvasRect.height) * 100;
           let { x, y, w, h } = start;
           if (pos.includes("e")) w = start.w + dxPct;
           if (pos.includes("s")) h = start.h + dyPct;
