@@ -421,6 +421,7 @@
   manager.register("death", OW.DeathWidget);
   manager.register("webcam", OW.WebcamWidget);
   manager.register("soundboard", OW.SoundboardWidget);
+  manager.register("garland", OW.WidgetGarland);
   manager.register("custom", OW.CustomWidget);
   manager.register("grimhex", OW.WidgetGrimHex);
   manager.register("musain", OW.WidgetMusain);

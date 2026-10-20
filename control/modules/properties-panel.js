@@ -633,6 +633,53 @@ export function initPropertiesPanel({
         <div class="md-field"><label>${t("properties.uecDecode")}</label><input type="number" id="pUecDecode" min="10" max="500" step="10" value="${config.decodeTickMs || 76}"></div>
         <div class="properties__toggle-row"><label>${t("properties.uecShowAmount")}</label>${switchHtml("pUecShowAmount", config.showAmount !== false)}</div>
         <div class="properties__toggle-row"><label>${t("properties.uecShowMessage")}</label>${switchHtml("pUecShowMessage", config.showMessage !== false)}</div>`;
+    } else if (inst.type === "garland") {
+      // Сторона — главная настройка: от неё зависит, вдоль какой кромки виснет
+      // провод. Режим, палитра и размеры — уже вторичное.
+      const edge = String(config.edge || "auto");
+      const mode = String(config.mode || "twinkle");
+      const palette = typeof config.palette === "string" ? config.palette : "classic";
+      const option = (value, selected, label) =>
+        `<option value="${value}" ${value === selected ? "selected" : ""}>${label}</option>`;
+      extraHtml = `
+        <div class="md-field"><label>${t("properties.garlandEdge")}</label>
+          <select id="pGarlandEdge">
+            ${option("auto", edge, t("properties.garlandEdgeAuto"))}
+            ${option("top", edge, t("properties.garlandEdgeTop"))}
+            ${option("left", edge, t("properties.garlandEdgeLeft"))}
+            ${option("right", edge, t("properties.garlandEdgeRight"))}
+            ${option("bottom", edge, t("properties.garlandEdgeBottom"))}
+            ${option("frame", edge, t("properties.garlandEdgeFrame"))}
+            ${option("arc", edge, t("properties.garlandEdgeArc"))}
+          </select>
+        </div>
+        <div class="md-field"><label>${t("properties.garlandMode")}</label>
+          <select id="pGarlandMode">
+            ${option("twinkle", mode, t("properties.garlandModeTwinkle"))}
+            ${option("chase", mode, t("properties.garlandModeChase"))}
+            ${option("wave", mode, t("properties.garlandModeWave"))}
+            ${option("blink", mode, t("properties.garlandModeBlink"))}
+            ${option("steady", mode, t("properties.garlandModeSteady"))}
+          </select>
+        </div>
+        <div class="md-field"><label>${t("properties.garlandPalette")}</label>
+          <select id="pGarlandPalette">
+            ${option("classic", palette, t("properties.garlandPaletteClassic"))}
+            ${option("warm", palette, t("properties.garlandPaletteWarm"))}
+            ${option("cool", palette, t("properties.garlandPaletteCool"))}
+            ${option("redgreen", palette, t("properties.garlandPaletteRedGreen"))}
+            ${option("retro", palette, t("properties.garlandPaletteRetro"))}
+          </select>
+        </div>
+        <div class="properties__row">
+          <div class="md-field"><label>${t("properties.garlandBulbs")}</label><input type="number" id="pGarlandBulbs" min="4" max="240" step="1" value="${config.bulbs || 24}"></div>
+          <div class="md-field"><label>${t("properties.garlandSwags")}</label><input type="number" id="pGarlandSwags" min="1" max="24" step="1" value="${config.swags || 5}"></div>
+        </div>
+        <div class="properties__row">
+          <div class="md-field"><label>${t("properties.garlandSag")}</label><input type="number" id="pGarlandSag" min="0" max="1" step="0.05" value="${config.sag ?? 0.5}"></div>
+          <div class="md-field"><label>${t("properties.garlandSpeed")}</label><input type="number" id="pGarlandSpeed" min="0.25" max="4" step="0.25" value="${config.speed ?? 1}"></div>
+        </div>
+        <div class="properties__toggle-row"><label>${t("properties.garlandReact")}</label>${switchHtml("pGarlandReact", config.reactToAlerts !== false)}</div>`;
     }
 
     propertiesEl.innerHTML = `
@@ -998,6 +1045,24 @@ export function initPropertiesPanel({
       propertiesEl.querySelector("#pUecDecode").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { decodeTickMs: Math.max(10, Math.min(500, Number(e.target.value) || 76)) } } }));
       wireSwitch(propertiesEl.querySelector("#pUecShowAmount"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showAmount: on } } }));
       wireSwitch(propertiesEl.querySelector("#pUecShowMessage"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showMessage: on } } }));
+    } else if (inst.type === "garland") {
+      const patchGarland = (config) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config } });
+      propertiesEl.querySelector("#pGarlandEdge").addEventListener("change", (e) => patchGarland({ edge: e.target.value }));
+      propertiesEl.querySelector("#pGarlandMode").addEventListener("change", (e) => patchGarland({ mode: e.target.value }));
+      propertiesEl.querySelector("#pGarlandPalette").addEventListener("change", (e) => patchGarland({ palette: e.target.value }));
+      propertiesEl.querySelector("#pGarlandBulbs").addEventListener("change", (e) =>
+        patchGarland({ bulbs: Math.max(4, Math.min(240, Math.round(Number(e.target.value) || 24))) }),
+      );
+      propertiesEl.querySelector("#pGarlandSwags").addEventListener("change", (e) =>
+        patchGarland({ swags: Math.max(1, Math.min(24, Math.round(Number(e.target.value) || 5))) }),
+      );
+      propertiesEl.querySelector("#pGarlandSag").addEventListener("change", (e) =>
+        patchGarland({ sag: Math.max(0, Math.min(1, Number(e.target.value) || 0)) }),
+      );
+      propertiesEl.querySelector("#pGarlandSpeed").addEventListener("change", (e) =>
+        patchGarland({ speed: Math.max(0.25, Math.min(4, Number(e.target.value) || 1)) }),
+      );
+      wireSwitch(propertiesEl.querySelector("#pGarlandReact"), (on) => patchGarland({ reactToAlerts: on }));
     }
 
     document.getElementById("pDeleteBtn").addEventListener("click", () => {

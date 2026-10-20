@@ -272,6 +272,28 @@
       minH: 8,
       defaultConfig: { popupDurationMs: 4600, imageSize: 200, showImage: true, showText: true, showBackground: true, showBorder: true },
     },
+    // Гирлянда — декоративный виджет без данных: строка лампочек вдоль края
+    // виджета. Edge: auto выбирает сторону по форме и месту плашки, поэтому
+    // одну и ту же карточку можно повесить сверху, слева или справа.
+    garland: {
+      type: "garland",
+      label: "Гирлянда",
+      description: "Лампочки вдоль края: сверху, слева, справа или по периметру",
+      icon: "widgetGarland",
+      defaultGeometry: { x: 2, y: 0, w: 96, h: 10 },
+      minW: 6,
+      minH: 6,
+      defaultConfig: {
+        edge: "auto",
+        mode: "twinkle",
+        palette: "classic",
+        bulbs: 24,
+        swags: 5,
+        sag: 0.5,
+        speed: 1,
+        reactToAlerts: true,
+      },
+    },
 
     // ---- Orbital и свои темы ----
     timer: {

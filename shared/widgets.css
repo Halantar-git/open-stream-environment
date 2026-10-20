@@ -3369,3 +3369,107 @@
     animation: none;
   }
 }
+
+/* ==== Новогодняя гирлянда ====
+   Мерцание — только opacity/transform у лампочек (--d и --delay задаёт JS),
+   поэтому виджет почти ничего не стоит сцене. */
+.garland {
+  pointer-events: none;
+  overflow: visible;
+}
+
+.garland__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.garland__wire {
+  stroke: #17301f;
+  stroke-linecap: round;
+}
+
+.garland__wire-sheen {
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-linecap: round;
+  transform: translateY(-0.5px);
+}
+
+.garland__knot {
+  fill: #0f1f15;
+}
+
+.garland__cap {
+  fill: #2b302b;
+}
+
+.garland__shine {
+  fill: #ffffff;
+  opacity: 0.55;
+}
+
+.garland__lamp {
+  opacity: 1;
+}
+
+.garland__glow {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.garland--twinkle .garland__lamp,
+.garland--wave .garland__lamp {
+  animation: garland-pulse var(--d, 2.4s) ease-in-out var(--delay, 0s) infinite;
+}
+
+.garland--blink .garland__lamp {
+  animation: garland-blink var(--d, 1.2s) steps(1) infinite;
+}
+
+/* Бегущие огни: фаза включается по очереди, остальные приглушены. */
+.garland--chase .garland__lamp {
+  opacity: 0.3;
+  animation: garland-chase var(--d, 1.35s) steps(1) var(--delay, 0s) infinite;
+}
+
+/* Вспышка на алерт: соседние лампочки мигают в противофазе. */
+.garland.is-burst .garland__lamp {
+  animation: garland-burst 0.36s ease-in-out calc(var(--par, 0) * -0.18s) infinite;
+}
+.garland.is-burst .garland__glow {
+  animation: garland-glow 0.36s ease-in-out calc(var(--par, 0) * -0.18s) infinite;
+}
+
+@keyframes garland-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+@keyframes garland-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.25; }
+}
+
+@keyframes garland-chase {
+  0%, 33% { opacity: 1; }
+  34%, 100% { opacity: 0.3; }
+}
+
+@keyframes garland-burst {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+@keyframes garland-glow {
+  0%, 100% { transform: scale(1.5); }
+  50% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .garland .garland__lamp,
+  .garland .garland__glow {
+    animation: none;
+    opacity: 1;
+  }
+}

@@ -229,6 +229,7 @@
       death: OW.DeathWidget,
       webcam: OW.WebcamWidget,
       soundboard: OW.SoundboardWidget,
+      garland: OW.WidgetGarland,
       custom: OW.CustomWidget,
       grimhex: OW.WidgetGrimHex,
       musain: OW.WidgetMusain,

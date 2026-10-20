@@ -291,6 +291,52 @@ export function initCanvasEditor({
     </div>`;
   }
 
+  // Миниатюра гирлянды для колонки редактора. Пресеты повторяют
+  // `PALETTES` из `overlay/widgets/garland-widget.js` — превью статичное и
+  // живёт в другой странице, так что общий модуль ради пяти массивов не тянем.
+  const GARLAND_PREVIEW_PALETTES = {
+    classic: ["#ff3b30", "#ffcc00", "#34c759", "#0a84ff", "#ff2d92"],
+    warm: ["#ffd9a0", "#ffc46b", "#ffe6c2"],
+    cool: ["#bfe3ff", "#8fd0ff", "#e8f6ff"],
+    redgreen: ["#e5222b", "#1fae4b"],
+    retro: ["#ff6a3d", "#ffd23f", "#3bceac", "#4d9de0", "#e15554"],
+  };
+
+  // Дуга провода и точки на ней — в процентах кадра; авто-сторона в превью
+  // показывается сверху, как и карточка каталога по умолчанию.
+  function garlandPreview(edgeValue, paletteValue) {
+    const colors = GARLAND_PREVIEW_PALETTES[paletteValue] || GARLAND_PREVIEW_PALETTES.classic;
+    const edge = String(edgeValue || "auto");
+    const sides =
+      edge === "frame"
+        ? ["top", "bottom", "left", "right"]
+        : edge === "arc"
+          ? ["left", "top", "right"]
+          : edge === "auto"
+            ? ["top"]
+            : [edge];
+    const curves = {
+      top: { d: "M3 5 Q50 27 97 5", points: [[14, 13], [32, 19], [50, 21], [68, 19], [86, 13]] },
+      bottom: { d: "M3 95 Q50 73 97 95", points: [[14, 87], [32, 81], [50, 79], [68, 81], [86, 87]] },
+      left: { d: "M5 3 Q27 50 5 97", points: [[13, 14], [19, 32], [21, 50], [19, 68], [13, 86]] },
+      right: { d: "M95 3 Q73 50 95 97", points: [[87, 14], [81, 32], [79, 50], [81, 68], [87, 86]] },
+    };
+    const parts = sides
+      .filter((side) => curves[side])
+      .map((side) => {
+        const curve = curves[side];
+        const bulbs = curve.points
+          .map(([x, y], index) => {
+            const color = escapeAttr(colors[index % colors.length]);
+            return `<circle cx="${x}" cy="${y}" r="5" fill="${color}" opacity="0.18"/><circle cx="${x}" cy="${y}" r="2.4" fill="${color}"/>`;
+          })
+          .join("");
+        return `<path d="${curve.d}" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="0.8"/>${bulbs}`;
+      })
+      .join("");
+    return `<div class="garland" style="position:relative;width:100%;height:100%;pointer-events:none;"><svg class="garland__svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" style="width:100%;height:100%;">${parts}</svg></div>`;
+  }
+
   function buildPreviewHtml(inst) {
     const config = inst.config || {};
     const previewType = effectiveType(inst);
@@ -490,6 +536,9 @@ export function initCanvasEditor({
       }
       case "soundboard": {
         return `<div class="widget-soundboard"><div class="widget-soundboard__placeholder">🔊 ${escapeHtml(t("widgets.soundboard"))}</div></div>`;
+      }
+      case "garland": {
+        return garlandPreview(config.edge, config.palette);
       }
       case "grimhex": {
         const primary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#FF1800";
