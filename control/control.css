@@ -837,6 +837,10 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .topbar__poll-btn { margin-left: 10px; font-size: 12px; padding: 7px 14px; }
 .topbar__poll-btn svg { width: 14px; height: 14px; }
 .topbar__poll-btn.is-active { background: var(--md-primary-container); color: var(--md-on-primary-container); }
+/* У «Шаблонов» не было своего правила: кнопка прилипала к «Голосованию» и не
+   подсвечивалась при открытой панели. */
+.topbar__templates-btn { margin-left: 10px; font-size: 12px; padding: 7px 14px; }
+.topbar__templates-btn.is-active { background: var(--md-primary-container); color: var(--md-on-primary-container); }
 .topbar__clip-btn { margin-left: 10px; font-size: 12px; padding: 7px 14px; }
 .topbar__marker-btn { margin-left: 10px; font-size: 12px; padding: 7px 14px; }
 
