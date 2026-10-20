@@ -64,6 +64,7 @@ jobs:
             --notes "Список изменений — в CHANGELOG.md." \
             --assets "$RUNNER_TEMP/release.json" \
             --signatures "$RUNNER_TEMP/sigs" \
+            --base-url "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG" \
             --out "$RUNNER_TEMP/latest.json"
 
       - name: Upload latest.json

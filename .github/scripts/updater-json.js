@@ -65,10 +65,14 @@ function sortedPlatforms(platforms) {
   return out;
 }
 
-function buildManifest({ version, notes = "", pubDate = new Date().toISOString(), assets, signatures }) {
+function buildManifest({ version, notes = "", pubDate = new Date().toISOString(), assets, signatures, baseUrl }) {
   if (!version) throw new Error("не передана версия");
-
-  const urls = new Map(assets.map((asset) => [asset.name, asset.browser_download_url || asset.url]));
+  // Адрес ассета собирается из тега, а не из `browser_download_url`: у
+  // черновика GitHub отдаёт `.../download/untagged-…`, и после публикации
+  // такой адрес отвечает 404 — автообновление ломалось именно на этом.
+  if (!baseUrl) throw new Error("не передан адрес релиза");
+  const base = String(baseUrl).replace(/\/+$/, "");
+  const known = new Set(assets.map((asset) => asset.name));
   const platforms = {};
   // Общий ключ платформы собирается отдельно: конкретные установщики важнее, и
   // приоритет решает, какой из них станет запасным для `{os}-{arch}`.
@@ -84,11 +88,12 @@ function buildManifest({ version, notes = "", pubDate = new Date().toISOString()
     // `.dmg`): такие файлы просто пропускаем.
     if (!rule) continue;
 
-    const url = urls.get(assetName);
-    if (!url) throw new Error(`нет ассета для подписи: ${assetName}`);
+    if (!known.has(assetName)) throw new Error(`нет ассета для подписи: ${assetName}`);
 
     const arch = archOf(assetName, rule.os);
     if (!arch) throw new Error(`не определить архитектуру: ${assetName}`);
+
+    const url = `${base}/${encodeURIComponent(assetName)}`;
 
     const entry = { signature, url };
     platforms[`${rule.os}-${arch}-${rule.installer}`] = entry;
@@ -136,7 +141,7 @@ function parseArgs(argv) {
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
-  for (const required of ["version", "assets", "signatures", "out"]) {
+  for (const required of ["version", "assets", "signatures", "base-url", "out"]) {
     if (!args[required]) throw new Error(`не хватает --${required}`);
   }
 
@@ -147,6 +152,7 @@ function main() {
     pubDate: args["pub-date"],
     assets: release.assets || [],
     signatures: readSignatures(args.signatures),
+    baseUrl: args["base-url"],
   });
 
   fs.writeFileSync(args.out, `${JSON.stringify(manifest, null, 2)}\n`);

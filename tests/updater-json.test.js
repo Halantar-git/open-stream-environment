@@ -30,7 +30,9 @@ const { buildManifest, archOf } = require("../.github/scripts/updater-json.js");
 const VERSION = "4.2.1";
 const BASE = `https://github.com/Halantar-git/open-stream-environment/releases/download/v${VERSION}`;
 
-// Имена — как их отдаёт `tauri build` в этом релизе.
+// Имена — как их отдаёт `tauri build` в этом релизе. `browser_download_url`
+// намеренно ведёт на `untagged-…`: ровно так его отдаёт API для черновика, и
+// такой адрес после публикации отвечает 404.
 const ASSETS = [
   "Open.Stream.Environment-4.2.1-1.x86_64.rpm",
   "Open.Stream.Environment_4.2.1_aarch64.dmg",
@@ -39,7 +41,10 @@ const ASSETS = [
   "Open.Stream.Environment_4.2.1_x64-setup.exe",
   "Open.Stream.Environment_4.2.1_x64_en-US.msi",
   "Open.Stream.Environment_aarch64.app.tar.gz",
-].map((name) => ({ name, browser_download_url: `${BASE}/${name}` }));
+].map((name) => ({
+  name,
+  browser_download_url: `https://github.com/Halantar-git/open-stream-environment/releases/download/untagged-0123456789abcdef0123/${name}`,
+}));
 
 function signaturesFor(names) {
   const signatures = {};
@@ -56,6 +61,7 @@ function manifest(overrides = {}) {
     pubDate: "2026-10-20T00:00:00.000Z",
     assets: ASSETS,
     signatures: signaturesFor(SIGNED),
+    baseUrl: BASE,
     ...overrides,
   });
 }
@@ -134,6 +140,17 @@ describe("latest.json: сборка фида", () => {
     for (const [key, value] of Object.entries(platforms)) {
       expect({ key, download: value.url.startsWith(`${BASE}/`) }).toEqual({ key, download: true });
     }
+  });
+
+  test("адрес ассета собирается из тега, а не из ответа API", () => {
+    // У черновика `browser_download_url` — `untagged-…`, после публикации он
+    // отдаёт 404; фид должен ссылаться на тег.
+    expect(manifest().platforms["windows-x86_64-nsis"].url).toBe(`${BASE}/Open.Stream.Environment_4.2.1_x64-setup.exe`);
+    expect(manifest().platforms["windows-x86_64-nsis"].url).not.toContain("untagged");
+  });
+
+  test("без адреса релиза фид не собирается", () => {
+    expect(() => manifest({ baseUrl: "" })).toThrow(/адрес релиза/);
   });
 
   test("архитектура читается из имени на каждой ОС", () => {
