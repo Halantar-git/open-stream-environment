@@ -57,6 +57,7 @@ const SECTIONS = [
       { type: "p", key: "help.editor.p3" },
       { type: "p", key: "help.editor.p4" },
       { type: "p", key: "help.editor.p5" },
+      { type: "p", key: "help.editor.p6" },
       { type: "code", text: "http://localhost:8710/overlay/overlay.html" },
     ],
   },
@@ -99,6 +100,7 @@ const SECTIONS = [
       { type: "p", key: "help.widgets.p5" },
       { type: "p", key: "help.widgets.p6" },
       { type: "p", key: "help.widgets.p7" },
+      { type: "p", key: "help.widgets.p8" },
     ],
   },
   {
@@ -109,6 +111,7 @@ const SECTIONS = [
       { type: "p", key: "help.guests.p2" },
       { type: "p", key: "help.guests.p3" },
       { type: "p", key: "help.guests.p4" },
+      { type: "p", key: "help.guests.p5" },
     ],
   },
   {
@@ -269,6 +272,15 @@ const SECTIONS = [
       { type: "p", key: "help.terminal.p1" },
       { type: "p", key: "help.terminal.p2" },
       { type: "p", key: "help.terminal.p3" },
+    ],
+  },
+  {
+    id: "templates",
+    title: "help.templates.title",
+    blocks: [
+      { type: "p", key: "help.templates.p1" },
+      { type: "p", key: "help.templates.p2" },
+      { type: "p", key: "help.templates.p3" },
     ],
   },
   {

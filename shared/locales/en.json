@@ -1579,7 +1579,8 @@
       "p2": "Select a widget to edit its properties on the right. Drag to move it, use the corner handle to resize.",
       "p3": "The Layers panel controls z-order; the Grid toggle helps with alignment. Copy this URL into an OBS Browser Source:",
       "p4": "Widget icons appear on the canvas next to the label on hover or selection, so widgets are easier to tell apart.",
-      "p5": "The Lock button in the toolbar below the canvas prevents dragging, resizing, deleting, adding and reordering widgets. Selection and property editing stay available — handy for avoiding an accidental layout shift during a live stream."
+      "p5": "The Lock button in the toolbar below the canvas prevents dragging, resizing, deleting, adding and reordering widgets. Selection and property editing stay available — handy for avoiding an accidental layout shift during a live stream.",
+      "p6": "For a 3D widget with an Angle slider the whole tile rotates on the canvas — frame, label and resize handles. Drag a handle along the widget's axes: width and height are measured in its rotated coordinate system, not on screen."
     },
     "hud": {
       "title": "Overlays over the game (HUD)",
@@ -1597,18 +1598,20 @@
       "title": "Widgets on the scene",
       "p1": "Every widget has its own settings in the inspector on the right. For the UEC transfer you can set the header channel, display duration, decode step (ms per character), and toggle the amount and message. Long text makes the panel grow by itself, up to the bottom of the screen.",
       "p2": "The UEC transfer shows event details: for a follow — that the contact is being watched, for a sub — the tier, for a gift — the number of gifted subs and the tier. The donation amount is coloured by tier, like in the TESO alert.",
-      "p3": "The microphone visualizer has modes (sine, bars from the center, bars growing upward, ring), colour, opacity, gain and noise gate. Rotate turns the drawing by 90° and swaps the frame sides — a vertical widget becomes tall, otherwise the wave would stay a strip in the centre. Direction flips the drawing the other way without touching the frame.",
-      "p4": "The microphone visualizer, webcam frame, 3D goals and the Executive Hangar timer have perspective: tilt strength 0–100 and a direction — left, right, up or down. The tilt is visible both in the overlay and in the editor preview.",
+      "p3": "The microphone visualizer has modes (sine, bars from the center, bars growing upward, spectrum envelope, ring), colour, opacity, gain and noise gate. Spectrum envelope is the same spectrum drawn as one smooth line filled downward: in a narrow strip it reads better than separate bars. Mirror flips the drawing across the vertical axis after rotation, so it means the same thing in any orientation. Rotate turns the drawing by 90° and swaps the frame sides — a vertical widget becomes tall, otherwise the wave would stay a strip in the centre. Direction flips the drawing the other way without touching the frame.",
+      "p4": "The microphone visualizer, webcam frame, Recent events, 3D goals and the Executive Hangar timer have perspective: tilt strength 0–100 and a direction — left, right, up or down. The tilt is visible both in the overlay and in the editor preview. Every 3D widget also has an Angle slider (0–359°) that turns the widget within its own plane.",
       "p5": "Microphone settings are split in two: display (mode, color, opacity, perspective) is per widget, while the device, echo cancellation and noise suppression are global because the microphone is opened once.",
-      "p6": "The webcam frame has two modes. Frame only is decoration: corners, a thin border and a LIVE badge in the current theme color; the camera is a separate OBS source. Live video from the panel makes the control panel capture the camera and send frames to the overlay; device, frame width, FPS (up to 60), codec, bitrate or JPEG quality are configurable, plus mirror and fit. H.264 through WebCodecs is used by default; if the browser or hardware cannot handle it, the panel falls back to JPEG. The OBS browser source itself has no camera access.",
-      "p7": "The news ticker is a scrolling line of stream events: donations, follows, subs, rewards, and optionally chat, the goal and the top donation. Speed is set in pixels per second and does not depend on message length; direction and sources are toggled in the inspector. There is a flat 2D variant and 3D tickers in the theme sets with a slight perspective."
+      "p6": "The webcam frame has two modes. Frame only is decoration: corners, a thin border and a LIVE badge in the current theme color; the camera is a separate OBS source. Live video from the panel makes the control panel capture the camera and send frames to the overlay; device, frame width, FPS (up to 60), codec, bitrate or JPEG quality are configurable, plus mirror and fit. H.264 through WebCodecs is used by default; if the browser or hardware cannot handle it, the panel falls back to JPEG. The OBS browser source itself has no camera access. The corner colour can be set separately from the frame (empty — taken from the theme), and the Neon toggle adds a glow around the frame and corners; the glow strength is 2–40 px.",
+      "p7": "The news ticker is a scrolling line of stream events: donations, follows, subs, rewards, and optionally chat, the goal and the top donation. Speed is set in pixels per second and does not depend on message length; direction and sources are toggled in the inspector. There is a flat 2D variant and 3D tickers in the theme sets with a slight perspective. Ready-made phrases for it live in the Templates panel — send one into the ticker or the breaking bar in one click.",
+      "p8": "3D chats have a Show time toggle: it affects new messages only — chat keeps no history, just the rows on screen, so messages already shown keep their time. The TESO chat has no time at all."
     },
     "guests": {
       "title": "Guest cameras",
       "p1": "In Settings → Guest cameras each slot has an Invite button: it creates a one-time ose-join:// link.",
       "p2": "Send the link to the guest. They paste it into OSE, enter a name and wait — the camera starts only after you press Allow. The link lives for 15 minutes and survives a dropped connection.",
       "p3": "In the layout pick the camera widget, the Guest camera source and a slot. Several slots give several cameras in frame; each volume is adjusted in the properties.",
-      "p4": "An invite can be created for the internet (through a signaling service) or for the local network. For the guest's voice to reach the stream, enable “Control audio via OBS” on the Browser Source. The signaling address is set in Settings; see signal/README.md for deploying your own service."
+      "p4": "An invite can be created for the internet (through a signaling service) or for the local network. For the guest's voice to reach the stream, enable “Control audio via OBS” on the Browser Source. The signaling address is set in Settings; see signal/README.md for deploying your own service.",
+      "p5": "The slot is assigned automatically: a new widget with the Guest camera source gets the first free one, and slots already chosen are left alone. Without a slot the widget shows No slot selected and accepts no stream — change it by hand only to pin a guest to a specific place."
     },
     "presets": {
       "title": "Layout presets",
@@ -1734,6 +1737,12 @@
       "p1": "The Terminal button in the header opens the built-in console: it shows server and integration logs in real time.",
       "p2": "Type commands in the input (e.g. scene brb, death +1, wheel spin, sim sub user, theme pixel, status). Type help for the full list.",
       "p3": "Tab autocompletes commands and arguments (scenes, sounds, cameras, filters). The search field in the terminal header filters logs by text, and logs <level> filters by level."
+    },
+    "templates": {
+      "title": "Templates",
+      "p1": "The Templates button in the header opens a panel with ready-made phrases for the news ticker. Type into the New template field and press Add — the phrase is saved in settings and survives a restart.",
+      "p2": "Each row has two buttons: To ticker puts the phrase into the common event flow, To breaking shows it as a separate bar above the ticker without waiting for the cycle to end. Edits happen right in the row; an empty row and a duplicate remove themselves.",
+      "p3": "Up to 20 phrases of 200 characters each are stored. The same message can be sent from the terminal with ticker [breaking] <text> or from the Web Remote."
     },
     "wheel": {
       "title": "Fortune Wheel",
