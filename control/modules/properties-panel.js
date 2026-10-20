@@ -717,6 +717,17 @@ export function initPropertiesPanel({
         <div class="properties__toggle-row"><label>${t("properties.snowReact")}</label>${switchHtml("pSnowReact", config.reactToAlerts !== false)}</div>`;
     }
 
+    // Поворот в плоскости кадра — всем 3D-виджетам. Угол складывается с
+    // наклоном перспективы, поэтому знак можно поставить под любым углом к
+    // кадру, а не только «ровно» или «с наклоном». У 2D-виджета поле остаётся,
+    // если угол уже задан: тему могли переключить после поворота, и убрать
+    // его из 2D-темы иначе было бы нечем.
+    if (def.dimension === "3d" || config.angle != null) {
+      const angle = Math.round((((Number(config.angle) || 0) % 360) + 360) % 360);
+      extraHtml += `
+        <div class="md-field"><label>${t("properties.angle")}: <span id="pWidgetAngleValue">${angle}</span>°</label><input type="range" id="pWidgetAngle" min="0" max="359" step="1" value="${angle}"></div>`;
+    }
+
     propertiesEl.innerHTML = `
       <div class="properties__toggle-row"><label>${t("properties.visibility")}</label>${switchHtml("pVisible", inst.visible)}</div>
       <div class="properties__row">
@@ -736,6 +747,17 @@ export function initPropertiesPanel({
       });
     });
     wireSwitch(propertiesEl.querySelector("#pVisible"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { visible: on } }));
+
+    // Ползунок поворота общий для всех 3D-виджетов.
+    const angleInput = propertiesEl.querySelector("#pWidgetAngle");
+    if (angleInput) {
+      angleInput.addEventListener("input", (e) => {
+        const value = Number(e.target.value);
+        const label = propertiesEl.querySelector("#pWidgetAngleValue");
+        if (label) label.textContent = String(value);
+        send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { angle: value } } });
+      });
+    }
 
     if (inst.type === "goal" || inst.type === "grimhex-goal" || inst.type === "nuclear-goal" || inst.type === "cobra-goal" || inst.type === "wardogs-goal" || inst.type === "md3-goal" || inst.type === "pixel-goal" || inst.type === "teso-goal" || inst.type === "retrowave-goal") {
       propertiesEl.querySelector("#pGoalTitle").addEventListener("change", (e) => send(EVENT_TYPES.CMD_SET_GOAL, { title: e.target.value }));

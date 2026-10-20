@@ -693,8 +693,7 @@
     _applyPerspective() {
       const value = clamp(num(this.config.perspective, 0), 0, 100);
       if (value <= 0) {
-        this.element.style.transform = "";
-        this.element.style.transformStyle = "";
+        this._setTilt("");
         return;
       }
       const magnitude = value * 0.15;
@@ -710,8 +709,7 @@
         rotateY = 0;
         rotateX = -magnitude;
       }
-      this.element.style.transform = `perspective(1200px) rotateY(${rotateY}deg) rotateX(${rotateX}deg)`;
-      this.element.style.transformStyle = "preserve-3d";
+      this._setTilt(`perspective(1200px) rotateY(${rotateY}deg) rotateX(${rotateX}deg)`);
     }
   }
 

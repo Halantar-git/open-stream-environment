@@ -106,6 +106,7 @@
       this._mounted = false;
       this._rafId = 0;
       this._fps = 0;
+      this._tilt = ""; // наклон 3D-виджета (perspective + rotateX/Y), задаёт подкласс
       this._loopDesired = false; // subclass asked for animation (startRenderLoop)
       this._idle = false; // explicit sleep (animation finished, etc.)
       this._timers = new Set(); // setTimeout/setInterval handles
@@ -328,6 +329,40 @@
       s.height = this.geometry.h + "%";
       s.zIndex = String(this.geometry.z);
       s.display = this.geometry.visible ? "" : "none";
+      // Геометрия меняется чаще всего и не должна сбрасывать наклон и поворот.
+      this._applyTransform();
+    }
+
+    // ---- наклон и поворот ----
+
+    // Угол поворота в плоскости экрана (`config.angle`, градусы). Отдельный от
+    // `rotation` ключ: у визуализатора микрофона `rotation` — это поворот холста
+    // на 90°, и накладывать на него ещё один поворот нельзя.
+    _widgetAngle() {
+      const raw = Number(this.config && this.config.angle);
+      if (!Number.isFinite(raw) || raw === 0) return 0;
+      return ((Math.round(raw) % 360) + 360) % 360;
+    }
+
+    // Наклон задаёт сам виджет; BaseWidget хранит его, чтобы не потерять при
+    // следующем обновлении геометрии.
+    _setTilt(tilt) {
+      this._tilt = tilt || "";
+      this._applyTransform();
+    }
+
+    // `transform: perspective(...) rotateY(...) rotate(угол)` — функции
+    // применяются справа налево, поэтому сначала знак поворачивается в своей
+    // плоскости, а потом наклоняется целиком — так он и висит на «стене» под
+    // углом, не будучи сплюснутым.
+    _applyTransform() {
+      if (!this.element) return;
+      const tilt = this._tilt || "";
+      const angle = this._widgetAngle();
+      const rotate = angle ? `rotate(${angle}deg)` : "";
+      const parts = [tilt, rotate].filter(Boolean);
+      this.element.style.transform = parts.join(" ");
+      this.element.style.transformStyle = tilt ? "preserve-3d" : "";
     }
 
     _initWebGL() {

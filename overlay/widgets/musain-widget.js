@@ -137,11 +137,9 @@
       if (v > 0) {
         const ry = -(v * 0.15); // 0 .. -15deg
         const rx = v * 0.03; // 0 .. 3deg
-        this.element.style.transform = `perspective(1200px) rotateY(${ry}deg) rotateX(${rx}deg)`;
-        this.element.style.transformStyle = "preserve-3d";
+        this._setTilt(`perspective(1200px) rotateY(${ry}deg) rotateX(${rx}deg)`);
       } else {
-        this.element.style.transform = "";
-        this.element.style.transformStyle = "";
+        this._setTilt("");
       }
     }
 

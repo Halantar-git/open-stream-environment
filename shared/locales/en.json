@@ -1085,6 +1085,7 @@
     "maxMessages": "Max messages",
     "showBadges": "Show badges",
     "perspective": "Perspective",
+    "angle": "Rotation",
     "perspectiveDirection": "Tilt direction",
     "perspectiveLeft": "Left",
     "perspectiveRight": "Right",

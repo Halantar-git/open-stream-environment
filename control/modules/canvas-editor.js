@@ -1360,7 +1360,13 @@ export function initCanvasEditor({
 
         const content = document.createElement("div");
         content.className = "canvas-widget__content";
-        content.innerHTML = buildPreviewHtml(inst);
+        const preview = buildPreviewHtml(inst);
+        // Угол поворота виден и в редакторе: без него ползунок выглядел бы
+        // неработающим до выхода в эфир.
+        const angle = Math.round((((Number(inst.config && inst.config.angle) || 0) % 360) + 360) % 360);
+        content.innerHTML = angle
+          ? `<div style="width:100%;height:100%;transform:rotate(${angle}deg);transform-origin:50% 50%;">${preview}</div>`
+          : preview;
         box.appendChild(content);
 
         canvasEl.appendChild(box);
