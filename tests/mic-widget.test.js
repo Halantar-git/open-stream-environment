@@ -145,6 +145,125 @@ function drawableWidget(config) {
   return w;
 }
 
+describe("MicWidget: источник данных", () => {
+  beforeEach(() => {
+    global.window = { devicePixelRatio: 1 };
+  });
+  afterEach(() => {
+    delete global.window;
+  });
+
+  function remote(level) {
+    return {
+      level,
+      wave: new Uint8Array(240).fill(180),
+      freq: new Uint8Array(128).fill(220),
+    };
+  }
+
+  // В OBS локальный захват может разрешиться, но отдавать тишину (устройство
+  // занято панелью). Кадры моста должны перекрывать такой поток, иначе
+  // визуализатор замирает на нулях.
+  test("живые кадры панели важнее молчащего локального захвата", () => {
+    const w = drawableWidget({ visualizer_mode: "bars" });
+    const frame = remote(0.8);
+    w.context.state = { remoteMicData: frame };
+    w.dataArray = new Uint8Array(2048);
+    w.freqArray = new Uint8Array(1024);
+    w.analyser = {
+      getByteTimeDomainData(arr) {
+        arr.fill(128);
+      },
+      getByteFrequencyData(arr) {
+        arr.fill(0);
+      },
+    };
+    const bars = jest.spyOn(w, "_drawBars").mockImplementation(() => {});
+
+    w._draw(1000);
+    w._draw(1100);
+
+    expect(bars).toHaveBeenCalled();
+    // Полосы собраны из кадра панели, а не из локального (молчащего) потока.
+    // Первый кадр только заводит сглаживание (dt = 0), поэтому смотрим второй.
+    expect(Math.max(...bars.mock.calls[1][3])).toBeGreaterThan(0.5);
+    expect(w.level).toBeGreaterThan(0.5);
+  });
+
+  // Обратный случай: устройство первым забрал оверлей, и панель шлёт нули.
+  test("живой локальный захват важнее молчащих кадров панели", () => {
+    const w = drawableWidget({ visualizer_mode: "bars" });
+    w.context.state = { remoteMicData: remote(0) };
+    w.dataArray = new Uint8Array(2048).fill(170);
+    w.freqArray = new Uint8Array(1024);
+    w.analyser = {
+      getByteTimeDomainData(arr) {
+        arr.fill(170);
+      },
+      getByteFrequencyData(arr) {
+        arr.fill(190);
+      },
+    };
+    const bars = jest.spyOn(w, "_drawBars").mockImplementation(() => {});
+
+    w._draw(1000);
+    w._draw(1100);
+
+    expect(Math.max(...bars.mock.calls[1][3])).toBeGreaterThan(0.5);
+    expect(w.level).toBeGreaterThan(0);
+  });
+
+  test("без кадров панели работает локальный захват", () => {
+    const w = drawableWidget({ visualizer_mode: "bars" });
+    w.dataArray = new Uint8Array(2048).fill(170);
+    w.freqArray = new Uint8Array(1024).fill(190);
+    w.analyser = {
+      getByteTimeDomainData(arr) {
+        arr.fill(170);
+      },
+      getByteFrequencyData(arr) {
+        arr.fill(190);
+      },
+    };
+    const bars = jest.spyOn(w, "_drawBars").mockImplementation(() => {});
+
+    w._draw(1000);
+    w._draw(1100);
+
+    expect(Math.max(...bars.mock.calls[1][3])).toBeGreaterThan(0.5);
+    expect(w.level).toBeGreaterThan(0);
+  });
+
+  test("замолчавший мост уступает локальному захвату", () => {
+    const w = drawableWidget({ visualizer_mode: "bars" });
+    w.dataArray = new Uint8Array(2048).fill(170);
+    w.freqArray = new Uint8Array(1024).fill(80);
+    w.analyser = {
+      getByteTimeDomainData(arr) {
+        arr.fill(170);
+      },
+      getByteFrequencyData(arr) {
+        arr.fill(80);
+      },
+    };
+    const frame = remote(0.8);
+    frame.freq.fill(255);
+    w.context.state = { remoteMicData: frame };
+    const bars = jest.spyOn(w, "_drawBars").mockImplementation(() => {});
+
+    w._draw(1000);
+    w._draw(1100);
+    // Свежие кадры панели: громкий спектр 255.
+    expect(Math.max(...bars.mock.calls[1][3])).toBeGreaterThan(0.9);
+
+    // Кадров нет — источник переключился на локальный спектр 80.
+    w._draw(1600);
+    w._draw(2000);
+    w._draw(2400);
+    expect(Math.max(...bars.mock.calls.at(-1)[3])).toBeLessThan(0.5);
+  });
+});
+
 describe("MicWidget: режимы", () => {
   test("столбики снизу вверх растут от нижнего края", () => {
     const w = widget({});

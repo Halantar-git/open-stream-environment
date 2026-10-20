@@ -70,6 +70,8 @@
       this.analyser = null;
       this.dataArray = null;
       this.freqArray = null;
+      this._remoteRef = null;
+      this._remoteSeenAt = 0;
       this.rafId = null;
       this.audioCtx = null;
       this.stream = null;
@@ -259,7 +261,22 @@
       const dt = this._lastDrawAt == null ? 0 : Math.min(0.1, (now - this._lastDrawAt) / 1000);
       this._lastDrawAt = now;
 
-      let level = 0;
+      // Кадры из панели — основной источник. В OBS Browser Source локальный
+      // захват может разрешиться, но отдавать тишину (устройство занято панелью
+      // или CEF выдал пустой поток). Симметрично бывает и с панелью: если
+      // устройство первым забрал оверлей, мост шлёт нули. Поэтому выбираем по
+      // свежести кадров и по тому, у кого действительно есть сигнал.
+      const remote = state.remoteMicData || null;
+      if (remote !== this._remoteRef) {
+        this._remoteRef = remote;
+        this._remoteSeenAt = now;
+      }
+      // Полсекунды без новых кадров — мост остановлен; возвращаемся к захвату.
+      const remoteFresh = !!remote && now - this._remoteSeenAt < 500;
+
+      // Локальный захват читаем всегда, когда он есть: без этого не отличить
+      // рабочий микрофон от разрешённого, но молчащего потока.
+      let localLevel = 0;
       if (this.analyser && this.dataArray) {
         this.analyser.getByteTimeDomainData(this.dataArray);
         let sum = 0;
@@ -267,34 +284,48 @@
           const v = (this.dataArray[i] - 128) / 128;
           sum += v * v;
         }
-        level = Math.sqrt(sum / this.dataArray.length);
-      } else if (state.remoteMicData) {
-        level = state.remoteMicData.level || 0;
-        this.dataArray = state.remoteMicData.wave;
-        this.freqArray = state.remoteMicData.freq;
+        localLevel = Math.sqrt(sum / this.dataArray.length);
+        if (mode !== "sine" && this.freqArray) this.analyser.getByteFrequencyData(this.freqArray);
+      }
+      const hasLocal = !!this.analyser && !!this.dataArray;
+      const remoteLevel = remote ? remote.level || 0 : 0;
+      const silence = 0.002;
+
+      let wave = null;
+      let freq = null;
+      let level = 0;
+      if (hasLocal && (!remoteFresh || remoteLevel <= silence) && localLevel > silence) {
+        // Панель молчит или отдаёт нули, а локальный поток живой.
+        level = localLevel;
+        wave = this.dataArray;
+        freq = mode !== "sine" ? this.freqArray : null;
+      } else if (remote) {
+        level = remoteLevel;
+        wave = remote.wave;
+        freq = remote.freq;
+      } else if (hasLocal) {
+        level = localLevel;
+        wave = this.dataArray;
+        freq = mode !== "sine" ? this.freqArray : null;
       }
       level = DSP.applyGain(DSP.applyGate(level, gate), gain);
       this.level = level;
 
-      if (mode !== "sine" && this.analyser && this.freqArray) {
-        this.analyser.getByteFrequencyData(this.freqArray);
-      }
-
       let bandValues = null;
-      if (mode !== "sine" && this.freqArray && this.freqArray.length) {
+      if (mode !== "sine" && freq && freq.length) {
         if (
           !this._bands ||
-          this._bandBins !== this.freqArray.length ||
+          this._bandBins !== freq.length ||
           this._bandCount !== bandCount ||
           this._bandScale !== freqScale
         ) {
-          this._bands = DSP.buildBands(this.freqArray.length, bandCount, freqScale);
-          this._bandBins = this.freqArray.length;
+          this._bands = DSP.buildBands(freq.length, bandCount, freqScale);
+          this._bandBins = freq.length;
           this._bandCount = bandCount;
           this._bandScale = freqScale;
           this._bandValues = new Array(bandCount).fill(0);
         }
-        const raw = DSP.bandsFromSpectrum(this.freqArray, this._bands).map((v) =>
+        const raw = DSP.bandsFromSpectrum(freq, this._bands).map((v) =>
           DSP.applyGain(DSP.applyGate(v, gate), gain)
         );
         this._bandValues = DSP.smoothBands(this._bandValues, raw, dt, DSP.smoothingTimes(smoothing));
@@ -308,7 +339,7 @@
       ctx.lineJoin = "round";
       ctx.lineCap = "round";
 
-      if (!this.analyser && this.micError && !state.remoteMicData) {
+      if (!this.analyser && this.micError && !remote) {
         const locale = typeof t === "function" ? t : (key) => key;
         const key =
           this.micError === "NotAllowedError" || this.micError === "insecure"
@@ -353,14 +384,14 @@
       } else if (mode === "curve") {
         this._drawCurve(ctx, drawW, drawH, bandValues);
       } else {
-        this._drawSine(ctx, drawW, drawH, elapsed, amp, level);
+        this._drawSine(ctx, drawW, drawH, elapsed, amp, level, wave);
       }
 
       ctx.restore();
       ctx.globalAlpha = 1;
     }
 
-    _drawSine(ctx, cw, ch, elapsed, amp, level) {
+    _drawSine(ctx, cw, ch, elapsed, amp, level, wave) {
       const live = level > 0.001;
       const POINTS = 240;
       const midY = ch / 2;
@@ -368,9 +399,9 @@
       for (let i = 0; i <= POINTS; i++) {
         const x = (i / POINTS) * cw;
         let y;
-        if (live && this.dataArray && this.dataArray.length) {
-          const idx = Math.floor((i / POINTS) * (this.dataArray.length - 1));
-          const v = (this.dataArray[idx] - 128) / 128;
+        if (live && wave && wave.length) {
+          const idx = Math.floor((i / POINTS) * (wave.length - 1));
+          const v = (wave[idx] - 128) / 128;
           y = midY + v * amp;
         } else {
           y = midY + Math.sin(x * 0.02 + elapsed * 1.6) * (amp * 0.05) + Math.sin(x * 0.006 - elapsed * 0.9) * (amp * 0.03);
