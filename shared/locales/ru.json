@@ -622,6 +622,9 @@
     "detailSubMonths": "УРОВЕНЬ {{tier}} · {{months}} МЕС.",
     "detailGift": "×{{count}} · УРОВЕНЬ {{tier}}",
     "decoded": "ДЕШИФРОВАНО",
+    "rank3": "ЭПИЧЕСКИЙ",
+    "rank4": "ЛЕГЕНДАРНЫЙ",
+    "rank5": "МИФИЧЕСКИЙ",
     "anonymous": "АНОНИМ",
     "emptyLog": "—",
     "bits": "бит"

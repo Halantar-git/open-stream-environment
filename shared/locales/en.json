@@ -622,6 +622,9 @@
     "detailSubMonths": "TIER {{tier}} · {{months}} MO.",
     "detailGift": "×{{count}} · TIER {{tier}}",
     "decoded": "DECODED",
+    "rank3": "EPIC",
+    "rank4": "LEGENDARY",
+    "rank5": "MYTHIC",
     "anonymous": "ANONYMOUS",
     "emptyLog": "—",
     "bits": "bits"

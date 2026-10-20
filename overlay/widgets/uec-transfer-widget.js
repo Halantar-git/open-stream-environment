@@ -56,6 +56,12 @@
   const MAX_DECODE_TICK_MS = 500;
   const MESSAGE_TICKS = 18;
   const DEFAULT_DURATION_MS = 9000;
+  // Уход панели: «потеря сигнала» (схлопывание, как у CRT) перед тем, как
+  // показ сменится следующим алертом или тишиной.
+  const LEAVE_MS = 420;
+  // Ранги крупных донатов. Ключи uec.rank3…5 в словарях перекрывают эти
+  // подписи; пока их нет, показываем русские по умолчанию.
+  const RANK_FALLBACK = { 3: "Эпический", 4: "Легендарный", 5: "Мифический" };
   // С этого момента сообщение переносится на несколько строк даже на широком
   // виджете: подпись логичнее вынести над текстом, а не держать в одной строке
   // с ним.
@@ -101,14 +107,23 @@
 
   // Палитра качества донатов — та же, что у TESO-алерта: сумма красится по
   // tier'ам, чтобы крупный донат было видно с первого взгляда.
-  function donationQualityColor(amount) {
+  // Белый, зелёный, синий, фиолетовый, золотой, оранжевый (Trash … Mythic).
+  const DONATION_TIER_COLORS = ["#ffffff", "#2dc50e", "#3a92ff", "#a02dc5", "#e5a823", "#ee6a00"];
+
+  // Индекс tier'а 0..5: по нему CSS решает, насколько «громко» подсвечивать
+  // панель (`data-tier` на корне виджета).
+  function donationTier(amount) {
     const a = Number(amount) || 0;
-    if (a < 200) return "#ffffff"; // White (Trash)
-    if (a < 400) return "#2dc50e"; // Green (Fine)
-    if (a < 600) return "#3a92ff"; // Blue (Superior)
-    if (a < 800) return "#a02dc5"; // Purple (Epic)
-    if (a < 1000) return "#e5a823"; // Gold (Legendary)
-    return "#ee6a00"; // Orange (Mythic)
+    if (a < 200) return 0;
+    if (a < 400) return 1;
+    if (a < 600) return 2;
+    if (a < 800) return 3;
+    if (a < 1000) return 4;
+    return 5;
+  }
+
+  function donationQualityColor(amount) {
+    return DONATION_TIER_COLORS[donationTier(amount)];
   }
 
   function div(className) {
@@ -133,6 +148,9 @@
       this._compactId = null;
       this._decodeId = null;
       this._messageDecodeId = null;
+      this._countId = null;
+      this._leaveId = null;
+      this._sparkId = null;
       this._messageText = "";
       this._messageDecoded = false;
       this._duration = DEFAULT_DURATION_MS;
@@ -150,6 +168,7 @@
       this.compactTextEl.textContent = this.t("uec.incoming");
       this.compactDotsEl = span("uec-transfer__dots");
       for (let i = 0; i < 3; i++) this.compactDotsEl.appendChild(span("uec-transfer__dot"));
+      this.compactEl.appendChild(span("uec-transfer__scan"));
       this.compactEl.appendChild(this.compactBadgeEl);
       this.compactEl.appendChild(this.compactTextEl);
       this.compactEl.appendChild(this.compactDotsEl);
@@ -173,6 +192,10 @@
       head.appendChild(this.separatorEl);
       head.appendChild(this.channelEl);
       head.appendChild(this._buildSignal());
+      this.queueEl = span("uec-transfer__queue is-empty");
+      head.appendChild(this.queueEl);
+      this.rankEl = span("uec-transfer__rank");
+      head.appendChild(this.rankEl);
       head.appendChild(this.chipEl);
       this.panelEl.appendChild(head);
 
@@ -207,6 +230,14 @@
       body.appendChild(main);
       body.appendChild(aside);
       this.panelEl.appendChild(body);
+
+      // Тонкая полоска оставшегося времени показа: убывает на CSS, без таймеров.
+      this.sparksEl = div("uec-transfer__sparks");
+      this.panelEl.appendChild(this.sparksEl);
+
+      const timer = div("uec-transfer__timer");
+      timer.appendChild(span("uec-transfer__timer-fill"));
+      this.panelEl.appendChild(timer);
 
       this.frameEl.appendChild(this.panelEl);
       this.element.appendChild(this.frameEl);
@@ -247,6 +278,10 @@
     onUnmount() {
       this._clearDecode();
       this._clearMessageDecode();
+      this._clearCount();
+      this._clearSparks();
+      if (this._leaveId != null) this.clearTimer(this._leaveId);
+      this._leaveId = null;
       if (this._onFontsDone && typeof document !== "undefined" && document.fonts) {
         if (typeof document.fonts.removeEventListener === "function") {
           document.fonts.removeEventListener("loadingdone", this._onFontsDone);
@@ -285,6 +320,7 @@
     queueAlert(alert) {
       if (!alert) return;
       this.queue.push(alert);
+      this._renderQueue();
       if (!this.current) this.showNext();
     }
 
@@ -292,16 +328,23 @@
       this.current = null;
       this._clearDecode();
       this._clearMessageDecode();
+      this._clearCount();
+      this._clearSparks();
+      if (this._leaveId != null) {
+        this.clearTimer(this._leaveId);
+        this._leaveId = null;
+      }
       this._messageDecoded = false;
       this._resetHeight();
       if (this._compactId != null) {
         this.clearTimer(this._compactId);
         this._compactId = null;
       }
-      this.element.classList.remove("is-active", "is-compact", "is-expanded");
+      this.element.classList.remove("is-active", "is-compact", "is-expanded", "is-leaving", "is-locked");
       this.element.style.opacity = "0";
 
       const alert = this.queue.shift();
+      this._renderQueue();
       if (!alert) return;
 
       this.current = alert;
@@ -316,6 +359,13 @@
 
       const duration = Number(alert.durationMs) || Number(this.config.durationMs) || DEFAULT_DURATION_MS;
       this._duration = Math.max(1500, Math.min(60000, duration));
+      // Полоска таймера стартует с раскрытием панели, поэтому компактную фазу
+      // из её длительности вычитаем.
+      this.element.style.setProperty("--uec-timer-ms", Math.max(500, this._duration - COMPACT_MS) + "ms");
+      this._leaveId = this.later(() => {
+        this._leaveId = null;
+        this.element.classList.add("is-leaving");
+      }, Math.max(0, this._duration - LEAVE_MS));
       this._hideId = this.later(() => {
         this._hideId = null;
         this.showNext();
@@ -362,7 +412,8 @@
       const amount = this.amountText(alert);
       const showAmount = this.config.showAmount !== false && amount;
       if (this.amountEl) {
-        this.amountEl.textContent = showAmount ? amount : "";
+        // Пока сумма «набегает», не перезаписываем её итоговым значением.
+        if (this._countId == null) this.amountEl.textContent = showAmount ? amount : "";
         this.amountEl.style.display = showAmount ? "" : "none";
       }
       if (this.creditLabelEl) {
@@ -394,10 +445,26 @@
       if (this.asideEl && typeof this.asideEl.style.setProperty === "function") {
         this.asideEl.style.setProperty("--uec-amount-color", this.amountColor(kind, alert.amount));
       }
+      // Корню виджета тоже нужны цвет и tier: от них зависит подсветка панели.
+      this.element.style.setProperty("--uec-amount-color", this.amountColor(kind, alert.amount));
+      if (kind === "donation" && showAmount) {
+        const tier = donationTier(alert.amount);
+        this.element.setAttribute("data-tier", String(tier));
+        if (this.rankEl) this.rankEl.textContent = tier >= 3 ? this.rankLabel(tier) : "";
+      } else {
+        this.element.removeAttribute("data-tier");
+        if (this.rankEl) this.rankEl.textContent = "";
+      }
       // Длинный текст раскладываем иначе: подпись — отдельной строкой, текст на
       // всю ширину. Иначе каждая перенесённая строка начинается с отступа под
       // подпись, и на узком виджете сообщение вытягивается в длинный столбик.
       this.element.classList.toggle("is-long-message", Array.from(text).length > LONG_MESSAGE_CHARS);
+    }
+
+    rankLabel(tier) {
+      const key = "uec.rank" + tier;
+      const value = this.t(key);
+      return value && value !== key ? value : RANK_FALLBACK[tier] || "";
     }
 
     // Сведения о неденежных событиях: уровень подписки и количество подарков.
@@ -435,12 +502,13 @@
       return user || this.t(NAME_FALLBACK);
     }
 
-    amountText(alert) {
+    amountText(alert, valueOverride) {
       const context = this.context || {};
       const formatMoney = typeof context.formatMoney === "function" ? context.formatMoney : (n) => String(n);
       const symbol = typeof context.currencySymbol === "function" ? context.currencySymbol : () => "";
-      const amount = Number(alert.amount) || 0;
-      if (amount <= 0) return "";
+      const real = Number(alert.amount) || 0;
+      if (real <= 0) return "";
+      const amount = valueOverride == null ? real : valueOverride;
       if (alert.kind === "cheer") return `+${formatMoney(amount)} ${this.t("uec.bits")}`;
       return `+${formatMoney(amount)} ${symbol(alert.currency || "RUB")}`.trim();
     }
@@ -471,17 +539,89 @@
       }
 
       let revealed = 0;
-      this.nameEl.textContent = this._scramble(chars, 0);
+      this._renderName(chars, 0);
       this._decodeId = this.every(() => {
         revealed += 1;
         if (revealed >= chars.length) {
           this.nameEl.textContent = chars.join("");
           this._clearDecode();
           this.panelEl.classList.add("is-decoded");
+          this.element.classList.add("is-locked");
+          this._startCountUp(this.current);
+          this._burst();
           return;
         }
-        this.nameEl.textContent = this._scramble(chars, revealed);
+        this._renderName(chars, revealed);
       }, this.decodeTickMs());
+    }
+
+    // Текст во время расшифровки: открытая часть — обычным текстом, «бегущая
+    // кромка» из последних открытых символов подсвечена, закрытая часть
+    // приглушена как шифр. Общий рендер для ника и сообщения.
+    _renderCipher(el, chars, revealed, freshLen) {
+      el.textContent = "";
+      const scrambled = Array.from(this._scramble(chars, revealed));
+      const freshFrom = Math.max(0, revealed - freshLen);
+      if (freshFrom > 0) el.appendChild(document.createTextNode(chars.slice(0, freshFrom).join("")));
+      if (revealed > freshFrom) {
+        const fresh = span("uec-transfer__fresh");
+        fresh.textContent = chars.slice(freshFrom, revealed).join("");
+        el.appendChild(fresh);
+      }
+      if (revealed < chars.length) {
+        const cipher = span("uec-transfer__cipher");
+        cipher.textContent = scrambled.slice(revealed).join("");
+        el.appendChild(cipher);
+      }
+    }
+
+    _renderName(chars, revealed) {
+      this._renderCipher(this.nameEl, chars, revealed, 1);
+    }
+
+    // Искры из зоны суммы: только для Legendary/Mythic, один раз за алерт.
+    _burst() {
+      const tier = Number(this.element.getAttribute("data-tier"));
+      if (!(tier >= 4) || !this.sparksEl) return;
+      this._clearSparks();
+      const count = tier >= 5 ? 16 : 9;
+      for (let i = 0; i < count; i++) {
+        const spark = span("uec-transfer__spark");
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 26 + Math.random() * 58;
+        spark.style.setProperty("--dx", Math.round(Math.cos(angle) * dist * 1.7) + "px");
+        spark.style.setProperty("--dy", Math.round(Math.sin(angle) * dist) + "px");
+        spark.style.setProperty("--sd", Math.round(520 + Math.random() * 420) + "ms");
+        this.sparksEl.appendChild(spark);
+      }
+      this._sparkId = this.later(() => {
+        this._sparkId = null;
+        if (this.sparksEl) this.sparksEl.textContent = "";
+      }, 1100);
+    }
+
+    // Индикатор очереди: по точке на ждущий алерт (до трёх), дальше «+N».
+    _renderQueue() {
+      const el = this.queueEl;
+      if (!el) return;
+      const pending = this.queue.length;
+      el.textContent = "";
+      el.classList.toggle("is-empty", pending <= 0);
+      if (pending <= 0) return;
+      for (let i = 0; i < Math.min(pending, 3); i++) el.appendChild(span("uec-transfer__qdot"));
+      if (pending > 3) {
+        const more = span("uec-transfer__qmore");
+        more.textContent = "+" + (pending - 3);
+        el.appendChild(more);
+      }
+    }
+
+    _clearSparks() {
+      if (this._sparkId != null) {
+        this.clearTimer(this._sparkId);
+        this._sparkId = null;
+      }
+      if (this.sparksEl) this.sparksEl.textContent = "";
     }
 
     _clearDecode() {
@@ -490,6 +630,7 @@
         this._decodeId = null;
       }
       if (this.panelEl) this.panelEl.classList.remove("is-decoded");
+      if (this.element) this.element.classList.remove("is-locked");
     }
 
     // Текст сообщения расшифровывается вместе с ником, но чуть медленнее:
@@ -503,9 +644,10 @@
 
       this._messageDecoded = false;
       const perTick = Math.max(1, Math.ceil(chars.length / MESSAGE_TICKS));
+      const freshLen = Math.max(3, perTick * 2);
       let revealed = 0;
       this.messageEl.classList.add("is-decoding");
-      this.messageEl.textContent = this._scramble(chars, 0);
+      this._renderCipher(this.messageEl, chars, 0, freshLen);
       this._messageDecodeId = this.every(() => {
         revealed += perTick;
         if (revealed >= chars.length) {
@@ -517,8 +659,41 @@
           this._fitHeight();
           return;
         }
-        this.messageEl.textContent = this._scramble(chars, revealed);
+        this._renderCipher(this.messageEl, chars, revealed, freshLen);
       }, this.decodeTickMs());
+    }
+
+    // Сумма «набегает» от нуля к итогу в момент, когда ник расшифрован: это и
+    // есть кульминация алерта. Easing ease-out, чтобы последние цифры
+    // успевали читаться.
+    _startCountUp(alert) {
+      this._clearCount();
+      if (!alert || !this.amountEl || this.config.showAmount === false) return;
+      const target = Number(alert.amount) || 0;
+      if (target <= 0) return;
+
+      const steps = 14;
+      const whole = Number.isInteger(target);
+      let step = 0;
+      this.amountEl.textContent = this.amountText(alert, 0);
+      this._countId = this.every(() => {
+        step += 1;
+        if (step >= steps) {
+          this._clearCount();
+          this.amountEl.textContent = this.amountText(alert);
+          return;
+        }
+        const eased = 1 - Math.pow(1 - step / steps, 3);
+        const value = target * eased;
+        this.amountEl.textContent = this.amountText(alert, whole ? Math.round(value) : Math.round(value * 100) / 100);
+      }, 45);
+    }
+
+    _clearCount() {
+      if (this._countId != null) {
+        this.clearTimer(this._countId);
+        this._countId = null;
+      }
     }
 
     _clearMessageDecode() {
@@ -557,7 +732,7 @@
 
       // На время замера подменяем «шифр» на финальный текст: так высота
       // считается по тому, сколько места он займёт после дешифровки.
-      const shownMessage = this.messageEl ? this.messageEl.textContent : "";
+      const shownMessage = this.messageEl ? this.messageEl.innerHTML : "";
       if (usePlainMessage && this.messageEl && this._messageText) {
         this.messageEl.textContent = this._messageText;
       }
@@ -594,7 +769,7 @@
       this.panelEl.style.height = panelHeight;
       this.panelEl.style.overflow = panelOverflow;
       if (this.messageEl && usePlainMessage) {
-        this.messageEl.textContent = shownMessage;
+        this.messageEl.innerHTML = shownMessage;
       }
 
       if (!needed) return;

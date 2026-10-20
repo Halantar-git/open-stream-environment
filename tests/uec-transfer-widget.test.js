@@ -22,6 +22,15 @@ const WidgetUecTransfer = require("../overlay/widgets/uec-transfer-widget");
 function makeEl(tag) {
   const classSet = new Set();
   const styleProps = {};
+  const attributes = {};
+  const children = [];
+  // В браузере `innerHTML` и `textContent` — две стороны одного содержимого:
+  // установка любого из них заменяет детей, а чтение показывает то же самое.
+  // Виджет сохраняет и восстанавливает сообщение через `innerHTML`, поэтому
+  // без этой связи замер высоты «съедал» бы текст.
+  let content = "";
+  const textOf = () =>
+    children.length ? children.map((child) => child.textContent || "").join("") : content;
   const el = {
     tagName: (tag || "div").toUpperCase(),
     className: "",
@@ -33,11 +42,39 @@ function makeEl(tag) {
       getPropertyValue(key) {
         return styleProps[key] || "";
       },
+      removeProperty(key) {
+        delete styleProps[key];
+      },
     },
-    innerHTML: "",
-    textContent: "",
     parentNode: null,
-    children: [],
+    children,
+    attributes,
+    get textContent() {
+      return textOf();
+    },
+    set textContent(value) {
+      content = String(value);
+      children.length = 0;
+    },
+    get innerHTML() {
+      return textOf();
+    },
+    set innerHTML(value) {
+      content = String(value);
+      children.length = 0;
+    },
+    setAttribute(name, value) {
+      attributes[name] = String(value);
+    },
+    getAttribute(name) {
+      return Object.prototype.hasOwnProperty.call(attributes, name) ? attributes[name] : null;
+    },
+    hasAttribute(name) {
+      return Object.prototype.hasOwnProperty.call(attributes, name);
+    },
+    removeAttribute(name) {
+      delete attributes[name];
+    },
     classList: {
       add: (...c) => c.forEach((x) => classSet.add(x)),
       remove: (...c) => c.forEach((x) => classSet.delete(x)),
@@ -51,12 +88,12 @@ function makeEl(tag) {
     },
     appendChild(c) {
       c.parentNode = this;
-      this.children.push(c);
+      children.push(c);
       return c;
     },
     removeChild(c) {
-      const i = this.children.indexOf(c);
-      if (i >= 0) this.children.splice(i, 1);
+      const i = children.indexOf(c);
+      if (i >= 0) children.splice(i, 1);
       c.parentNode = null;
       return c;
     },
@@ -108,7 +145,12 @@ let originalDocument;
 beforeEach(() => {
   jest.useFakeTimers();
   originalDocument = global.document;
-  global.document = { createElement: (tag) => makeEl(tag) };
+  global.document = {
+    createElement: (tag) => makeEl(tag),
+    // Новый ник рисуется текстовым узлом (закрытая часть) плюс подстрокой
+    // свежераскрытых букв, поэтому харнессу нужен и он.
+    createTextNode: (text) => ({ nodeType: 3, textContent: text }),
+  };
 });
 
 afterEach(() => {
@@ -195,6 +237,74 @@ describe("WidgetUecTransfer", () => {
     expect(w.current).toBeNull();
     expect(w.element.style.opacity).toBe("0");
 
+    w.unmount();
+  });
+
+  test("tier и ранг считаются по сумме доната", () => {
+    const big = makeContext({ t: (key) => (key.startsWith("uec.rank") ? "RANG" + key.slice(-1) : key) });
+    const w1 = new WidgetUecTransfer(item(), big);
+    w1.mount(makeEl("div"));
+    big.bus.emit(EVENT_TYPES.ALERT, donation({ amount: 850 }));
+
+    // Tier уходит в CSS: от него зависит подсветка панели; ранг — отдельный ярлык.
+    expect(w1.element.getAttribute("data-tier")).toBe("4");
+    expect(w1.rankEl.textContent).toBe("RANG4");
+    w1.unmount();
+
+    const small = makeContext();
+    const w2 = new WidgetUecTransfer(item(), small);
+    w2.mount(makeEl("div"));
+    small.bus.emit(EVENT_TYPES.ALERT, donation({ amount: 150 }));
+
+    expect(w2.element.getAttribute("data-tier")).toBe("0");
+    expect(w2.rankEl.textContent).toBe("");
+    w2.unmount();
+  });
+
+  test("не-денежные события не получают tier и ранга", () => {
+    const ctx = makeContext();
+    const w = new WidgetUecTransfer(item(), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "follow", user: "neo" });
+
+    expect(w.element.hasAttribute("data-tier")).toBe(false);
+    expect(w.rankEl.textContent).toBe("");
+    w.unmount();
+  });
+
+  test("очередь показывается точками, дальше — «+N»", () => {
+    const ctx = makeContext();
+    const w = new WidgetUecTransfer(item(), ctx);
+    w.mount(makeEl("div"));
+
+    ["a", "b", "c", "d", "e"].forEach((user) => ctx.bus.emit(EVENT_TYPES.ALERT, donation({ user })));
+
+    // Первый в эфире, четверо ждут: три точки и «+1» — иначе шапка расползлась бы.
+    expect(w.queueEl.classList.contains("is-empty")).toBe(false);
+    expect(w.queueEl.children).toHaveLength(4);
+    expect(w.queueEl.children[0].className).toBe("uec-transfer__qdot");
+    expect(w.queueEl.children[3].className).toBe("uec-transfer__qmore");
+    expect(w.queueEl.children[3].textContent).toBe("+1");
+    w.unmount();
+  });
+
+  test("перед скрытием панель уходит «потерей сигнала»", () => {
+    const ctx = makeContext();
+    const w = new WidgetUecTransfer(item({ config: { durationMs: 4000 } }), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, donation());
+    // Полоска времени стартует с раскрытием, поэтому компактная фаза вычтена.
+    expect(w.element.style.getPropertyValue("--uec-timer-ms")).toBe("2600ms");
+
+    jest.advanceTimersByTime(4000 - 420);
+    expect(w.element.classList.contains("is-leaving")).toBe(true);
+    expect(w.element.classList.contains("is-active")).toBe(true);
+
+    jest.advanceTimersByTime(420);
+    expect(w.element.classList.contains("is-leaving")).toBe(false);
+    expect(w.element.classList.contains("is-active")).toBe(false);
     w.unmount();
   });
 
