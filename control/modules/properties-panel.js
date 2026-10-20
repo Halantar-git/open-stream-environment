@@ -425,7 +425,10 @@ export function initPropertiesPanel({
       const reversed = rotation >= 180;
       const themePrimary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#0060A8";
       const micColor = config.color || state.micConfig.color || themePrimary;
-      const deviceId = state.micConfig.deviceId || "";
+      // «default» — псевдоним системного выбора, а не пункт списка: иначе
+      // выбранным оказался бы несуществующий пункт или виртуальный вход.
+      const rawDeviceId = state.micConfig.deviceId || "";
+      const deviceId = rawDeviceId === "default" ? "" : rawDeviceId;
       const devices = Array.isArray(state.micDevices) ? state.micDevices : [];
       const deviceOptions = [
         `<option value="" ${deviceId ? "" : "selected"}>${t("mic.deviceDefault")}</option>`,
@@ -488,6 +491,9 @@ export function initPropertiesPanel({
             <button class="md-button md-button--text" id="pMicDeviceRefresh" title="${t("mic.deviceRefresh")}">↻</button>
           </div>
         </div>
+        <p class="properties__hint" style="margin:0;">${escapeHtml(
+          state.micActiveDevice ? t("mic.captureDevice", { device: state.micActiveDevice.label }) : t("mic.captureNone")
+        )}</p>
         <div class="properties__toggle-row"><label>${t("mic.echoCancellation")}</label>${switchHtml("pMicEcho", state.micConfig.echoCancellation !== false)}</div>
         <div class="properties__toggle-row"><label>${t("mic.noiseSuppression")}</label>${switchHtml("pMicNoise", state.micConfig.noiseSuppression !== false)}</div>
         <div class="properties__toggle-row"><label>${t("mic.autoGainControl")}</label>${switchHtml("pMicAgc", state.micConfig.autoGainControl !== false)}</div>

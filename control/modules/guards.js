@@ -17,7 +17,8 @@
 
 /*
   Мелкие защитные помощники панели управления: безопасное значение цвета для
-  инлайнового стиля и счётчик поколений захвата микрофона.
+  инлайнового стиля, счётчик поколений захвата микрофона и выбор устройства
+  ввода, когда системное умолчание оказалось виртуальным.
 
   Формат UMD, как у модулей shared/: в браузере файл подключается обычным
   <script> и живёт на window (control.js читает window.ControlGuards), а Jest
@@ -62,7 +63,48 @@
     };
   }
 
-  const api = { safeCssColor, createCaptureGeneration };
+  const api = { safeCssColor, createCaptureGeneration, pickCaptureDevice, isExplicitDevice };
+
+  /*
+    Виртуальные входы. Если Windows выбирает такой по умолчанию, настоящий
+    микрофон остаётся в списке «лишним», а мост получает тишину: NVIDIA
+    Broadcast молчит, пока в него не завернули источник, виртуальные кабели —
+    пока в них ничего не играет. Поэтому такой выбор по умолчанию заменяем
+    первым физическим устройством.
+  */
+  const VIRTUAL_INPUT =
+    /nvidia broadcast|vb-audio|voicemeeter|virtual (audio|cable|mic)|blackhole|soundflower|stereo mix|steam streaming|obs virtual|droidcam|loopback/i;
+
+  /*
+    «default» и «communications» — не конкретные устройства, а псевдонимы
+    системного выбора. Сохранённый «default» означает «пусть решает Windows»,
+    а не осознанный выбор пользователя: его можно заменить на физический вход.
+  */
+  function isExplicitDevice(deviceId) {
+    const id = typeof deviceId === "string" ? deviceId.trim() : "";
+    return !!id && id !== "default" && id !== "communications";
+  }
+
+  /*
+    Возвращает deviceId физического входа, если системное умолчание
+    виртуальное, иначе пустую строку — тогда пусть решает система. Метки
+    устройства пусты, пока браузер не получил разрешение: без них выбор не
+    делаем, иначе первым в списке окажется тот же виртуальный вход.
+  */
+  function pickCaptureDevice(devices) {
+    const list = Array.isArray(devices) ? devices.filter((d) => d && d.deviceId) : [];
+    const systemDefault = list.find((d) => d.deviceId === "default");
+    if (!systemDefault || !systemDefault.label) return "";
+    if (!VIRTUAL_INPUT.test(systemDefault.label)) return "";
+    const physical = list.find(
+      (d) =>
+        d.deviceId !== "default" &&
+        d.deviceId !== "communications" &&
+        d.label &&
+        !VIRTUAL_INPUT.test(d.label)
+    );
+    return physical ? physical.deviceId : "";
+  }
 
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.ControlGuards = api;

@@ -21,7 +21,7 @@
   Логика чистая, DOM не нужен — поэтому тесты обычные, без jsdom.
 */
 
-const { safeCssColor, createCaptureGeneration } = require("../control/modules/guards");
+const { safeCssColor, createCaptureGeneration, pickCaptureDevice, isExplicitDevice } = require("../control/modules/guards");
 
 describe("control/modules/guards: safeCssColor", () => {
   test("пропускает hex и ссылку на токен темы", () => {
@@ -88,5 +88,72 @@ describe("control/modules/guards: createCaptureGeneration", () => {
       capture.invalidate();
     }
     expect(seen.size).toBe(5);
+  });
+});
+
+describe("control/modules/guards: pickCaptureDevice", () => {
+  const device = (deviceId, label) => ({ kind: "audioinput", deviceId, label });
+
+  test("обычное системное умолчание не трогаем", () => {
+    const list = [device("default", "По умолчанию - Микрофон (USB Audio)"), device("usb", "Микрофон (USB Audio)")];
+    expect(pickCaptureDevice(list)).toBe("");
+  });
+
+  test("виртуальное умолчание уступает физическому микрофону", () => {
+    // Случай, на котором виджет молчал: Windows по умолчанию отдаёт Broadcast,
+    // а Behringer остаётся в списке отдельным устройством.
+    const list = [
+      device("default", "По умолчанию - Микрофон (NVIDIA Broadcast)"),
+      device("communications", "Связь - Микрофон (NVIDIA Broadcast)"),
+      device("broadcast", "Микрофон (NVIDIA Broadcast)"),
+      device("flow8", "Main L/R (BEHRINGER FLOW 8 (Streaming))"),
+    ];
+    expect(pickCaptureDevice(list)).toBe("flow8");
+  });
+
+  test("другие виртуальные входы тоже распознаются", () => {
+    for (const label of [
+      "VoiceMeeter Output",
+      "CABLE Output (VB-Audio Virtual Cable)",
+      "Стерео микшер (Stereo Mix)",
+      "BlackHole 2ch",
+      "OBS Virtual Camera",
+    ]) {
+      const list = [device("default", `По умолчанию - ${label}`), device("real", "Микрофон (Realtek)")];
+      expect(pickCaptureDevice(list)).toBe("real");
+    }
+  });
+
+  test("одно виртуальное устройство — оставляем системный выбор", () => {
+    const list = [device("default", "Микрофон (NVIDIA Broadcast)"), device("broadcast", "Микрофон (NVIDIA Broadcast)")];
+    expect(pickCaptureDevice(list)).toBe("");
+  });
+
+  test("без меток (разрешение ещё не выдано) выбор не делаем", () => {
+    const list = [device("default", ""), device("a", ""), device("b", "")];
+    expect(pickCaptureDevice(list)).toBe("");
+  });
+
+  test("пустой список и мусор безопасны", () => {
+    expect(pickCaptureDevice([])).toBe("");
+    expect(pickCaptureDevice(null)).toBe("");
+    expect(pickCaptureDevice([null, {}, device("default", "Микрофон (USB)")])).toBe("");
+  });
+});
+
+describe("control/modules/guards: isExplicitDevice", () => {
+  test("псевдонимы системного выбора — не выбор пользователя", () => {
+    // Именно «default» в базе уводил захват на NVIDIA Broadcast.
+    expect(isExplicitDevice("default")).toBe(false);
+    expect(isExplicitDevice("communications")).toBe(false);
+    expect(isExplicitDevice("")).toBe(false);
+    expect(isExplicitDevice("   ")).toBe(false);
+    expect(isExplicitDevice(undefined)).toBe(false);
+    expect(isExplicitDevice(null)).toBe(false);
+  });
+
+  test("конкретное устройство — выбор пользователя", () => {
+    expect(isExplicitDevice("d798c2b5f0")).toBe(true);
+    expect(isExplicitDevice(" default ")).toBe(false);
   });
 });

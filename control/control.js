@@ -38,7 +38,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const MicFrame = window.MicFrame;
   const CameraFrame = window.CameraFrame;
   const { ICONS } = window.SharedIcons;
-  const { safeCssColor, createCaptureGeneration } = window.ControlGuards;
+  const { safeCssColor, createCaptureGeneration, pickCaptureDevice, isExplicitDevice } = window.ControlGuards;
   const { micRotationPatch } = window.ControlMicRotation;
   const { cameraOutputSize } = window.ControlCamera;
   const { WIDGET_TYPES, widgetsForTheme, themeAllowsWidget, replacedBy3d, widgetRole, resolveTypeForTheme, isAnimatedWidget } = window.WidgetCatalog;
@@ -2631,18 +2631,17 @@ const { EVENT_TYPES } = window.SharedEvents;
   }
 
   // Список устройств ввода — для выпадающего списка в панели свойств.
+  function applyMicDevices(devices) {
+    state.micDevices = (devices || [])
+      .filter((d) => d.kind === "audioinput" && d.deviceId !== "default")
+      .map((d, i) => ({ deviceId: d.deviceId, label: d.label || t("mic.deviceFallback", { n: i + 1 }) }));
+    propertiesPanel.invalidate();
+    propertiesPanel.render();
+  }
+
   function refreshMicDevices() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
-    navigator.mediaDevices
-      .enumerateDevices()
-      .then((devices) => {
-        state.micDevices = devices
-          .filter((d) => d.kind === "audioinput")
-          .map((d, i) => ({ deviceId: d.deviceId, label: d.label || t("mic.deviceFallback", { n: i + 1 }) }));
-        propertiesPanel.invalidate();
-        propertiesPanel.render();
-      })
-      .catch(() => {});
+    navigator.mediaDevices.enumerateDevices().then(applyMicDevices).catch(() => {});
   }
 
   function updateMicLevelMeter(level) {
@@ -4423,6 +4422,10 @@ const { EVENT_TYPES } = window.SharedEvents;
   const micCapture = createCaptureGeneration();
   const micBridge = {
     running: false,
+    // Что реально открыто: у системного выбора deviceId появляется только
+    // после getUserMedia, а подпись в инспекторе нужна настоящая.
+    deviceId: "",
+    autoPicked: "",
     stream: null,
     ctx: null,
     analyser: null,
@@ -4443,7 +4446,16 @@ const { EVENT_TYPES } = window.SharedEvents;
         this.running = false;
         return;
       }
-      navigator.mediaDevices.getUserMedia({ audio: this._constraints() })
+      const cfg = state.micConfig || {};
+      // Явный выбор пользователя не трогаем. Алиас «default» выбором не считается:
+      // он и приводит к виртуальному умолчанию. Дальше — ранее найденное
+      // физическое устройство, а если такого ещё нет — системный выбор.
+      const explicit = isExplicitDevice(cfg.deviceId) ? cfg.deviceId : "";
+      this._open(explicit || this.autoPicked || "", generation, Ctx);
+    },
+
+    _open(deviceId, generation, Ctx) {
+      navigator.mediaDevices.getUserMedia({ audio: this._constraints(deviceId) })
         .then((stream) => {
           // Поток получили после stop()/restart: молча отпускаем его, иначе
           // микрофон остаётся захваченным — stop() про этот поток уже не знает.
@@ -4463,7 +4475,22 @@ const { EVENT_TYPES } = window.SharedEvents;
           this.wave = new Uint8Array(240);
           this.freq = new Uint8Array(128);
           this.frame = MicFrame ? new Uint8Array(MicFrame.FRAME_LEN) : null;
+          const track = stream.getAudioTracks()[0];
+          const settings = track && track.getSettings ? track.getSettings() : {};
+          this.deviceId = (settings && settings.deviceId) || deviceId || "";
+          // Инспектор показывает, что на самом деле открыто: при выборе
+          // «по умолчанию» это может оказаться не то устройство, которое ждёт
+          // пользователь.
+          state.micActiveDevice = {
+            deviceId: this.deviceId,
+            label: (track && track.label) || t("mic.deviceDefault"),
+          };
+          propertiesPanel.invalidate();
+          propertiesPanel.render();
           if (!this.timer) this.timer = setInterval(() => this.tick(), MIC_FRAME_INTERVAL_MS);
+          // У системного умолчания метки могли быть ещё пустыми: разрешение уже
+          // есть, можно отличить виртуальный вход от настоящего.
+          this._preferPhysical(generation);
         })
         .catch((err) => {
           // Отказ устаревшего запроса ничего не говорит о текущем захвате.
@@ -4471,6 +4498,28 @@ const { EVENT_TYPES } = window.SharedEvents;
           this.running = false;
           console.warn("[mic-bridge] microphone unavailable:", (err && err.name) || "unknown");
         });
+    },
+
+    // Виртуальное системное умолчание (NVIDIA Broadcast, кабели) часто отдаёт
+    // тишину: в него нужно ещё завернуть источник. Настоящий микрофон при этом
+    // виден в списке — берём его один раз, пока пользователь не выбрал устройство
+    // вручную.
+    _preferPhysical(generation) {
+      const cfg = state.micConfig || {};
+      if (this.autoPicked || isExplicitDevice(cfg.deviceId)) return;
+      navigator.mediaDevices
+        .enumerateDevices()
+        .then((list) => {
+          if (!this.running || micCapture.isStale(generation)) return;
+          const pick = pickCaptureDevice(list);
+          if (pick) this.autoPicked = pick;
+          applyMicDevices(list);
+          if (!pick) return;
+          console.info("[mic-bridge] системное умолчание виртуальное, захват с физического устройства");
+          this.stop();
+          this.start();
+        })
+        .catch((err) => console.warn("[mic-bridge] выбор устройства не удался:", (err && err.message) || err));
     },
 
     tick() {
@@ -4496,14 +4545,15 @@ const { EVENT_TYPES } = window.SharedEvents;
       updateMicLevelMeter(level);
     },
 
-    _constraints() {
+    _constraints(deviceId) {
       const cfg = state.micConfig || {};
       const audio = {
         echoCancellation: cfg.echoCancellation !== false,
         noiseSuppression: cfg.noiseSuppression !== false,
         autoGainControl: cfg.autoGainControl !== false,
       };
-      if (cfg.deviceId) audio.deviceId = { exact: cfg.deviceId };
+      const id = deviceId || cfg.deviceId || "";
+      if (id) audio.deviceId = { exact: id };
       return audio;
     },
 
@@ -4516,6 +4566,14 @@ const { EVENT_TYPES } = window.SharedEvents;
 
     stop() {
       this.running = false;
+      this.deviceId = "";
+      if (state.micActiveDevice) {
+        state.micActiveDevice = null;
+        propertiesPanel.invalidate();
+        propertiesPanel.render();
+      }
+      // autoPicked не сбрасываем: выбор физического устройства переживает
+      // перезапуск моста, иначе каждый старт снова цеплял бы виртуальное.
       // Поколение закрывает все незавершённые getUserMedia: их результат уже
       // неактуален и будет отброшен (см. комментарий в start).
       micCapture.invalidate();

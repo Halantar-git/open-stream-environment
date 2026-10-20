@@ -100,6 +100,9 @@ export function createStateManager() {
     wheelSpeedConfig: { speed: 3 },
     micConfig: { sensitivity: 1.5, lineWidth: 2, color: "", opacity: 0.9, visualizer_mode: "sine", barCount: 32, barGap: 2 },
     micDevices: [],
+    // Что захвачено на самом деле: при выборе «по умолчанию» это может быть
+    // виртуальный вход, а не тот микрофон, который ждёт пользователь.
+    micActiveDevice: null,
     cameraConfig: { deviceId: "", width: 960, fps: 12, quality: 0.6, codec: "auto", bitrateKbps: 4000, enabled: true },
     // Панель ждёт сохранённый флаг камеры, прежде чем открывать устройство:
     // иначе при выключенной камере она успела бы мигнуть на старте.
