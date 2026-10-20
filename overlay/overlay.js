@@ -478,6 +478,10 @@
         // Счёт донатов стрима приходит и в снимке: иначе виджет показывал бы
         // прочерк до первого доната после загрузки страницы.
         if (p.sessionDonations) state.sessionDonations = p.sessionDonations;
+        // Общие шаблоны ленты: у виджета может быть свой набор, но без этой
+        // строки правки из панели «Шаблоны» до эфира не доходили бы.
+        state.tickerTemplates =
+          p.tickerTemplates && typeof p.tickerTemplates === "object" ? p.tickerTemplates : {};
         state.deathCount = p.deathCount || 0;
         state.soundboardConfig = p.soundboard || state.soundboardConfig;
         state.tts = p.tts || state.tts;

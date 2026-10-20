@@ -25,6 +25,7 @@
 
 import { initLoggerPanel } from "./modules/logger-panel.js";
 import { initHelpPanel } from "./modules/help-panel.js";
+import { initTemplatesPanel } from "./modules/templates-panel.js";
 import { initDebugPanel } from "./modules/debug-panel.js";
 import { initDonationAlertsPanel } from "./modules/donationalerts-panel.js";
 import { initWsClient } from "./modules/ws-client.js";
@@ -3603,6 +3604,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     utils: { escapeHtml, escapeAttr, formatMoney, currencySymbol, formatEventTime },
   });
   const helpPanel = initHelpPanel({ t, ICONS });
+  const templatesPanel = initTemplatesPanel({ t, ICONS, send, EVENT_TYPES, state });
   const debugPanel = initDebugPanel({ t, ICONS, send, EVENT_TYPES });
 
   // ---- history console panel ----
@@ -3960,6 +3962,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     { id: "terminalPanel", setOpen: loggerPanel.setOpen },
     { id: "debugPanel", setOpen: debugPanel.setOpen },
     { id: "helpPanel", setOpen: helpPanel.setOpen },
+    { id: "templatesPanel", setOpen: templatesPanel.setOpen },
     { id: "historyPanel", setOpen: setHistoryOpen },
     { id: "wheelPanel", setOpen: setWheelOpen },
     { id: "pollPanel", setOpen: setPollOpen },
@@ -3989,6 +3992,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     ["toggleHistoryBtn", "historyPanel"],
     ["toggleWheelBtn", "wheelPanel"],
     ["togglePollBtn", "pollPanel"],
+    ["toggleTemplatesBtn", "templatesPanel"],
     ["toggleDaBtn", "daPanel"],
   ].forEach(([btnId, panelId]) => {
     const btn = document.getElementById(btnId);
@@ -4330,6 +4334,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (wheelBtn) wheelBtn.innerHTML = `${ICONS.sceneWheel} ${t("nav.wheel")}`;
     const pollBtn = document.getElementById("togglePollBtn");
     if (pollBtn) pollBtn.innerHTML = `${ICONS.scenePoll} ${t("nav.poll")}`;
+    templatesPanel.refreshLabel();
     renderQueuePanel();
     daPanel.refreshLabel();
     loggerPanel.refreshLabel();

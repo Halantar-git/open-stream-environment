@@ -437,8 +437,13 @@
       а не тихо съедается.
     */
     _template(key, values) {
-      const templates = this.config && this.config.templates;
-      const raw = templates && typeof templates[key] === "string" ? templates[key] : "";
+      const own = this.config && this.config.templates;
+      const global = (this.context.state && this.context.state.tickerTemplates) || {};
+      // Свой шаблон виджета важнее общего из панели «Шаблоны»; пустой —
+      // значит «как у всех», иначе после очистки поля возвращать общий было бы нечем.
+      const raw =
+        (own && typeof own[key] === "string" && own[key].trim()) ||
+        (typeof global[key] === "string" ? global[key] : "");
       if (!raw.trim()) return "";
       return raw.replace(/\{\{(\w+)\}\}/g, (whole, name) =>
         Object.prototype.hasOwnProperty.call(values, name) ? String(values[name]) : whole

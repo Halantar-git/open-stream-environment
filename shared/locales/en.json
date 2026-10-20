@@ -629,6 +629,13 @@
     "emptyLog": "—",
     "bits": "bits"
   },
+  "templates": {
+    "title": "Templates",
+    "hint": "Shared news ticker templates. An empty field keeps the default text (shown as a placeholder). Per-widget templates in the widget settings take precedence. Placeholders: {{user}}, {{amount}}, {{message}}, {{tier}}, {{months}}, {{count}}, {{reward}}, {{title}}, {{current}}, {{target}}.",
+    "breakingPlaceholder": "Breaking message text…",
+    "breakingSend": "To breaking",
+    "breakingSent": "Sent"
+  },
   "ticker": {
     "label": "ON AIR",
     "tagDonation": "DONATION",

@@ -52,6 +52,7 @@
         <button class="md-button md-button--tonal topbar__debug-btn" id="toggleDebugBtn" data-i18n-title="debug.title"></button>
         <button class="md-button md-button--tonal topbar__wheel-btn" id="toggleWheelBtn" data-i18n-title="nav.wheel"></button>
         <button class="md-button md-button--tonal topbar__poll-btn" id="togglePollBtn" data-i18n-title="nav.poll"></button>
+        <button class="md-button md-button--tonal topbar__templates-btn" id="toggleTemplatesBtn" data-i18n-title="templates.title"></button>
         <button class="md-button md-button--tonal topbar__terminal-btn" id="toggleTerminalBtn" data-i18n-title="editor.terminal"></button>
         <button class="md-button md-button--tonal topbar__history-btn" id="toggleHistoryBtn" data-i18n-title="settings.history"></button>
         <button class="md-button md-button--tonal topbar__da-btn" id="toggleDaBtn" data-i18n-title="da.title"></button>
@@ -80,6 +81,22 @@
         </div>
       </div>
       <div class="terminal-panel__body" id="terminalBody"></div>
+    </aside>
+
+    <aside class="terminal-panel templates-panel" id="templatesPanel" hidden>
+      <header class="terminal-panel__header">
+        <span class="terminal-panel__title" data-i18n="templates.title">Шаблоны</span>
+        <span class="templates-panel__status" id="templatesBreakingStatus"></span>
+        <button class="terminal-panel__btn terminal-panel__close" id="templatesCloseBtn" aria-label="Закрыть" data-i18n-title="common.close">×</button>
+      </header>
+      <div class="terminal-panel__input" id="templatesBreakingRow">
+        <span class="terminal-panel__prompt">!</span>
+        <div class="terminal-panel__field-wrap">
+          <input class="terminal-panel__field" id="templatesBreakingText" type="text" data-i18n-placeholder="templates.breakingPlaceholder" placeholder="Текст срочного сообщения…" autocomplete="off" spellcheck="false" />
+        </div>
+        <button class="terminal-panel__btn" id="templatesBreakingSend" data-i18n="templates.breakingSend">В срочную</button>
+      </div>
+      <div class="terminal-panel__body templates-panel__body" id="templatesBody"></div>
     </aside>
 
     <aside class="debug-panel" id="debugPanel" hidden>

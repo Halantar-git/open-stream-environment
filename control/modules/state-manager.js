@@ -118,6 +118,8 @@ export function createStateManager() {
     guestShare: { slot: "", status: "idle", detail: "" },
     // Последний снимок конфига Longshot (Executive Hangar), если получен.
     longshot: null,
+    // Общие шаблоны новостной ленты — правятся панелью «Шаблоны».
+    tickerTemplates: {},
   };
 
   // Maps the server's `state` snapshot payload into this object.
@@ -172,6 +174,10 @@ export function createStateManager() {
     state.connectionStatus = payload.connectionStatus || state.connectionStatus;
     state.sessionDonations = payload.sessionDonations || state.sessionDonations;
     state.longshot = payload.longshot || state.longshot;
+    state.tickerTemplates =
+      payload.tickerTemplates && typeof payload.tickerTemplates === "object"
+        ? payload.tickerTemplates
+        : {};
   };
 
   // Переключить редактируемую раскладку, сохранив текущую в кэше.

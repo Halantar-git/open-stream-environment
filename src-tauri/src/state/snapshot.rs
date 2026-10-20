@@ -185,6 +185,10 @@ pub fn snapshot(config: &ConfigFile, db: &Database, runtime: &Runtime) -> Value 
     );
     out.insert("obs".to_string(), obs);
     out.insert("soundboard".to_string(), field(config, "soundboard"));
+    out.insert(
+        "tickerTemplates".to_string(),
+        field(config, "ticker_templates"),
+    );
     out.insert("donationMedia".to_string(), field(config, "donationMedia"));
     out.insert("tts".to_string(), field(config, "tts"));
     out.insert("donationVoice".to_string(), field(config, "donationVoice"));

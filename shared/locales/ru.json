@@ -629,6 +629,13 @@
     "emptyLog": "—",
     "bits": "бит"
   },
+  "templates": {
+    "title": "Шаблоны",
+    "hint": "Общие шаблоны новостной ленты. Пустое поле — стандартный текст, он же показан подсказкой. Свой набор в настройках виджета важнее общих. Подстановки: {{user}}, {{amount}}, {{message}}, {{tier}}, {{months}}, {{count}}, {{reward}}, {{title}}, {{current}}, {{target}}.",
+    "breakingPlaceholder": "Текст срочного сообщения…",
+    "breakingSend": "В срочную",
+    "breakingSent": "Отправлено"
+  },
   "ticker": {
     "label": "В ЭФИРЕ",
     "tagDonation": "ДОНАТ",

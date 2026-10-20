@@ -520,4 +520,31 @@ describe("WidgetTicker: шаблоны сообщений", () => {
 
     w.unmount();
   });
+
+  test("общий шаблон из панели применяется, если у виджета своего нет", () => {
+    const ctx = makeContext({
+      state: { recentEvents: [], goal: null, topDonation: null, tickerTemplates: { follow: "Новый зритель: {{user}}" } },
+    });
+    const w = new WidgetTicker(item("ticker", {}), ctx);
+
+    expect(w._textOf({ kind: "follow", user: "Аня" })).toBe("Новый зритель: Аня");
+  });
+
+  test("свой шаблон виджета важнее общего", () => {
+    const ctx = makeContext({
+      state: { recentEvents: [], goal: null, topDonation: null, tickerTemplates: { follow: "общий: {{user}}" } },
+    });
+    const w = new WidgetTicker(item("ticker", { templates: { follow: "свой: {{user}}" } }), ctx);
+
+    expect(w._textOf({ kind: "follow", user: "Аня" })).toBe("свой: Аня");
+  });
+
+  test("очищенный шаблон виджета возвращает общий", () => {
+    const ctx = makeContext({
+      state: { recentEvents: [], goal: null, topDonation: null, tickerTemplates: { follow: "общий: {{user}}" } },
+    });
+    const w = new WidgetTicker(item("ticker", { templates: { follow: "   " } }), ctx);
+
+    expect(w._textOf({ kind: "follow", user: "Аня" })).toBe("общий: Аня");
+  });
 });

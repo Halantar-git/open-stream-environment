@@ -2038,6 +2038,28 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   font-size: 12px;
   line-height: 1.55;
 }
+
+/* Панель шаблонов повторяет терминал, но поля — форма, а не лог. */
+.templates-panel__body { font-family: var(--font-body); }
+.templates-panel__status { font-size: 12px; color: #3fb950; }
+.templates-hint { margin: 0 0 12px; color: #8b949e; font-size: 12px; line-height: 1.5; }
+.templates-field { display: block; margin-bottom: 10px; }
+.templates-field__label { display: block; margin-bottom: 4px; font-size: 12px; font-weight: 600; color: #c9d1d9; }
+.templates-field__input {
+  width: 100%;
+  box-sizing: border-box;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #c9d1d9;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 6px 8px;
+  outline: none;
+}
+.templates-field__input:focus { border-color: #58a6ff; }
+.templates-field__input::placeholder { color: #6e7681; }
 .terminal-panel__input {
   display: flex;
   align-items: center;

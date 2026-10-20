@@ -127,6 +127,35 @@ pub fn set_alert_queue_config(config: &mut ConfigFile, patch: &Value) -> Value {
 
 // ---- Приложение ----
 
+/// Какие шаблоны ленты принимаем: только известные виды событий, без пустых
+/// значений (пустое — стандартный текст из словарей). Строка обрезается так же,
+/// как текст самой ленты.
+pub const TICKER_TEMPLATE_KEYS: [&str; 9] = [
+    "donation", "cheer", "follow", "sub", "gift_sub", "reward", "chat", "goal", "top",
+];
+const TICKER_TEMPLATE_LIMIT: usize = 200;
+
+pub fn sanitize_ticker_templates(value: &Value) -> Value {
+    let mut out = Map::new();
+    let Some(object) = value.as_object() else {
+        return Value::Object(out);
+    };
+    for key in TICKER_TEMPLATE_KEYS {
+        let text: String = object
+            .get(key)
+            .map(js_string)
+            .unwrap_or_default()
+            .trim()
+            .chars()
+            .take(TICKER_TEMPLATE_LIMIT)
+            .collect();
+        if !text.is_empty() {
+            out.insert(key.to_string(), Value::from(text));
+        }
+    }
+    Value::Object(out)
+}
+
 /// Канал и порт; порт зажат в 1024–65535.
 pub fn set_app_config(config: &mut ConfigFile, patch: &Value) {
     if let Some(channel) = patch.get("twitchChannel") {
@@ -150,6 +179,9 @@ pub fn set_app_config(config: &mut ConfigFile, patch: &Value) {
             DEFAULT_GUEST_SIGNAL_URL.to_string()
         };
         config.set("guest_signal_url", Value::from(value));
+    }
+    if let Some(templates) = patch.get("tickerTemplates") {
+        config.set("ticker_templates", sanitize_ticker_templates(templates));
     }
     if let Some(donatex) = patch.get("donatex") {
         let mut service = section(config, "donatex");
@@ -832,6 +864,13 @@ pub fn normalize_config(config: &mut ConfigFile) {
         signal
     };
     config.set("guest_signal_url", Value::from(signal));
+
+    // Общие шаблоны новостной ленты. Их правит панель «Шаблоны»; у виджета
+    // может быть свой набор, который важнее.
+    config.set(
+        "ticker_templates",
+        sanitize_ticker_templates(config.get("ticker_templates").unwrap_or(&Value::Null)),
+    );
 
     // Уведомления.
     config.set(
@@ -1988,5 +2027,36 @@ mod tests {
         let db = fixture.db();
         assert!(replace_config(&mut config, &db, &json!([1, 2])).is_err());
         assert!(replace_config(&mut config, &db, &Value::Null).is_err());
+    }
+
+    #[test]
+    fn ticker_templates_keep_only_known_kinds() {
+        let value = sanitize_ticker_templates(&json!({
+            "donation": "  Спасибо, {{user}}!  ",
+            "follow": "   ",
+            "nonsense": "нет",
+        }));
+
+        assert_eq!(value["donation"], json!("Спасибо, {{user}}!"));
+        // Пустое значение — стандартный текст, хранить его в настройках незачем.
+        assert!(value.get("follow").is_none());
+        assert!(value.get("nonsense").is_none());
+    }
+
+    #[test]
+    fn ticker_templates_are_saved_and_survive_reading() {
+        let fixture = Fixture::new("ticker-templates");
+        let mut config = fixture.config();
+
+        set_app_config(
+            &mut config,
+            &json!({ "tickerTemplates": { "chat": "{{user}} пишет: {{message}}" } }),
+        );
+        normalize_config(&mut config);
+
+        assert_eq!(
+            config.get("ticker_templates"),
+            Some(&json!({ "chat": "{{user}} пишет: {{message}}" }))
+        );
     }
 }
