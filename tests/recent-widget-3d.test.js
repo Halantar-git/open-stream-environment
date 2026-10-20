@@ -22,6 +22,7 @@
 */
 
 const RecentWidget3d = require("../overlay/widgets/recent-widget-3d");
+const RecentWidget = require("../overlay/widgets/recent-widget");
 const { EVENT_TYPES } = require("../shared/events");
 
 function makeNode() {
@@ -164,6 +165,50 @@ describe("RecentWidget3d", () => {
     const { widget } = setup({}, []);
     expect(widget._text({ kind: "sub", user: "loyal", months: 14, resub: true })).toBe("<b>loyal</b> — продление 14 мес.");
     expect(widget._text({ kind: "sub", user: "nova", months: 1, resub: false })).toBe("<b>nova</b> — подписка");
+  });
+
+  test("перспектива наклоняет виджет и учитывает направление", () => {
+    const right = setup({ perspective: 50, perspectiveDirection: "right" }, []).widget;
+    expect(right.element.style.transform).toBe("perspective(1200px) rotateY(7.5deg) rotateX(1.5deg)");
+    expect(right.element.style.transformStyle).toBe("preserve-3d");
+
+    const up = setup({ perspective: 50, perspectiveDirection: "up" }, []).widget;
+    expect(up.element.style.transform).toBe("perspective(1200px) rotateY(0deg) rotateX(7.5deg)");
+
+    const flat = setup({ perspective: 0 }, []).widget;
+    expect(flat.element.style.transform).toBe("");
+    expect(flat.element.style.transformStyle).toBe("");
+  });
+
+  test("смена перспективы не пересобирает список", () => {
+    const { widget } = setup({}, [event("a", 1)]);
+    const before = widget.listEl.children.length;
+
+    widget.config = { ...widget.config, perspective: 30 };
+    widget.onUpdate({}, widget.config);
+
+    expect(widget.element.style.transform).toContain("perspective(1200px)");
+    expect(widget.listEl.children).toHaveLength(before);
+  });
+
+  test("2D-вариант тоже получает наклон", () => {
+    global.document = { createElement: () => makeNode() };
+    const handlers = new Map();
+    const widget = new RecentWidget(
+      { type: "recent", config: { perspective: 100 } },
+      {
+        state: { recentEvents: [] },
+        bus: { on: (channel, handler) => handlers.set(channel, handler) },
+        EVENT_TYPES,
+        escapeHtml: (value) => String(value),
+        formatMoney: (value) => String(value),
+        t: (key) => key,
+      }
+    );
+    widget.element = makeNode();
+    widget.onMount();
+
+    expect(widget.element.style.transform).toBe("perspective(1200px) rotateY(-15deg) rotateX(3deg)");
   });
 
   test("смена лимита пересобирает список", () => {

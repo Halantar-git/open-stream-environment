@@ -151,7 +151,7 @@ export function initCanvasEditor({
 
   // Тот же наклон, что у живого виджета: превью в редакторе должно показывать
   // перспективу, иначе настройка выглядит неработающей.
-  function micPerspectiveStyle(config) {
+  function perspectiveStyle(config) {
     const value = Math.max(0, Math.min(100, Number(config.perspective) || 0));
     if (!value) return "";
     const magnitude = value * 0.15;
@@ -429,14 +429,18 @@ export function initCanvasEditor({
         const items = SAMPLE_RECENT.slice(0, Math.min(3, config.maxItems || 5))
           .map((e) => `<div class="widget-recent__item widget-recent3d__item"><span class="widget-recent__dot" data-kind="${escapeAttr(e.kind)}"></span><span class="widget-recent3d__text">${recentTextPreview(e)}</span></div>`)
           .join("");
-        return `<div class="widget-recent widget-recent3d"><div class="widget-recent__title">${t("preview.recentTitle")}</div><div class="widget-recent__list widget-recent3d__list">${items}</div></div>`;
+        const preview = `<div class="widget-recent widget-recent3d"><div class="widget-recent__title">${t("preview.recentTitle")}</div><div class="widget-recent__list widget-recent3d__list">${items}</div></div>`;
+        const transform = perspectiveStyle(config);
+        return transform ? `<div style="width:100%;height:100%;transform:${transform};transform-style:preserve-3d;">${preview}</div>` : preview;
       }
       case "recent": {
         const max = Math.min(3, config.maxItems || 5);
         const items = SAMPLE_RECENT.slice(0, max)
           .map((e) => `<div class="widget-recent__item"><span class="widget-recent__dot" data-kind="${e.kind}"></span><span>${recentTextPreview(e)}</span></div>`)
           .join("");
-        return `<div class="widget-recent"><div class="widget-recent__title">${t("preview.recentTitle")}</div><div class="widget-recent__list">${items}</div></div>`;
+        const preview = `<div class="widget-recent"><div class="widget-recent__title">${t("preview.recentTitle")}</div><div class="widget-recent__list">${items}</div></div>`;
+        const transform = perspectiveStyle(config);
+        return transform ? `<div style="width:100%;height:100%;transform:${transform};transform-style:preserve-3d;">${preview}</div>` : preview;
       }
       case "alerts":
         return `<div class="widget-alerts-host"><div class="widget-alert" data-kind="follow">
@@ -524,7 +528,7 @@ export function initCanvasEditor({
         else if (mode === "ring") preview = buildRingPreview({ width, height, opacity, color, barCount, lineWidth, rotation, mirror });
         else if (mode === "curve") preview = buildCurvePreview({ width, height, opacity, color, barCount, lineWidth, rotation, mirror });
         else preview = buildSinePreview({ width, height, opacity, color, lineWidth, rotation, mirror });
-        const transform = micPerspectiveStyle(config);
+        const transform = perspectiveStyle(config);
         return transform
           ? `<div style="width:100%;height:100%;transform:${transform};transform-style:preserve-3d;">${preview}</div>`
           : preview;
@@ -578,7 +582,7 @@ export function initCanvasEditor({
           ${showLabel ? `<div class="widget-webcam__label" data-pos="${escapeAttr(position)}"><span class="widget-webcam__dot"></span><span class="widget-webcam__label-text">${escapeHtml(label)}</span></div>` : ""}
           ${config.showVignette ? `<div class="widget-webcam__vignette"></div>` : ""}
         </div>`;
-        const transform = micPerspectiveStyle(config);
+        const transform = perspectiveStyle(config);
         return transform
           ? `<div style="width:100%;height:100%;transform:${transform};transform-style:preserve-3d;">${html}</div>`
           : html;

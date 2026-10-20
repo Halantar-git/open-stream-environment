@@ -36,6 +36,8 @@
 
   class RecentWidget extends BaseWidget {
     onMount() {
+      this._applyPerspective();
+
       this.host = document.createElement("div");
       this.host.className = "widget-recent";
       this.element.appendChild(this.host);
@@ -43,6 +45,36 @@
       const { EVENT_TYPES } = this.context;
       this.subscribe(EVENT_TYPES.RECENT_EVENT, () => this.render());
       this.subscribe(EVENT_TYPES.LOCALES, () => this.render());
+    }
+
+    onUpdate(prev, next) {
+      if (prev.perspective !== next.perspective || prev.perspectiveDirection !== next.perspectiveDirection) {
+        this._applyPerspective();
+      }
+    }
+
+    // Наклон (0–100) из инспектора — тот же приём, что у чата и целей:
+    // наклоняется сам элемент, а список внутри остаётся в своих координатах.
+    _applyPerspective() {
+      const value = Math.max(0, Math.min(100, Number(this.config.perspective) || 0));
+      if (!value) {
+        this._setTilt("");
+        return;
+      }
+      const magnitude = value * 0.15; // 0 .. 15deg
+      const direction = this.config.perspectiveDirection || "left";
+      let ry = -magnitude;
+      let rx = magnitude * 0.2;
+      if (direction === "right") {
+        ry = magnitude;
+      } else if (direction === "up") {
+        ry = 0;
+        rx = magnitude;
+      } else if (direction === "down") {
+        ry = 0;
+        rx = -magnitude;
+      }
+      this._setTilt(`perspective(1200px) rotateY(${ry}deg) rotateX(${rx}deg)`);
     }
 
     render() {

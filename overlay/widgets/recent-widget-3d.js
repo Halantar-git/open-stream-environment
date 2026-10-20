@@ -56,6 +56,8 @@
 
   class RecentWidget3d extends RecentWidget {
     onMount() {
+      this._applyPerspective();
+
       this.host = document.createElement("div");
       this.host.className = "widget-recent widget-recent3d";
       this.element.appendChild(this.host);
@@ -77,6 +79,12 @@
     }
 
     onUpdate(prevConfig, nextConfig) {
+      if (
+        prevConfig.perspective !== nextConfig.perspective ||
+        prevConfig.perspectiveDirection !== nextConfig.perspectiveDirection
+      ) {
+        this._applyPerspective();
+      }
       // Обновление раскладки приходит часто; пересобираем список только когда
       // меняются собственные настройки виджета.
       if (
