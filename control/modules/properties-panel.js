@@ -634,25 +634,12 @@ export function initPropertiesPanel({
         <div class="properties__toggle-row"><label>${t("properties.uecShowAmount")}</label>${switchHtml("pUecShowAmount", config.showAmount !== false)}</div>
         <div class="properties__toggle-row"><label>${t("properties.uecShowMessage")}</label>${switchHtml("pUecShowMessage", config.showMessage !== false)}</div>`;
     } else if (inst.type === "garland") {
-      // Сторона — главная настройка: от неё зависит, вдоль какой кромки виснет
-      // провод. Режим, палитра и размеры — уже вторичное.
-      const edge = String(config.edge || "auto");
+      // Режим, палитра и размеры: сторона у гирлянды всегда верхняя.
       const mode = String(config.mode || "twinkle");
       const palette = typeof config.palette === "string" ? config.palette : "classic";
       const option = (value, selected, label) =>
         `<option value="${value}" ${value === selected ? "selected" : ""}>${label}</option>`;
       extraHtml = `
-        <div class="md-field"><label>${t("properties.garlandEdge")}</label>
-          <select id="pGarlandEdge">
-            ${option("auto", edge, t("properties.garlandEdgeAuto"))}
-            ${option("top", edge, t("properties.garlandEdgeTop"))}
-            ${option("left", edge, t("properties.garlandEdgeLeft"))}
-            ${option("right", edge, t("properties.garlandEdgeRight"))}
-            ${option("bottom", edge, t("properties.garlandEdgeBottom"))}
-            ${option("frame", edge, t("properties.garlandEdgeFrame"))}
-            ${option("arc", edge, t("properties.garlandEdgeArc"))}
-          </select>
-        </div>
         <div class="md-field"><label>${t("properties.garlandMode")}</label>
           <select id="pGarlandMode">
             ${option("twinkle", mode, t("properties.garlandModeTwinkle"))}
@@ -1047,7 +1034,6 @@ export function initPropertiesPanel({
       wireSwitch(propertiesEl.querySelector("#pUecShowMessage"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showMessage: on } } }));
     } else if (inst.type === "garland") {
       const patchGarland = (config) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config } });
-      propertiesEl.querySelector("#pGarlandEdge").addEventListener("change", (e) => patchGarland({ edge: e.target.value }));
       propertiesEl.querySelector("#pGarlandMode").addEventListener("change", (e) => patchGarland({ mode: e.target.value }));
       propertiesEl.querySelector("#pGarlandPalette").addEventListener("change", (e) => patchGarland({ palette: e.target.value }));
       propertiesEl.querySelector("#pGarlandBulbs").addEventListener("change", (e) =>

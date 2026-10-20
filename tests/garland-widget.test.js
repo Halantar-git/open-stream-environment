@@ -16,13 +16,12 @@
  */
 
 /*
-  Проверка геометрии гирлянды.
+  Проверка гирлянды.
 
-  Виджет строит строку в локальных координатах и поворачивает её матрицей под
-  выбранную кромку. Ошибка в матрице не видна по коду: провод просто уедет за
-  пределы виджета или повиснет не в ту сторону. Здесь проверяется, какую
-  трансформацию получает каждая сторона и как `auto` выбирает сторону по
-  геометрии виджета.
+  Виджет строит SVG по реальным размерам плашки: ширина — длина провода,
+  высота — сколько места есть на провис. Ошибка здесь не видна по коду —
+  провод просто не появится или повиснет не туда, — поэтому проверяется
+  структура получившегося SVG и разбор настроек.
 */
 
 const EventBus = require("../overlay/event-bus");
@@ -119,89 +118,50 @@ function mount(config = {}, geometry = {}) {
   return { widget, bus };
 }
 
-// `defs` идёт первым, дальше — по группе на каждую сторону.
-function stringGroups(widget) {
-  return widget.svgEl.children.filter((child) => child.tagName === "G");
+function byClass(widget, className) {
+  return widget.svgEl.children.filter((child) => child.getAttribute("class") === className);
 }
 
-const edgesOf = (widget) => widget.settings().edges;
-
-describe("WidgetGarland: стороны", () => {
-  test("верх: строка без поворота", () => {
-    const { widget } = mount({ edge: "top" });
-    expect(edgesOf(widget)).toEqual(["top"]);
-    expect(stringGroups(widget)).toHaveLength(1);
-    expect(stringGroups(widget)[0].getAttribute("transform")).toBe("");
+describe("WidgetGarland: построение", () => {
+  test("провод один и висит с верхней кромки", () => {
+    const { widget } = mount();
+    expect(widget.svgEl.getAttribute("viewBox")).toBe("0 0 960 90");
+    expect(byClass(widget, "garland__wire")).toHaveLength(1);
+    // Лампочки — отдельными группами, по одной на каждую.
+    expect(byClass(widget, "garland__bulb").length).toBeGreaterThan(0);
     widget.unmount();
   });
 
-  test("левая сторона: провод вертикальный, лампочки внутрь виджета", () => {
-    const { widget } = mount({ edge: "left" });
-    // matrix(0 1 1 0 0 0) меняет оси местами: вдоль — по вертикали, провис —
-    // вправо, то есть внутрь сцены от левой кромки.
-    expect(stringGroups(widget)[0].getAttribute("transform")).toBe("matrix(0 1 1 0 0 0)");
+  test("сторона больше не настраивается: edge ни на что не влияет", () => {
+    const left = mount({ edge: "left" });
+    const top = mount({ edge: "top" });
+
+    expect(byClass(left.widget, "garland__wire")).toHaveLength(1);
+    expect(left.widget.svgEl.getAttribute("viewBox")).toBe(top.widget.svgEl.getAttribute("viewBox"));
+
+    left.widget.unmount();
+    top.widget.unmount();
+  });
+
+  test("повторная сборка с теми же размерами ничего не перестраивает", () => {
+    const { widget } = mount();
+    const before = widget.svgEl.children[0];
+    widget.rebuild();
+    // Первый ребёнок — defs: если кэш сработал, узел тот же.
+    expect(widget.svgEl.children[0]).toBe(before);
     widget.unmount();
   });
 
-  test("правая сторона: провод вертикальный и провисает влево", () => {
-    const { widget } = mount({ edge: "right" });
-    expect(stringGroups(widget)[0].getAttribute("transform")).toBe("matrix(0 1 -1 0 960 0)");
-    widget.unmount();
-  });
-
-  test("низ: строка перевёрнута и висит вверх", () => {
-    const { widget } = mount({ edge: "bottom" });
-    expect(stringGroups(widget)[0].getAttribute("transform")).toBe("translate(0 90) scale(1 -1)");
-    widget.unmount();
-  });
-
-  test("frame — строка на каждой из четырёх сторон", () => {
-    const { widget } = mount({ edge: "frame" });
-    expect(edgesOf(widget)).toEqual(["left", "top", "right", "bottom"]);
-    expect(stringGroups(widget)).toHaveLength(4);
-    widget.unmount();
-  });
-
-  test("arc — дуга слева, сверху и справа", () => {
-    const { widget } = mount({ edge: "arc" });
-    expect(edgesOf(widget)).toEqual(["left", "top", "right"]);
-    expect(stringGroups(widget)).toHaveLength(3);
+  test("ноль в размерах не ломает построение", () => {
+    const { widget } = mount();
+    widget.element.clientWidth = 0;
+    widget.element.clientHeight = 0;
+    expect(() => widget.rebuild()).not.toThrow();
     widget.unmount();
   });
 });
 
-describe("WidgetGarland: auto по геометрии", () => {
-  // auto выбирает сторону по форме и месту плашки: широкую вешает на верхнюю
-  // или нижнюю кромку, узкую — на боковую.
-  const cases = [
-    { geometry: { x: 2, y: 0, w: 96, h: 10 }, edge: "top" },
-    { geometry: { x: 2, y: 88, w: 96, h: 10 }, edge: "bottom" },
-    { geometry: { x: 0, y: 4, w: 10, h: 90 }, edge: "left" },
-    { geometry: { x: 90, y: 4, w: 10, h: 90 }, edge: "right" },
-  ];
-
-  for (const item of cases) {
-    test(`${JSON.stringify(item.geometry)} → ${item.edge}`, () => {
-      const { widget } = mount({ edge: "auto" }, item.geometry);
-      expect(edgesOf(widget)).toEqual([item.edge]);
-      widget.unmount();
-    });
-  }
-
-  test("по умолчанию тоже auto", () => {
-    const { widget } = mount({}, { x: 90, y: 4, w: 10, h: 90 });
-    expect(edgesOf(widget)).toEqual(["right"]);
-    widget.unmount();
-  });
-
-  test("неизвестная сторона откатывается на auto", () => {
-    const { widget } = mount({ edge: "diagonal" }, { x: 0, y: 0, w: 96, h: 10 });
-    expect(edgesOf(widget)).toEqual(["top"]);
-    widget.unmount();
-  });
-});
-
-describe("WidgetGarland: настройки и реакция", () => {
+describe("WidgetGarland: настройки", () => {
   test("палитра по имени и по списку цветов", () => {
     const named = mount({ palette: "warm" });
     expect(named.widget.settings().palette).toHaveLength(3);
@@ -227,6 +187,15 @@ describe("WidgetGarland: настройки и реакция", () => {
     widget.unmount();
   });
 
+  test("режим превращается в класс на корне", () => {
+    const { widget } = mount({ mode: "chase" });
+    expect(widget.element.classList.contains("garland--chase")).toBe(true);
+    expect(widget.element.classList.contains("garland--twinkle")).toBe(false);
+    widget.unmount();
+  });
+});
+
+describe("WidgetGarland: реакция на алерты", () => {
   test("алерт включает вспышку и отпускает её по таймеру", () => {
     const { widget, bus } = mount({ reactToAlerts: true });
     bus.emit(EVENT_TYPES.ALERT, { kind: "donation", amount: 500 });
@@ -241,21 +210,6 @@ describe("WidgetGarland: настройки и реакция", () => {
     const { widget, bus } = mount({ reactToAlerts: false });
     bus.emit(EVENT_TYPES.ALERT, { kind: "donation", amount: 500 });
     expect(widget.element.classList.contains("is-burst")).toBe(false);
-    widget.unmount();
-  });
-
-  test("режим превращается в класс на корне", () => {
-    const { widget } = mount({ mode: "chase" });
-    expect(widget.element.classList.contains("garland--chase")).toBe(true);
-    expect(widget.element.classList.contains("garland--twinkle")).toBe(false);
-    widget.unmount();
-  });
-
-  test("ноль в размерах не ломает построение", () => {
-    const { widget } = mount({ edge: "top" });
-    widget.element.clientWidth = 0;
-    widget.element.clientHeight = 0;
-    expect(() => widget.rebuild()).not.toThrow();
     widget.unmount();
   });
 });

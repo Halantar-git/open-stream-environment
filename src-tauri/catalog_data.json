@@ -1,5 +1,5 @@
 {
-  "sourceHash": "8a5327f0f6a1a279",
+  "sourceHash": "f0f94265a6b6cac6",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -317,7 +317,7 @@
     "garland": {
       "type": "garland",
       "label": "Гирлянда",
-      "description": "Лампочки вдоль края: сверху, слева, справа или по периметру",
+      "description": "Лампочки на проводе вдоль верхнего края сцены",
       "icon": "widgetGarland",
       "defaultGeometry": {
         "x": 2,
@@ -328,7 +328,6 @@
       "minW": 6,
       "minH": 6,
       "defaultConfig": {
-        "edge": "auto",
         "mode": "twinkle",
         "palette": "classic",
         "bulbs": 24,

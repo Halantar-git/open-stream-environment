@@ -24,14 +24,8 @@
   что нагрузка на сцену минимальна. Геометрия строится по реальным размерам
   виджета и пересобирается при ресайзе.
 
-  Края (`edge`): auto (по умолчанию) — сторона выбирается по форме и положению
-  виджета: широкая плашка в верхней половине сцены виснет сверху, в нижней —
-  снизу; узкая слева — слева, справа — справа. Так гирлянду можно поставить на
-  любую сторону, просто перетащив и растянув виджет. Явно: top / bottom / left /
-  right, несколько через запятую ("left,top,right" — арка на три стороны,
-  синоним `arc`), frame — по всему периметру. Строка строится в локальных
-  координатах (вдоль, поперёк) и поворачивается под нужный край матрицей,
-  поэтому код один для всех краёв. Длина гирлянды — это длина стороны виджета:
+  Гирлянда всегда виснет с верхней кромки виджета: растягиваемый бокс задаёт
+  длину провода и глубину провиса. Длина гирлянды — это ширина виджета:
   растяни виджет, и лампочек станет больше (до `bulbs`).
 
   Режимы: twinkle (случайное мерцание), chase (бегущие огни по трём фазам),
@@ -65,10 +59,6 @@
     retro: ["#ff6a3d", "#ffd23f", "#3bceac", "#4d9de0", "#e15554"],
   };
   const MODES = ["twinkle", "chase", "wave", "blink", "steady"];
-  // Стороны, вдоль которых вешается гирлянда. Порядок — по часовой стрелке от
-  // левой, чтобы сквозная нумерация лампочек шла «аркой»: слева → сверху →
-  // справа.
-  const SIDES = ["left", "top", "right", "bottom"];
 
   // Вспышка на алерт: базовая длительность плюс по 2 мс за каждую единицу
   // суммы, но не дольше потолка — иначе крупный донат «залипнет» на минуты.
@@ -110,32 +100,6 @@
   function mix(hex, target, t) {
     const a = toRgb(hex);
     return "#" + a.map((v, i) => Math.round(v + (target[i] - v) * t).toString(16).padStart(2, "0")).join("");
-  }
-
-  // `edge` → список сторон. Принимает auto (по форме виджета), одну сторону,
-  // список через запятую, arc (слева-сверху-справа) или frame; всё лишнее
-  // отбрасывается.
-  // Сторона для auto: широкая плашка виснет на верхней или нижней кромке (по
-  // вертикали), узкая — на боковой (по горизонтали). Геометрия — проценты
-  // сцены, поэтому половина берётся по 50.
-  function autoSide(geometry) {
-    const g = geometry || {};
-    const x = num(g.x, 0);
-    const y = num(g.y, 0);
-    const w = num(g.w, 100);
-    const h = num(g.h, 100);
-    if (w >= h) return y + h / 2 < 50 ? "top" : "bottom";
-    return x + w / 2 < 50 ? "left" : "right";
-  }
-
-  function parseEdges(value, geometry) {
-    const raw = String(value == null ? "auto" : value).toLowerCase().trim();
-    if (raw === "auto" || raw === "") return [autoSide(geometry)];
-    if (raw === "frame") return SIDES.slice();
-    if (raw === "arc") return ["left", "top", "right"];
-    const wanted = raw.split(/[\s,;+]+/);
-    const sides = SIDES.filter((side) => wanted.includes(side));
-    return sides.length ? sides : [autoSide(geometry)];
   }
 
   // Палитра: имя пресета, массив или строка «#aaa, #bbb». Всё некорректное
@@ -201,7 +165,6 @@
       const mode = MODES.includes(c.mode) ? c.mode : "twinkle";
       return {
         mode,
-        edges: parseEdges(c.edge, this.geometry),
         palette: parsePalette(c.palette),
         bulbs: Math.round(clamp(num(c.bulbs, 24), 4, 240)),
         swags: Math.round(clamp(num(c.swags, 5), 1, 24)),
@@ -242,7 +205,7 @@
       if (!w || !h) return;
 
       const s = this.settings();
-      const sig = [w, h, s.mode, s.edges.join("+"), s.palette.join(), s.bulbs, s.swags, s.sag, s.speed].join("|");
+      const sig = [w, h, s.mode, s.palette.join(), s.bulbs, s.swags, s.sag, s.speed].join("|");
       if (sig === this._sig) return;
       this._sig = sig;
 
@@ -254,57 +217,10 @@
       svg.setAttribute("height", h);
       svg.appendChild(this._buildDefs(uid, s.palette));
 
-      // Описание сторон: длина вдоль, поперечный размер и матрица, которая
-      // поворачивает «верхнюю» локальную гирлянду на нужный край.
-      const sides = s.edges;
-      const has = (side) => sides.includes(side);
-      // Поперёк гирлянда занимает не всю плашку, а её узкую сторону: иначе на
-      // широком боксе `edge: left` давал бы провис на всю ширину сцены.
-      const crossMax = Math.min(w, h);
-      let strings;
-      if (sides.length === 1) {
-        const side = sides[0];
-        strings = [
-          side === "bottom"
-            ? { length: w, cross: crossMax, transform: "translate(0 " + h + ") scale(1 -1)" }
-            : side === "left"
-              ? { length: h, cross: crossMax, transform: "matrix(0 1 1 0 0 0)" }
-              : side === "right"
-                ? { length: h, cross: crossMax, transform: "matrix(0 1 -1 0 " + w + " 0)" }
-                : { length: w, cross: crossMax, transform: "" },
-        ];
-      } else {
-        const depth = clamp(Math.min(w, h) * 0.22, 24, 120);
-        const corner = depth * 0.8;
-        // Боковые стороны не заходят в углы, где уже висит верхняя или нижняя.
-        const startInset = has("top") ? corner : 0;
-        const endInset = has("bottom") ? corner : 0;
-        const sideLen = h - startInset - endInset;
-        const shift = " translate(" + startInset.toFixed(1) + " 0)";
-        strings = sides.map((side) => {
-          if (side === "top") return { length: w, cross: depth, transform: "" };
-          if (side === "bottom") return { length: w, cross: depth, transform: "translate(0 " + h + ") scale(1 -1)" };
-          if (side === "left") return { length: sideLen, cross: depth, transform: "matrix(0 1 1 0 0 0)" + shift };
-          return { length: sideLen, cross: depth, transform: "matrix(0 1 -1 0 " + w + " 0)" + shift };
-        });
-      }
-
-      // Лампочки и дуги делим между сторонами пропорционально длине.
-      const total = strings.reduce((sum, st) => sum + Math.max(1, st.length), 0);
-      let index = 0;
-      for (const st of strings) {
-        if (st.length < 20 || st.cross < 12) continue;
-        const share = Math.max(1, st.length) / total;
-        const g = svgEl("g", { transform: st.transform });
-        svg.appendChild(g);
-        index = this._buildString(g, uid, s, {
-          length: st.length,
-          cross: st.cross,
-          bulbs: strings.length > 1 ? Math.max(2, Math.round(s.bulbs * share)) : s.bulbs,
-          swags: strings.length > 1 ? Math.max(1, Math.round(s.swags * share)) : s.swags,
-          startIndex: index,
-        });
-      }
+      // Одна строка вдоль верхней кромки: ширина виджета — длина провода,
+      // высота — сколько места есть на провис.
+      if (w < 20 || h < 12) return;
+      this._buildString(svg, uid, s, { length: w, cross: h, bulbs: s.bulbs, swags: s.swags, startIndex: 0 });
     }
 
     // Градиенты: свечение и объём стекла для каждого цвета палитры.
