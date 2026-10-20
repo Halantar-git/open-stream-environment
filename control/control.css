@@ -2060,9 +2060,30 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 }
 .templates-field__input:focus { border-color: #58a6ff; }
 .templates-field__input::placeholder { color: #6e7681; }
+/* Поле и кнопки в строке — одной высоты и с общим центром: иначе край
+   формы «пляшет» и строки выглядят криво. */
+.templates-panel .terminal-panel__input .terminal-panel__field-wrap,
+.templates-panel .terminal-panel__input > .terminal-panel__btn,
+.templates-row .templates-field__input,
+.templates-row .terminal-panel__btn { height: 32px; }
+.templates-panel .terminal-panel__input .terminal-panel__field-wrap { box-sizing: border-box; }
+.templates-panel .terminal-panel__field {
+  height: 100%;
+  box-sizing: border-box;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.templates-panel .terminal-panel__input > .terminal-panel__btn,
+.templates-row .terminal-panel__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+}
+.templates-row__btn:last-child { width: 32px; padding: 0; }
 .templates-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
 .templates-row .templates-field__input { flex: 1; min-width: 0; }
-.templates-row__btn { flex-shrink: 0; padding: 5px 8px; }
+.templates-row__btn { flex-shrink: 0; padding: 0 12px; }
 .terminal-panel__input {
   display: flex;
   align-items: center;
