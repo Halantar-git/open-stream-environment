@@ -88,6 +88,8 @@
       this._guestSubscribed = false;
       this._guestQueuedCandidates = [];
       this._guestApplying = false;
+      // Последнее отправленное гостю состояние звука (null — ещё не отправляли).
+      this._guestAudioSent = null;
 
       const { EVENT_TYPES } = this.context;
       if (EVENT_TYPES && EVENT_TYPES.CAMERA_VIDEO_FRAME) {
@@ -385,6 +387,8 @@
       }
       this._guestPeer = null;
       this._guestQueuedCandidates = [];
+      // Новый peer у гостя тоже новый: состояние звука придётся передать заново.
+      this._guestAudioSent = null;
     }
 
     _syncGuest() {
@@ -446,10 +450,33 @@
         if (played && typeof played.catch === "function") played.catch(() => {});
       }
       if (this.audioElement) {
-        if (this.audioElement.srcObject !== stream) this.audioElement.srcObject = stream;
-        const played = this.audioElement.play();
-        if (played && typeof played.catch === "function") played.catch(() => {});
+        if (this._guestVideoOnly()) {
+          // «Только видео»: звук не выводим вообще — гость может сидеть в
+          // Discord, и его голос не должен попадать в эфир.
+          this.audioElement.srcObject = null;
+        } else {
+          if (this.audioElement.srcObject !== stream) this.audioElement.srcObject = stream;
+          const played = this.audioElement.play();
+          if (played && typeof played.catch === "function") played.catch(() => {});
+        }
       }
+      // Гость тоже должен знать: так его микрофон не уходит в сеть зря.
+      this._sendGuestAudioState();
+    }
+
+    // «Только видео» для гостевой камеры.
+    _guestVideoOnly() {
+      return this.config.videoOnly === true;
+    }
+
+    // Сообщает гостю, нужен ли звук. Отправляется один раз на состояние и
+    // заново — после пересоздания peer: гость перезапустил поток.
+    _sendGuestAudioState(force = false) {
+      if (!this._guestPeer || !this._guestSlot) return;
+      const enabled = !this._guestVideoOnly();
+      if (!force && this._guestAudioSent === enabled) return;
+      this._guestAudioSent = enabled;
+      this._sendGuestSignal({ type: "audio", enabled });
     }
 
     _guestEmptyKey() {

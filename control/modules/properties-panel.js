@@ -555,7 +555,8 @@ export function initPropertiesPanel({
                    ${guestSlotOptions}
                  </select>
                </div>
-               <div class="md-field"><label>${t("properties.webcamGuestVolume")}: <span id="pWebcamGuestVolumeValue">${guestVolume}%</span></label><input type="range" id="pWebcamGuestVolume" min="0" max="100" step="1" value="${guestVolume}"></div>`
+               <div class="md-field"><label>${t("properties.webcamGuestVolume")}: <span id="pWebcamGuestVolumeValue">${guestVolume}%</span></label><input type="range" id="pWebcamGuestVolume" min="0" max="100" step="1" value="${guestVolume}"></div>
+               <div class="properties__toggle-row"><label>${t("properties.webcamGuestVideoOnly")}</label>${switchHtml("pWebcamVideoOnly", config.videoOnly === true)}</div>`
             : ""}
         <div class="md-field"><label>${t("properties.webcamLabel")}</label><input type="text" id="pWebcamLabel" value="${escapeAttr(label)}" placeholder="LIVE"></div>
         <div class="properties__toggle-row"><label>${t("properties.webcamShowLabel")}</label>${switchHtml("pWebcamShowLabel", config.showLabel !== false)}</div>
@@ -667,6 +668,20 @@ export function initPropertiesPanel({
           <div class="md-field"><label>${t("properties.garlandSpeed")}</label><input type="number" id="pGarlandSpeed" min="0.25" max="4" step="0.25" value="${config.speed ?? 1}"></div>
         </div>
         <div class="properties__toggle-row"><label>${t("properties.garlandReact")}</label>${switchHtml("pGarlandReact", config.reactToAlerts !== false)}</div>`;
+    } else if (inst.type === "snow") {
+      const density = Math.round(config.density ?? 40);
+      const speed = config.speed ?? 1;
+      const size = config.size ?? 3;
+      const wind = config.wind ?? 0.2;
+      extraHtml = `
+        <div class="md-field"><label>${t("properties.snowDensity")}: <span id="pSnowDensityValue">${density}</span></label><input type="range" id="pSnowDensity" min="5" max="100" step="1" value="${density}"></div>
+        <div class="md-field"><label>${t("properties.snowSpeed")}: <span id="pSnowSpeedValue">${speed}</span></label><input type="range" id="pSnowSpeed" min="0.25" max="3" step="0.25" value="${speed}"></div>
+        <div class="properties__row">
+          <div class="md-field"><label>${t("properties.snowSize")}</label><input type="number" id="pSnowSize" min="1" max="8" step="0.5" value="${size}"></div>
+          <div class="md-field"><label>${t("properties.snowWind")}</label><input type="number" id="pSnowWind" min="-1" max="1" step="0.1" value="${wind}"></div>
+        </div>
+        <div class="md-field"><label>${t("properties.snowColor")}</label><input type="text" id="pSnowColor" value="${escapeAttr(config.color || "#ffffff")}" placeholder="#ffffff"></div>
+        <div class="properties__toggle-row"><label>${t("properties.snowReact")}</label>${switchHtml("pSnowReact", config.reactToAlerts !== false)}</div>`;
     }
 
     propertiesEl.innerHTML = `
@@ -950,6 +965,7 @@ export function initPropertiesPanel({
           patchWebcam({ volume: value });
         });
       }
+      wireSwitch(propertiesEl.querySelector("#pWebcamVideoOnly"), (on) => patchWebcam({ videoOnly: on }));
       wireSwitch(propertiesEl.querySelector("#pCameraEnabled"), (on) => sendCameraCaptureConfig({ enabled: on }));
       const cameraDevice = propertiesEl.querySelector("#pCameraDevice");
       if (cameraDevice) {
@@ -1049,6 +1065,30 @@ export function initPropertiesPanel({
         patchGarland({ speed: Math.max(0.25, Math.min(4, Number(e.target.value) || 1)) }),
       );
       wireSwitch(propertiesEl.querySelector("#pGarlandReact"), (on) => patchGarland({ reactToAlerts: on }));
+    } else if (inst.type === "snow") {
+      const patchSnow = (config) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config } });
+      // Два ползунка с живой подписью: плотность и скорость важнее всего
+      // крутить на глаз.
+      const snowRange = (id, key, min, max) => {
+        const input = propertiesEl.querySelector("#" + id);
+        if (!input) return;
+        input.addEventListener("input", (e) => {
+          const value = Math.max(min, Math.min(max, Number(e.target.value)));
+          const label = propertiesEl.querySelector("#" + id + "Value");
+          if (label) label.textContent = String(value);
+          patchSnow({ [key]: value });
+        });
+      };
+      snowRange("pSnowDensity", "density", 5, 100);
+      snowRange("pSnowSpeed", "speed", 0.25, 3);
+      propertiesEl.querySelector("#pSnowSize").addEventListener("change", (e) =>
+        patchSnow({ size: Math.max(1, Math.min(8, Number(e.target.value) || 3)) }),
+      );
+      propertiesEl.querySelector("#pSnowWind").addEventListener("change", (e) =>
+        patchSnow({ wind: Math.max(-1, Math.min(1, Number(e.target.value) || 0)) }),
+      );
+      propertiesEl.querySelector("#pSnowColor").addEventListener("change", (e) => patchSnow({ color: e.target.value.trim() }));
+      wireSwitch(propertiesEl.querySelector("#pSnowReact"), (on) => patchSnow({ reactToAlerts: on }));
     }
 
     document.getElementById("pDeleteBtn").addEventListener("click", () => {

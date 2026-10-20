@@ -180,6 +180,14 @@ export function createGuestShare({ state, send, EVENT_TYPES, onStatus }) {
 
   async function handleSignal(payload) {
     if (!peer || !payload || !payload.type) return;
+    // Хост просит выключить или вернуть звук: у гостя это просто флаг на
+    // дорожке — видео идёт дальше без пересогласования.
+    if (payload.type === "audio") {
+      if (stream) {
+        for (const track of stream.getAudioTracks()) track.enabled = payload.enabled !== false;
+      }
+      return;
+    }
     if (payload.type === "answer") {
       try {
         await peer.setRemoteDescription({ type: "answer", sdp: payload.sdp });

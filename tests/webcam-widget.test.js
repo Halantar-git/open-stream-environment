@@ -48,6 +48,11 @@ function makeEl(tag) {
     children: [],
     parentNode: null,
     isConnected: true,
+    srcObject: null,
+    play() {
+      return Promise.resolve();
+    },
+    pause() {},
     appendChild(child) {
       child.parentNode = this;
       this.children.push(child);
@@ -314,6 +319,89 @@ describe("WebcamWidget", () => {
       expect(w.context.send).toHaveBeenCalledWith(EVENT_TYPES.GUEST_SIGNAL, {
         slot: "cam2",
         payload: { type: "answer", sdp: "v=0 answer" },
+      });
+    } finally {
+      global.RTCPeerConnection = previous;
+    }
+  });
+
+  test("«только видео» не выводит звук гостя и просит его выключить", () => {
+    const created = [];
+    class FakePeer {
+      constructor() {
+        this.remoteDescription = null;
+        this.localDescription = null;
+        this.connectionState = "new";
+        created.push(this);
+      }
+      close() {}
+      setRemoteDescription() {
+        return Promise.resolve();
+      }
+      createAnswer() {
+        return Promise.resolve({ type: "answer", sdp: "v=0" });
+      }
+      setLocalDescription() {
+        return Promise.resolve();
+      }
+      addIceCandidate() {
+        return Promise.resolve();
+      }
+    }
+    const previous = global.RTCPeerConnection;
+    global.RTCPeerConnection = FakePeer;
+    try {
+      const w = mount({ source: "remote", guestSlot: "cam2", videoOnly: true });
+      w.context.bus.emit(EVENT_TYPES.GUEST_ACCEPTED, { slot: "cam2" });
+
+      const stream = { getAudioTracks: () => [], getVideoTracks: () => [] };
+      created[0].ontrack({ streams: [stream] });
+
+      // Звук не выводим вообще: гость может сидеть в Discord.
+      expect(w.audioElement.srcObject).toBeNull();
+      // И просим его выключить микрофон, чтобы тот не уходил в сеть.
+      expect(w.context.send).toHaveBeenCalledWith(EVENT_TYPES.GUEST_SIGNAL, {
+        slot: "cam2",
+        payload: { type: "audio", enabled: false },
+      });
+    } finally {
+      global.RTCPeerConnection = previous;
+    }
+  });
+
+  test("без «только видео» звук гостя играет и остаётся включённым", () => {
+    const created = [];
+    class FakePeer {
+      constructor() {
+        created.push(this);
+      }
+      close() {}
+      setRemoteDescription() {
+        return Promise.resolve();
+      }
+      createAnswer() {
+        return Promise.resolve({ type: "answer", sdp: "v=0" });
+      }
+      setLocalDescription() {
+        return Promise.resolve();
+      }
+      addIceCandidate() {
+        return Promise.resolve();
+      }
+    }
+    const previous = global.RTCPeerConnection;
+    global.RTCPeerConnection = FakePeer;
+    try {
+      const w = mount({ source: "remote", guestSlot: "cam2" });
+      w.context.bus.emit(EVENT_TYPES.GUEST_ACCEPTED, { slot: "cam2" });
+
+      const stream = { getAudioTracks: () => [], getVideoTracks: () => [] };
+      created[0].ontrack({ streams: [stream] });
+
+      expect(w.audioElement.srcObject).toBe(stream);
+      expect(w.context.send).toHaveBeenCalledWith(EVENT_TYPES.GUEST_SIGNAL, {
+        slot: "cam2",
+        payload: { type: "audio", enabled: true },
       });
     } finally {
       global.RTCPeerConnection = previous;

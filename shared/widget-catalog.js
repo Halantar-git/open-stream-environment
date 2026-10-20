@@ -237,6 +237,7 @@
       minH: 8,
       defaultConfig: {
         source: "frame",
+        videoOnly: false,
         label: "LIVE",
         showLabel: true,
         labelPosition: "top-left",
@@ -290,6 +291,25 @@
         swags: 5,
         sag: 0.5,
         speed: 1,
+        reactToAlerts: true,
+      },
+    },
+    // Снегопад — тоже без данных: поле снежинок, падающих на CSS. Занимает
+    // всю сцену, поэтому и геометрия по умолчанию — на весь кадр.
+    snow: {
+      type: "snow",
+      label: "Снегопад",
+      description: "Падающий снег: плотность, скорость, снос и цвет",
+      icon: "widgetSnow",
+      defaultGeometry: { x: 0, y: 0, w: 100, h: 100 },
+      minW: 6,
+      minH: 6,
+      defaultConfig: {
+        density: 40,
+        speed: 1,
+        size: 3,
+        wind: 0.2,
+        color: "#ffffff",
         reactToAlerts: true,
       },
     },

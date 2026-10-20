@@ -230,6 +230,7 @@
       webcam: OW.WebcamWidget,
       soundboard: OW.SoundboardWidget,
       garland: OW.WidgetGarland,
+      snow: OW.WidgetSnow,
       custom: OW.CustomWidget,
       grimhex: OW.WidgetGrimHex,
       musain: OW.WidgetMusain,

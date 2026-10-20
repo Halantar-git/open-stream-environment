@@ -329,6 +329,25 @@ export function initCanvasEditor({
     return `<div class="garland" style="position:relative;width:100%;height:100%;pointer-events:none;"><svg class="garland__svg" viewBox="0 0 100 ${height.toFixed(2)}" preserveAspectRatio="none" aria-hidden="true" style="width:100%;height:100%;"><path d="M2 ${y0.toFixed(2)} Q50 ${ctrl} 98 ${y0.toFixed(2)}" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="0.8" vector-effect="non-scaling-stroke"/>${bulbs}</svg></div>`;
   }
 
+  // Миниатюра снегопада: статичное поле точек — та же картинка, что в эфире,
+  // но без анимации. Точки — обычные `span` в процентах, поэтому круги не
+  // растягиваются вместе с плашкой.
+  function snowPreview(config = {}) {
+    const raw = String(config.color == null ? "" : config.color).trim();
+    const color = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(raw) ? raw : "#ffffff";
+    const density = Math.max(5, Math.min(100, Number(config.density) || 40));
+    const count = Math.max(12, Math.round((density / 100) * 48));
+    const flakes = Array.from({ length: count }, (_, i) => {
+      // Детерминированный разброс: превью не должно мерцать при перерисовке.
+      const x = ((i * 37.7 + 11) % 100).toFixed(1);
+      const y = ((i * 61.3 + 7) % 100).toFixed(1);
+      const size = (1.5 + ((i * 13) % 7) * 0.45).toFixed(1);
+      const opacity = (0.3 + ((i * 17) % 10) / 14).toFixed(2);
+      return `<span style="position:absolute;left:${x}%;top:${y}%;width:${size}px;height:${size}px;border-radius:50%;background:${escapeAttr(color)};opacity:${opacity};"></span>`;
+    }).join("");
+    return `<div class="snow" style="position:relative;width:100%;height:100%;pointer-events:none;">${flakes}</div>`;
+  }
+
   function buildPreviewHtml(inst) {
     const config = inst.config || {};
     const previewType = effectiveType(inst);
@@ -531,6 +550,9 @@ export function initCanvasEditor({
       }
       case "garland": {
         return garlandPreview(config.palette, inst);
+      }
+      case "snow": {
+        return snowPreview(config);
       }
       case "grimhex": {
         const primary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#FF1800";

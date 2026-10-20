@@ -3473,3 +3473,49 @@
     opacity: 1;
   }
 }
+
+/* ==== Снегопад ====
+   Падение — только transform на композиторе: цвет, высота поля и разброс
+   снежинок приходят CSS-переменными из виджета. */
+.snow { overflow: hidden; }
+.snow__field {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.snow__flake {
+  position: absolute;
+  top: -10px;
+  left: var(--x, 50%);
+  width: var(--s, 3px);
+  height: var(--s, 3px);
+  margin-left: calc(var(--s, 3px) / -2);
+  border-radius: 50%;
+  background: var(--snow-color, #ffffff);
+  opacity: var(--o, 0.8);
+  animation: snow-fall var(--dur, 9s) linear infinite;
+  animation-delay: var(--delay, 0s);
+  will-change: transform;
+}
+
+@keyframes snow-fall {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(var(--wind, 20px), calc(var(--h, 100vh) + 20px), 0); }
+}
+
+/* Порыв на алерт: снег летит быстрее, размер и положение те же. */
+.snow.is-burst .snow__flake {
+  animation-duration: calc(var(--dur, 9s) * 0.45);
+}
+
+/* Без анимации снежинки остаются статичным «заснеженным» слоем. */
+@media (prefers-reduced-motion: reduce) {
+  .snow__flake {
+    top: var(--y, 50%);
+    animation: none;
+  }
+}
