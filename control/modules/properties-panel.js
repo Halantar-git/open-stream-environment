@@ -275,6 +275,7 @@ export function initPropertiesPanel({
     } else if (inst.type === "grimhex-chat" || inst.type === "nuclear-chat" || inst.type === "cobra-chat" || inst.type === "md3-chat" || inst.type === "pixel-chat" || inst.type === "teso-chat" || inst.type === "wardogs-chat" || inst.type === "retrowave-chat") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.maxMessages")}</label><input type="number" id="pMaxMessages" min="1" max="100" value="${config.maxMessages || 50}"></div>
+        ${inst.type === "teso-chat" ? "" : `<div class="properties__toggle-row"><label>${t("properties.chatShowTime")}</label>${switchHtml("pChatShowTime", config.showTime !== false)}</div>`}
         <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>`;
     } else if (inst.type === "grimhex" || inst.type === "musain" || inst.type === "nuclear" || inst.type === "cobra" || inst.type === "elite-sign" || inst.type === "teso-seal" || inst.type === "md3-orb" || inst.type === "pixel-cube" || inst.type === "wardogs-cube" || inst.type === "retrowave-symbol") {
       extraHtml = `
@@ -818,6 +819,7 @@ export function initPropertiesPanel({
       wireSwitch(propertiesEl.querySelector("#pShowBadges"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showBadges: on } } }));
     } else if (inst.type === "grimhex-chat" || inst.type === "nuclear-chat" || inst.type === "cobra-chat" || inst.type === "md3-chat" || inst.type === "pixel-chat" || inst.type === "teso-chat" || inst.type === "wardogs-chat" || inst.type === "retrowave-chat") {
       propertiesEl.querySelector("#pMaxMessages").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { maxMessages: Number(e.target.value) } } }));
+      wireSwitch(propertiesEl.querySelector("#pChatShowTime"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showTime: on } } }));
       propertiesEl.querySelector("#pPerspective").addEventListener("input", (e) => {
         const v = Number(e.target.value);
         const label = propertiesEl.querySelector("#pPerspectiveValue");

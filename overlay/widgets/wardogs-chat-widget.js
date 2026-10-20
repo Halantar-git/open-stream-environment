@@ -194,7 +194,10 @@
       row.className = "wardogs-chat__row";
       row.style.cssText = `font-family:${FONT_DISPLAY};font-size:14px;line-height:1.45;color:${this.textColor};`;
 
-      const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const time =
+        this.config.showTime === false
+          ? ""
+          : new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       const badges = (msg.badges || [])
         .slice(0, 3)
         .map((b, i) => {
@@ -208,7 +211,7 @@
       const text = renderEmotes ? renderEmotes(msg.message, msg.emotes) : escapeHtml(msg.message);
 
       row.innerHTML =
-        `<span style="color:${this.mutedColor};font-family:${FONT_MONO};font-size:11px;">[${escapeHtml(time)}]</span>` +
+        (time ? `<span style="color:${this.mutedColor};font-family:${FONT_MONO};font-size:11px;">[${escapeHtml(time)}]</span>` : "") +
         (badges ? ` ${badges}` : "") +
         ` <span style="color:${escapeAttr(userColor)};font-weight:700;">${escapeHtml(msg.user)}</span>` +
         `<span style="color:${this.mutedColor};">:</span>` +

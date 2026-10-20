@@ -246,7 +246,10 @@
       row.style.cssText =
         "font-size:13px;line-height:1.55;color:" + TEXT_COLOR + ";";
 
-      const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const time =
+        this.config.showTime === false
+          ? ""
+          : new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       const badges = (msg.badges || [])
         .slice(0, 3)
         .map((b, i) => {
@@ -259,7 +262,7 @@
       const text = renderEmotes ? renderEmotes(msg.message, msg.emotes) : escapeHtml(msg.message);
 
       row.innerHTML =
-        `<span style="color:${MUTED};">[${escapeHtml(time)}]</span>` +
+        (time ? `<span style="color:${MUTED};">[${escapeHtml(time)}]</span>` : "") +
         (badges ? ` ${badges}` : "") +
         ` <span style="color:${escapeAttr(AMBER)};font-weight:700;">${escapeHtml(msg.user)}</span>` +
         `<span style="color:${MUTED};">:</span>` +

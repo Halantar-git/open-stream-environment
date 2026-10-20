@@ -160,6 +160,28 @@ describe("WidgetGrimHexChat", () => {
     w.unmount();
   });
 
+  test("время сообщения показывается по умолчанию", () => {
+    const ctx = makeContext("grimhex");
+    const w = new WidgetGrimHexChat(item(), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "bob", message: "hi", badges: [] });
+
+    expect(w.messagesInner.children[0].innerHTML).toMatch(/\[\d{2}:\d{2}\]/);
+    w.unmount();
+  });
+
+  test("время можно отключить", () => {
+    const ctx = makeContext("grimhex");
+    const w = new WidgetGrimHexChat(item({ config: { showTime: false } }), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "bob", message: "hi", badges: [] });
+
+    expect(w.messagesInner.children[0].innerHTML).not.toMatch(/\[\d{2}:\d{2}\]/);
+    w.unmount();
+  });
+
   test("ограничивает число сообщений до 50", () => {
     const ctx = makeContext("grimhex");
     const parent = makeEl("div");

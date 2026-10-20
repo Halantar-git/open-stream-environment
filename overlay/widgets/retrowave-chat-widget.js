@@ -205,7 +205,10 @@
         "padding:3px 8px 3px 11px;box-sizing:border-box;background:linear-gradient(90deg,rgba(255,45,149,0.10),rgba(5,2,11,0.30) 42%,transparent);" +
         "border-left:2px solid rgba(45,226,230,0.55);box-shadow:inset 3px 0 8px -4px rgba(45,226,230,0.9);";
 
-      const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const time =
+        this.config.showTime === false
+          ? ""
+          : new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       const badges = (msg.badges || [])
         .slice(0, 3)
         .map((b, i) => {
@@ -219,7 +222,7 @@
       const text = renderEmotes ? renderEmotes(msg.message, msg.emotes) : escapeHtml(msg.message);
 
       row.innerHTML =
-        `<span style="color:${this.mutedColor};font-family:${FONT_MONO};font-size:11px;opacity:0.85;">[${escapeHtml(time)}]</span>` +
+        (time ? `<span style="color:${this.mutedColor};font-family:${FONT_MONO};font-size:11px;opacity:0.85;">[${escapeHtml(time)}]</span>` : "") +
         (badges ? ` ${badges}` : "") +
         ` <span style="color:${escapeAttr(userColor)};font-weight:700;text-shadow:0 0 10px rgba(255,45,149,0.6);">${escapeHtml(msg.user)}</span>` +
         `<span style="color:${this.mutedColor};">:</span>` +

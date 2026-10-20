@@ -709,7 +709,7 @@ export function initCanvasEditor({
           .map(
             (m) =>
               `<div class="grimhex-chat__row" style="display:flex;gap:7px;font-size:13px;line-height:1.55;color:#e9eef2;">
-                <span style="color:#64748b">[12:00]</span>
+                ${config.showTime === false ? "" : `<span style="color:#64748b">[12:00]</span>`}
                 ${previewBadges(m.badges, "#64748b")}
                 <span style="color:#F97316;font-weight:700">${escapeHtml(m.user)}</span>
                 <span style="color:#64748b">:</span>
@@ -849,7 +849,7 @@ export function initCanvasEditor({
           .map(
             (m) =>
               `<div class="nuclear-chat__row" style="display:flex;gap:7px;font-size:13px;line-height:1.55;color:#a7ada8;">
-                <span style="color:#59615b">[12:00]</span>
+                ${config.showTime === false ? "" : `<span style="color:#59615b">[12:00]</span>`}
                 ${previewBadges(m.badges, "#59615b")}
                 <span style="color:#d3d8d4;font-weight:700">${escapeHtml(m.user)}</span>
                 <span style="color:#59615b">:</span>
@@ -931,7 +931,7 @@ export function initCanvasEditor({
           .map(
             (m) =>
               `<div class="cobra-chat__row" style="display:flex;gap:7px;font-size:13px;line-height:1.55;color:#ffb07c;">
-                <span style="color:#bdb0a1">[12:00]</span>
+                ${config.showTime === false ? "" : `<span style="color:#bdb0a1">[12:00]</span>`}
                 ${previewBadges(m.badges, "#bdb0a1")}
                 <span style="color:#ff7605;font-weight:700">${escapeHtml(m.user)}</span>
                 <span style="color:#bdb0a1">:</span>
@@ -990,7 +990,7 @@ export function initCanvasEditor({
           .map(
             (m) =>
               `<div class="wardogs-chat__row" style="display:flex;gap:7px;font-family:'Roboto Condensed','Segoe UI',sans-serif;font-size:14px;line-height:1.45;color:${escapeAttr(text)};">
-                <span style="color:${muted};font-family:'JetBrains Mono','Consolas',monospace;font-size:11px;">[12:00]</span>
+                ${config.showTime === false ? "" : `<span style="color:${muted};font-family:'JetBrains Mono','Consolas',monospace;font-size:11px;">[12:00]</span>`}
                 ${previewBadges(m.badges, muted)}
                 <span style="color:${primary};font-weight:700">${escapeHtml(m.user)}</span>
                 <span style="color:${muted}">:</span>
@@ -1095,7 +1095,7 @@ export function initCanvasEditor({
               // поэтому в разметку он идёт только через escapeAttr: остальные акценты
               // theme-engine выводит в hex сам.
               `<div class="md3-chat__row" style="display:flex;gap:7px;font-size:13px;line-height:1.55;color:${escapeAttr(text)};">
-                <span style="color:${muted}">[12:00]</span>
+                ${config.showTime === false ? "" : `<span style="color:${muted}">[12:00]</span>`}
                 ${previewBadges(m.badges, muted)}
                 <span style="color:${primary};font-weight:700">${escapeHtml(m.user)}</span>
                 <span style="color:${muted}">:</span>
@@ -1165,7 +1165,7 @@ export function initCanvasEditor({
           .map(
             (m) =>
               `<div class="pixel-chat__row" style="display:flex;gap:7px;font-size:13px;line-height:1.5;color:${escapeAttr(text)};font-family:'Roboto Condensed','Segoe UI',sans-serif;">
-                <span style="color:${muted}">[12:00]</span>
+                ${config.showTime === false ? "" : `<span style="color:${muted}">[12:00]</span>`}
                 ${previewBadges(m.badges, muted)}
                 <span style="color:${gold};font-weight:700">${escapeHtml(m.user)}</span>
                 <span style="color:${muted}">:</span>
@@ -1245,7 +1245,7 @@ export function initCanvasEditor({
           .map(
             (m) =>
               `<div style="display:flex;gap:7px;padding:3px 8px 3px 10px;font-family:'Montserrat','Segoe UI',sans-serif;font-size:12px;line-height:1.45;color:${escapeAttr(text)};background:linear-gradient(90deg,rgba(255,45,149,0.10),rgba(5,2,11,0.30) 42%,transparent);border-left:2px solid rgba(45,226,230,0.55);">
-                <span style="color:${escapeAttr(muted)};font-family:'JetBrains Mono','Consolas',monospace;font-size:10px;">[12:00]</span>
+                ${config.showTime === false ? "" : `<span style="color:${escapeAttr(muted)};font-family:'JetBrains Mono','Consolas',monospace;font-size:10px;">[12:00]</span>`}
                 ${previewBadges(m.badges, muted)}
                 <span style="color:${escapeAttr(primary)};font-weight:700">${escapeHtml(m.user)}</span>
                 <span style="color:${escapeAttr(muted)}">:</span>
