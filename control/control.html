@@ -86,15 +86,15 @@
     <aside class="terminal-panel templates-panel" id="templatesPanel" hidden>
       <header class="terminal-panel__header">
         <span class="terminal-panel__title" data-i18n="templates.title">Шаблоны</span>
-        <span class="templates-panel__status" id="templatesBreakingStatus"></span>
+        <span class="templates-panel__status" id="templatesStatus"></span>
         <button class="terminal-panel__btn terminal-panel__close" id="templatesCloseBtn" aria-label="Закрыть" data-i18n-title="common.close">×</button>
       </header>
-      <div class="terminal-panel__input" id="templatesBreakingRow">
-        <span class="terminal-panel__prompt">!</span>
+      <div class="terminal-panel__input">
+        <span class="terminal-panel__prompt">+</span>
         <div class="terminal-panel__field-wrap">
-          <input class="terminal-panel__field" id="templatesBreakingText" type="text" data-i18n-placeholder="templates.breakingPlaceholder" placeholder="Текст срочного сообщения…" autocomplete="off" spellcheck="false" />
+          <input class="terminal-panel__field" id="templatesNewText" type="text" maxlength="200" data-i18n-placeholder="templates.newPlaceholder" placeholder="Новый шаблон…" autocomplete="off" spellcheck="false" />
         </div>
-        <button class="terminal-panel__btn" id="templatesBreakingSend" data-i18n="templates.breakingSend">В срочную</button>
+        <button class="terminal-panel__btn" id="templatesAddBtn" data-i18n="templates.add">Добавить</button>
       </div>
       <div class="terminal-panel__body templates-panel__body" id="templatesBody"></div>
     </aside>

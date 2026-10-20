@@ -16,13 +16,12 @@
  */
 
 /*
-  Панель «Шаблоны»: редактор общих шаблонов новостной ленты и отправка
-  срочного сообщения в её верхнюю полосу.
+  Панель «Шаблоны»: сохранённые текстовые заготовки для новостной ленты.
 
-  Шаблоны здесь общие для всех лент — их читает каждая лента, у которой нет
-  своего набора в настройках виджета. Панель живёт рядом с терминалом и
-  открывается кнопкой в верхней панели: правка не должна требовать найти
-  виджет на холсте.
+  Это простые фразы, которые стример пишет заранее и потом отправляет в ленту
+  или в срочную полосу одной кнопкой — без набора текста в эфире. Список живёт
+  в настройках приложения, поэтому панель не зависит от того, выбран ли виджет
+  на холсте.
 */
 
 import { el, on } from "./dom.js";
@@ -33,57 +32,21 @@ function escapeHtml(value) {
   return String(value == null ? "" : value).replace(/[&<>"']/g, (char) => ESCAPES[char]);
 }
 
-// Ключ шаблона, подпись поля и текст-подсказка по умолчанию. Подсказка — та же
-// строка словаря, которую лента берёт без своего шаблона, поэтому в поле видно
-// ровно то, что уйдёт в эфир, и из чего собирать свой вариант.
-const FIELDS = [
-  ["donation", "properties.tickerTplDonation", "ticker.donation"],
-  ["cheer", "properties.tickerTplCheer", "ticker.cheer"],
-  ["follow", "properties.tickerTplFollow", "ticker.follow"],
-  ["sub", "properties.tickerTplSub", "ticker.sub"],
-  ["gift_sub", "properties.tickerTplGift", "ticker.gift"],
-  ["reward", "properties.tickerTplReward", "ticker.rewardTitle"],
-  ["chat", "properties.tickerTplChat", "ticker.chat"],
-  ["goal", "properties.tickerTplGoal", "ticker.goalTitle"],
-  ["top", "properties.tickerTplTop", "ticker.top"],
-];
+// Дублируем ограничение сервера: список не должен расти бесконечно, а строка —
+// съедать ленту целиком.
+const MAX_MESSAGES = 20;
+const MAX_LENGTH = 200;
 
 export function initTemplatesPanel({ t, ICONS, send, EVENT_TYPES, state }) {
   const panel = el("templatesPanel");
   const body = el("templatesBody");
   const toggleBtn = el("toggleTemplatesBtn");
-  const breakingInput = el("templatesBreakingText");
-  const statusEl = el("templatesBreakingStatus");
+  const newInput = el("templatesNewText");
+  const statusEl = el("templatesStatus");
   let statusTimer = 0;
 
-  function templates() {
-    const value = state.tickerTemplates;
-    return value && typeof value === "object" ? value : {};
-  }
-
-  function render() {
-    if (!body) return;
-    const current = templates();
-    const fields = FIELDS.map(([key, labelKey, placeholderKey]) => {
-      const value = typeof current[key] === "string" ? current[key] : "";
-      return `<label class="templates-field">
-        <span class="templates-field__label">${escapeHtml(t(labelKey))}</span>
-        <input class="templates-field__input" type="text" data-template="${key}" value="${escapeHtml(value)}" placeholder="${escapeHtml(t(placeholderKey))}" autocomplete="off" spellcheck="false">
-      </label>`;
-    }).join("");
-    body.innerHTML = `<p class="templates-hint">${escapeHtml(t("templates.hint"))}</p>${fields}`;
-    body.querySelectorAll("[data-template]").forEach((input) => {
-      input.addEventListener("change", () => {
-        const next = { ...templates() };
-        const value = input.value.trim();
-        if (value) next[input.dataset.template] = value;
-        else delete next[input.dataset.template];
-        // Оптимистично: снимок с сервера может прийти на круг шины позже, а
-        // следующая правка должна видеть уже сохранённое.
-        state.tickerTemplates = next;
-        send(EVENT_TYPES.CMD_SET_APP_CONFIG, { tickerTemplates: next });
-      });
-    });
+  function messages() {
+    return Array.isArray(state.tickerMessages) ? state.tickerMessages.slice() : [];
   }
 
   function setStatus(text) {
@@ -96,18 +59,89 @@ export function initTemplatesPanel({ t, ICONS, send, EVENT_TYPES, state }) {
     }, 1600);
   }
 
-  function sendBreaking() {
-    const text = breakingInput ? breakingInput.value.trim() : "";
+  // Сохранение без перерисовки списка: `change` приходит при уходе из поля, и
+  // пересборка DOM украла бы фокус у следующего элемента.
+  function save(next) {
+    state.tickerMessages = next;
+    send(EVENT_TYPES.CMD_SET_APP_CONFIG, { tickerMessages: next });
+  }
+
+  function sendToTicker(text, priority) {
+    const value = String(text || "").trim().slice(0, MAX_LENGTH);
+    if (!value) return;
+    send(EVENT_TYPES.CMD_TICKER_MESSAGE, { text: value, priority });
+    setStatus(priority === "breaking" ? t("templates.sentBreaking") : t("templates.sentTicker"));
+  }
+
+  function rowHtml(text, index) {
+    const value = escapeHtml(text);
+    return `<div class="templates-row">
+      <input class="templates-field__input" type="text" data-message="${index}" value="${value}" maxlength="${MAX_LENGTH}" autocomplete="off" spellcheck="false">
+      <button class="terminal-panel__btn templates-row__btn" type="button" data-send="${index}" data-priority="normal">${escapeHtml(t("templates.sendTicker"))}</button>
+      <button class="terminal-panel__btn templates-row__btn" type="button" data-send="${index}" data-priority="breaking">${escapeHtml(t("templates.sendBreaking"))}</button>
+      <button class="terminal-panel__btn templates-row__btn" type="button" data-remove="${index}" title="${escapeHtml(t("templates.remove"))}">×</button>
+    </div>`;
+  }
+
+  function render() {
+    if (!body) return;
+    const list = messages();
+    const rows = list.length
+      ? list.map(rowHtml).join("")
+      : `<p class="templates-hint">${escapeHtml(t("templates.empty"))}</p>`;
+    body.innerHTML = `<p class="templates-hint">${escapeHtml(t("templates.hint"))}</p>${rows}`;
+  }
+
+  function add() {
+    const text = String(newInput ? newInput.value : "").trim().slice(0, MAX_LENGTH);
     if (!text) {
-      if (breakingInput) breakingInput.focus();
+      if (newInput) newInput.focus();
       return;
     }
-    send(EVENT_TYPES.CMD_TICKER_MESSAGE, { text, priority: "breaking" });
-    if (breakingInput) {
-      breakingInput.value = "";
-      breakingInput.focus();
-    }
-    setStatus(t("templates.breakingSent"));
+    const next = messages();
+    if (!next.includes(text) && next.length < MAX_MESSAGES) next.push(text);
+    if (newInput) newInput.value = "";
+    save(next);
+    render();
+    setStatus(t("templates.saved"));
+    if (newInput) newInput.focus();
+  }
+
+  // События делегируем на список: строки пересобираются, слушатели на них
+  // пережили бы только одну перерисовку.
+  if (body) {
+    body.addEventListener("change", (event) => {
+      const input = event.target.closest("[data-message]");
+      if (!input) return;
+      const index = Number(input.dataset.message);
+      const next = messages();
+      if (!Number.isInteger(index) || index < 0 || index >= next.length) return;
+      const text = input.value.trim().slice(0, MAX_LENGTH);
+      if (!text || next.some((item, i) => i !== index && item === text)) next.splice(index, 1);
+      else next[index] = text;
+      save(next);
+      // Перерисовываем, потому что при пустом значении или дубле строка уходит.
+      render();
+    });
+
+    body.addEventListener("click", (event) => {
+      const remove = event.target.closest("[data-remove]");
+      if (remove) {
+        const index = Number(remove.dataset.remove);
+        const next = messages();
+        if (!Number.isInteger(index) || index < 0 || index >= next.length) return;
+        next.splice(index, 1);
+        save(next);
+        render();
+        return;
+      }
+      const sendBtn = event.target.closest("[data-send]");
+      if (!sendBtn) return;
+      const index = Number(sendBtn.dataset.send);
+      const input = body.querySelector(`[data-message="${index}"]`);
+      const text = input ? input.value : messages()[index];
+      sendToTicker(text, sendBtn.dataset.priority === "breaking" ? "breaking" : "normal");
+    });
   }
 
   function setOpen(open) {
@@ -116,7 +150,7 @@ export function initTemplatesPanel({ t, ICONS, send, EVENT_TYPES, state }) {
     toggleBtn.classList.toggle("is-active", open);
     if (open) {
       render();
-      if (breakingInput) breakingInput.focus();
+      if (newInput) newInput.focus();
     }
   }
 
@@ -129,12 +163,12 @@ export function initTemplatesPanel({ t, ICONS, send, EVENT_TYPES, state }) {
   }
 
   on("templatesCloseBtn", "click", () => setOpen(false));
-  on("templatesBreakingSend", "click", sendBreaking);
-  if (breakingInput) {
-    breakingInput.addEventListener("keydown", (event) => {
+  on("templatesAddBtn", "click", add);
+  if (newInput) {
+    newInput.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
-        sendBreaking();
+        add();
       }
     });
   }

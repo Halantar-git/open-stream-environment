@@ -330,10 +330,6 @@
         state.stats = payload.stats || state.stats;
         state.topDonation = payload.topDonation || state.topDonation;
         if (payload.sessionDonations) state.sessionDonations = payload.sessionDonations;
-        state.tickerTemplates =
-          payload.tickerTemplates && typeof payload.tickerTemplates === "object"
-            ? payload.tickerTemplates
-            : {};
         state.deathCount = payload.deathCount || 0;
         state.soundboardConfig = payload.soundboard || state.soundboardConfig;
         state.tts = payload.tts || state.tts;

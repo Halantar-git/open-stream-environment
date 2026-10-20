@@ -376,48 +376,32 @@
       const user = raw.user || this.t("ticker.anonymous");
       switch (raw.kind) {
         case "donation": {
-          const amount = `+${this._money(raw.amount, raw.currency)}`;
-          const message = raw.message || "";
-          const custom = this._template("donation", { user, amount, message });
-          if (custom) return custom;
-          const base = this.t("ticker.donation", { user, amount });
-          return message ? `${base} — ${message}` : base;
+          const base = this.t("ticker.donation", { user, amount: `+${this._money(raw.amount, raw.currency)}` });
+          return raw.message ? `${base} — ${raw.message}` : base;
         }
-        case "cheer": {
-          const amount = `+${this._money(raw.amount, "")}`;
-          return this._template("cheer", { user, amount }) || this.t("ticker.cheer", { user, amount });
-        }
+        case "cheer":
+          return this.t("ticker.cheer", { user, amount: `+${this._money(raw.amount, "")}` });
         case "follow":
-          return this._template("follow", { user }) || this.t("ticker.follow", { user });
-        case "sub": {
-          const tier = this._tier(raw.tier);
-          const months = Math.max(1, Number(raw.months) || 1);
-          const custom = this._template("sub", { user, tier, months });
-          if (custom) return custom;
-          return months > 1
-            ? this.t("ticker.subMonths", { user, tier, months })
-            : this.t("ticker.sub", { user, tier });
-        }
-        case "gift_sub": {
-          const count = Math.max(1, raw.count || 1);
-          const tier = this._tier(raw.tier);
-          return (
-            this._template("gift_sub", { user, count, tier }) || this.t("ticker.gift", { user, count, tier })
-          );
-        }
+          return this.t("ticker.follow", { user });
+        case "sub":
+          return raw.months > 1
+            ? this.t("ticker.subMonths", { user, tier: this._tier(raw.tier), months: raw.months })
+            : this.t("ticker.sub", { user, tier: this._tier(raw.tier) });
+        case "gift_sub":
+          return this.t("ticker.gift", {
+            user,
+            count: Math.max(1, raw.count || 1),
+            tier: this._tier(raw.tier),
+          });
         case "reward": {
-          const reward = raw.rewardTitle || "";
-          const message = raw.userInput || "";
-          const custom = this._template("reward", { user, reward, message });
-          if (custom) return custom;
-          const base = reward ? this.t("ticker.rewardTitle", { user, reward }) : this.t("ticker.reward", { user });
-          return message ? `${base} — ${message}` : base;
+          const title = raw.rewardTitle || "";
+          const base = title
+            ? this.t("ticker.rewardTitle", { user, reward: title })
+            : this.t("ticker.reward", { user });
+          return raw.userInput ? `${base} — ${raw.userInput}` : base;
         }
         case "chat":
-          return (
-            this._template("chat", { user, message: raw.message }) ||
-            this.t("ticker.chat", { user, message: raw.message })
-          );
+          return this.t("ticker.chat", { user, message: raw.message });
         case "message":
           return raw.message;
         case "wheel_start":
@@ -427,27 +411,6 @@
         default:
           return "";
       }
-    }
-
-    /*
-      Шаблон сообщения из настроек виджета. Подстановки — `{{user}}`,
-      `{{amount}}`, `{{message}}` и остальные поля события. Пустой шаблон
-      означает «как раньше»: старые раскладки не должны поменять вид ленты.
-      Неизвестная подстановка остаётся как есть — так опечатка видна в эфире,
-      а не тихо съедается.
-    */
-    _template(key, values) {
-      const own = this.config && this.config.templates;
-      const global = (this.context.state && this.context.state.tickerTemplates) || {};
-      // Свой шаблон виджета важнее общего из панели «Шаблоны»; пустой —
-      // значит «как у всех», иначе после очистки поля возвращать общий было бы нечем.
-      const raw =
-        (own && typeof own[key] === "string" && own[key].trim()) ||
-        (typeof global[key] === "string" ? global[key] : "");
-      if (!raw.trim()) return "";
-      return raw.replace(/\{\{(\w+)\}\}/g, (whole, name) =>
-        Object.prototype.hasOwnProperty.call(values, name) ? String(values[name]) : whole
-      );
     }
 
     _tagOf(kind) {
@@ -484,25 +447,26 @@
       const src = this._sources();
       if (src.goal && this._goal && Number(this._goal.target) > 0) {
         const goal = this._goal;
-        const values = {
-          title: goal.title || "",
-          current: this._money(goal.current, goal.currency),
-          target: this._money(goal.target, goal.currency),
-        };
-        const text =
-          this._template("goal", values) ||
-          (goal.title ? this.t("ticker.goalTitle", values) : this.t("ticker.goal", values));
+        const text = goal.title
+          ? this.t("ticker.goalTitle", {
+              title: goal.title,
+              current: this._money(goal.current, goal.currency),
+              target: this._money(goal.target, goal.currency),
+            })
+          : this.t("ticker.goal", {
+              current: this._money(goal.current, goal.currency),
+              target: this._money(goal.target, goal.currency),
+            });
         items.push({ kind: "goal", tag: this.t("ticker.tagGoal"), text });
       }
       if (src.top && this._top && Number(this._top.amount) > 0) {
-        const values = {
-          user: this._top.user || this.t("ticker.anonymous"),
-          amount: this._money(this._top.amount, this._top.currency),
-        };
         items.push({
           kind: "top",
           tag: this.t("ticker.tagTop"),
-          text: this._template("top", values) || this.t("ticker.top", values),
+          text: this.t("ticker.top", {
+            user: this._top.user || this.t("ticker.anonymous"),
+            amount: this._money(this._top.amount, this._top.currency),
+          }),
         });
       }
       return items;
