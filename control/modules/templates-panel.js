@@ -89,7 +89,11 @@ export function initTemplatesPanel({ t, ICONS, send, EVENT_TYPES, state }) {
     const rows = list.length
       ? list.map(rowHtml).join("")
       : `<p class="templates-hint">${escapeHtml(t("templates.empty"))}</p>`;
-    body.innerHTML = `<p class="templates-hint">${escapeHtml(t("templates.hint"))}</p>${rows}`;
+    // Заголовок раздела: в панели могут появиться и другие наборы, и должно
+    // быть видно, что этот — именно для бегущей строки.
+    body.innerHTML =
+      `<div class="templates-section-title">${escapeHtml(t("templates.tickerTitle"))}</div>` +
+      `<p class="templates-hint">${escapeHtml(t("templates.hint"))}</p>${rows}`;
   }
 
   function add() {

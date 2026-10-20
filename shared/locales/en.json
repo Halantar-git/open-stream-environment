@@ -631,6 +631,7 @@
   },
   "templates": {
     "title": "Templates",
+    "tickerTitle": "News ticker templates",
     "hint": "Ready-made phrases for the news ticker. The buttons send the text to the ticker or to the breaking band, and you can edit a line in place.",
     "newPlaceholder": "New template…",
     "add": "Add",
