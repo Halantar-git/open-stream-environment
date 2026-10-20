@@ -303,16 +303,30 @@ export function initCanvasEditor({
     retro: ["#ff6a3d", "#ffd23f", "#3bceac", "#4d9de0", "#e15554"],
   };
 
-  function garlandPreview(paletteValue) {
+  // Высота viewBox повторяет пропорции плашки (канвас 16:9): при растягивании
+  // по ширине SVG масштабируется без искажения, иначе круги лампочек
+  // превращаются в широкие эллипсы.
+  function garlandPreview(paletteValue, geometry = {}) {
     const colors = GARLAND_PREVIEW_PALETTES[paletteValue] || GARLAND_PREVIEW_PALETTES.classic;
-    const points = [[14, 13], [32, 19], [50, 21], [68, 19], [86, 13]];
-    const bulbs = points
-      .map(([x, y], index) => {
+    const w = Math.max(1, Number(geometry.w) || 96);
+    const h = Math.max(1, Number(geometry.h) || 10);
+    const height = Math.max(4, Math.min(100, (100 * h * 9) / (w * 16)));
+    const y0 = Math.max(0.8, height * 0.14);
+    const r = Math.max(0.9, Math.min(2.6, height * 0.2));
+    const dip = Math.max(0.8, height - y0 - r * 2.2);
+    const ctrl = (y0 + dip * 2).toFixed(2);
+    // Точки на той же квадратичной кривой, что и провод: t = 0.2 / 0.5 / 0.8.
+    const bulbs = [0.2, 0.5, 0.8]
+      .map((t, index) => {
+        const q = 1 - t;
+        const x = q * q * 2 + 2 * q * t * 50 + t * t * 98;
+        const y = y0 + 2 * q * t * 2 * dip;
         const color = escapeAttr(colors[index % colors.length]);
-        return `<circle cx="${x}" cy="${y}" r="5" fill="${color}" opacity="0.18"/><circle cx="${x}" cy="${y}" r="2.4" fill="${color}"/>`;
+        const cy = (y + r * 1.1).toFixed(2);
+        return `<circle cx="${x.toFixed(2)}" cy="${cy}" r="${r.toFixed(2)}" fill="${color}"/>`;
       })
       .join("");
-    return `<div class="garland" style="position:relative;width:100%;height:100%;pointer-events:none;"><svg class="garland__svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" style="width:100%;height:100%;"><path d="M3 5 Q50 27 97 5" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="0.8"/>${bulbs}</svg></div>`;
+    return `<div class="garland" style="position:relative;width:100%;height:100%;pointer-events:none;"><svg class="garland__svg" viewBox="0 0 100 ${height.toFixed(2)}" preserveAspectRatio="none" aria-hidden="true" style="width:100%;height:100%;"><path d="M2 ${y0.toFixed(2)} Q50 ${ctrl} 98 ${y0.toFixed(2)}" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="0.8" vector-effect="non-scaling-stroke"/>${bulbs}</svg></div>`;
   }
 
   function buildPreviewHtml(inst) {
@@ -516,7 +530,7 @@ export function initCanvasEditor({
         return `<div class="widget-soundboard"><div class="widget-soundboard__placeholder">🔊 ${escapeHtml(t("widgets.soundboard"))}</div></div>`;
       }
       case "garland": {
-        return garlandPreview(config.palette);
+        return garlandPreview(config.palette, inst);
       }
       case "grimhex": {
         const primary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#FF1800";
