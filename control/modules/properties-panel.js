@@ -180,6 +180,32 @@ export function initPropertiesPanel({
     lastSig = null;
   }
 
+  // Свободный гостевой слот для нового виджета. Пустой слот у источника
+  // «Гостевая камера» — самая незаметная поломка: виджет рисует заглушку,
+  // ни на что не подписывается, и гость после подтверждения навсегда остаётся
+  // с «ждём экран». Поэтому слот подставляем сами и не занимаем тот, что уже
+  // выбран другим гостевым виджетом.
+  function unusedGuestSlot(widgetId) {
+    const known =
+      Array.isArray(state.guestSlots) && state.guestSlots.length
+        ? state.guestSlots
+        : ["cam2", "cam3", "cam4"].map((slot) => ({ slot }));
+    const used = new Set(
+      (state.layout || [])
+        .filter(
+          (item) =>
+            item.id !== widgetId &&
+            item.type === "webcam" &&
+            item.config &&
+            item.config.source === "remote" &&
+            item.config.guestSlot
+        )
+        .map((item) => item.config.guestSlot)
+    );
+    const free = known.find((item) => !used.has(item.slot));
+    return (free || known[0]).slot;
+  }
+
   function render(force) {
     const raw = state.layout.find((w) => w.id === state.selectedId);
     if (!raw) {
@@ -555,6 +581,7 @@ export function initPropertiesPanel({
                    ${guestSlotOptions}
                  </select>
                </div>
+               ${guestSlot ? "" : `<p class="properties__hint properties__hint--warn">${t("properties.webcamGuestSlotRequired")}</p>`}
                <div class="md-field"><label>${t("properties.webcamGuestVolume")}: <span id="pWebcamGuestVolumeValue">${guestVolume}%</span></label><input type="range" id="pWebcamGuestVolume" min="0" max="100" step="1" value="${guestVolume}"></div>
                <div class="properties__toggle-row"><label>${t("properties.webcamGuestVideoOnly")}</label>${switchHtml("pWebcamVideoOnly", config.videoOnly === true)}</div>`
             : ""}
@@ -923,8 +950,14 @@ export function initPropertiesPanel({
     } else if (inst.type === "webcam") {
       const patchWebcam = (configPatch) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: configPatch } });
       propertiesEl.querySelector("#pWebcamSource").addEventListener("change", (e) => {
-        patchWebcam({ source: e.target.value });
-        if (e.target.value === "camera" && typeof refreshCameraDevices === "function") refreshCameraDevices();
+        const nextSource = e.target.value;
+        const patch = { source: nextSource };
+        // Без слота приёмник не подпишется на гостя — подставляем свободный.
+        if (nextSource === "remote" && !String(config.guestSlot || "").trim()) {
+          patch.guestSlot = unusedGuestSlot(inst.id);
+        }
+        patchWebcam(patch);
+        if (nextSource === "camera" && typeof refreshCameraDevices === "function") refreshCameraDevices();
       });
       propertiesEl.querySelector("#pWebcamLabel").addEventListener("change", (e) => patchWebcam({ label: e.target.value }));
       wireSwitch(propertiesEl.querySelector("#pWebcamShowLabel"), (on) => patchWebcam({ showLabel: on }));

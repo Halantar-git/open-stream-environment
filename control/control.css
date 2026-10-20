@@ -277,6 +277,7 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .properties__test-grid { display: flex; flex-wrap: wrap; gap: 8px; }
 .properties__test-grid .md-button { flex: 1 1 auto; font-size: 12px; padding: 8px 10px; }
 .properties__hint { font-size: 11px; color: var(--md-on-surface-variant); line-height: 1.4; }
+.properties__hint--warn { color: var(--md-error); }
 .properties__level { height: 8px; border-radius: 4px; background: var(--md-surface-container-highest); border: 1px solid var(--md-outline-variant); overflow: hidden; }
 .properties__level-fill { height: 100%; width: 0%; background: var(--md-primary); transition: width 80ms linear; }
 .properties__delete { display: flex; justify-content: flex-end; margin-top: 2px; }
@@ -295,6 +296,7 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .settings__card h2 { margin: 0; font-family: var(--font-display); font-size: 16px; font-weight: 600; }
 .settings__desc { margin: 0; font-size: 13px; color: var(--md-on-surface-variant); line-height: 1.5; }
 .settings__hint { font-size: 12px; color: var(--md-on-surface-variant); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--md-surface-container-highest); padding: 8px 10px; border-radius: var(--shape-sm); }
+.settings__hint--warn { color: var(--md-error); border: 1px solid var(--md-error); }
 .settings__hint code { font-family: var(--font-mono); color: var(--md-on-surface); }
 .settings__actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
 .settings__statuses { display: flex; gap: 8px; margin-top: 2px; }

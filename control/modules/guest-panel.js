@@ -126,6 +126,10 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
     const invite = state.guestInvites[info.slot] || "";
     const pending = info.state === "waiting";
     const live = info.state === "accepted" || info.state === "connected";
+    // Гость подтверждён, но никто не принимает поток: слот висит в этом
+    // состоянии вечно, и гость видит «ждём экран». Говорим хозяину, чего не
+    // хватает, — иначе выглядит как «подключение не работает».
+    const awaitingWidget = info.state === "accepted";
     const actions = [];
     if (!live) {
       actions.push(
@@ -167,6 +171,7 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
         <span class="guest-slot__state" data-state="${escapeHtml(info.state)}">${escapeHtml(stateLabel(info.state))}</span>
       </div>
       <div class="guest-slot__actions">${actions.join("")}</div>
+      ${awaitingWidget ? `<p class="settings__hint settings__hint--warn">${escapeHtml(t("guests.waitingWidgetHint"))}</p>` : ""}
       ${link}
     </div>`;
   }

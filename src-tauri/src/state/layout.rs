@@ -488,10 +488,59 @@ fn widget_is_known(widget: &Value) -> bool {
 }
 
 fn clean_widgets(list: &[Value]) -> Vec<Value> {
-    list.iter()
+    let mut clean: Vec<Value> = list
+        .iter()
         .filter(|widget| widget_is_known(widget))
         .map(migrated_widget)
-        .collect()
+        .collect();
+    assign_guest_slots(&mut clean);
+    clean
+}
+
+/// Гостевой виджет без слота — мёртвый: он ни на что не подписывается, и гость
+/// после подтверждения навсегда остаётся с «ждём экран». Слот не выбирают из
+/// вредности — его просто забывают выбрать при переключении источника, поэтому
+/// раздаём свободные по порядку и не трогаем уже выбранные.
+fn assign_guest_slots(widgets: &mut [Value]) {
+    let slots = crate::server::guest::GUEST_SLOTS;
+    let current_slot = |widget: &Value| -> String {
+        widget
+            .get("config")
+            .and_then(|config| config.get("guestSlot"))
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|slot| slots.contains(slot))
+            .unwrap_or_default()
+            .to_string()
+    };
+    let mut used: Vec<String> = widgets
+        .iter()
+        .map(current_slot)
+        .filter(|s| !s.is_empty())
+        .collect();
+    for widget in widgets.iter_mut() {
+        if widget_type(widget) != "webcam" {
+            continue;
+        }
+        let remote = widget
+            .get("config")
+            .and_then(|config| config.get("source"))
+            .and_then(Value::as_str)
+            == Some("remote");
+        if !remote || !current_slot(widget).is_empty() {
+            continue;
+        }
+        let Some(free) = slots
+            .iter()
+            .find(|slot| !used.iter().any(|taken| taken == *slot))
+        else {
+            break;
+        };
+        if let Some(config) = widget.get_mut("config").and_then(Value::as_object_mut) {
+            config.insert("guestSlot".to_string(), Value::from(*free));
+        }
+        used.push((*free).to_string());
+    }
 }
 
 /// Рамка камеры раньше всегда рождалась с `radius: 16`. Пока пользователь не
@@ -695,6 +744,39 @@ mod tests {
 
     fn layout(db: &Database, config: &ConfigFile) -> Vec<Value> {
         widgets(db, config)
+    }
+
+    #[test]
+    fn a_guest_camera_widget_without_a_slot_gets_a_free_one() {
+        let fixture = Fixture::new("guest-slots");
+        let (db, config) = (fixture.db(), fixture.config());
+        db.save_widgets(vec![
+            json!({ "id": "a", "type": "webcam", "config": { "source": "remote", "guestSlot": "cam3" } }),
+            json!({ "id": "b", "type": "webcam", "config": { "source": "remote" } }),
+            json!({ "id": "c", "type": "webcam", "config": { "source": "remote", "guestSlot": "" } }),
+            json!({ "id": "d", "type": "webcam", "config": { "source": "camera" } }),
+        ]);
+
+        let layout = layout(&db, &config);
+        let slot = |id: &str| {
+            layout
+                .iter()
+                .find(|widget| widget["id"] == json!(id))
+                .unwrap()["config"]["guestSlot"]
+                .clone()
+        };
+
+        // Выбранный слот не трогаем, свободные раздаём по порядку и без повторов.
+        assert_eq!(slot("a"), json!("cam3"));
+        assert_eq!(slot("b"), json!("cam2"));
+        assert_eq!(slot("c"), json!("cam4"));
+        // Локальная камера — не гость, ей слот не нужен.
+        assert!(layout
+            .iter()
+            .find(|widget| widget["id"] == json!("d"))
+            .unwrap()["config"]
+            .get("guestSlot")
+            .is_none());
     }
 
     #[test]

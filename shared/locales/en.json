@@ -1172,6 +1172,7 @@
     "webcamWidth": "Frame width",
     "webcamSourceRemote": "Guest camera",
     "webcamGuestSlot": "Guest slot",
+    "webcamGuestSlotRequired": "No slot selected — the guest camera won't appear. Pick a slot and the widget will start receiving the stream.",
     "webcamGuestVolume": "Guest volume",
     "webcamGuestVideoOnly": "Video only (no sound)",
     "webcamGuestNoSlot": "Choose a slot",
@@ -1232,6 +1233,7 @@
     "decline": "Decline",
     "revoke": "Disconnect",
     "copy": "Copy",
+    "waitingWidgetHint": "The guest is confirmed, but no widget is receiving the stream. Add a Webcam widget with the Guest camera source and this slot.",
     "noLanAddress": "This machine has no LAN address — the guest cannot connect. Check Wi-Fi or Ethernet."
   },
   "webcam": {
