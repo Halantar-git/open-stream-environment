@@ -94,6 +94,19 @@ export function initCanvasEditor({
   // пример, иначе виджет выглядел бы сломанным при настройке.
   const SAMPLE_PARTICIPANTS = ["nova_viewer", "star_gazer", "orbit_fan", "pixel_pilot"];
 
+  // Значки в превью — буквами, как запасной вариант в эфире: тянуть картинки
+  // Twitch в инспектор незачем, а роль зрителя читается и так. Без этого
+  // 3D-чаты на канвасе выглядели беднее, чем в эфире.
+  function previewBadges(badges, color) {
+    return (badges || [])
+      .slice(0, 3)
+      .map(
+        (badge) =>
+          `<span style="color:${escapeAttr(color)};font-weight:700;">${escapeHtml(String(badge).slice(0, 1).toUpperCase())}</span>`
+      )
+      .join(" ");
+  }
+
   function recentTextPreview(e) {
     const user = `<b>${e.user}</b>`;
     switch (e.kind) {
@@ -636,13 +649,14 @@ export function initCanvasEditor({
         const gold = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#c7a75c";
         const goldBright = (state.appearance.tokens && state.appearance.tokens["--md-secondary"]) || "#e2c47e";
         const rows = [
-          { user: "Vestige_99", message: t("preview.chat1") },
-          { user: "TamrielHero", message: t("preview.chat2") },
-          { user: "SkoomaDealer", message: t("preview.chat3") },
+          { user: "Vestige_99", badges: ["moderator"], message: t("preview.chat1") },
+          { user: "TamrielHero", badges: ["subscriber"], message: t("preview.chat2") },
+          { user: "SkoomaDealer", badges: ["vip"], message: t("preview.chat3") },
         ]
           .map(
             (m) =>
               `<div class="teso-chat__row" style="font-family:'Montserrat','Segoe UI',sans-serif;font-size:13px;line-height:1.5;color:#e6e3d8;text-shadow:1px 1px 2px rgba(0,0,0,0.9);">` +
+              `${previewBadges(m.badges, "#bfc3b0")} ` +
               `<span style="color:${goldBright};font-weight:600;">${escapeHtml(m.user)}</span><span style="color:#bfc3b0;">:</span> <span>${escapeHtml(m.message)}</span></div>`
           )
           .join("");
@@ -688,14 +702,15 @@ export function initCanvasEditor({
       }
       case "grimhex-chat": {
         const rows = [
-          { user: "nova_viewer", message: t("preview.chat1") },
-          { user: "star_gazer", message: t("preview.chat2") },
-          { user: "orbit_fan", message: t("preview.chat3") },
+          { user: "nova_viewer", badges: ["moderator"], message: t("preview.chat1") },
+          { user: "star_gazer", badges: ["subscriber"], message: t("preview.chat2") },
+          { user: "orbit_fan", badges: ["vip"], message: t("preview.chat3") },
         ]
           .map(
             (m) =>
               `<div class="grimhex-chat__row" style="display:flex;gap:7px;font-size:13px;line-height:1.55;color:#e9eef2;">
                 <span style="color:#64748b">[12:00]</span>
+                ${previewBadges(m.badges, "#64748b")}
                 <span style="color:#F97316;font-weight:700">${escapeHtml(m.user)}</span>
                 <span style="color:#64748b">:</span>
                 <span style="color:#e9eef2">${escapeHtml(m.message)}</span>
@@ -827,14 +842,15 @@ export function initCanvasEditor({
       }
       case "nuclear-chat": {
         const rows = [
-          { user: "nova_viewer", message: t("preview.chat1") },
-          { user: "star_gazer", message: t("preview.chat2") },
-          { user: "orbit_fan", message: t("preview.chat3") },
+          { user: "nova_viewer", badges: ["moderator"], message: t("preview.chat1") },
+          { user: "star_gazer", badges: ["subscriber"], message: t("preview.chat2") },
+          { user: "orbit_fan", badges: ["vip"], message: t("preview.chat3") },
         ]
           .map(
             (m) =>
               `<div class="nuclear-chat__row" style="display:flex;gap:7px;font-size:13px;line-height:1.55;color:#a7ada8;">
                 <span style="color:#59615b">[12:00]</span>
+                ${previewBadges(m.badges, "#59615b")}
                 <span style="color:#d3d8d4;font-weight:700">${escapeHtml(m.user)}</span>
                 <span style="color:#59615b">:</span>
                 <span style="color:#a7ada8">${escapeHtml(m.message)}</span>
@@ -908,14 +924,15 @@ export function initCanvasEditor({
       }
       case "cobra-chat": {
         const rows = [
-          { user: "nova_viewer", message: t("preview.chat1") },
-          { user: "star_gazer", message: t("preview.chat2") },
-          { user: "orbit_fan", message: t("preview.chat3") },
+          { user: "nova_viewer", badges: ["moderator"], message: t("preview.chat1") },
+          { user: "star_gazer", badges: ["subscriber"], message: t("preview.chat2") },
+          { user: "orbit_fan", badges: ["vip"], message: t("preview.chat3") },
         ]
           .map(
             (m) =>
               `<div class="cobra-chat__row" style="display:flex;gap:7px;font-size:13px;line-height:1.55;color:#ffb07c;">
                 <span style="color:#bdb0a1">[12:00]</span>
+                ${previewBadges(m.badges, "#bdb0a1")}
                 <span style="color:#ff7605;font-weight:700">${escapeHtml(m.user)}</span>
                 <span style="color:#bdb0a1">:</span>
                 <span style="color:#ffb07c">${escapeHtml(m.message)}</span>
@@ -966,14 +983,15 @@ export function initCanvasEditor({
         const muted = (state.appearance.tokens && state.appearance.tokens["--md-on-surface-variant"]) || "#b6b3a7";
         const primary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#f0a92c";
         const rows = [
-          { user: "nova_viewer", message: t("preview.chat1") },
-          { user: "star_gazer", message: t("preview.chat2") },
-          { user: "orbit_fan", message: t("preview.chat3") },
+          { user: "nova_viewer", badges: ["moderator"], message: t("preview.chat1") },
+          { user: "star_gazer", badges: ["subscriber"], message: t("preview.chat2") },
+          { user: "orbit_fan", badges: ["vip"], message: t("preview.chat3") },
         ]
           .map(
             (m) =>
               `<div class="wardogs-chat__row" style="display:flex;gap:7px;font-family:'Roboto Condensed','Segoe UI',sans-serif;font-size:14px;line-height:1.45;color:${escapeAttr(text)};">
                 <span style="color:${muted};font-family:'JetBrains Mono','Consolas',monospace;font-size:11px;">[12:00]</span>
+                ${previewBadges(m.badges, muted)}
                 <span style="color:${primary};font-weight:700">${escapeHtml(m.user)}</span>
                 <span style="color:${muted}">:</span>
                 <span style="color:${escapeAttr(text)}">${escapeHtml(m.message)}</span>
@@ -1067,9 +1085,9 @@ export function initCanvasEditor({
         const muted = (state.appearance.tokens && state.appearance.tokens["--md-on-surface-variant"]) || "#cac4d0";
         const primary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#d0bcff";
         const rows = [
-          { user: "nova_viewer", message: t("preview.chat1") },
-          { user: "star_gazer", message: t("preview.chat2") },
-          { user: "orbit_fan", message: t("preview.chat3") },
+          { user: "nova_viewer", badges: ["moderator"], message: t("preview.chat1") },
+          { user: "star_gazer", badges: ["subscriber"], message: t("preview.chat2") },
+          { user: "orbit_fan", badges: ["vip"], message: t("preview.chat3") },
         ]
           .map(
             (m) =>
@@ -1078,6 +1096,7 @@ export function initCanvasEditor({
               // theme-engine выводит в hex сам.
               `<div class="md3-chat__row" style="display:flex;gap:7px;font-size:13px;line-height:1.55;color:${escapeAttr(text)};">
                 <span style="color:${muted}">[12:00]</span>
+                ${previewBadges(m.badges, muted)}
                 <span style="color:${primary};font-weight:700">${escapeHtml(m.user)}</span>
                 <span style="color:${muted}">:</span>
                 <span style="color:${escapeAttr(text)}">${escapeHtml(m.message)}</span>
@@ -1139,14 +1158,15 @@ export function initCanvasEditor({
         const muted = (state.appearance.tokens && state.appearance.tokens["--md-on-surface-variant"]) || "#b8b8b8";
         const gold = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#d6b675";
         const rows = [
-          { user: "nova_viewer", message: t("preview.chat1") },
-          { user: "star_gazer", message: t("preview.chat2") },
-          { user: "orbit_fan", message: t("preview.chat3") },
+          { user: "nova_viewer", badges: ["moderator"], message: t("preview.chat1") },
+          { user: "star_gazer", badges: ["subscriber"], message: t("preview.chat2") },
+          { user: "orbit_fan", badges: ["vip"], message: t("preview.chat3") },
         ]
           .map(
             (m) =>
               `<div class="pixel-chat__row" style="display:flex;gap:7px;font-size:13px;line-height:1.5;color:${escapeAttr(text)};font-family:'Roboto Condensed','Segoe UI',sans-serif;">
                 <span style="color:${muted}">[12:00]</span>
+                ${previewBadges(m.badges, muted)}
                 <span style="color:${gold};font-weight:700">${escapeHtml(m.user)}</span>
                 <span style="color:${muted}">:</span>
                 <span style="color:${escapeAttr(text)}">${escapeHtml(m.message)}</span>
@@ -1218,14 +1238,15 @@ export function initCanvasEditor({
         const primary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#ff2d95";
         const secondary = (state.appearance.tokens && state.appearance.tokens["--md-secondary"]) || "#2de2e6";
         const rows = [
-          { user: "nova_viewer", message: t("preview.chat1") },
-          { user: "star_gazer", message: t("preview.chat2") },
-          { user: "orbit_fan", message: t("preview.chat3") },
+          { user: "nova_viewer", badges: ["moderator"], message: t("preview.chat1") },
+          { user: "star_gazer", badges: ["subscriber"], message: t("preview.chat2") },
+          { user: "orbit_fan", badges: ["vip"], message: t("preview.chat3") },
         ]
           .map(
             (m) =>
               `<div style="display:flex;gap:7px;padding:3px 8px 3px 10px;font-family:'Montserrat','Segoe UI',sans-serif;font-size:12px;line-height:1.45;color:${escapeAttr(text)};background:linear-gradient(90deg,rgba(255,45,149,0.10),rgba(5,2,11,0.30) 42%,transparent);border-left:2px solid rgba(45,226,230,0.55);">
                 <span style="color:${escapeAttr(muted)};font-family:'JetBrains Mono','Consolas',monospace;font-size:10px;">[12:00]</span>
+                ${previewBadges(m.badges, muted)}
                 <span style="color:${escapeAttr(primary)};font-weight:700">${escapeHtml(m.user)}</span>
                 <span style="color:${escapeAttr(muted)}">:</span>
                 <span style="color:${escapeAttr(text)}">${escapeHtml(m.message)}</span>
