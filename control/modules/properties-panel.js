@@ -304,6 +304,11 @@ export function initPropertiesPanel({
       const ticker3d = inst.type.endsWith("-ticker") || String(type).endsWith("-ticker");
       const sourceToggle = (id, key, labelKey) =>
         `<div class="properties__toggle-row"><label>${t(labelKey)}</label>${switchHtml(id, sources[key] === true)}</div>`;
+      // Шаблоны сообщений: пустое поле — стандартный текст из словаря.
+      const templates = config.templates && typeof config.templates === "object" ? config.templates : {};
+      const templateField = (key, labelKey, placeholderKey) =>
+        `<div class="md-field"><label>${t(labelKey)}</label><input type="text" id="pTickerTpl-${key}" data-ticker-template="${key}" value="${escapeAttr(templates[key] || "")}" placeholder="${escapeAttr(t(placeholderKey))}" spellcheck="false"></div>`;
+      const hasTemplates = Object.keys(templates).some((key) => String(templates[key] || "").trim());
       extraHtml = `
         <div class="md-field"><label>${t("properties.tickerSpeed")}</label><input type="number" id="pTickerSpeed" min="20" max="200" step="5" value="${config.speed || 80}"></div>
         <div class="md-field"><label>${t("properties.tickerDirection")}</label>
@@ -324,6 +329,19 @@ export function initPropertiesPanel({
         ${sourceToggle("pTickerSourceGoal", "goal", "properties.tickerSourceGoal")}
         ${sourceToggle("pTickerSourceTop", "top", "properties.tickerSourceTop")}
         <div class="md-field"><label>${t("properties.tickerMaxItems")}</label><input type="number" id="pTickerMaxItems" min="1" max="60" value="${config.maxItems || 24}"></div>
+        <details class="properties__details" ${hasTemplates ? "open" : ""}>
+          <summary>${t("properties.tickerTemplates")}</summary>
+          <p class="properties__hint">${t("properties.tickerTemplatesHint")}</p>
+          ${templateField("donation", "properties.tickerTplDonation", "ticker.donation")}
+          ${templateField("cheer", "properties.tickerTplCheer", "ticker.cheer")}
+          ${templateField("follow", "properties.tickerTplFollow", "ticker.follow")}
+          ${templateField("sub", "properties.tickerTplSub", "ticker.sub")}
+          ${templateField("gift_sub", "properties.tickerTplGift", "ticker.gift")}
+          ${templateField("reward", "properties.tickerTplReward", "ticker.rewardTitle")}
+          ${templateField("chat", "properties.tickerTplChat", "ticker.chat")}
+          ${templateField("goal", "properties.tickerTplGoal", "ticker.goalTitle")}
+          ${templateField("top", "properties.tickerTplTop", "ticker.top")}
+        </details>
         ${ticker3d ? `<div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>` : ""}
         <p class="properties__hint">${t("properties.tickerHint")}</p>`;
     } else if (inst.type === "stat") {
@@ -862,6 +880,24 @@ export function initPropertiesPanel({
       wireSwitch(propertiesEl.querySelector("#pTickerSourceGoal"), (on) => setSource("goal", on));
       wireSwitch(propertiesEl.querySelector("#pTickerSourceTop"), (on) => setSource("top", on));
       propertiesEl.querySelector("#pTickerMaxItems").addEventListener("change", (e) => patchTicker({ maxItems: Math.max(1, Math.min(60, Number(e.target.value) || 24)) }));
+      // Правки шаблонов собираем из живого пункта раскладки: инспектор может
+      // не перерисоваться между двумя правками, и снимок в замыкании отстал бы.
+      propertiesEl.querySelectorAll("[data-ticker-template]").forEach((input) => {
+        input.addEventListener("change", () => {
+          const live = state.layout.find((w) => w.id === inst.id) || inst;
+          const base =
+            live.config && live.config.templates && typeof live.config.templates === "object"
+              ? live.config.templates
+              : {};
+          const next = { ...base };
+          const value = input.value.trim();
+          if (value) next[input.dataset.tickerTemplate] = value;
+          else delete next[input.dataset.tickerTemplate];
+          if (!live.config) live.config = {};
+          live.config.templates = next;
+          patchTicker({ templates: next });
+        });
+      });
       const perspective = propertiesEl.querySelector("#pPerspective");
       if (perspective) {
         perspective.addEventListener("input", (e) => {

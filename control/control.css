@@ -278,6 +278,10 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .properties__test-grid .md-button { flex: 1 1 auto; font-size: 12px; padding: 8px 10px; }
 .properties__hint { font-size: 11px; color: var(--md-on-surface-variant); line-height: 1.4; }
 .properties__hint--warn { color: var(--md-error); }
+.properties__details { border: 1px solid var(--md-outline-variant); border-radius: var(--shape-sm); padding: 8px 10px; margin-top: 4px; }
+.properties__details summary { cursor: pointer; font-size: 12px; font-weight: 600; color: var(--md-on-surface); }
+.properties__details[open] summary { margin-bottom: 8px; }
+.properties__details .properties__hint { margin: 0 0 4px; }
 .properties__level { height: 8px; border-radius: 4px; background: var(--md-surface-container-highest); border: 1px solid var(--md-outline-variant); overflow: hidden; }
 .properties__level-fill { height: 100%; width: 0%; background: var(--md-primary); transition: width 80ms linear; }
 .properties__delete { display: flex; justify-content: flex-end; margin-top: 2px; }
