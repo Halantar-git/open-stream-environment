@@ -232,10 +232,13 @@ export function initPropertiesPanel({
     // Поворот меняет не только рисунок, но и подпись под кнопками — без него
     // рендер с активной кнопкой в панели пропускался бы и состояние отставало.
     const micRotation = type === "mic" ? Number(raw.config && raw.config.rotation) || 0 : "";
+    // Зеркало не меняет набор полей, но заголовок состояния под кнопками
+    // зависит от него — без него рендер с включённым зеркалом пропускался бы.
+    const micMirror = type === "mic" ? ((raw.config && raw.config.mirror) || (state.micConfig && state.micConfig.mirror) ? 1 : 0) : "";
     const webcamSource = type === "webcam" ? (raw.config && raw.config.source) || "frame" : "";
     const cameraCodec = type === "webcam" ? (state.cameraConfig && state.cameraConfig.codec) || "auto" : "";
     const guestSlotsSig = type === "webcam" ? (state.guestSlots || []).map((s) => `${s.slot}:${s.state}`).join(",") : "";
-    const sig = `${raw.id}|${raw.type}|${type}|${micMode}|${micRotation}|${webcamSource}|${cameraCodec}|${(raw.config && raw.config.guestSlot) || ""}|${guestSlotsSig}|${(state.micDevices || []).length}|${(state.cameraDevices || []).length}`;
+    const sig = `${raw.id}|${raw.type}|${type}|${micMode}|${micRotation}|${micMirror}|${webcamSource}|${cameraCodec}|${(raw.config && raw.config.guestSlot) || ""}|${guestSlotsSig}|${(state.micDevices || []).length}|${(state.cameraDevices || []).length}`;
     if (!force && sig === lastSig && propertiesEl.contains(document.activeElement)) return;
     lastSig = sig;
     const def = WIDGET_TYPES[type] || {};
@@ -392,6 +395,7 @@ export function initPropertiesPanel({
         return fallback;
       };
       const mode = micDef("visualizer_mode", "sine");
+      const mirror = micDef("mirror", false) === true;
       const rawRotation = Number(config.rotation);
       const rotation = rawRotation === 90 || rawRotation === 180 || rawRotation === 270 ? rawRotation : 0;
       const vertical = rotation === 90 || rotation === 270;
@@ -416,10 +420,10 @@ export function initPropertiesPanel({
       if (mode === "sine") {
         fields += `<div class="md-field"><label>${t("mic.sensitivity")}: <span id="pMicSensitivityValue">${num("sensitivity", 1.5)}</span></label><input type="range" id="pMicSensitivity" min="0.2" max="6" step="0.1" value="${num("sensitivity", 1.5)}"></div>`;
       }
-      if (mode === "sine" || mode === "ring") {
+      if (mode === "sine" || mode === "ring" || mode === "curve") {
         fields += `<div class="md-field"><label>${t("mic.lineWidth")}: <span id="pMicLineWidthValue">${num("lineWidth", 2)}</span></label><input type="range" id="pMicLineWidth" min="1" max="12" step="0.5" value="${num("lineWidth", 2)}"></div>`;
       }
-      if (mode === "bars" || mode === "bars-up" || mode === "ring") {
+      if (mode === "bars" || mode === "bars-up" || mode === "ring" || mode === "curve") {
         fields += `<div class="md-field"><label>${t("mic.barCount")}: <span id="pMicBarCountValue">${num("barCount", 32)}</span></label><input type="range" id="pMicBarCount" min="10" max="64" step="1" value="${num("barCount", 32)}"></div>`;
       }
       if (mode === "bars" || mode === "bars-up") {
@@ -474,14 +478,16 @@ export function initPropertiesPanel({
             <option value="sine" ${mode === "sine" ? "selected" : ""}>${t("mic.modeSine")}</option>
             <option value="bars" ${mode === "bars" ? "selected" : ""}>${t("mic.modeBars")}</option>
             <option value="bars-up" ${mode === "bars-up" ? "selected" : ""}>${t("mic.modeBarsUp")}</option>
+            <option value="curve" ${mode === "curve" ? "selected" : ""}>${t("mic.modeCurve")}</option>
             <option value="ring" ${mode === "ring" ? "selected" : ""}>${t("mic.modeRing")}</option>
           </select>
         </div>
+        <div class="properties__toggle-row"><label>${t("mic.mirror")}</label>${switchHtml("pMicMirror", mirror)}</div>
         <div class="properties__actions">
           <button class="md-button md-button--tonal" id="pMicRotate" title="${t("mic.rotateHint")}">↻ ${t("mic.rotateAction")}</button>
           <button class="md-button md-button--tonal" id="pMicFlip" title="${t("mic.directionHint")}">⇄ ${t("mic.directionAction")}</button>
         </div>
-        <p class="properties__hint" style="margin:0;">${vertical ? t("mic.orientationVertical") : t("mic.orientationHorizontal")} · ${reversed ? t("mic.directionReverse") : t("mic.directionNormal")}</p>
+        <p class="properties__hint" style="margin:0;">${vertical ? t("mic.orientationVertical") : t("mic.orientationHorizontal")} · ${reversed ? t("mic.directionReverse") : t("mic.directionNormal")}${mirror ? ` · ${t("mic.mirrorOn")}` : ""}</p>
         ${fields}
         ${captureHtml}`;
     } else if (inst.type === "death") {
@@ -910,6 +916,7 @@ export function initPropertiesPanel({
       if (micRotateEl) micRotateEl.addEventListener("click", () => rotateMic(90));
       const micFlipEl = propertiesEl.querySelector("#pMicFlip");
       if (micFlipEl) micFlipEl.addEventListener("click", () => rotateMic(180));
+      wireSwitch(propertiesEl.querySelector("#pMicMirror"), (on) => setMic("mirror", on));
       onMicRange("pMicSensitivity", "pMicSensitivityValue", (v) => v.toFixed(1), (v) => setMic("sensitivity", v));
       onMicRange("pMicLineWidth", "pMicLineWidthValue", (v) => v.toFixed(1), (v) => setMic("lineWidth", v));
       onMicRange("pMicBarCount", "pMicBarCountValue", (v) => String(Math.round(v)), (v) => setMic("barCount", Math.round(v)));

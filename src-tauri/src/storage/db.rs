@@ -697,6 +697,7 @@ impl Database {
         let mode = match raw.get("visualizer_mode").and_then(Value::as_str) {
             Some("bars") => "bars",
             Some("bars-up") => "bars-up",
+            Some("curve") => "curve",
             Some("ring") => "ring",
             _ => "sine",
         };

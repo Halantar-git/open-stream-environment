@@ -97,14 +97,30 @@ function drawContext() {
   return {
     rects: [],
     calls: [],
+    curves: 0,
+    fills: 0,
+    strokes: 0,
+    globalAlpha: 1,
     setTransform() {},
     clearRect() {},
     save() {},
     restore() {},
     beginPath() {},
+    closePath() {},
     moveTo() {},
     lineTo() {},
-    stroke() {},
+    quadraticCurveTo() {
+      this.curves += 1;
+    },
+    createLinearGradient() {
+      return { addColorStop() {} };
+    },
+    stroke() {
+      this.strokes += 1;
+    },
+    fill() {
+      this.fills += 1;
+    },
     fillRect(x, y, w, h) {
       this.rects.push({ x, y, w, h });
     },
@@ -113,6 +129,9 @@ function drawContext() {
     },
     rotate(a) {
       this.calls.push({ op: "rotate", a });
+    },
+    scale(x, y) {
+      this.calls.push({ op: "scale", x, y });
     },
   };
 }
@@ -143,6 +162,17 @@ describe("MicWidget: режимы", () => {
     w._drawBars(ctx, 200, 80, [0.25, 0.5, 1], 2);
 
     for (const r of ctx.rects) expect(r.y + r.h / 2).toBeCloseTo(40, 5);
+  });
+
+  test("огибающая сглаживает спектр и заливает площадь под ним", () => {
+    const w = widget({});
+    const ctx = drawContext();
+    w._drawCurve(ctx, 200, 80, [0.2, 0.6, 1, 0.4]);
+
+    // По квадратичной кривой на каждый отрезок между полосами плюс замыкающая.
+    expect(ctx.curves).toBe(4);
+    expect(ctx.fills).toBe(1);
+    expect(ctx.strokes).toBe(1);
   });
 });
 
@@ -216,5 +246,39 @@ describe("MicWidget: поворот", () => {
       { op: "translate", x: 320, y: 96 },
       { op: "rotate", a: Math.PI },
     ]);
+  });
+
+  test("режим огибающей получает ту же область, что и столбики", () => {
+    const w = drawableWidget({ visualizer_mode: "curve" });
+    const curve = jest.spyOn(w, "_drawCurve").mockImplementation(() => {});
+
+    w._draw(1000);
+
+    expect(curve).toHaveBeenCalledWith(w.micCtx, 320, 96, null);
+    expect(w.micCtx.calls).toEqual([]);
+  });
+
+  test("зеркало отражает рисунок после поворота", () => {
+    const w = drawableWidget({ visualizer_mode: "sine", rotation: 90, mirror: true });
+    jest.spyOn(w, "_drawSine").mockImplementation(() => {});
+
+    w._draw(1000);
+
+    // Сначала поворот в рамку, затем отражение по оси уже повёрнутой области.
+    expect(w.micCtx.calls).toEqual([
+      { op: "translate", x: 320, y: 0 },
+      { op: "rotate", a: Math.PI / 2 },
+      { op: "translate", x: 96, y: 0 },
+      { op: "scale", x: -1, y: 1 },
+    ]);
+  });
+
+  test("без зеркала холст не отражается", () => {
+    const w = drawableWidget({ visualizer_mode: "sine", mirror: false });
+    jest.spyOn(w, "_drawSine").mockImplementation(() => {});
+
+    w._draw(1000);
+
+    expect(w.micCtx.calls.some((call) => call.op === "scale")).toBe(false);
   });
 });

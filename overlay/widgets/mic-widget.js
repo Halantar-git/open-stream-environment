@@ -338,12 +338,22 @@
         ctx.rotate(-Math.PI / 2);
       }
 
+      // Зеркало отражает уже повернутый рисунок относительно вертикальной оси
+      // области рисования: так оно означает одно и то же при любой ориентации
+      // виджета и не зависит от пропорций рамки.
+      if (this.config.mirror === true) {
+        ctx.translate(drawW, 0);
+        ctx.scale(-1, 1);
+      }
+
       if (mode === "bars") {
         this._drawBars(ctx, drawW, drawH, bandValues, gap);
       } else if (mode === "bars-up") {
         this._drawBarsUp(ctx, drawW, drawH, bandValues, gap);
       } else if (mode === "ring") {
         this._drawRing(ctx, drawW, drawH, bandValues);
+      } else if (mode === "curve") {
+        this._drawCurve(ctx, drawW, drawH, bandValues);
       } else {
         this._drawSine(ctx, drawW, drawH, elapsed, amp, level);
       }
@@ -414,6 +424,44 @@
         ctx.lineTo(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r);
         ctx.stroke();
       }
+    }
+
+    // Огибающая: тот же спектр, но одной плавной линией с заливкой вниз.
+    // В маленькой рамке отдельные столбики сливаются в шум, а контур
+    // читается даже в полосе высотой в пару процентов экрана.
+    _drawCurve(ctx, cw, ch, bands) {
+      if (!bands || !bands.length) return;
+      const n = bands.length;
+      const stepX = cw / Math.max(1, n - 1);
+      const top = (i) => ch - Math.max(0.02, Math.min(1, bands[i])) * ch * 0.96;
+      let prevX = 0;
+      let prevY = top(0);
+      ctx.beginPath();
+      ctx.moveTo(prevX, prevY);
+      for (let i = 1; i < n; i++) {
+        const x = i * stepX;
+        const y = top(i);
+        // Сглаживание по серединам отрезков: без него пики спектра выглядели бы
+        // угловатой ломаной.
+        ctx.quadraticCurveTo(prevX, prevY, (prevX + x) / 2, (prevY + y) / 2);
+        prevX = x;
+        prevY = y;
+      }
+      ctx.quadraticCurveTo(prevX, prevY, cw, prevY);
+      ctx.lineTo(cw, ch);
+      ctx.lineTo(0, ch);
+      ctx.closePath();
+
+      const gradient = ctx.createLinearGradient(0, 0, 0, ch);
+      gradient.addColorStop(0, ctx.strokeStyle);
+      gradient.addColorStop(1, "rgba(0,0,0,0)");
+      const alpha = ctx.globalAlpha;
+      ctx.save();
+      ctx.globalAlpha = alpha * 0.55;
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      ctx.restore();
+      ctx.stroke();
     }
 
     _clamp(v, min, max, fallback) {

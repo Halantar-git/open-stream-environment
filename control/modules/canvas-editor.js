@@ -122,8 +122,12 @@ export function initCanvasEditor({
     return r === 90 || r === 270 ? { w: height, h: width } : { w: width, h: height };
   }
 
-  function buildMicPreviewFrame(inner, width, height, opacity, rotation) {
+  function buildMicPreviewFrame(inner, width, height, opacity, rotation, mirror) {
     const r = micRotation(rotation);
+    const draw = micDrawSize(width, height, r);
+    // Отражение — в системе координат рисунка, до поворота: так превью
+    // совпадает с эфиром при любом угле.
+    const content = mirror ? `<g transform="translate(${draw.w},0) scale(-1,1)">${inner}</g>` : inner;
     const wrap =
       r === 90
         ? `translate(${width},0) rotate(90)`
@@ -132,7 +136,7 @@ export function initCanvasEditor({
         : r === 270
         ? `translate(0,${height}) rotate(-90)`
         : "";
-    const body = wrap ? `<g transform="${wrap}">${inner}</g>` : inner;
+    const body = wrap ? `<g transform="${wrap}">${content}</g>` : content;
     return `<div class="widget-mic widget-mic--preview"><svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="width:100%;height:100%;opacity:${opacity}">${body}</svg></div>`;
   }
 
@@ -166,7 +170,7 @@ export function initCanvasEditor({
     return `perspective(1200px) rotateY(${ry}deg) rotateX(${rx}deg)`;
   }
 
-  function buildBarsPreview({ width, height, opacity, color, barCount, gap, rotation }) {
+  function buildBarsPreview({ width, height, opacity, color, barCount, gap, rotation, mirror }) {
     const { w: dw, h: dh } = micDrawSize(width, height, rotation);
     const n = Math.max(2, Math.round(barCount));
     const slotW = dw / n;
@@ -179,10 +183,10 @@ export function initCanvasEditor({
       const y = (dh - h) / 2;
       rects += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${escapeAttr(color)}"/>`;
     }
-    return buildMicPreviewFrame(rects, width, height, opacity, rotation);
+    return buildMicPreviewFrame(rects, width, height, opacity, rotation, mirror);
   }
 
-  function buildBarsUpPreview({ width, height, opacity, color, barCount, gap, rotation }) {
+  function buildBarsUpPreview({ width, height, opacity, color, barCount, gap, rotation, mirror }) {
     const { w: dw, h: dh } = micDrawSize(width, height, rotation);
     const n = Math.max(2, Math.round(barCount));
     const slotW = dw / n;
@@ -194,10 +198,10 @@ export function initCanvasEditor({
       const x = i * slotW + (slotW - barW) / 2;
       rects += `<rect x="${x.toFixed(1)}" y="${(dh - h).toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${escapeAttr(color)}"/>`;
     }
-    return buildMicPreviewFrame(rects, width, height, opacity, rotation);
+    return buildMicPreviewFrame(rects, width, height, opacity, rotation, mirror);
   }
 
-  function buildSinePreview({ width, height, opacity, color, lineWidth, rotation }) {
+  function buildSinePreview({ width, height, opacity, color, lineWidth, rotation, mirror }) {
     const { w: dw, h: dh } = micDrawSize(width, height, rotation);
     const pts = [];
     for (let x = 0; x <= dw; x += 6) {
@@ -205,10 +209,10 @@ export function initCanvasEditor({
       pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
     }
     const inner = `<path d="M${pts.join(" L")}" fill="none" stroke="${escapeAttr(color)}" stroke-width="${lineWidth}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
-    return buildMicPreviewFrame(inner, width, height, opacity, rotation);
+    return buildMicPreviewFrame(inner, width, height, opacity, rotation, mirror);
   }
 
-  function buildRingPreview({ width, height, opacity, color, barCount, lineWidth, rotation }) {
+  function buildRingPreview({ width, height, opacity, color, barCount, lineWidth, rotation, mirror }) {
     const { w: dw, h: dh } = micDrawSize(width, height, rotation);
     const n = Math.max(2, Math.round(barCount));
     const cx = dw / 2;
@@ -222,7 +226,31 @@ export function initCanvasEditor({
       const r = minR + (maxR - minR) * v;
       lines += `<line x1="${(cx + Math.cos(angle) * minR).toFixed(1)}" y1="${(cy + Math.sin(angle) * minR).toFixed(1)}" x2="${(cx + Math.cos(angle) * r).toFixed(1)}" y2="${(cy + Math.sin(angle) * r).toFixed(1)}" stroke="${escapeAttr(color)}" stroke-width="${lineWidth}" stroke-linecap="round"/>`;
     }
-    return buildMicPreviewFrame(lines, width, height, opacity, rotation);
+    return buildMicPreviewFrame(lines, width, height, opacity, rotation, mirror);
+  }
+
+  // Огибающая: сглаженный спектр с заливкой вниз — копия `_drawCurve` из
+  // живого виджета, но с зафиксированным «спектром».
+  function buildCurvePreview({ width, height, opacity, color, barCount, lineWidth, rotation, mirror }) {
+    const { w: dw, h: dh } = micDrawSize(width, height, rotation);
+    const n = Math.max(2, Math.round(barCount));
+    const stepX = dw / Math.max(1, n - 1);
+    const value = (i) => Math.abs(Math.sin(i * 0.5) * 0.6 + Math.sin(i * 0.19) * 0.4);
+    const top = (i) => dh - Math.max(0.04, value(i)) * dh * 0.96;
+    let prevX = 0;
+    let prevY = top(0);
+    let d = `M${prevX.toFixed(1)} ${prevY.toFixed(1)}`;
+    for (let i = 1; i < n; i++) {
+      const x = i * stepX;
+      const y = top(i);
+      d += ` Q${prevX.toFixed(1)} ${prevY.toFixed(1)} ${((prevX + x) / 2).toFixed(1)} ${((prevY + y) / 2).toFixed(1)}`;
+      prevX = x;
+      prevY = y;
+    }
+    d += ` Q${prevX.toFixed(1)} ${prevY.toFixed(1)} ${dw.toFixed(1)} ${prevY.toFixed(1)}`;
+    d += ` L${dw.toFixed(1)} ${dh.toFixed(1)} L0 ${dh.toFixed(1)} Z`;
+    const inner = `<path d="${d}" fill="${escapeAttr(color)}" fill-opacity="0.28" stroke="${escapeAttr(color)}" stroke-width="${lineWidth}" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+    return buildMicPreviewFrame(inner, width, height, opacity, rotation, mirror);
   }
 
   // The type a widget renders as under the active theme — mirrors the overlay's
@@ -487,13 +515,15 @@ export function initCanvasEditor({
         const gap = Number(micCfg(config, "barGap", 2)) || 0;
         const lineWidth = Number(micCfg(config, "lineWidth", 2)) || 2;
         const rotation = micRotation(config.rotation);
+        const mirror = micCfg(config, "mirror", false) === true;
         const width = 400;
         const height = 80;
         let preview;
-        if (mode === "bars-up") preview = buildBarsUpPreview({ width, height, opacity, color, barCount, gap, rotation });
-        else if (mode === "bars") preview = buildBarsPreview({ width, height, opacity, color, barCount, gap, rotation });
-        else if (mode === "ring") preview = buildRingPreview({ width, height, opacity, color, barCount, lineWidth, rotation });
-        else preview = buildSinePreview({ width, height, opacity, color, lineWidth, rotation });
+        if (mode === "bars-up") preview = buildBarsUpPreview({ width, height, opacity, color, barCount, gap, rotation, mirror });
+        else if (mode === "bars") preview = buildBarsPreview({ width, height, opacity, color, barCount, gap, rotation, mirror });
+        else if (mode === "ring") preview = buildRingPreview({ width, height, opacity, color, barCount, lineWidth, rotation, mirror });
+        else if (mode === "curve") preview = buildCurvePreview({ width, height, opacity, color, barCount, lineWidth, rotation, mirror });
+        else preview = buildSinePreview({ width, height, opacity, color, lineWidth, rotation, mirror });
         const transform = micPerspectiveStyle(config);
         return transform
           ? `<div style="width:100%;height:100%;transform:${transform};transform-style:preserve-3d;">${preview}</div>`
