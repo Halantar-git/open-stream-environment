@@ -400,7 +400,7 @@ export function initHelpPanel({ t, ICONS }) {
   }
 
   function refreshLabel() {
-    if (toggleBtn) toggleBtn.innerHTML = `${ICONS.help} ${t("help.title")}`;
+    if (toggleBtn) toggleBtn.innerHTML = ICONS.help;
   }
 
   function refresh() {

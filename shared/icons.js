@@ -113,6 +113,8 @@
     link: `<svg viewBox="0 0 24 24" ${stroke}><path d="M9 15l6-6M8 12l-2.5 2.5a3.5 3.5 0 0 0 5 5L13 17M16 12l2.5-2.5a3.5 3.5 0 0 0-5-5L11 7"/></svg>`,
     copy: `<svg viewBox="0 0 24 24" ${stroke}><rect x="9" y="9" width="12" height="12" rx="1.5"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>`,
     terminal: `<svg viewBox="0 0 24 24" ${stroke}><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg>`,
+    clip: `<svg viewBox="0 0 24 24" ${stroke}><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18M8 6 6 10M14 6l-2 4M20 6l-2 4"/></svg>`,
+    marker: `<svg viewBox="0 0 24 24" ${stroke}><path d="M6 3h12v18l-6-4.5L6 21V3z"/></svg>`,
     bug: `<svg viewBox="0 0 24 24" ${stroke}><path d="M9 3h6M10 3v5.5L5.5 17a2 2 0 0 0 1.8 3h9.4a2 2 0 0 0 1.8-3L14 8.5V3"/><path d="M7.5 14h9"/></svg>`,
     help: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="12" r="9"/><path d="M9.3 9a2.8 2.8 0 0 1 5.4 1c0 1.7-2.7 2.4-2.7 4"/><circle cx="12" cy="17.4" r="1.2" fill="currentColor" stroke="none"/></svg>`,
     back: `<svg viewBox="0 0 24 24" ${stroke}><path d="M15 5l-7 7 7 7"/></svg>`,

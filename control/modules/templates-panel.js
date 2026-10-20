@@ -159,7 +159,7 @@ export function initTemplatesPanel({ t, ICONS, send, EVENT_TYPES, state }) {
   }
 
   function refreshLabel() {
-    if (toggleBtn) toggleBtn.innerHTML = `${ICONS.widgetTicker} ${t("templates.title")}`;
+    if (toggleBtn) toggleBtn.innerHTML = ICONS.widgetTicker;
   }
 
   on("templatesCloseBtn", "click", () => setOpen(false));

@@ -461,7 +461,7 @@ export function initDonationAlertsPanel({ t, ICONS, send, EVENT_TYPES, state, sh
     // В шапке — короткое «DA»: рядом стоят ещё восемь кнопок, и полное
     // «DonationAlerts» растягивало панель. Полное имя осталось в подсказке
     // (data-i18n-title в разметке) и в заголовке самой панели.
-    if (toggleBtn) toggleBtn.innerHTML = `${ICONS.donation} ${t("da.short")}`;
+    if (toggleBtn) toggleBtn.innerHTML = ICONS.donation;
     if (logSearch) logSearch.placeholder = t("da.logSearchPlaceholder");
     render();
   }

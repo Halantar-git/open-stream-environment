@@ -68,7 +68,7 @@ export function initDebugPanel({ t, ICONS, send, EVENT_TYPES }) {
   }
 
   function refreshLabel() {
-    if (toggleBtn) toggleBtn.innerHTML = `${ICONS.bug} ${t("debug.title")}`;
+    if (toggleBtn) toggleBtn.innerHTML = ICONS.bug;
   }
 
   function render() {

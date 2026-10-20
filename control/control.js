@@ -3521,8 +3521,13 @@ const { EVENT_TYPES } = window.SharedEvents;
   });
 
   const openChatWindowBtn = document.getElementById("openChatWindowBtn");
-  openChatWindowBtn.innerHTML = `${ICONS.widgetChat} ${t("editor.chat")}`;
+  openChatWindowBtn.innerHTML = ICONS.widgetChat;
   openChatWindowBtn.addEventListener("click", () => window.desktop?.openChatWindow());
+
+  // Верхняя панель — только иконки: подписи остались в подсказках, иначе
+  // восемь кнопок с текстом перекрывали друг друга на узком окне.
+  if (createClipBtn) createClipBtn.innerHTML = ICONS.clip;
+  if (createMarkerBtn) createMarkerBtn.innerHTML = ICONS.marker;
 
   const openBoostyBtn = document.getElementById("openBoostyBtn");
   if (openBoostyBtn) {
@@ -3617,7 +3622,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (open) refreshHistoryTab();
   }
   if (toggleHistoryBtn) {
-    toggleHistoryBtn.innerHTML = `${ICONS.widgetRecent} ${t("nav.history")}`;
+    toggleHistoryBtn.innerHTML = ICONS.widgetRecent;
   }
   const historyCloseBtn = document.getElementById("historyCloseBtn");
   if (historyCloseBtn) historyCloseBtn.addEventListener("click", () => setHistoryOpen(false));
@@ -3631,7 +3636,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (open) renderWheelPanels();
   }
   if (toggleWheelBtn) {
-    toggleWheelBtn.innerHTML = `${ICONS.sceneWheel} ${t("nav.wheel")}`;
+    toggleWheelBtn.innerHTML = ICONS.sceneWheel;
   }
   if (wheelCloseBtn) wheelCloseBtn.addEventListener("click", () => setWheelOpen(false));
 
@@ -3644,7 +3649,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (open) renderPollPanels();
   }
   if (togglePollBtn) {
-    togglePollBtn.innerHTML = `${ICONS.scenePoll} ${t("nav.poll")}`;
+    togglePollBtn.innerHTML = ICONS.scenePoll;
   }
   if (pollCloseBtn) pollCloseBtn.addEventListener("click", () => setPollOpen(false));
 
@@ -4327,13 +4332,13 @@ const { EVENT_TYPES } = window.SharedEvents;
     exportConfigBtn.textContent = t("settings.export");
     importConfigBtn.textContent = t("settings.import");
     const chatBtn = document.getElementById("openChatWindowBtn");
-    if (chatBtn) chatBtn.innerHTML = `${ICONS.widgetChat} ${t("editor.chat")}`;
+    if (chatBtn) chatBtn.innerHTML = ICONS.widgetChat;
     const historyBtn = document.getElementById("toggleHistoryBtn");
-    if (historyBtn) historyBtn.innerHTML = `${ICONS.widgetRecent} ${t("nav.history")}`;
+    if (historyBtn) historyBtn.innerHTML = ICONS.widgetRecent;
     const wheelBtn = document.getElementById("toggleWheelBtn");
-    if (wheelBtn) wheelBtn.innerHTML = `${ICONS.sceneWheel} ${t("nav.wheel")}`;
+    if (wheelBtn) wheelBtn.innerHTML = ICONS.sceneWheel;
     const pollBtn = document.getElementById("togglePollBtn");
-    if (pollBtn) pollBtn.innerHTML = `${ICONS.scenePoll} ${t("nav.poll")}`;
+    if (pollBtn) pollBtn.innerHTML = ICONS.scenePoll;
     templatesPanel.refreshLabel();
     renderQueuePanel();
     daPanel.refreshLabel();

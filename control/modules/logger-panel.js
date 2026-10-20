@@ -291,7 +291,7 @@ export function initLoggerPanel({ t, ICONS, send, EVENT_TYPES, state }) {
   }
 
   function refreshLabel() {
-    if (toggleBtn) toggleBtn.innerHTML = `${ICONS.terminal} ${t("editor.terminal")}`;
+    if (toggleBtn) toggleBtn.innerHTML = ICONS.terminal;
     if (input) input.placeholder = t("terminal.inputPlaceholder");
   }
 

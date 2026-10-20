@@ -89,6 +89,10 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .topbar__status { margin-left: auto; display: flex; gap: 8px; }
 .topbar__actions { margin-left: auto; display: flex; align-items: center; }
 .topbar__actions > :first-child { margin-left: 0; }
+/* Кнопки верхней панели — только иконки: подписи живут в подсказках, иначе
+   восемь кнопок с текстом не влезают в узкое окно. */
+.topbar__actions > .md-button { padding: 7px 8px; gap: 0; }
+.topbar__actions > .md-button svg { width: 15px; height: 15px; }
 
 /* ---------- Views ---------- */
 .view { flex: 1; display: flex; overflow: hidden; }
