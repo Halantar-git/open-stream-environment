@@ -1365,6 +1365,9 @@
   --webcam-live: #ff4d4d;
   --webcam-thickness: 4px;
   --webcam-radius: 16px;
+  /* Свечение рамки: цвет берётся из уголков, радиус — из инспектора. */
+  --webcam-glow: 14px;
+  --webcam-neon: var(--webcam-corner, var(--webcam-accent));
   position: relative;
   width: 100%;
   height: 100%;
@@ -1500,6 +1503,35 @@
   inset: 0;
   border-radius: var(--webcam-radius);
   box-shadow: inset 0 0 48px rgba(0, 0, 0, 0.55);
+}
+
+/* Цвет уголков и неон сильнее правил темы: пользователь перекрывает набор,
+   но пока ничего не выбрано, рамка живёт по его стилю. */
+.widget-webcam[data-corner-color="custom"] .widget-webcam__corner {
+  border-color: var(--webcam-corner);
+}
+/* У Material You и Pixel уголки — залитые точки и квадраты, им нужен фон. */
+[data-theme="nebula"] .widget-webcam[data-corner-color="custom"] .widget-webcam__corner,
+[data-theme="pixel"] .widget-webcam[data-corner-color="custom"] .widget-webcam__corner {
+  background-color: var(--webcam-corner);
+}
+/* Свечение — отдельный слой: box-shadow темы остаётся на месте, а размытие
+   повторяет форму рамки вместе со скруглением. */
+.widget-webcam__glow {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--webcam-radius);
+  border: var(--webcam-thickness) solid var(--webcam-neon);
+  box-shadow:
+    0 0 var(--webcam-glow) var(--webcam-neon),
+    inset 0 0 var(--webcam-glow) var(--webcam-neon);
+  pointer-events: none;
+}
+.widget-webcam[data-neon="on"] .widget-webcam__corner {
+  filter: drop-shadow(0 0 var(--webcam-glow) var(--webcam-neon));
+}
+.widget-webcam[data-neon="on"] .widget-webcam__label {
+  box-shadow: 0 0 var(--webcam-glow) var(--webcam-neon);
 }
 @keyframes webcam-live {
   0%, 100% { opacity: 1; }

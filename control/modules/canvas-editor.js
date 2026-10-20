@@ -551,6 +551,13 @@ export function initCanvasEditor({
         const corners = config.showCorners !== false
           ? ["tl", "tr", "bl", "br"].map((corner) => `<span class="widget-webcam__corner" data-corner="${corner}"></span>`).join("")
           : "";
+        // Цвет уголков и неон — те же переменные, что и в эфире: превью должно
+        // совпадать с оверлеем, иначе настройка выглядит неработающей.
+        const cornerColor = /^#[0-9a-f]{3,8}$/i.test(String(config.cornerColor || "").trim()) ? String(config.cornerColor).trim() : "";
+        const neon = config.neon === true;
+        const neonStrength = Math.max(2, Math.min(40, Math.round(Number(config.neonStrength) || 14)));
+        const neonVars = neon ? `--webcam-glow:${neonStrength}px;` : "";
+        const cornerVars = cornerColor ? `--webcam-corner:${escapeAttr(cornerColor)};` : "";
         const camera = config.source === "camera";
         const remote = config.source === "remote";
         const videoHtml = camera
@@ -562,9 +569,10 @@ export function initCanvasEditor({
               `<div class="widget-webcam__empty">${escapeHtml(t(config.guestSlot ? "webcam.guestWaiting" : "webcam.guestNoSlot"))}</div>` +
               `</div>`
             : "";
-        const html = `<div class="widget-webcam" style="--webcam-accent:${escapeAttr(accent)};--webcam-thickness:${thickness}px;--webcam-radius:${radius}px;">
+        const html = `<div class="widget-webcam" data-corner-color="${cornerColor ? "custom" : ""}" data-neon="${neon ? "on" : ""}" style="--webcam-accent:${escapeAttr(accent)};--webcam-thickness:${thickness}px;--webcam-radius:${radius}px;${cornerVars}${neonVars}">
           ${config.showBackground ? `<div class="widget-webcam__backdrop"></div>` : ""}
           ${videoHtml}
+          ${neon ? `<div class="widget-webcam__glow"></div>` : ""}
           ${config.showBorder !== false ? `<div class="widget-webcam__frame"></div>` : ""}
           ${corners}
           ${showLabel ? `<div class="widget-webcam__label" data-pos="${escapeAttr(position)}"><span class="widget-webcam__dot"></span><span class="widget-webcam__label-text">${escapeHtml(label)}</span></div>` : ""}

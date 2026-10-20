@@ -175,6 +175,11 @@
       }
 
       const accent = SAFE_ACCENT.test(String(cfg.color || "").trim()) ? String(cfg.color).trim() : "var(--md-primary)";
+      // Уголки и неон можно покрасить отдельно от рамки: пока цвет не выбран,
+      // они наследуют акцент (и правила темы).
+      const cornerColor = SAFE_ACCENT.test(String(cfg.cornerColor || "").trim()) ? String(cfg.cornerColor).trim() : "";
+      const neon = cfg.neon === true;
+      const glow = clamp(Math.round(num(cfg.neonStrength, 14)), 2, 40);
       const thickness = clamp(Math.round(num(cfg.thickness, 4)), 1, 16);
       // Старое значение 16px было дефолтом для всех тем; без явного
       // переопределения (`radiusAuto: false`) считаем его автоматическим.
@@ -191,6 +196,16 @@
       this.host.style.setProperty("--webcam-accent", accent);
       this.host.style.setProperty("--webcam-thickness", `${thickness}px`);
       this.host.style.setProperty("--webcam-radius", `${radius}px`);
+      this.host.style.setProperty("--webcam-glow", `${glow}px`);
+      if (cornerColor) {
+        this.host.style.setProperty("--webcam-corner", cornerColor);
+        this.host.dataset.cornerColor = "custom";
+      } else {
+        this.host.style.removeProperty("--webcam-corner");
+        delete this.host.dataset.cornerColor;
+      }
+      if (neon) this.host.dataset.neon = "on";
+      else delete this.host.dataset.neon;
 
       const parts = [];
       if (cfg.showBackground) parts.push(`<div class="widget-webcam__backdrop"></div>`);
@@ -216,6 +231,7 @@
             `</div>`
         );
       }
+      if (neon) parts.push(`<div class="widget-webcam__glow"></div>`);
       if (cfg.showBorder !== false) parts.push(`<div class="widget-webcam__frame"></div>`);
       if (cfg.showCorners !== false) {
         parts.push(...CORNERS.map((corner) => `<span class="widget-webcam__corner" data-corner="${corner}"></span>`));

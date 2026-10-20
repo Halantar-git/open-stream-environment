@@ -236,9 +236,12 @@ export function initPropertiesPanel({
     // зависит от него — без него рендер с включённым зеркалом пропускался бы.
     const micMirror = type === "mic" ? ((raw.config && raw.config.mirror) || (state.micConfig && state.micConfig.mirror) ? 1 : 0) : "";
     const webcamSource = type === "webcam" ? (raw.config && raw.config.source) || "frame" : "";
+    // Включённый неон добавляет ползунок силы свечения — без него в сигнатуре
+    // инспектор не перестроится и поле не появится до смены виджета.
+    const webcamNeon = type === "webcam" ? (raw.config && raw.config.neon ? 1 : 0) : "";
     const cameraCodec = type === "webcam" ? (state.cameraConfig && state.cameraConfig.codec) || "auto" : "";
     const guestSlotsSig = type === "webcam" ? (state.guestSlots || []).map((s) => `${s.slot}:${s.state}`).join(",") : "";
-    const sig = `${raw.id}|${raw.type}|${type}|${micMode}|${micRotation}|${micMirror}|${webcamSource}|${cameraCodec}|${(raw.config && raw.config.guestSlot) || ""}|${guestSlotsSig}|${(state.micDevices || []).length}|${(state.cameraDevices || []).length}`;
+    const sig = `${raw.id}|${raw.type}|${type}|${micMode}|${micRotation}|${micMirror}|${webcamSource}|${webcamNeon}|${cameraCodec}|${(raw.config && raw.config.guestSlot) || ""}|${guestSlotsSig}|${(state.micDevices || []).length}|${(state.cameraDevices || []).length}`;
     if (!force && sig === lastSig && propertiesEl.contains(document.activeElement)) return;
     lastSig = sig;
     const def = WIDGET_TYPES[type] || {};
@@ -509,6 +512,9 @@ export function initPropertiesPanel({
       const source = config.source === "remote" ? "remote" : config.source === "camera" ? "camera" : "frame";
       const cameraCfg = state.cameraConfig || {};
       const guestSlot = config.guestSlot || "";
+      const cornerColor = /^#[0-9a-f]{3,8}$/i.test(String(config.cornerColor || "").trim()) ? String(config.cornerColor).trim() : "";
+      const neon = config.neon === true;
+      const neonStrength = Math.max(2, Math.min(40, Math.round(Number(config.neonStrength) || 14)));
       const guestSlots = Array.isArray(state.guestSlots) && state.guestSlots.length
         ? state.guestSlots
         : ["cam2", "cam3", "cam4"].map((slot) => ({ slot, state: "free" }));
@@ -618,6 +624,14 @@ export function initPropertiesPanel({
             <button class="md-button md-button--text" id="pWebcamColorReset">${t("properties.webcamColorAuto")}</button>
           </div>
         </div>
+        <div class="md-field"><label>${t("properties.webcamCornerColor")}</label>
+          <div class="properties__color-row">
+            <input type="color" id="pWebcamCornerColor" value="${escapeAttr(cornerColor || themePrimary)}">
+            <button class="md-button md-button--text" id="pWebcamCornerColorReset">${t("properties.webcamCornerColorAuto")}</button>
+          </div>
+        </div>
+        <div class="properties__toggle-row"><label>${t("properties.webcamNeon")}</label>${switchHtml("pWebcamNeon", neon)}</div>
+        ${neon ? `<div class="md-field"><label>${t("properties.webcamNeonStrength")}: <span id="pWebcamNeonValue">${neonStrength}</span> px</label><input type="range" id="pWebcamNeonStrength" min="2" max="40" step="1" value="${neonStrength}"></div>` : ""}
         ${captureHtml}
         <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>
         <div class="md-field"><label>${t("properties.perspectiveDirection")}</label>
@@ -1014,6 +1028,20 @@ export function initPropertiesPanel({
       });
       propertiesEl.querySelector("#pWebcamColor").addEventListener("input", (e) => patchWebcam({ color: e.target.value }));
       propertiesEl.querySelector("#pWebcamColorReset").addEventListener("click", () => patchWebcam({ color: "" }));
+      const cornerColorInput = propertiesEl.querySelector("#pWebcamCornerColor");
+      if (cornerColorInput) cornerColorInput.addEventListener("input", (e) => patchWebcam({ cornerColor: e.target.value }));
+      const cornerColorReset = propertiesEl.querySelector("#pWebcamCornerColorReset");
+      if (cornerColorReset) cornerColorReset.addEventListener("click", () => patchWebcam({ cornerColor: "" }));
+      wireSwitch(propertiesEl.querySelector("#pWebcamNeon"), (on) => patchWebcam({ neon: on }));
+      const neonRange = propertiesEl.querySelector("#pWebcamNeonStrength");
+      if (neonRange) {
+        neonRange.addEventListener("input", (e) => {
+          const value = Number(e.target.value);
+          const label = propertiesEl.querySelector("#pWebcamNeonValue");
+          if (label) label.textContent = String(value);
+          patchWebcam({ neonStrength: value });
+        });
+      }
       const guestSlotSelect = propertiesEl.querySelector("#pWebcamGuestSlot");
       if (guestSlotSelect) {
         guestSlotSelect.addEventListener("change", (e) => patchWebcam({ guestSlot: e.target.value }));

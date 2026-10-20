@@ -33,6 +33,9 @@ function makeEl(tag) {
       setProperty(k, v) {
         this.values[k] = v;
       },
+      removeProperty(k) {
+        delete this.values[k];
+      },
     },
     classList: {
       add: (...c) => c.forEach((x) => classSet.add(x)),
@@ -154,6 +157,40 @@ describe("WebcamWidget", () => {
   test("без цвета рамка берёт акцент темы", () => {
     const w = mount({ color: "" });
     expect(w.host.style.values["--webcam-accent"]).toBe("var(--md-primary)");
+  });
+
+  test("цвет уголков задаётся отдельно и сбрасывается в тему", () => {
+    const custom = mount({ cornerColor: "#00ffaa" });
+    expect(custom.host.style.values["--webcam-corner"]).toBe("#00ffaa");
+    expect(custom.host.dataset.cornerColor).toBe("custom");
+    custom.unmount();
+
+    const auto = mount({ cornerColor: "" });
+    expect(auto.host.style.values["--webcam-corner"]).toBeUndefined();
+    expect(auto.host.dataset.cornerColor).toBeUndefined();
+  });
+
+  test("небезопасный цвет уголков не попадает в CSS", () => {
+    const w = mount({ cornerColor: 'red; background:url("x")' });
+    expect(w.host.style.values["--webcam-corner"]).toBeUndefined();
+    expect(w.host.dataset.cornerColor).toBeUndefined();
+  });
+
+  test("неон добавляет слой свечения и силу в переменную", () => {
+    const w = mount({ neon: true, neonStrength: 24 });
+    expect(w.host.innerHTML).toContain("widget-webcam__glow");
+    expect(w.host.style.values["--webcam-glow"]).toBe("24px");
+    expect(w.host.dataset.neon).toBe("on");
+    w.unmount();
+
+    const off = mount({ neon: false });
+    expect(off.host.innerHTML).not.toContain("widget-webcam__glow");
+    expect(off.host.dataset.neon).toBeUndefined();
+  });
+
+  test("сила свечения зажимается в 2–40", () => {
+    expect(mount({ neon: true, neonStrength: 200 }).host.style.values["--webcam-glow"]).toBe("40px");
+    expect(mount({ neon: true, neonStrength: 0 }).host.style.values["--webcam-glow"]).toBe("2px");
   });
 
   test("без явного радиуса повторяет скругление темы", () => {
