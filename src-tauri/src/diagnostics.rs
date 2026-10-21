@@ -2640,10 +2640,22 @@ fn apply_alert_side_effects(
     }
     let (goal, top) = {
         let mut config = config.lock().unwrap_or_else(|error| error.into_inner());
-        let goal = crate::state::config::add_to_goal(
-            &mut config,
-            alert.get("amount").unwrap_or(&Value::Null),
-        );
+        // Цель ведётся в одной валюте: $100 не должны прибавляться как 100 ₽.
+        // Курсов в приложении нет, поэтому чужая валюта цель не двигает —
+        // лучше неверного числа только честное «без изменений».
+        let donation_currency =
+            crate::state::currency_code(alert.get("currency").unwrap_or(&Value::Null));
+        let goal_currency = config
+            .get("goal")
+            .and_then(|goal| goal.get("currency"))
+            .map(crate::state::currency_code)
+            .unwrap_or_else(|| crate::state::currency_code(&Value::Null));
+        let goal = (donation_currency == goal_currency).then(|| {
+            crate::state::config::add_to_goal(
+                &mut config,
+                alert.get("amount").unwrap_or(&Value::Null),
+            )
+        });
         let top = crate::state::scenes::maybe_update_top_donation(
             &mut config,
             &json!({
@@ -2654,7 +2666,9 @@ fn apply_alert_side_effects(
         );
         (goal, top)
     };
-    broadcast_clients(clients, event_types::GOAL_UPDATE, goal);
+    if let Some(goal) = goal {
+        broadcast_clients(clients, event_types::GOAL_UPDATE, goal);
+    }
     if let Some(top) = top {
         broadcast_clients(clients, event_types::TOP_DONATION_UPDATE, top);
     }
@@ -3412,6 +3426,37 @@ mod tests {
 
         assert!(diagnostics.trigger_soundboard("s1", "Тест"));
         assert!(!diagnostics.trigger_soundboard("ghost", "Тест"));
+    }
+
+    #[test]
+    fn a_foreign_currency_donation_does_not_add_rubles_to_the_goal() {
+        let dir = TempDir::new("currency-effects");
+        dir.write_config(
+            r#"{ "alertQueue": { "enabled": false },
+                 "goal": { "title": "Цель", "target": 10000, "current": 500, "currency": "RUB" } }"#,
+        );
+        let diagnostics = Diagnostics::open(dir.storage()).expect("диагностика");
+        let emit = diagnostics.integration_emit();
+
+        emit(json!({
+            "type": event_types::ALERT,
+            "payload": { "kind": "donation", "user": "Вася", "amount": 100, "currency": "USD" },
+        }));
+
+        // Цель в рублях: $100 не прибавляются как 100 ₽ — лучше не двигать её вовсе.
+        assert_eq!(
+            diagnostics.config().get("goal").unwrap()["current"],
+            json!(500)
+        );
+        // А счёт стрима знает обе валюты и не смешивает их в одно число.
+        let session = diagnostics.runtime().session_donations();
+        assert_eq!(session["count"], json!(1));
+        assert_eq!(session["amount"], json!(100));
+        assert_eq!(session["currency"], json!("USD"));
+        assert_eq!(
+            session["amounts"],
+            json!([{ "currency": "USD", "amount": 100 }])
+        );
     }
 
     #[test]

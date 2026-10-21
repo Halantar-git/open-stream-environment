@@ -285,11 +285,22 @@ pub fn reset_top_donation(config: &mut ConfigFile) -> Value {
 /// Обновить крупный донат, если сумма больше прежней; `None` — не крупнее.
 pub fn maybe_update_top_donation(config: &mut ConfigFile, patch: &Value) -> Option<Value> {
     let amount = patch.get("amount").and_then(Value::as_f64)?;
+    let currency = crate::state::currency_code(patch.get("currency").unwrap_or(&Value::Null));
     let current = config
         .get("topDonation")
         .and_then(|top| top.get("amount"))
         .and_then(Value::as_f64)
         .unwrap_or(0.0);
+    // Курсов в приложении нет: сравниваем только суммы в одной валюте, иначе
+    // $100 оказывались бы «больше» 500 ₽, а 100 иен — «больше» $50.
+    let current_currency = config
+        .get("topDonation")
+        .and_then(|top| top.get("currency"))
+        .map(crate::state::currency_code)
+        .unwrap_or_else(|| crate::state::currency_code(&Value::Null));
+    if current > 0.0 && currency != current_currency {
+        return None;
+    }
     if amount <= current {
         return None;
     }
@@ -299,11 +310,6 @@ pub fn maybe_update_top_donation(config: &mut ConfigFile, patch: &Value) -> Opti
         .filter(|value| js_truthy(Some(value)))
         .map(js_string)
         .unwrap_or_else(|| "Аноним".to_string());
-    let currency = patch
-        .get("currency")
-        .filter(|value| js_truthy(Some(value)))
-        .map(js_string)
-        .unwrap_or_else(|| "RUB".to_string());
     let value = json!({ "user": user, "amount": number_value(amount), "currency": currency });
     config.set("topDonation", value.clone());
     config.save();
@@ -507,6 +513,20 @@ mod tests {
         assert!(
             maybe_update_top_donation(&mut config, &json!({ "user": "bob", "amount": 100 }))
                 .is_none()
+        );
+        // Другая валюта не сравнивается по числу: 900 рублей не «больше» $500.
+        assert!(maybe_update_top_donation(
+            &mut config,
+            &json!({ "user": "bob", "amount": 900, "currency": "RUB" })
+        )
+        .is_none());
+        // В той же валюте — заменяет.
+        assert_eq!(
+            maybe_update_top_donation(
+                &mut config,
+                &json!({ "user": "bob", "amount": 900, "currency": "usd" })
+            ),
+            Some(json!({ "user": "bob", "amount": 900, "currency": "USD" }))
         );
         // Не число — тоже не донат.
         assert!(

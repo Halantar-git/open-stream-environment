@@ -369,6 +369,18 @@ const { EVENT_TYPES } = window.SharedEvents;
   }
   const CURRENCY_SYMBOLS = { RUB: "₽", USD: "$", EUR: "€", UAH: "₴", KZT: "₸", GBP: "£" };
   function currencySymbol(code) { return CURRENCY_SYMBOLS[String(code || "").toUpperCase()] || code || ""; }
+  // Счёт стрима может быть в нескольких валютах: DonationAlerts не конвертирует
+  // суммы, поэтому 500 ₽ и $100 нельзя сложить в одно число. Показываем
+  // каждую валюту отдельно, основная (первая) — впереди.
+  function formatSessionAmount(session) {
+    const list = session && Array.isArray(session.amounts) ? session.amounts : null;
+    const source = list && list.length ? list : session ? [{ amount: session.amount, currency: session.currency }] : [];
+    const parts = source
+      .map((item) => ({ amount: Number(item && item.amount) || 0, currency: (item && item.currency) || "" }))
+      .filter((item) => item.amount > 0)
+      .map((item) => `${formatMoney(item.amount)}${item.currency ? ` ${currencySymbol(item.currency)}` : ""}`);
+    return parts.length ? parts.join(" + ") : formatMoney(0);
+  }
   function alertToastTitle(kind, event) {
     if (kind === "gift_sub") return t("alert.giftSub", { count: event.count ?? event.amount ?? 1 });
     const key = "alert." + kind;
@@ -2746,6 +2758,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     escapeAttr,
     formatMoney,
     currencySymbol,
+    formatSessionAmount,
     resolveMediaUrl,
     onSelectionChange: () => propertiesPanel.render(),
   });
@@ -3614,7 +3627,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     statusClass: wsClient.statusClass,
     // Форматирование и экранирование — то же, что у остальной панели, чтобы
     // суммы и время в списке донатов выглядели как в «Истории».
-    utils: { escapeHtml, escapeAttr, formatMoney, currencySymbol, formatEventTime },
+    utils: { escapeHtml, escapeAttr, formatMoney, currencySymbol, formatSessionAmount, formatEventTime },
   });
   const helpPanel = initHelpPanel({ t, ICONS });
   const templatesPanel = initTemplatesPanel({ t, ICONS, send, EVENT_TYPES, state });

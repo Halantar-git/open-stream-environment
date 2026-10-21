@@ -440,8 +440,16 @@
       return;
     }
     // Формат суммы — как в строке «в эфире» выше (alertNowSummary): число и код
-    // валюты. Пульт намеренно не тянет за собой таблицу символов.
-    const text = `${amount}${sessionStats.currency ? ` ${sessionStats.currency}` : ""}`;
+    // валюты. Пульт намеренно не тянет за собой таблицу символов. Валюты
+    // перечисляются отдельно: $100 — не 100 ₽.
+    const list = Array.isArray(sessionStats.amounts) && sessionStats.amounts.length
+      ? sessionStats.amounts
+      : [{ amount, currency: sessionStats.currency }];
+    const text = list
+      .map((item) => ({ amount: Number(item && item.amount) || 0, currency: (item && item.currency) || "" }))
+      .filter((item) => item.amount > 0)
+      .map((item) => `${item.amount}${item.currency ? ` ${item.currency}` : ""}`)
+      .join(" + ") || "0";
     queueSession.hidden = false;
     queueSession.innerHTML =
       `<span class="queue-panel__session-count">${escapeHtml(t("session.count", { count }))}</span>` +

@@ -221,6 +221,23 @@ describe("overlay widgets", () => {
     expect(w.host.innerHTML).toContain("RUB");
   });
 
+  test("StatWidget не смешивает валюты в одну сумму", () => {
+    const ctx = makeContext();
+    ctx.state.sessionDonations = {
+      count: 2,
+      amount: 500,
+      currency: "RUB",
+      amounts: [
+        { currency: "RUB", amount: 500 },
+        { currency: "USD", amount: 100 },
+      ],
+    };
+    const { w } = mountWidget(StatWidget, ctx, { type: "stat", config: { metric: "sessionAmount" } });
+
+    // 500 ₽ и $100 — две суммы, а не 600 «рублей».
+    expect(w.host.innerHTML).toContain("500 RUB + 100 USD");
+  });
+
   test("DeathWidget рендерит счётчик и обновляется по death_count_update", () => {
     const ctx = makeContext();
     const { w } = mountWidget(DeathWidget, ctx, { type: "death", config: { label: "Deaths", color: "#f00" } });

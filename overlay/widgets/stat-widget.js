@@ -57,6 +57,20 @@
       this.host.innerHTML = `<div class="widget-stat__icon">${icon}</div><div class="widget-stat__info"><span class="widget-stat__label">${this.context.escapeHtml(label)}</span><span class="widget-stat__value">${this.context.escapeHtml(value)}</span></div>`;
     }
 
+    // Сумма стрима может прийти в нескольких валютах: DonationAlerts не
+    // конвертирует, поэтому каждую показываем отдельно. Основная валюта —
+    // первая; старый снимок без `amounts` читается как раньше.
+    _sessionAmount(session) {
+      const { formatMoney, currencySymbol } = this.context;
+      const list = session && Array.isArray(session.amounts) ? session.amounts : null;
+      const source = list && list.length ? list : [{ amount: session.amount, currency: session.currency }];
+      const parts = source
+        .map((item) => ({ amount: Number(item && item.amount) || 0, currency: (item && item.currency) || "" }))
+        .filter((item) => item.amount > 0)
+        .map((item) => `${formatMoney(item.amount)}${item.currency ? ` ${currencySymbol(item.currency)}` : ""}`);
+      return parts.length ? parts.join(" + ") : formatMoney(0);
+    }
+
     _content() {
       const { ICONS, formatMoney, currencySymbol, t, state } = this.context;
       const metric = this.config.metric || "followers";
@@ -87,11 +101,10 @@
       }
       if (metric === "sessionAmount") {
         const session = state.sessionDonations;
-        const symbol = session && session.currency ? currencySymbol(session.currency) : "";
         return {
           icon: ICONS.donation,
           label: this.config.label || t("preview.sessionAmount"),
-          value: session ? `${formatMoney(session.amount)}${symbol ? ` ${symbol}` : ""}` : "—",
+          value: session ? this._sessionAmount(session) : "—",
         };
       }
       if (metric === "topDonation") {

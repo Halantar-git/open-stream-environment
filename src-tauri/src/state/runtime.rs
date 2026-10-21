@@ -65,8 +65,10 @@ pub struct Runtime {
     follower_count: Option<f64>,
     subscriber_count: Option<f64>,
     session_donations: i64,
-    session_amount: f64,
-    session_currency: String,
+    /// Суммы по валютам в порядке появления. Первая валюта сессии — основная:
+    /// её виджет показывает крупно, остальные приписываются рядом. Складывать
+    /// разные валюты в одно число нельзя — курсов в приложении нет.
+    session_amounts: Vec<(String, f64)>,
     /// Счётчик смертей: в JS это обычное число, дробное значение не округляется.
     death_count: f64,
     longshot: Option<Value>,
@@ -113,8 +115,7 @@ impl Runtime {
             follower_count: None,
             subscriber_count: None,
             session_donations: 0,
-            session_amount: 0.0,
-            session_currency: String::new(),
+            session_amounts: Vec::new(),
             death_count: 0.0,
             longshot: None,
             active_scene: "main".to_string(),
@@ -538,26 +539,43 @@ impl Runtime {
             return self.session_donations();
         }
         self.session_donations += 1;
-        self.session_amount += value;
-        if js_truthy(Some(currency)) {
-            self.session_currency = js_string(currency);
+        let code = crate::state::currency_code(currency);
+        match self
+            .session_amounts
+            .iter_mut()
+            .find(|(known, _)| *known == code)
+        {
+            Some((_, total)) => *total += value,
+            None => self.session_amounts.push((code, value)),
         }
         self.session_donations()
     }
 
     pub fn session_donations(&self) -> Value {
+        // `amount` и `currency` — основная валюта, ради старых клиентов и
+        // виджетов, которые знают только одно число. `amounts` — полная картина.
+        let amounts: Vec<Value> = self
+            .session_amounts
+            .iter()
+            .map(|(currency, amount)| json!({ "currency": currency, "amount": number_value(*amount) }))
+            .collect();
+        let (currency, amount) = self
+            .session_amounts
+            .first()
+            .map(|(currency, amount)| (currency.clone(), *amount))
+            .unwrap_or_else(|| (String::new(), 0.0));
         json!({
             "count": number_value(self.session_donations as f64),
-            "amount": number_value(self.session_amount),
-            "currency": self.session_currency,
+            "amount": number_value(amount),
+            "currency": currency,
+            "amounts": amounts,
         })
     }
 
     /// Новый стрим — новый счёт.
     pub fn reset_session_donations(&mut self) -> Value {
         self.session_donations = 0;
-        self.session_amount = 0.0;
-        self.session_currency = String::new();
+        self.session_amounts.clear();
         self.session_donations()
     }
 }
@@ -870,24 +888,39 @@ mod tests {
         let runtime = runtime();
         assert_eq!(
             runtime.session_donations(),
-            json!({ "count": 0, "amount": 0, "currency": "" })
+            json!({ "count": 0, "amount": 0, "currency": "", "amounts": [] })
         );
     }
 
     #[test]
-    fn donations_add_up_and_the_currency_is_the_last_one() {
+    fn amounts_are_kept_per_currency() {
         let mut runtime = runtime();
         runtime.add_donation_to_session(&json!(500), &json!("RUB"));
-        runtime.add_donation_to_session(&json!(300), &json!("RUB"));
+        runtime.add_donation_to_session(&json!(300), &json!("rub"));
         assert_eq!(
             runtime.session_donations(),
-            json!({ "count": 2, "amount": 800, "currency": "RUB" })
+            json!({
+                "count": 2,
+                "amount": 800,
+                "currency": "RUB",
+                "amounts": [{ "currency": "RUB", "amount": 800 }],
+            })
         );
 
-        runtime.add_donation_to_session(&json!(10), &json!("USD"));
+        // Другая валюта не прибавляется к рублям и не меняет основную:
+        // курсов в приложении нет, $100 — это не 100 ₽.
+        runtime.add_donation_to_session(&json!(100), &json!("USD"));
         assert_eq!(
             runtime.session_donations(),
-            json!({ "count": 3, "amount": 810, "currency": "USD" })
+            json!({
+                "count": 3,
+                "amount": 800,
+                "currency": "RUB",
+                "amounts": [
+                    { "currency": "RUB", "amount": 800 },
+                    { "currency": "USD", "amount": 100 },
+                ],
+            })
         );
     }
 
@@ -899,6 +932,7 @@ mod tests {
         runtime.add_donation_to_session(&Value::Null, &json!("RUB"));
         runtime.add_donation_to_session(&json!("abc"), &json!("RUB"));
         assert_eq!(runtime.session_donations()["count"], json!(0));
+        assert_eq!(runtime.session_donations()["amounts"], json!([]));
     }
 
     #[test]
@@ -908,7 +942,7 @@ mod tests {
         runtime.reset_session_donations();
         assert_eq!(
             runtime.session_donations(),
-            json!({ "count": 0, "amount": 0, "currency": "" })
+            json!({ "count": 0, "amount": 0, "currency": "", "amounts": [] })
         );
     }
 }

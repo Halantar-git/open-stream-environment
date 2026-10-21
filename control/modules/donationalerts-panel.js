@@ -51,7 +51,7 @@ const DONATIONS_REFRESH_DEBOUNCE_MS = 400;
 const RECOVER_TIMEOUT_MS = 30000;
 
 export function initDonationAlertsPanel({ t, ICONS, send, EVENT_TYPES, state, showToast, statusText, statusClass, utils }) {
-  const { escapeHtml, escapeAttr, formatMoney, currencySymbol, formatEventTime } = utils;
+  const { escapeHtml, escapeAttr, formatMoney, currencySymbol, formatSessionAmount, formatEventTime } = utils;
   const panel = el("daPanel");
   const toggleBtn = el("toggleDaBtn");
   const chip = el("daStatusChip");
@@ -92,7 +92,7 @@ export function initDonationAlertsPanel({ t, ICONS, send, EVENT_TYPES, state, sh
   let donationsTimer = null;
   let sessionOnly = false;
   let sessionStartedAt = 0;
-  let sessionCounts = { count: 0, amount: 0, currency: "" };
+  let sessionCounts = { count: 0, amount: 0, currency: "", amounts: null };
 
   function formatTime(ts) {
     const date = new Date(Number(ts) || Date.now());
@@ -313,8 +313,7 @@ export function initDonationAlertsPanel({ t, ICONS, send, EVENT_TYPES, state, sh
   */
   function renderSessionStats() {
     if (!sessionStats) return;
-    const symbol = sessionCounts.currency ? currencySymbol(sessionCounts.currency) : "";
-    const amount = `${formatMoney(sessionCounts.amount)}${symbol ? ` ${symbol}` : ""}`;
+    const amount = formatSessionAmount(sessionCounts);
     sessionStats.textContent = `${t("session.count", { count: sessionCounts.count })} · ${t("session.amount", { amount })}`;
   }
 
@@ -324,6 +323,7 @@ export function initDonationAlertsPanel({ t, ICONS, send, EVENT_TYPES, state, sh
       count: Number(payload.count) || 0,
       amount: Number(payload.amount) || 0,
       currency: payload.currency || "",
+      amounts: Array.isArray(payload.amounts) ? payload.amounts : null,
     };
     renderSessionStats();
   }

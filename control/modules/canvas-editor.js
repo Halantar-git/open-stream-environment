@@ -59,6 +59,7 @@ export function initCanvasEditor({
   escapeAttr,
   formatMoney,
   currencySymbol,
+  formatSessionAmount,
   resolveMediaUrl,
   onSelectionChange,
 }) {
@@ -497,7 +498,7 @@ export function initCanvasEditor({
             : metric === "sessionDonations"
             ? { icon: ICONS.donation, label: config.label || t("preview.sessionDonations"), value: state.sessionDonations ? formatMoney(state.sessionDonations.count) : "—" }
             : metric === "sessionAmount"
-            ? { icon: ICONS.donation, label: config.label || t("preview.sessionAmount"), value: state.sessionDonations ? `${formatMoney(state.sessionDonations.amount)} ${currencySymbol(state.sessionDonations.currency)}`.trim() : "—" }
+            ? { icon: ICONS.donation, label: config.label || t("preview.sessionAmount"), value: state.sessionDonations ? formatSessionAmount(state.sessionDonations) : "—" }
             : { icon: ICONS.follow, label: config.label || t("preview.followers"), value: state.stats.followerCount != null ? formatMoney(state.stats.followerCount) : "—" };
         return `<div class="widget-stat"><div class="widget-stat__icon">${sample.icon}</div><div class="widget-stat__info"><span class="widget-stat__label">${escapeHtml(sample.label)}</span><span class="widget-stat__value">${escapeHtml(sample.value)}</span></div></div>`;
       }

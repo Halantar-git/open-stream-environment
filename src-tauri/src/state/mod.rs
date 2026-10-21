@@ -80,6 +80,20 @@ pub(crate) fn string_trim(value: &Value) -> String {
     js_string(value).trim().to_string()
 }
 
+/// Код валюты в одном виде: без пробелов и в верхнем регистре; пустое — рубли.
+///
+/// DonationAlerts и DonateX присылают то `RUB`, то `rub`, а часть источников
+/// не присылает валюту совсем. Без нормализации один и тот же рубль попадал бы
+/// в две строки счёта, а пустой код нельзя было бы сравнить с настройкой цели.
+pub(crate) fn currency_code(value: &Value) -> String {
+    let code = string_trim(value).to_ascii_uppercase();
+    if code.is_empty() {
+        "RUB".to_string()
+    } else {
+        code
+    }
+}
+
 /// Размерность темы: `2d` или `3d` у встроенной, `2d` у своей, `None` — темы нет.
 ///
 /// По этому значению `applyLayoutPreset` решает, можно ли вернуть тему из пресета.
