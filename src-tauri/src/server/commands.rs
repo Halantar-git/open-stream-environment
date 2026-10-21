@@ -1280,6 +1280,15 @@ pub fn handle_message(
                 guest::broadcast_status(diagnostics);
             }
         }
+        event_types::CMD_GUEST_UNSUBSCRIBE => {
+            if let Some(id) = client {
+                let slot = payload.get("slot").and_then(Value::as_str).unwrap_or("");
+                // Отпускаем только этот слот: остальные виджеты мультикама
+                // в том же оверлее продолжают принимать своих гостей.
+                diagnostics.guests().unsubscribe_slot(id, slot);
+                guest::broadcast_status(diagnostics);
+            }
+        }
         event_types::CMD_SET_TWITCH_REWARDS => {
             {
                 let mut config = diagnostics.config();

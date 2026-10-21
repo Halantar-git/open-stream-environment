@@ -406,7 +406,11 @@ impl GuestHub {
         Some((slot.to_string(), guest, ready))
     }
 
-    /// Отписать приёмник при размонтировании виджета.
+    /// Отписать клиента от всех слотов — он отключился от шины.
+    ///
+    /// Отдельный слот освобождает [`Self::unsubscribe_slot`]: у мультикама
+    /// один оверлей держит несколько виджетов, и один из них не должен
+    /// отбирать поток у остальных.
     pub fn unsubscribe(&self, client: u64) {
         let mut inner = self.lock();
         for entry in inner.slots.values_mut() {
@@ -416,6 +420,25 @@ impl GuestHub {
                     entry.state = State::Accepted;
                 }
             }
+        }
+    }
+
+    /// Отписать клиента от одного слота: виджет размонтирован или сменил слот.
+    pub fn unsubscribe_slot(&self, client: u64, slot: &str) {
+        let Some(slot) = valid_slot(slot) else {
+            return;
+        };
+        let mut inner = self.lock();
+        let Some(entry) = inner.slots.get_mut(slot) else {
+            return;
+        };
+        // Чужой клиент не должен освобождать слот, который ему не принадлежит.
+        if entry.receiver != Some(client) {
+            return;
+        }
+        entry.receiver = None;
+        if entry.state == State::Ready {
+            entry.state = State::Accepted;
         }
     }
 
@@ -1402,5 +1425,32 @@ mod tests {
         hub.unsubscribe(21);
         assert_eq!(hub.snapshot()["slots"][0]["state"], json!("accepted"));
         assert_eq!(hub.receiver_client("cam2"), None);
+    }
+
+    #[test]
+    fn unsubscribing_one_slot_keeps_other_guest_cameras() {
+        let hub = hub();
+        let second = invite(&hub, "cam2");
+        let third = invite(&hub, "cam3");
+        assert!(hub.open("cam2", &second, "Аня"));
+        assert!(hub.open("cam3", &third, "Боря"));
+        assert!(hub.bind("cam2", 11));
+        assert!(hub.bind("cam3", 12));
+        assert!(hub.accept("cam2").is_some());
+        assert!(hub.accept("cam3").is_some());
+        // Один оверлей (клиент 21) держит двух гостей сразу.
+        assert!(hub.subscribe("cam2", 21).is_some());
+        assert!(hub.subscribe("cam3", 21).is_some());
+        assert_eq!(hub.receiver_client("cam2"), Some(21));
+        assert_eq!(hub.receiver_client("cam3"), Some(21));
+
+        // Виджет cam2 сменил слот или размонтировался — cam3 не страдает.
+        hub.unsubscribe_slot(21, "cam2");
+        assert_eq!(hub.receiver_client("cam2"), None);
+        assert_eq!(hub.receiver_client("cam3"), Some(21));
+
+        // Чужой клиент не может освободить чужой слот.
+        hub.unsubscribe_slot(22, "cam3");
+        assert_eq!(hub.receiver_client("cam3"), Some(21));
     }
 }

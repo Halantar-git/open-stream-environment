@@ -190,6 +190,7 @@
     CMD_GUEST_JOIN: "cmd_guest_join", // { host, port, slot, token, name? }
     CMD_GUEST_LEAVE: "cmd_guest_leave", // {}
     CMD_GUEST_SUBSCRIBE: "cmd_guest_subscribe", // { slot } — какой виджет принимает поток // { config }
+    CMD_GUEST_UNSUBSCRIBE: "cmd_guest_unsubscribe", // { slot } — виджет отпустил только этот слот
     CMD_RUN_OBS_COMMAND: "cmd_run_obs_command", // { id }
     CMD_SET_CAMERA_ANGLE: "cmd_set_camera_angle", // { angleId }
     CMD_TRIGGER_CAMERA_FILTER: "cmd_trigger_camera_filter", // { filterId }

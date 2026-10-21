@@ -445,9 +445,10 @@
     _teardownGuest() {
       if (this._guestSubscribed) {
         const { EVENT_TYPES, send } = this.context;
-        if (EVENT_TYPES && EVENT_TYPES.CMD_GUEST_SUBSCRIBE && typeof send === "function") {
-          // Пустой слот — «я больше не принимаю этот поток».
-          send(EVENT_TYPES.CMD_GUEST_SUBSCRIBE, { slot: "" });
+        if (EVENT_TYPES && EVENT_TYPES.CMD_GUEST_UNSUBSCRIBE && typeof send === "function") {
+          // Освобождаем только свой слот: остальные виджеты мультикама в том
+          // же оверлее продолжают принимать своих гостей.
+          send(EVENT_TYPES.CMD_GUEST_UNSUBSCRIBE, { slot: this._guestSlot });
         }
       }
       this._guestSubscribed = false;

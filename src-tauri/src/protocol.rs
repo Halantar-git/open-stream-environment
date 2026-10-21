@@ -201,6 +201,7 @@ event_types! {
     CMD_GUEST_JOIN => "cmd_guest_join",
     CMD_GUEST_LEAVE => "cmd_guest_leave",
     CMD_GUEST_SUBSCRIBE => "cmd_guest_subscribe",
+    CMD_GUEST_UNSUBSCRIBE => "cmd_guest_unsubscribe",
     CMD_RUN_OBS_COMMAND => "cmd_run_obs_command",
     CMD_SET_CAMERA_ANGLE => "cmd_set_camera_angle",
     CMD_TRIGGER_CAMERA_FILTER => "cmd_trigger_camera_filter",

@@ -309,6 +309,29 @@ describe("WebcamWidget", () => {
 
     expect(w.host.innerHTML).toContain("webcam.guestNoSlot");
     expect(w.context.send).not.toHaveBeenCalledWith(EVENT_TYPES.CMD_GUEST_SUBSCRIBE, { slot: "" });
+    expect(w.context.send).not.toHaveBeenCalledWith(EVENT_TYPES.CMD_GUEST_UNSUBSCRIBE, expect.anything());
+  });
+
+  test("смена слота освобождает только старый слот", () => {
+    const w = mount({ source: "remote", guestSlot: "cam2" });
+    w.context.send.mockClear();
+
+    // В том же оверлее может быть ещё один гость: его подписка не должна
+    // слетать из-за смены слота у этого виджета.
+    w.update({ config: { guestSlot: "cam3" } });
+
+    expect(w.context.send).toHaveBeenCalledWith(EVENT_TYPES.CMD_GUEST_UNSUBSCRIBE, { slot: "cam2" });
+    expect(w.context.send).toHaveBeenCalledWith(EVENT_TYPES.CMD_GUEST_SUBSCRIBE, { slot: "cam3" });
+  });
+
+  test("размонтирование освобождает только свой слот", () => {
+    const w = mount({ source: "remote", guestSlot: "cam3" });
+    w.context.send.mockClear();
+
+    w.unmount();
+
+    expect(w.context.send).toHaveBeenCalledWith(EVENT_TYPES.CMD_GUEST_UNSUBSCRIBE, { slot: "cam3" });
+    expect(w.context.send).not.toHaveBeenCalledWith(EVENT_TYPES.CMD_GUEST_SUBSCRIBE, expect.anything());
   });
 
   test("подтверждение гостя создаёт peer, а offer получает answer", async () => {
