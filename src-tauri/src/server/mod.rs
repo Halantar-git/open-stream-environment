@@ -677,13 +677,36 @@ fn static_routes(root: &Path) -> Router {
     }
     router
         .layer(middleware::from_fn(redirect_directory_roots))
-        .layer(middleware::from_fn(no_cache))
+        .layer(middleware::from_fn(no_store_static))
 }
 
-/// Просить клиента перепроверять файлы: статика меняется вместе с приложением, а
-/// адреса у файлов те же. Без этого webview (WebView2) может отдать
-/// закэшированный JS и не показать новую разметку — так значок в чате не
-/// появлялся до ручной чистки кэша.
+/// Отдавать статику целиком и не разрешать webview хранить копию.
+///
+/// `no-cache` здесь мало: он оставляет право на `304 Not Modified`, а `ServeDir`
+/// сравнивает `If-Modified-Since` со временем файла. Копия из dev-сборки может
+/// оказаться новее установленной — тогда сервер подтверждает её как свежую, и
+/// панель исполняет JS, которого рядом нет: импорт вроде
+/// `modules/templates-panel.js` отвечает 404, весь модуль не выполняется, окно
+/// остаётся пустым. Поэтому условные заголовки отбрасываем (ответ всегда 200 с
+/// телом), а `no-store` запрещает хранить новую копию.
+async fn no_store_static(mut request: Request, next: Next) -> Response {
+    for name in [
+        header::IF_MODIFIED_SINCE,
+        header::IF_NONE_MATCH,
+        header::IF_MATCH,
+        header::IF_UNMODIFIED_SINCE,
+    ] {
+        request.headers_mut().remove(name);
+    }
+    let mut response = next.run(request).await;
+    response
+        .headers_mut()
+        .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    response
+}
+
+/// Просить клиента перепроверять пользовательские медиа: файл могли заменить под
+/// тем же именем, но большие видео из кэша webview читаются быстрее.
 async fn no_cache(request: Request, next: Next) -> Response {
     let mut response = next.run(request).await;
     if !response.headers().contains_key(header::CACHE_CONTROL) {
@@ -1271,11 +1294,37 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn static_files_ask_the_client_to_revalidate() {
+    async fn static_files_are_not_stored_by_the_webview() {
         let fixture = Fixture::new();
         // Обновление не должно залипать в кэше webview: адреса файлов те же.
         let response = request(&fixture, "/control/control.html").await;
-        assert_eq!(response.headers()[header::CACHE_CONTROL], "no-cache");
+        assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
+    }
+
+    #[tokio::test]
+    async fn static_files_ignore_conditional_requests() {
+        let fixture = Fixture::new();
+        // Копия в webview может быть новее установленного файла (после запуска
+        // dev-сборки), и `304` оставил бы её: панель грузила бы модули, которых
+        // нет рядом с установленным приложением.
+        let mut request = request_from("/control/control.js", [127, 0, 0, 1]);
+        request.headers_mut().insert(
+            header::IF_MODIFIED_SINCE,
+            HeaderValue::from_static("Fri, 31 Dec 9999 23:59:59 GMT"),
+        );
+        let response = fixture
+            .app()
+            .oneshot(request)
+            .await
+            .expect("запрос должен дойти до сервера");
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = response
+            .into_body()
+            .collect()
+            .await
+            .expect("тело должно читаться")
+            .to_bytes();
+        assert!(body.len() > 1000, "скрипт панели подозрительно мал");
     }
 
     #[tokio::test]
