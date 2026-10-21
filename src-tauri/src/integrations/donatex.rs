@@ -63,6 +63,17 @@ pub fn donation_alert_from_payload(payload: &Value) -> Value {
         string_trimmed(payload.get("voiceFilePath"))
     };
     let music_link = string_trimmed(payload.get("musicLink"));
+    let music_title = string_trimmed(payload.get("musicTitle"));
+    let music_title = if music_title.is_empty() {
+        let fallback = string_trimmed(payload.get("musicName"));
+        if fallback.is_empty() {
+            string_trimmed(payload.get("songName"))
+        } else {
+            fallback
+        }
+    } else {
+        music_title
+    };
 
     let mut out = Map::new();
     out.insert("kind".to_string(), Value::from("donation"));
@@ -83,6 +94,9 @@ pub fn donation_alert_from_payload(payload: &Value) -> Value {
     out.insert("message".to_string(), Value::from(message));
     if !music_link.is_empty() {
         out.insert("musicLink".to_string(), Value::from(music_link));
+    }
+    if !music_title.is_empty() {
+        out.insert("musicTitle".to_string(), Value::from(music_title));
     }
     if !voice.is_empty() {
         out.insert("voiceUrl".to_string(), Value::from(voice));
@@ -126,6 +140,9 @@ pub fn goal_update_from_payload(payload: &Value) -> Option<Value> {
 /// `aiResponseVoiceFilePath` — озвучка именно ИИ. Раньше голос лежал в общем
 /// `paidVoice`, но в текущем API это платная озвучка доната, поэтому её
 /// больше не подставляем: иначе персонаж говорил бы голосом зрителя.
+///
+/// Имя персонажа отдаём только если DonateX его прислал: иначе виджет берёт
+/// имя из своих настроек, а не показывает чужое «Ассистент».
 pub fn ai_response_from_payload(payload: &Value) -> Option<Value> {
     if !payload.is_object() {
         return None;
@@ -137,12 +154,21 @@ pub fn ai_response_from_payload(payload: &Value) -> Option<Value> {
     }
 
     let audio = string_trimmed(payload.get("aiResponseVoiceFilePath"));
+    let name = string_trimmed(payload.get("aiCharacterName"));
+    let name = if name.is_empty() {
+        string_trimmed(payload.get("characterName"))
+    } else {
+        name
+    };
 
-    Some(json!({
-        "characterName": "Ассистент",
+    let mut out = json!({
         "aiText": ai_text,
         "aiAudio": audio,
-    }))
+    });
+    if !name.is_empty() {
+        out["characterName"] = Value::from(name);
+    }
+    Some(out)
 }
 
 /// Одно подключение к DonateX за раз.
@@ -485,6 +511,7 @@ mod tests {
             "currency": "RUB",
             "message": "gg",
             "musicLink": "https://example.com/track.mp3",
+            "musicTitle": "Night Drive",
             "voiceFilePath": "https://cdn.donatex.gg/voice.mp3",
         }));
         assert_eq!(alert["kind"], json!("donation"));
@@ -494,6 +521,7 @@ mod tests {
         assert_eq!(alert["currency"], json!("RUB"));
         assert_eq!(alert["message"], json!("gg"));
         assert_eq!(alert["musicLink"], json!("https://example.com/track.mp3"));
+        assert_eq!(alert["musicTitle"], json!("Night Drive"));
         assert_eq!(alert["voiceUrl"], json!("https://cdn.donatex.gg/voice.mp3"));
     }
 
@@ -560,9 +588,20 @@ mod tests {
                 "voiceFilePath": "https://cdn.donatex.gg/voice.mp3",
             })),
             Some(json!({
-                "characterName": "Ассистент",
                 "aiText": "Привет, спасибо!",
                 "aiAudio": "https://cdn.donatex.gg/ai.mp3",
+            }))
+        );
+        // Имя берётся из ответа DonateX, если сервис его прислал.
+        assert_eq!(
+            ai_response_from_payload(&json!({
+                "aiResponse": "Здорово!",
+                "aiCharacterName": "Кэти",
+            })),
+            Some(json!({
+                "characterName": "Кэти",
+                "aiText": "Здорово!",
+                "aiAudio": "",
             }))
         );
         // Платная озвучка и голос доната — не голос ИИ.
@@ -573,7 +612,6 @@ mod tests {
                 "voiceFilePath": "https://cdn.donatex.gg/voice.mp3",
             })),
             Some(json!({
-                "characterName": "Ассистент",
                 "aiText": "Здорово!",
                 "aiAudio": "",
             }))

@@ -1,5 +1,5 @@
 {
-  "sourceHash": "545bb853e1a097ff",
+  "sourceHash": "5638a01a86631643",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -1819,7 +1819,7 @@
     "donatex-ai": {
       "type": "donatex-ai",
       "label": "ИИ-персонаж DonateX",
-      "description": "Реплика ИИ-персонажа DonateX с озвучкой; можно встроить и внешнюю ссылку",
+      "description": "Реплики ИИ-персонажа DonateX с озвучкой, именем, донатером и очередью; можно встроить и внешнюю ссылку",
       "icon": "widgetDonatexAi",
       "services": [
         "donatex"
@@ -1833,7 +1833,10 @@
       "minW": 16,
       "minH": 10,
       "defaultConfig": {
+        "characterName": "",
         "showName": true,
+        "showDonor": true,
+        "queue": true,
         "volume": 0.8,
         "hideDelayMs": 5000
       }
@@ -1841,7 +1844,7 @@
     "music": {
       "type": "music",
       "label": "Музыка донатов",
-      "description": "Трек, приложенный к донату: обложка, название, автор и прогресс",
+      "description": "Трек, приложенный к донату: обложка, название, автор, сумма и очередь",
       "icon": "widgetMusic",
       "services": [
         "donatex"
@@ -1855,7 +1858,10 @@
       "minW": 20,
       "minH": 6,
       "defaultConfig": {
-        "autoplay": true
+        "autoplay": true,
+        "queue": true,
+        "showAmount": true,
+        "volume": 1
       }
     }
   },

@@ -20,6 +20,11 @@
   attached to a donation. Shows cover art (YouTube thumbnail or a rotating
   vinyl placeholder), a marquee track title, the requester, a countdown timer
   and a progress bar. Accent colors follow the active overlay theme.
+
+  Donations can arrive back to back, so tracks wait in a queue instead of
+  cutting each other off. If the link is not a direct audio file, the widget
+  moves the progress bar itself for the same simulated duration and only then
+  takes the next track.
 */
 (function (root, factory) {
   const BaseWidget =
@@ -38,6 +43,7 @@
   "use strict";
 
   const SIMULATED_PLAY_MS = 20000;
+  const SIM_TICK_MS = 250;
 
   function youtubeVideoId(link) {
     if (!link) return "";
@@ -68,6 +74,22 @@
     return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   }
 
+  function clamp01(value, fallback) {
+    const number = Number(value);
+    if (!isFinite(number)) return fallback;
+    return Math.max(0, Math.min(1, number));
+  }
+
+  /// «250 ₽» в локали интерфейса — тем же форматером, что и алерты.
+  function sumText(context, amount, currency) {
+    if (amount == null || amount === "") return "";
+    const money = context.formatMoney ? context.formatMoney(amount) : String(amount);
+    const symbol = context.currencySymbol
+      ? context.currencySymbol(currency)
+      : String(currency || "");
+    return `${money} ${symbol}`.trim();
+  }
+
   class MusicWidget extends BaseWidget {
     onMount() {
       this.host = document.createElement("div");
@@ -76,57 +98,115 @@
 
       this._audio = null;
       this._simTimer = null;
+      this._simTick = null;
       this.current = null;
+      this.queue = [];
       this.el = {};
 
       this.buildDom();
 
       this.subscribe(this.context.EVENT_TYPES.ALERT, (alert) => this.onAlert(alert));
       this.subscribe(this.context.EVENT_TYPES.LOCALES, () => {
-        if (this.current) this.applyPlaying(this.current);
+        if (this.current) this.renderMeta(this.current);
         else this.renderIdle();
+        this.renderQueue();
       });
       this.renderIdle();
+      this.renderQueue();
     }
 
     onUnmount() {
       this.stopPlayback();
       this.current = null;
+      this.queue.length = 0;
+    }
+
+    onUpdate() {
+      // Очередь выключили — ждущие треки больше не нужны.
+      if (this.config.queue === false && this.queue.length) {
+        this.queue.length = 0;
+        this.renderQueue();
+      }
+      if (this._audio) this._audio.volume = clamp01(this.config.volume, 1);
+      if (this.current) this.renderMeta(this.current);
     }
 
     onAlert(alert) {
       if (!alert || alert.kind !== "donation" || !alert.musicLink) return;
-      this.play({ user: alert.user, musicLink: alert.musicLink, amount: alert.amount, currency: alert.currency });
+      const track = {
+        user: alert.user,
+        musicLink: alert.musicLink,
+        musicTitle: alert.musicTitle,
+        amount: alert.amount,
+        currency: alert.currency,
+      };
+      if (this.current && this.queueEnabled()) {
+        this.queue.push(track);
+        this.renderQueue();
+        return;
+      }
+      this.play(track);
+    }
+
+    queueEnabled() {
+      return this.config.queue !== false;
     }
 
     buildDom() {
-      this.host.innerHTML = `
-        <div class="orbital">
-          <div class="orbital__cover">
-            <span class="orbital__vinyl"></span>
-            <span class="orbital__note">♪</span>
-            <img class="orbital__art" alt="" />
-          </div>
-          <div class="orbital__meta">
-            <div class="orbital__track">
-              <span class="orbital__track-inner">
-                <span class="orbital__track-text"></span><span class="orbital__track-text"></span>
-              </span>
-            </div>
-            <div class="orbital__requester"></div>
-          </div>
-          <div class="orbital__timer">00:00 / --:--</div>
-        </div>
-        <div class="orbital__progress"><span class="orbital__progress-fill"></span></div>`;
+      const el = (tag, className) => {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        return node;
+      };
+
+      const orbital = el("div", "orbital");
+      const cover = el("div", "orbital__cover");
+      const vinyl = el("span", "orbital__vinyl");
+      const note = el("span", "orbital__note");
+      note.textContent = "♪";
+      const art = el("img", "orbital__art");
+      art.alt = "";
+      cover.appendChild(vinyl);
+      cover.appendChild(note);
+      cover.appendChild(art);
+
+      const meta = el("div", "orbital__meta");
+      const track = el("div", "orbital__track");
+      const trackInner = el("span", "orbital__track-inner");
+      const text1 = el("span", "orbital__track-text");
+      const text2 = el("span", "orbital__track-text");
+      trackInner.appendChild(text1);
+      trackInner.appendChild(text2);
+      track.appendChild(trackInner);
+
+      const requester = el("div", "orbital__requester");
+      const queue = el("div", "orbital__queue");
+      queue.style.display = "none";
+      meta.appendChild(track);
+      meta.appendChild(requester);
+      meta.appendChild(queue);
+
+      const timer = el("div", "orbital__timer");
+      orbital.appendChild(cover);
+      orbital.appendChild(meta);
+      orbital.appendChild(timer);
+
+      const progress = el("div", "orbital__progress");
+      const progressFill = el("span", "orbital__progress-fill");
+      progress.appendChild(progressFill);
+
+      this.host.appendChild(orbital);
+      this.host.appendChild(progress);
 
       this.el = {
-        track: this.host.querySelector(".orbital__track"),
-        trackTexts: this.host.querySelectorAll(".orbital__track-text"),
-        requester: this.host.querySelector(".orbital__requester"),
-        timer: this.host.querySelector(".orbital__timer"),
-        progressFill: this.host.querySelector(".orbital__progress-fill"),
-        art: this.host.querySelector(".orbital__art"),
-        note: this.host.querySelector(".orbital__note"),
+        track,
+        trackTexts: [text1, text2],
+        requester,
+        queue,
+        timer,
+        progressFill,
+        art,
+        note,
       };
     }
 
@@ -144,9 +224,19 @@
 
     applyPlaying(info) {
       this.resetProgress();
+      this.renderMeta(info);
+    }
+
+    renderMeta(info) {
       const title = this.trackTitle(info);
-      this.el.trackTexts.forEach((s) => (s.textContent = title));
-      this.el.requester.textContent = this.context.t("music.requester", { user: info.user || "Аноним" });
+      this.el.trackTexts.forEach((span) => (span.textContent = title));
+
+      const user = info.user || this.context.t("music.anonymous");
+      const requester = this.context.t("music.requester", { user });
+      const sum =
+        this.config.showAmount === false ? "" : sumText(this.context, info.amount, info.currency);
+      this.el.requester.textContent = sum ? `${requester} · ${sum}` : requester;
+
       this.setCoverArt(info.musicLink);
       this.syncOrbitalMarquee();
     }
@@ -154,25 +244,45 @@
     renderIdle() {
       this.resetProgress();
       const idle = this.context.t("music.idle");
-      this.el.trackTexts.forEach((s) => (s.textContent = idle));
+      this.el.trackTexts.forEach((span) => (span.textContent = idle));
       this.el.requester.textContent = "";
       this.setCoverArt("");
       this.syncOrbitalMarquee();
     }
 
+    renderQueue() {
+      if (!this.el.queue) return;
+      const count = this.queue.length;
+      if (!count) {
+        this.el.queue.textContent = "";
+        this.el.queue.style.display = "none";
+        return;
+      }
+      this.el.queue.textContent = this.context.t("music.queue", { count });
+      this.el.queue.style.display = "";
+    }
+
     startAudio(link) {
+      this.clearSimTimer();
+      const src = this.context.resolveMediaUrl ? this.context.resolveMediaUrl(link) : link;
       let audio;
       try {
-        audio = new Audio(link);
+        audio = new Audio(src);
       } catch (_) {
         this.scheduleSimulatedStop();
         return;
       }
-      audio.volume = 1;
+      audio.volume = clamp01(this.config.volume, 1);
       this._audio = audio;
-      audio.addEventListener("ended", () => this.idle());
-      audio.addEventListener("error", () => this.idle());
-      audio.addEventListener("timeupdate", () => this.updateProgress(audio.currentTime, audio.duration));
+      audio.addEventListener("ended", () => {
+        if (this._audio === audio) this.idle();
+      });
+      audio.addEventListener("error", () => {
+        if (this._audio === audio) this.idle();
+      });
+      audio.addEventListener("timeupdate", () => {
+        if (this._audio === audio) this.updateProgress(audio.currentTime, audio.duration);
+      });
 
       const started = audio.play();
       if (started && typeof started.catch === "function") {
@@ -193,19 +303,32 @@
       if (this.el.progressFill) this.el.progressFill.style.width = "0%";
     }
 
+    /// Ссылка может быть страницей YouTube: звука из неё не будет, поэтому
+    /// показываем тот же отрезок времени полосой прогресса и идём дальше.
     scheduleSimulatedStop() {
       this.clearSimTimer();
+      const total = SIMULATED_PLAY_MS;
+      const startedAt = Date.now();
+      this.updateProgress(0, total / 1000);
+      this._simTick = this.every(() => {
+        const elapsed = Math.min(total, Date.now() - startedAt);
+        this.updateProgress(elapsed / 1000, total / 1000);
+      }, SIM_TICK_MS);
       this._simTimer = this.later(() => {
         this._simTimer = null;
         if (!this.host.classList.contains("is-playing")) return;
         this.idle();
-      }, SIMULATED_PLAY_MS);
+      }, total);
     }
 
     clearSimTimer() {
       if (this._simTimer) {
         this.clearTimer(this._simTimer);
         this._simTimer = null;
+      }
+      if (this._simTick) {
+        this.clearTimer(this._simTick);
+        this._simTick = null;
       }
     }
 
@@ -214,15 +337,22 @@
       this.clearSimTimer();
       this.host.classList.remove("is-playing");
       this.current = null;
+      if (this.queue.length) {
+        const next = this.queue.shift();
+        this.renderQueue();
+        this.play(next);
+        return;
+      }
+      this.renderQueue();
       this.renderIdle();
     }
 
     stopAudio() {
-      const a = this._audio;
+      const audio = this._audio;
       this._audio = null;
-      if (a) {
+      if (audio) {
         try {
-          a.pause();
+          audio.pause();
         } catch (_) {
           /* ignore */
         }
@@ -238,12 +368,15 @@
     // ---- text / art helpers ----
 
     trackTitle(info) {
+      const explicit = info && typeof info.musicTitle === "string" ? info.musicTitle.trim() : "";
+      if (explicit) return explicit;
+
       const link = info && info.musicLink;
       if (link) {
         try {
           const u = new URL(link);
-          const seg = decodeURIComponent((u.pathname.split("/").filter(Boolean).pop() || "")).trim();
-          if (seg && !/youtube\.com$|youtu\.be$/.test(u.hostname)) return seg;
+          const segment = decodeURIComponent((u.pathname.split("/").filter(Boolean).pop() || "")).trim();
+          if (segment && !/youtube\.com$|youtu\.be$/.test(u.hostname)) return segment;
         } catch (_) {
           /* ignore */
         }

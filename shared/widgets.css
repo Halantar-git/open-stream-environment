@@ -2523,6 +2523,23 @@
   text-transform: uppercase;
   color: var(--md-primary, #00f0ff);
 }
+.ai-donor {
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: var(--md-on-surface-variant, #b6b3a7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ai-queue {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--md-primary, #00f0ff);
+  opacity: 0.85;
+}
+.widget-donatex-ai.is-speaking .ai-avatar-box {
+  animation: donatex-ai-glow 1.2s ease-in-out infinite;
+}
 .ai-text-content {
   font-size: clamp(13px, 2.2vh, 18px);
   line-height: 1.4;
@@ -2532,6 +2549,10 @@
 @keyframes donatex-ai-pulse {
   0%, 100% { transform: scale(0.94); opacity: 0.75; }
   50% { transform: scale(1.04); opacity: 1; }
+}
+@keyframes donatex-ai-glow {
+  0%, 100% { filter: drop-shadow(0 0 4px var(--md-primary, #00f0ff)); }
+  50% { filter: drop-shadow(0 0 12px var(--md-primary, #00f0ff)); }
 }
 
 /* ---------- DonateX music player ---------- */
@@ -2614,6 +2635,14 @@
 .orbital__requester {
   font-size: 12px;
   color: var(--md-on-surface-variant, #b6b3a7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.orbital__queue {
+  font-size: 11px;
+  color: var(--md-primary, #00f0ff);
+  opacity: 0.85;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

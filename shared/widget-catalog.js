@@ -1008,24 +1008,24 @@
     "donatex-ai": {
       type: "donatex-ai",
       label: "ИИ-персонаж DonateX",
-      description: "Реплика ИИ-персонажа DonateX с озвучкой; можно встроить и внешнюю ссылку",
+      description: "Реплики ИИ-персонажа DonateX с озвучкой, именем, донатером и очередью; можно встроить и внешнюю ссылку",
       icon: "widgetDonatexAi",
       services: ["donatex"],
       defaultGeometry: { x: 30, y: 58, w: 40, h: 30 },
       minW: 16,
       minH: 10,
-      defaultConfig: { showName: true, volume: 0.8, hideDelayMs: 5000 },
+      defaultConfig: { characterName: "", showName: true, showDonor: true, queue: true, volume: 0.8, hideDelayMs: 5000 },
     },
     music: {
       type: "music",
       label: "Музыка донатов",
-      description: "Трек, приложенный к донату: обложка, название, автор и прогресс",
+      description: "Трек, приложенный к донату: обложка, название, автор, сумма и очередь",
       icon: "widgetMusic",
       services: ["donatex"],
       defaultGeometry: { x: 30, y: 84, w: 40, h: 12 },
       minW: 20,
       minH: 6,
-      defaultConfig: { autoplay: true },
+      defaultConfig: { autoplay: true, queue: true, showAmount: true, volume: 1 },
     },
 
   };

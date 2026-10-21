@@ -81,7 +81,15 @@ function makeContext() {
   return {
     bus: new EventBus(),
     EVENT_TYPES,
-    t: (k) => k,
+    t: (key, params) => {
+      let out = key;
+      if (params) {
+        Object.entries(params).forEach(([name, value]) => (out += `:${name}=${value}`));
+      }
+      return out;
+    },
+    formatMoney: (value) => String(value),
+    currencySymbol: (code) => (String(code || "").toUpperCase() === "RUB" ? "₽" : String(code || "")),
     resolveMediaUrl: (p) => p || "",
   };
 }
@@ -160,6 +168,64 @@ describe("donatex-ai widget", () => {
     const { w } = mountWidget({ showName: false });
     w.context.bus.emit(EVENT_TYPES.DONATEX_AI_EVENT, { characterName: "Katy", aiText: "hi" });
     expect(w.nameEl.style.display).toBe("none");
+    w.unmount();
+  });
+
+  test("имя из настроек, если DonateX его не прислал", () => {
+    const { w } = mountWidget({ characterName: "Кэти" });
+    w.context.bus.emit(EVENT_TYPES.DONATEX_AI_EVENT, { aiText: "hi" });
+    expect(w.nameEl.textContent).toBe("Кэти");
+    w.unmount();
+  });
+
+  test("показывает донатера и сумму", () => {
+    const { w } = mountWidget({});
+    w.context.bus.emit(EVENT_TYPES.DONATEX_AI_EVENT, {
+      aiText: "Спасибо!",
+      user: "fan",
+      amount: 250,
+      currency: "RUB",
+    });
+    expect(w.donorEl.textContent).toBe("fan · 250 ₽");
+    expect(w.donorEl.style.display).toBe("");
+    w.unmount();
+  });
+
+  test("showDonor: false скрывает донатера, но оставляет реплику", () => {
+    const { w } = mountWidget({ showDonor: false });
+    w.context.bus.emit(EVENT_TYPES.DONATEX_AI_EVENT, {
+      aiText: "Спасибо!",
+      user: "fan",
+      amount: 250,
+      currency: "RUB",
+    });
+    expect(w.donorEl.style.display).toBe("none");
+    expect(w.textEl.textContent).toBe("Спасибо!");
+    w.unmount();
+  });
+
+  test("вторая реплика ждёт своей очереди", () => {
+    const { w } = mountWidget({});
+    w.context.bus.emit(EVENT_TYPES.DONATEX_AI_EVENT, { aiText: "Первая" });
+    w.context.bus.emit(EVENT_TYPES.DONATEX_AI_EVENT, { aiText: "Вторая" });
+
+    expect(w.textEl.textContent).toBe("Первая");
+    expect(w.queueEl.textContent).toBe("donatexAi.queue:count=1");
+    expect(w.queueEl.style.display).toBe("");
+
+    w.hide();
+    expect(w.textEl.textContent).toBe("Вторая");
+    expect(w.queueEl.style.display).toBe("none");
+    w.unmount();
+  });
+
+  test("очередь можно выключить — новая реплика заменяет текущую", () => {
+    const { w } = mountWidget({ queue: false });
+    w.context.bus.emit(EVENT_TYPES.DONATEX_AI_EVENT, { aiText: "Первая" });
+    w.context.bus.emit(EVENT_TYPES.DONATEX_AI_EVENT, { aiText: "Вторая" });
+
+    expect(w.textEl.textContent).toBe("Вторая");
+    expect(w.queueEl.style.display).toBe("none");
     w.unmount();
   });
 });
