@@ -162,6 +162,54 @@ pub fn sanitize_ticker_messages(value: &Value) -> Value {
     Value::Array(out)
 }
 
+/// Сколько ICE-адресов принимаем из одного поля: больше только замедляет сбор
+/// кандидатов, а держать десяток STUN/TURN на практике некому.
+const ICE_URLS_LIMIT: usize = 8;
+
+/// Адрес ICE-сервера: `stun:`/`stuns:`/`turn:`/`turns:` и ничего лишнего.
+/// Схему проверяем здесь, потому что список уходит в браузерный
+/// `RTCPeerConnection` и гостю по signaling.
+fn is_ice_url(url: &str) -> bool {
+    if url.is_empty() || url.len() > 200 || !url.chars().all(|ch| ch.is_ascii_graphic()) {
+        return false;
+    }
+    let lower = url.to_ascii_lowercase();
+    ["stun:", "stuns:", "turn:", "turns:"]
+        .iter()
+        .any(|prefix| lower.starts_with(prefix))
+}
+
+/// Список ICE-адресов строкой через пробел. Панель присылает строку из поля
+/// ввода, но массив тоже принимаем — так список мог выглядеть в старом конфиге.
+fn ice_url_list(value: Option<&Value>) -> String {
+    let parts: Vec<String> = match value {
+        Some(Value::Array(items)) => items
+            .iter()
+            .filter_map(Value::as_str)
+            .map(str::to_string)
+            .collect(),
+        Some(Value::String(text)) => text.split([' ', ',', ';']).map(str::to_string).collect(),
+        _ => Vec::new(),
+    };
+    let mut urls: Vec<String> = Vec::new();
+    for part in parts {
+        let url = part.trim();
+        if !is_ice_url(url) || urls.iter().any(|known| known == url) {
+            continue;
+        }
+        urls.push(url.to_string());
+        if urls.len() >= ICE_URLS_LIMIT {
+            break;
+        }
+    }
+    urls.join(" ")
+}
+
+fn ice_text(value: Option<&Value>, limit: usize) -> String {
+    let text = value.and_then(Value::as_str).unwrap_or("").trim();
+    text.chars().take(limit).collect()
+}
+
 /// Канал и порт; порт зажат в 1024–65535.
 pub fn set_app_config(config: &mut ConfigFile, patch: &Value) {
     if let Some(channel) = patch.get("twitchChannel") {
@@ -185,6 +233,24 @@ pub fn set_app_config(config: &mut ConfigFile, patch: &Value) {
             DEFAULT_GUEST_SIGNAL_URL.to_string()
         };
         config.set("guest_signal_url", Value::from(value));
+    }
+    if let Some(ice) = patch.get("guestIce").and_then(Value::as_object) {
+        config.set(
+            "guest_stun_urls",
+            Value::from(ice_url_list(ice.get("stunUrls"))),
+        );
+        config.set(
+            "guest_turn_urls",
+            Value::from(ice_url_list(ice.get("turnUrls"))),
+        );
+        config.set(
+            "guest_turn_user",
+            Value::from(ice_text(ice.get("turnUser"), 200)),
+        );
+        config.set(
+            "guest_turn_password",
+            Value::from(ice_text(ice.get("turnPassword"), 200)),
+        );
     }
     if let Some(messages) = patch.get("tickerMessages") {
         config.set("ticker_messages", sanitize_ticker_messages(messages));
@@ -870,6 +936,26 @@ pub fn normalize_config(config: &mut ConfigFile) {
         signal
     };
     config.set("guest_signal_url", Value::from(signal));
+
+    // ICE гостевых камер: списки STUN/TURN и учётные данные. Пустые значения —
+    // встроенные STUN-серверы из `shared/guest-protocol.js`, поэтому умолчаний
+    // здесь нет: пустая строка и значит «по умолчанию».
+    config.set(
+        "guest_stun_urls",
+        Value::from(ice_url_list(config.get("guest_stun_urls"))),
+    );
+    config.set(
+        "guest_turn_urls",
+        Value::from(ice_url_list(config.get("guest_turn_urls"))),
+    );
+    config.set(
+        "guest_turn_user",
+        Value::from(ice_text(config.get("guest_turn_user"), 200)),
+    );
+    config.set(
+        "guest_turn_password",
+        Value::from(ice_text(config.get("guest_turn_password"), 200)),
+    );
 
     // Сохранённые заготовки новостной ленты: правит панель «Шаблоны».
     config.set(
@@ -1781,6 +1867,34 @@ mod tests {
         );
         assert_eq!(config.get("port"), Some(&json!(9000)));
         assert_eq!(config.get("twitch").unwrap()["channel"], json!("halantar"));
+    }
+
+    #[test]
+    fn guest_ice_lists_keep_only_valid_addresses() {
+        let fixture = Fixture::new("ice");
+        let mut config = fixture.config();
+
+        set_app_config(
+            &mut config,
+            &json!({
+                "guestIce": {
+                    "stunUrls": "stun:stun.example.org:3478, http://чужое, stun:stun.example.org:3478",
+                    "turnUrls": ["turn:turn.example.org:3478", "turn:turn.example.org:3478"],
+                    "turnUser": " guest ",
+                    "turnPassword": "secret",
+                }
+            }),
+        );
+        assert_eq!(
+            config.get("guest_stun_urls"),
+            Some(&json!("stun:stun.example.org:3478"))
+        );
+        assert_eq!(
+            config.get("guest_turn_urls"),
+            Some(&json!("turn:turn.example.org:3478"))
+        );
+        assert_eq!(config.get("guest_turn_user"), Some(&json!("guest")));
+        assert_eq!(config.get("guest_turn_password"), Some(&json!("secret")));
     }
 
     #[test]

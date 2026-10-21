@@ -86,9 +86,18 @@ export function createGuestShare({ state, send, EVENT_TYPES, onStatus }) {
     stream = null;
   }
 
-  function createPeer() {
+  // STUN/TURN для peer'а. Настройки приходят с машины хоста в подтверждении и
+  // в `receiver_ready`; свои (на случай локального запуска) — из состояния
+  // панели. Без STUN в интернете остаются только локальные кандидаты.
+  function peerIceServers(overrides) {
+    const protocol = typeof window !== "undefined" ? window.GuestProtocol : null;
+    if (!protocol || typeof protocol.iceServers !== "function") return [];
+    return protocol.iceServers(overrides || state.guestIce || null);
+  }
+
+  function createPeer(ice) {
     closePeer();
-    peer = new RTCPeerConnection({ iceServers: [] });
+    peer = new RTCPeerConnection({ iceServers: peerIceServers(ice) });
     peer.onicecandidate = (event) => {
       if (!event.candidate) return;
       send(EVENT_TYPES.GUEST_SIGNAL, {
@@ -119,7 +128,7 @@ export function createGuestShare({ state, send, EVENT_TYPES, onStatus }) {
     }
   }
 
-  async function start(targetSlot) {
+  async function start(targetSlot, ice) {
     if (!targetSlot) return;
     const current = ++generation;
     closePeer();
@@ -161,7 +170,7 @@ export function createGuestShare({ state, send, EVENT_TYPES, onStatus }) {
       return;
     }
     stream = captured;
-    createPeer();
+    createPeer(ice);
     for (const track of stream.getTracks()) peer.addTrack(track, stream);
     setStatus("connecting");
     try {

@@ -1119,7 +1119,28 @@ fn broadcast_guest_left(clients: &ClientRegistry, slot: &str) {
 pub fn status_payload(diagnostics: &crate::diagnostics::Diagnostics) -> Value {
     let mut payload = diagnostics.guests().snapshot();
     payload["signalUrl"] = Value::from(diagnostics.guest_signal_url());
+    payload["ice"] = ice_settings(diagnostics);
     payload
+}
+
+/// Настройки ICE (STUN/TURN) гостевых камер. Пустые значения — умолчания в
+/// `shared/guest-protocol.js`: сборка конфигурации живёт в одном месте, чтобы
+/// обе стороны WebRTC получали одинаковые серверы.
+pub fn ice_settings(diagnostics: &crate::diagnostics::Diagnostics) -> Value {
+    let config = diagnostics.config();
+    let text = |key: &str| {
+        config
+            .get(key)
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string()
+    };
+    json!({
+        "stunUrls": text("guest_stun_urls"),
+        "turnUrls": text("guest_turn_urls"),
+        "turnUser": text("guest_turn_user"),
+        "turnPassword": text("guest_turn_password"),
+    })
 }
 
 /// Разослать снимок слотов всем локальным окнам.

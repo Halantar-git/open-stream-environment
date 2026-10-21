@@ -385,6 +385,54 @@ describe("WebcamWidget", () => {
     }
   });
 
+  test("peer собирается со STUN, а подтверждение хоста добавляет TURN", () => {
+    const created = [];
+    class FakePeer {
+      constructor(config) {
+        this.config = config;
+        this.remoteDescription = null;
+        this.localDescription = null;
+        this.connectionState = "new";
+        created.push(this);
+      }
+      close() {}
+      setRemoteDescription() {
+        return Promise.resolve();
+      }
+      createAnswer() {
+        return Promise.resolve({ type: "answer", sdp: "v=0" });
+      }
+      setLocalDescription() {
+        return Promise.resolve();
+      }
+      addIceCandidate() {
+        return Promise.resolve();
+      }
+    }
+    const protocol = require("../shared/guest-protocol");
+    const previousWindow = global.window;
+    const previousPeer = global.RTCPeerConnection;
+    global.window = { ...global.window, GuestProtocol: protocol };
+    global.RTCPeerConnection = FakePeer;
+    try {
+      const w = mount({ source: "remote", guestSlot: "cam2" });
+      w.context.bus.emit(EVENT_TYPES.GUEST_ACCEPTED, {
+        slot: "cam2",
+        ice: { turnUrls: "turn:turn.example.org:3478", turnUser: "u", turnPassword: "p" },
+      });
+
+      // Без явных адресов остаются встроенные STUN — иначе в интернете
+      // соединение держится только на локальных кандидатах.
+      expect(created[0].config.iceServers).toEqual([
+        { urls: protocol.DEFAULT_STUN },
+        { urls: ["turn:turn.example.org:3478"], username: "u", credential: "p" },
+      ]);
+    } finally {
+      global.window = previousWindow;
+      global.RTCPeerConnection = previousPeer;
+    }
+  });
+
   test("«только видео» не выводит звук гостя и просит его выключить", () => {
     const created = [];
     class FakePeer {

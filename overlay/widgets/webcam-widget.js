@@ -90,6 +90,8 @@
       this._guestApplying = false;
       // Последнее отправленное гостю состояние звука (null — ещё не отправляли).
       this._guestAudioSent = null;
+      // STUN/TURN, присланные хостом: без них через интернет не собрать путь.
+      this._guestIce = null;
 
       const { EVENT_TYPES } = this.context;
       if (EVENT_TYPES && EVENT_TYPES.CAMERA_VIDEO_FRAME) {
@@ -100,6 +102,9 @@
       }
       if (EVENT_TYPES && EVENT_TYPES.OVERLAY_CAMERA_CONFIG) {
         this.subscribe(EVENT_TYPES.OVERLAY_CAMERA_CONFIG, (payload) => this._onCameraConfig(payload));
+      }
+      if (EVENT_TYPES && EVENT_TYPES.GUEST_STATUS) {
+        this.subscribe(EVENT_TYPES.GUEST_STATUS, (payload) => this._onGuestStatus(payload));
       }
       if (EVENT_TYPES && EVENT_TYPES.GUEST_ACCEPTED) {
         this.subscribe(EVENT_TYPES.GUEST_ACCEPTED, (payload) => this._onGuestAccepted(payload));
@@ -277,9 +282,16 @@
     _onGuestAccepted(payload) {
       const slot = payload && payload.slot;
       if (!slot || slot !== this._guestSlot) return;
+      if (payload.ice) this._guestIce = payload.ice;
       this._createGuestPeer();
       this._guestState = "connecting";
       this._updateGuestEmpty();
+    }
+
+    // Настройки ICE в снимке слотов — запасной источник: подтверждение могло
+    // прийти до монтирования виджета, а пересборка peer'а все равно нужна.
+    _onGuestStatus(payload) {
+      if (payload && payload.ice) this._guestIce = payload.ice;
     }
 
     _onGuestSignal(payload) {
@@ -356,7 +368,10 @@
         this._updateGuestEmpty();
         return;
       }
-      const peer = new RTCPeerConnection({ iceServers: [] });
+      const protocol = typeof window !== "undefined" ? window.GuestProtocol : null;
+      const iceServers =
+        protocol && typeof protocol.iceServers === "function" ? protocol.iceServers(this._guestIce) : [];
+      const peer = new RTCPeerConnection({ iceServers });
       this._guestPeer = peer;
       this._guestQueuedCandidates = [];
       peer.onicecandidate = (event) => {
@@ -403,6 +418,8 @@
       }
       this._guestPeer = null;
       this._guestQueuedCandidates = [];
+      // Настройки ICE живут на слот, а не на peer: пересборка соединения не
+      // должна терять присланный хостом TURN.
       // Новый peer у гостя тоже новый: состояние звука придётся передать заново.
       this._guestAudioSent = null;
     }
@@ -453,6 +470,7 @@
       }
       this._guestSubscribed = false;
       this._closeGuestPeer();
+      this._guestIce = null;
       this._guestStream = null;
       this._guestSlot = "";
       this._guestState = "idle";

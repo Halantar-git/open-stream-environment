@@ -39,6 +39,16 @@
   const TOKEN_PATTERN = /^[a-z0-9_-]{16,64}$/i;
   const SIGNAL_PATTERN = /^wss?:\/\/[a-z0-9.:[\]-]+(?:\/[a-z0-9._~/-]*)?$/i;
   const ROOM_PATTERN = /^[a-z0-9_-]{16,64}$/i;
+  const ICE_URL_PATTERN = /^(?:stuns?|turns?):[^\s,;]+$/i;
+  // Больше адресов только замедляет сбор кандидатов, а настраивать десяток
+  // STUN/TURN на практике некому.
+  const ICE_URL_LIMIT = 8;
+  /*
+    Публичные STUN по умолчанию. Без них обе стороны объявляют только свои
+    локальные адреса, и в интернете ICE не находит общий путь: в локальной
+    сети такие кандидаты достижимы, а через NAT — уже нет.
+  */
+  const DEFAULT_STUN = ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"];
 
   function normalizeSlot(value) {
     const slot = String(value == null ? "" : value)
@@ -179,10 +189,63 @@
     return `${scheme}://${data.host}:${data.port}/ws?${query.toString()}`;
   }
 
+  /*
+    Разобрать список ICE-адресов из поля настроек: строка через запятую или
+    пробел либо массив. Всё, что не похоже на stun:/turn:, отбрасываем — эти
+    строки уходят прямо в `RTCPeerConnection`.
+  */
+  function splitIceUrls(value) {
+    const source = Array.isArray(value) ? value : String(value == null ? "" : value).split(/[\s,;]+/);
+    const urls = [];
+    for (const item of source) {
+      const url = String(item == null ? "" : item).trim();
+      if (!url || url.length > 200 || !ICE_URL_PATTERN.test(url)) continue;
+      if (urls.includes(url)) continue;
+      urls.push(url);
+      if (urls.length >= ICE_URL_LIMIT) break;
+    }
+    return urls;
+  }
+
+  function normalizeIceSettings(input) {
+    const data = input || {};
+    return {
+      stunUrls: splitIceUrls(data.stunUrls),
+      turnUrls: splitIceUrls(data.turnUrls),
+      turnUser: String(data.turnUser == null ? "" : data.turnUser)
+        .trim()
+        .slice(0, 200),
+      turnPassword: String(data.turnPassword == null ? "" : data.turnPassword).slice(0, 200),
+    };
+  }
+
+  /*
+    Конфигурация для `RTCPeerConnection`. Настройки приходят с машины хоста
+    вместе с подтверждением, поэтому обе стороны видят один и тот же TURN;
+    пустой список STUN означает встроенные адреса, а не «без STUN».
+  */
+  function iceServers(input) {
+    const settings = normalizeIceSettings(input);
+    const servers = [];
+    const stun = settings.stunUrls.length ? settings.stunUrls : DEFAULT_STUN.slice();
+    if (stun.length) servers.push({ urls: stun });
+    if (settings.turnUrls.length) {
+      const turn = { urls: settings.turnUrls };
+      if (settings.turnUser) turn.username = settings.turnUser;
+      if (settings.turnPassword) turn.credential = settings.turnPassword;
+      servers.push(turn);
+    }
+    return servers;
+  }
+
   const api = {
     SCHEME,
     CLOUD_SCHEME,
     SLOTS,
+    DEFAULT_STUN,
+    iceServers,
+    normalizeIceSettings,
+    splitIceUrls,
     createInvite,
     createCloudInvite,
     parseInvite,

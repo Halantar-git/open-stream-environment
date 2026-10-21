@@ -118,6 +118,10 @@ export function createStateManager() {
     guestPending: {},
     guestOutgoing: null,
     guestSignalUrl: "",
+    // STUN/TURN гостевых камер; пустые поля — встроенные STUN-серверы.
+    guestIce: { stunUrls: "", turnUrls: "", turnUser: "", turnPassword: "" },
+    // ICE-настройки хоста, когда панель работает стороной гостя.
+    guestRemoteIce: null,
     guestShare: { slot: "", status: "idle", detail: "" },
     // Последний снимок конфига Longshot (Executive Hangar), если получен.
     longshot: null,

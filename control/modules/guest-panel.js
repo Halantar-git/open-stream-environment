@@ -46,6 +46,10 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
   const statusEl = document.getElementById("guestJoinStatus");
   const modeSelect = document.getElementById("guestInviteMode");
   const signalInput = document.getElementById("guestSignalUrl");
+  const stunInput = document.getElementById("guestStunUrls");
+  const turnInput = document.getElementById("guestTurnUrls");
+  const turnUserInput = document.getElementById("guestTurnUser");
+  const turnPasswordInput = document.getElementById("guestTurnPassword");
   if (!list || !joinInput || !joinBtn) return { handleMessage() {}, render() {} };
 
   if (!state.guestSlots || !state.guestSlots.length) state.guestSlots = defaultSlots();
@@ -53,6 +57,14 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
   if (!state.guestPending) state.guestPending = {};
   if (!state.guestShare) state.guestShare = { slot: "", status: "idle", detail: "" };
   if (!state.guestSignalUrl) state.guestSignalUrl = "";
+  if (!state.guestIce) state.guestIce = { stunUrls: "", turnUrls: "", turnUser: "", turnPassword: "" };
+  if (!state.guestRemoteIce) state.guestRemoteIce = null;
+  const ICE_INPUTS = [
+    [stunInput, "stunUrls"],
+    [turnInput, "turnUrls"],
+    [turnUserInput, "turnUser"],
+    [turnPasswordInput, "turnPassword"],
+  ];
   if (modeSelect) {
     try {
       const saved = localStorage.getItem("ose.guestInviteMode");
@@ -79,6 +91,18 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
       state.guestSignalUrl = value;
       send(EVENT_TYPES.CMD_SET_APP_CONFIG, { guestSignalUrl: value });
     });
+  }
+
+  // STUN/TURN правятся вместе: сервер пересобирает пару «адреса + логин» и
+  // сохраняет в конфиг, а гость получит их с подтверждением.
+  function saveIce() {
+    const next = {};
+    for (const [input, key] of ICE_INPUTS) next[key] = input ? input.value.trim() : state.guestIce[key];
+    state.guestIce = next;
+    send(EVENT_TYPES.CMD_SET_APP_CONFIG, { guestIce: next });
+  }
+  for (const [input] of ICE_INPUTS) {
+    if (input) input.addEventListener("change", saveIce);
   }
 
   const share = createGuestShare({
@@ -189,6 +213,9 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
     if (signalInput && document.activeElement !== signalInput) {
       signalInput.value = state.guestSignalUrl || "";
     }
+    for (const [input, key] of ICE_INPUTS) {
+      if (input && document.activeElement !== input) input.value = state.guestIce[key] || "";
+    }
 
     const outgoing = state.guestOutgoing;
     if (statusEl) {
@@ -279,6 +306,7 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
 
   leaveBtn.addEventListener("click", () => {
     share.stop();
+    state.guestRemoteIce = null;
     send(EVENT_TYPES.CMD_GUEST_LEAVE, {});
     render();
   });
@@ -298,6 +326,9 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
         state.guestSlots = Array.isArray(payload.slots) ? payload.slots : [];
         state.guestOutgoing = payload.outgoing || null;
         if (typeof payload.signalUrl === "string") state.guestSignalUrl = payload.signalUrl;
+        if (payload.ice && typeof payload.ice === "object") {
+          state.guestIce = { ...state.guestIce, ...payload.ice };
+        }
         // Освободившийся слот больше не должен показывать старую ссылку:
         // сервер уже аннулировал её токен.
         for (const item of state.guestSlots) {
@@ -325,11 +356,16 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
         render();
         break;
       case EVENT_TYPES.GUEST_ACCEPTED:
+        // Настройки ICE хоста — для соединения, а не для полей ввода: свои
+        // значения гость не теряет.
+        if (payload.ice && typeof payload.ice === "object") state.guestRemoteIce = payload.ice;
         if (joinedSlot(payload.slot)) share.markAccepted(payload.slot);
         render();
         break;
       case EVENT_TYPES.GUEST_RECEIVER_READY:
-        if (joinedSlot(payload.slot)) share.start(payload.slot);
+        if (joinedSlot(payload.slot)) {
+          share.start(payload.slot, payload.ice || state.guestRemoteIce || state.guestIce);
+        }
         break;
       case EVENT_TYPES.GUEST_SIGNAL:
         if (joinedSlot(payload.slot)) share.handleSignal(payload.payload);
@@ -341,6 +377,7 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
           // Причина есть у сетевой ошибки (сервер недоступен), у отказа хоста
           // её нет — это разные сообщения для пользователя.
           const reason = payload.reason || "";
+          state.guestRemoteIce = null;
           state.guestShare = {
             slot: payload.slot,
             status: reason ? "error" : "declined",
@@ -355,6 +392,7 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
         if (joinedSlot(payload.slot)) {
           share.stop();
           state.guestOutgoing = null;
+          state.guestRemoteIce = null;
           state.guestShare = { slot: payload.slot, status: "left", detail: "" };
           send(EVENT_TYPES.CMD_GUEST_LEAVE, {});
           render();

@@ -1155,9 +1155,15 @@ pub fn handle_message(
         event_types::CMD_GUEST_ACCEPT => {
             let slot = payload.get("slot").and_then(Value::as_str).unwrap_or("");
             if let Some((slot, _guest_id)) = diagnostics.guests().accept(slot) {
-                let accepted =
-                    json!({ "type": event_types::GUEST_ACCEPTED, "payload": { "slot": slot } })
-                        .to_string();
+                // ICE-настройки хоста уезжают гостю вместе с подтверждением:
+                // его машина может быть за другим NAT, а TURN нужен обеим
+                // сторонам один и тот же.
+                let ice = guest::ice_settings(diagnostics);
+                let accepted = json!({
+                    "type": event_types::GUEST_ACCEPTED,
+                    "payload": { "slot": slot, "ice": ice },
+                })
+                .to_string();
                 // Номер клиента есть только у LAN-гостя, облачный уйдёт по
                 // ссылке signaling; `send_to_guest` выбирает сам.
                 diagnostics
@@ -1169,7 +1175,7 @@ pub fn handle_message(
                     diagnostics.clients().send_text(receiver, &accepted);
                     let ready = json!({
                         "type": event_types::GUEST_RECEIVER_READY,
-                        "payload": { "slot": slot },
+                        "payload": { "slot": slot, "ice": ice },
                     })
                     .to_string();
                     diagnostics
@@ -1261,15 +1267,16 @@ pub fn handle_message(
                     if ready {
                         // Виджет смонтировался уже после подтверждения: гостю
                         // пора собирать offer, а приёмнику — создавать peer.
+                        let ice = guest::ice_settings(diagnostics);
                         let accepted = json!({
                             "type": event_types::GUEST_ACCEPTED,
-                            "payload": { "slot": slot },
+                            "payload": { "slot": slot, "ice": ice },
                         })
                         .to_string();
                         diagnostics.clients().send_text(id, &accepted);
                         let ready = json!({
                             "type": event_types::GUEST_RECEIVER_READY,
-                            "payload": { "slot": slot },
+                            "payload": { "slot": slot, "ice": ice },
                         })
                         .to_string();
                         diagnostics

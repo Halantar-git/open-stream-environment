@@ -113,6 +113,7 @@ const SECTIONS = [
       { type: "p", key: "help.guests.p3" },
       { type: "p", key: "help.guests.p4" },
       { type: "p", key: "help.guests.p5" },
+      { type: "p", key: "help.guests.p6" },
     ],
   },
   {

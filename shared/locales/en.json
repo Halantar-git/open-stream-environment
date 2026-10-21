@@ -407,6 +407,11 @@
     "guestModeLan": "Local network",
     "guestSignal": "Signaling address",
     "guestSignalPlaceholder": "wss://ose-signal.halantar.workers.dev",
+    "guestIceDesc": "Empty lists mean the built-in STUN servers. TURN is needed when you or a guest sit behind a strict NAT; the guest receives these addresses with the confirmation. Separate addresses with commas.",
+    "guestStun": "STUN servers",
+    "guestTurn": "TURN servers",
+    "guestTurnUser": "TURN user",
+    "guestTurnPassword": "TURN password",
     "guestConnect": "Connect to a streamer",
     "guestConnectDesc": "Paste the invite the host sent you. Your camera and microphone are sent only after the host confirms.",
     "guestInvite": "Invite",
@@ -1624,7 +1629,8 @@
       "p2": "Send the link to the guest. They paste it into OSE, enter a name and wait — the camera starts only after you press Allow. The link lives for 15 minutes and survives a dropped connection.",
       "p3": "In the layout pick the camera widget, the Guest camera source and a slot. Several slots give several cameras in frame; each volume is adjusted in the properties.",
       "p4": "An invite can be created for the internet (through a signaling service) or for the local network. For the guest's voice to reach the stream, enable “Control audio via OBS” on the Browser Source. The signaling address is set in Settings; see signal/README.md for deploying your own service.",
-      "p5": "The slot is assigned automatically: a new widget with the Guest camera source gets the first free one, and slots already chosen are left alone. Without a slot the widget shows No slot selected and accepts no stream — change it by hand only to pin a guest to a specific place."
+      "p5": "The slot is assigned automatically: a new widget with the Guest camera source gets the first free one, and slots already chosen are left alone. Without a slot the widget shows No slot selected and accepts no stream — change it by hand only to pin a guest to a specific place.",
+      "p6": "The video goes directly over WebRTC: the internet invite travels through the signaling service, but the video itself never reaches it. STUN servers are built in — they help both sides learn their public addresses. If someone sits behind a strict NAT (mobile internet, some providers), a TURN server is required: the host enters its address, user and password in Settings, and the guest receives them with the confirmation. With TURN the video is relayed through its server, so you need your own or a rented one."
     },
     "presets": {
       "title": "Layout presets",

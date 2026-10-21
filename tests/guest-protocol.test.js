@@ -37,6 +37,9 @@ const {
   normalizeToken,
   normalizeSignal,
   normalizeRoom,
+  DEFAULT_STUN,
+  iceServers,
+  splitIceUrls,
 } = require("../shared/guest-protocol");
 
 const TOKEN = "0123456789abcdef0123456789abcdef";
@@ -129,5 +132,41 @@ describe("guest-protocol: приглашение", () => {
     const url = inviteWsUrl(invite);
     expect(url).toBe(`ws://192.168.1.10:8710/ws?role=guest&slot=cam2&token=${TOKEN}`);
     expect(inviteWsUrl(null)).toBe("");
+  });
+});
+
+describe("guest-protocol: ICE", () => {
+  test("без настроек берутся встроенные STUN-серверы", () => {
+    // Пустой список — не «без STUN»: иначе через интернет остаются только
+    // локальные кандидаты и соединение не поднимается.
+    expect(iceServers(null)).toEqual([{ urls: DEFAULT_STUN }]);
+    expect(iceServers({})).toEqual([{ urls: DEFAULT_STUN }]);
+    expect(iceServers({ stunUrls: "" })).toEqual([{ urls: DEFAULT_STUN }]);
+  });
+
+  test("свои STUN и TURN попадают в конфигурацию", () => {
+    const servers = iceServers({
+      stunUrls: "stun:stun.example.org:3478, stun:stun.example.org:3478",
+      turnUrls: "turn:turn.example.org:3478",
+      turnUser: " guest ",
+      turnPassword: "secret",
+    });
+    expect(servers).toEqual([
+      { urls: ["stun:stun.example.org:3478"] },
+      { urls: ["turn:turn.example.org:3478"], username: "guest", credential: "secret" },
+    ]);
+  });
+
+  test("мусор и чужие схемы отбрасываются", () => {
+    expect(splitIceUrls("http://example.org, ws://x, stun:ok:3478")).toEqual(["stun:ok:3478"]);
+    expect(splitIceUrls(["turns:ok:5349", 42, null, "stun: with space"])).toEqual(["turns:ok:5349"]);
+    expect(splitIceUrls("x".repeat(300)).length).toBe(0);
+  });
+
+  test("TURN без логина тоже допустим и не тащит пустые поля", () => {
+    const servers = iceServers({ turnUrls: "turn:turn.example.org:3478" });
+    expect(servers[1]).toEqual({ urls: ["turn:turn.example.org:3478"] });
+    expect(servers[1]).not.toHaveProperty("username");
+    expect(servers[1]).not.toHaveProperty("credential");
   });
 });

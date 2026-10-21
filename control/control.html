@@ -939,6 +939,23 @@
             <label data-i18n="settings.guestSignal">Адрес signaling</label>
             <input type="text" id="guestSignalUrl" data-i18n-placeholder="settings.guestSignalPlaceholder" placeholder="wss://ose-signal.halantar.workers.dev" spellcheck="false" autocomplete="off" />
           </div>
+          <p class="settings__desc" data-i18n="settings.guestIceDesc">Пустые списки — встроенные STUN-серверы. TURN нужен, если вы или гость за строгим NAT; гость получает эти адреса вместе с подтверждением. Адреса перечисляются через запятую.</p>
+          <div class="md-field">
+            <label data-i18n="settings.guestStun">STUN-серверы</label>
+            <input type="text" id="guestStunUrls" placeholder="stun:stun.l.google.com:19302" spellcheck="false" autocomplete="off" />
+          </div>
+          <div class="md-field">
+            <label data-i18n="settings.guestTurn">TURN-серверы</label>
+            <input type="text" id="guestTurnUrls" placeholder="turn:example.com:3478" spellcheck="false" autocomplete="off" />
+          </div>
+          <div class="md-field">
+            <label data-i18n="settings.guestTurnUser">Пользователь TURN</label>
+            <input type="text" id="guestTurnUser" spellcheck="false" autocomplete="off" />
+          </div>
+          <div class="md-field">
+            <label data-i18n="settings.guestTurnPassword">Пароль TURN</label>
+            <input type="password" id="guestTurnPassword" autocomplete="off" />
+          </div>
           <div class="guest-slots" id="guestSlotsList"></div>
           <div class="settings__subhead">
             <h3 data-i18n="settings.guestConnect">Подключиться к стримеру</h3>
