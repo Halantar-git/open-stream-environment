@@ -46,8 +46,11 @@ pub fn is_scene_target(target: &str) -> bool {
 pub fn widgets(db: &Database, config: &ConfigFile) -> Vec<Value> {
     let stored = db.widgets();
     if !stored.is_empty() {
-        let clean = clean_widgets(&stored);
-        if clean.len() != stored.len() {
+        let (clean, slots_assigned) = clean_widgets_with_slots(&stored);
+        // Слот, выданный на чтении, сразу пишем в базу: иначе при добавлении или
+        // удалении соседнего виджета он пересчитается, и живой гость потеряет
+        // приёмник посреди эфира.
+        if slots_assigned || clean.len() != stored.len() {
             db.save_widgets(clean.clone());
         }
         return clean;
@@ -488,20 +491,28 @@ fn widget_is_known(widget: &Value) -> bool {
 }
 
 fn clean_widgets(list: &[Value]) -> Vec<Value> {
+    clean_widgets_with_slots(list).0
+}
+
+/// То же, но сообщает, появились ли новые гостевые слоты: вызывающий решает,
+/// сохранять ли их (главная раскладка сохраняет, сцены — при первой правке).
+fn clean_widgets_with_slots(list: &[Value]) -> (Vec<Value>, bool) {
     let mut clean: Vec<Value> = list
         .iter()
         .filter(|widget| widget_is_known(widget))
         .map(migrated_widget)
         .collect();
-    assign_guest_slots(&mut clean);
-    clean
+    let slots_assigned = assign_guest_slots(&mut clean);
+    (clean, slots_assigned)
 }
 
 /// Гостевой виджет без слота — мёртвый: он ни на что не подписывается, и гость
 /// после подтверждения навсегда остаётся с «ждём экран». Слот не выбирают из
 /// вредности — его просто забывают выбрать при переключении источника, поэтому
 /// раздаём свободные по порядку и не трогаем уже выбранные.
-fn assign_guest_slots(widgets: &mut [Value]) {
+///
+/// Возвращает `true`, если хоть одному виджету слот достался.
+fn assign_guest_slots(widgets: &mut [Value]) -> bool {
     let slots = crate::server::guest::GUEST_SLOTS;
     let current_slot = |widget: &Value| -> String {
         widget
@@ -518,6 +529,7 @@ fn assign_guest_slots(widgets: &mut [Value]) {
         .map(current_slot)
         .filter(|s| !s.is_empty())
         .collect();
+    let mut assigned = false;
     for widget in widgets.iter_mut() {
         if widget_type(widget) != "webcam" {
             continue;
@@ -538,9 +550,11 @@ fn assign_guest_slots(widgets: &mut [Value]) {
         };
         if let Some(config) = widget.get_mut("config").and_then(Value::as_object_mut) {
             config.insert("guestSlot".to_string(), Value::from(*free));
+            assigned = true;
         }
         used.push((*free).to_string());
     }
+    assigned
 }
 
 /// Рамка камеры раньше всегда рождалась с `radius: 16`. Пока пользователь не
@@ -777,6 +791,27 @@ mod tests {
             .unwrap()["config"]
             .get("guestSlot")
             .is_none());
+    }
+
+    #[test]
+    fn an_assigned_guest_slot_is_saved_and_does_not_move() {
+        let fixture = Fixture::new("guest-slots-saved");
+        let (db, config) = (fixture.db(), fixture.config());
+        db.save_widgets(vec![
+            json!({ "id": "a", "type": "webcam", "config": { "source": "remote", "guestSlot": "cam2" } }),
+            json!({ "id": "b", "type": "webcam", "config": { "source": "remote" } }),
+        ]);
+        assert_eq!(
+            layout(&db, &config)[1]["config"]["guestSlot"],
+            json!("cam3")
+        );
+
+        // «a» убрали — слот «b» не переезжает на освободившийся cam2.
+        assert!(remove_widget(&db, "a"));
+        assert_eq!(
+            layout(&db, &config)[0]["config"]["guestSlot"],
+            json!("cam3")
+        );
     }
 
     #[test]

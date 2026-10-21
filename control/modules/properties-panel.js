@@ -203,7 +203,9 @@ export function initPropertiesPanel({
         .map((item) => item.config.guestSlot)
     );
     const free = known.find((item) => !used.has(item.slot));
-    return (free || known[0]).slot;
+    // Все слоты заняты: пусть лучше виджет покажет «слот не выбран», чем два
+    // приёмника будут делить одного гостя.
+    return free ? free.slot : "";
   }
 
   function render(force) {

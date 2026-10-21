@@ -248,10 +248,31 @@ pub fn snapshot(config: &ConfigFile, db: &Database, runtime: &Runtime) -> Value 
         field(config, "chat_hud_display_id"),
     );
     out.insert("chatHud".to_string(), field(config, "chatHud"));
-    out.insert("scenes".to_string(), field(config, "scenes"));
+    out.insert("scenes".to_string(), scenes_for_snapshot(config));
     out.insert("splash".to_string(), field(config, "splash"));
     out.insert("topDonation".to_string(), field(config, "topDonation"));
     Value::Object(out)
+}
+
+/// Сцены с почищенными раскладками: гостевые слоты раздаются и на сценах, а не
+/// только на основном оверлее — иначе виджет, созданный до появления раздачи,
+/// так и остался бы без приёмника до первой правки сцены.
+fn scenes_for_snapshot(config: &ConfigFile) -> Value {
+    let mut scenes = object(config.get("scenes"));
+    for scene in layout::WIDGET_SCENE_IDS {
+        let Some(fields) = scenes.get_mut(scene).and_then(Value::as_object_mut) else {
+            continue;
+        };
+        // Сцены без канваса не должны обзавестись пустым `widgets`.
+        if !fields.contains_key("widgets") {
+            continue;
+        }
+        fields.insert(
+            "widgets".to_string(),
+            Value::Array(layout::scene_widgets(config, scene)),
+        );
+    }
+    Value::Object(scenes)
 }
 
 /// Настройки OBS без пароля: подменяем пустой строкой и добавляем признак.
@@ -397,5 +418,30 @@ mod tests {
         // Настройки, не требующие секретов, на месте.
         assert_eq!(snap["port"], json!(8710));
         assert!(snap["scenes"].get("brb").is_some());
+    }
+
+    #[test]
+    fn the_snapshot_assigns_guest_slots_on_scenes_too() {
+        let fixture = Fixture::new("scene-guest-slots");
+        let mut config = fixture.config();
+        let db = fixture.db();
+        normalize_config(&mut config);
+        config.set(
+            "scenes",
+            json!({
+                "talk": {
+                    "widgets": [
+                        { "id": "a", "type": "webcam", "config": { "source": "remote", "guestSlot": "cam2" } },
+                        { "id": "b", "type": "webcam", "config": { "source": "remote" } }
+                    ]
+                }
+            }),
+        );
+
+        let snap = snapshot(&config, &db, &Runtime::new(0, &serde_json::Map::new()));
+        let widgets = snap["scenes"]["talk"]["widgets"].as_array().unwrap();
+        assert_eq!(widgets.len(), 2);
+        // Сцена получает ту же раздачу, что и основной оверлей, ещё до правки.
+        assert_eq!(widgets[1]["config"]["guestSlot"], json!("cam3"));
     }
 }
