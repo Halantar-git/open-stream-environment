@@ -523,6 +523,14 @@ export function initCanvasEditor({
       case "timer":
       case "grimhex-timer":
         return buildExecTimerPreview(config);
+      case "donatex-ai": {
+        // Аудио-мост ничего не рисует в эфире, но на канвасе должен быть виден:
+        // иначе пустой прямоугольник легко потерять среди виджетов.
+        const bridge = String(config.donationUrl || config.url || "").trim() !== "";
+        const icon = bridge ? ICONS.widgetSoundboard : ICONS.widgetDonatexAi;
+        const label = bridge ? t("preview.donatexAudio") : t("widgets.donatex-ai");
+        return `<div class="canvas-widget__placeholder">${icon}<span>${escapeHtml(label)}</span></div>`;
+      }
       case "mic": {
         const themePrimary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#0060A8";
         const color = config.color || state.micConfig.color || themePrimary;

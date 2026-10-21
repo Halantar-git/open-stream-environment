@@ -1296,7 +1296,8 @@
     "chat1": "let's play!",
     "chat2": "nice overlay 🔥",
     "chat3": "hey hey",
-    "death": "Deaths"
+    "death": "Deaths",
+    "donatexAudio": "DonateX audio"
   },
   "chatWindow": {
     "title": "Chat",
