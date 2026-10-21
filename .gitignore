@@ -2,6 +2,10 @@ node_modules/
 release/
 # Локальное состояние `wrangler dev` (публичный signaling).
 signal/.wrangler/
+# Локальные секреты `wrangler dev`: файл читается с диска и в код не попадает.
+# `release.bat` делает `git add .`, поэтому исключение обязательно.
+signal/.dev.vars*
+signal/.env
 backup/
 config/config.json
 config/local-db.json
