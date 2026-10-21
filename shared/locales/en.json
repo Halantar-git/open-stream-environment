@@ -405,6 +405,8 @@
     "guestInviteMode": "Invite method",
     "guestModeCloud": "Internet",
     "guestModeLan": "Local network",
+    "baseCurrency": "Base currency",
+    "baseCurrencyHint": "The stream total is shown in this currency; donations in other currencies are converted at the exchange rate.",
     "guestSignal": "Signaling address",
     "guestSignalPlaceholder": "wss://ose-signal.halantar.workers.dev",
     "guestIceDesc": "Empty lists mean the built-in STUN servers. TURN is needed when you or a guest sit behind a strict NAT; the guest receives these addresses with the confirmation. Separate addresses with commas.",
@@ -1809,7 +1811,8 @@
       "p1": "Port changes the local server port and requires an app restart.",
       "p2": "Appearance manages overlay themes; Export/Import saves the full config.json together with media files (it contains secrets — don't share it).",
       "p3": "Language switches the whole interface between English and Russian.",
-      "p4": "The event notification sound and its volume are configured in the Application card (the Notification sound toggle and Notification volume slider)."
+      "p4": "The event notification sound and its volume are configured in the Application card (the Notification sound toggle and Notification volume slider).",
+      "p5": "Base currency is the currency of the stream total. Donations in other currencies are converted at the rate loaded at startup and refreshed every twelve hours; without a rate the amount is shown on a separate line. The donation goal keeps its own currency in the widget properties."
     },
     "updates": {
       "title": "Updates",

@@ -100,6 +100,13 @@ pub fn snapshot(config: &ConfigFile, db: &Database, runtime: &Runtime) -> Value 
         Value::Array(layout::list_layout_presets(db)),
     );
     out.insert("goal".to_string(), field(config, "goal"));
+    // Базовая валюта итогов: по ней панель заполняет поле в настройках.
+    out.insert(
+        "baseCurrency".to_string(),
+        Value::from(crate::state::currency_code(
+            config.get("base_currency").unwrap_or(&Value::Null),
+        )),
+    );
     // Пауза новостной ленты — в снимке: оверлей, перезагрузившийся в OBS,
     // сразу знает, что строка стоит, и не ждёт отдельного кадра.
     out.insert(
@@ -206,7 +213,8 @@ pub fn snapshot(config: &ConfigFile, db: &Database, runtime: &Runtime) -> Value 
         Value::Array(runtime.recent_events().to_vec()),
     );
     out.insert("stats".to_string(), runtime.stats());
-    out.insert("sessionDonations".to_string(), runtime.session_donations());
+    // `sessionDonations` добавляет `Diagnostics::state_snapshot`: итог зависит
+    // от курсов, а в `Runtime` их нет.
     out.insert("deathCount".to_string(), runtime.death_count());
     out.insert(
         "activeScene".to_string(),

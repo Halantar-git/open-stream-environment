@@ -282,6 +282,15 @@ pub fn handle_message(
                     config::set_app_config(&mut config, &payload);
                 }
                 broadcast_state(diagnostics);
+                // Смена базовой валюты меняет итог в счёте стрима: оверлею нужен
+                // новый кадр, иначе виджет останется на прежней цифре.
+                if payload.get("baseCurrency").is_some() {
+                    broadcast(
+                        diagnostics,
+                        event_types::SESSION_STATS,
+                        diagnostics.session_stats(),
+                    );
+                }
                 // Смена канала перезапускает чтение чата — как в JS. Остальные
                 // поля настройки чат не трогают, поэтому дёргаем только при
                 // `twitchChannel`.
@@ -1357,11 +1366,15 @@ pub fn handle_message(
 
         // ---- Счёт текущего стрима и микрокадры ----
         event_types::CMD_RESET_SESSION_STATS => {
-            let session = {
+            {
                 let mut runtime = diagnostics.runtime();
-                runtime.reset_session_donations()
-            };
-            broadcast(diagnostics, event_types::SESSION_STATS, session);
+                runtime.reset_session_donations();
+            }
+            broadcast(
+                diagnostics,
+                event_types::SESSION_STATS,
+                diagnostics.session_stats(),
+            );
         }
         event_types::MIC_AUDIO_DATA => {
             broadcast(diagnostics, event_types::MIC_AUDIO_DATA, payload);

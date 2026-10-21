@@ -337,6 +337,7 @@ const SECTIONS = [
       { type: "p", key: "help.settings.p2" },
       { type: "p", key: "help.settings.p3" },
       { type: "p", key: "help.settings.p4" },
+      { type: "p", key: "help.settings.p5" },
     ],
   },
   {

@@ -257,6 +257,14 @@ pub fn set_app_config(config: &mut ConfigFile, patch: &Value) {
         // заново, а стример не ждёт, что строка поедет без его команды.
         config.set("ticker_paused", Value::Bool(js_truthy(Some(paused))));
     }
+    if let Some(currency) = patch.get("baseCurrency") {
+        // Валюта итогов стрима: код в верхнем регистре, не длиннее восьми.
+        let code = crate::state::currency_code(currency);
+        config.set(
+            "base_currency",
+            Value::from(code.chars().take(8).collect::<String>()),
+        );
+    }
     if let Some(messages) = patch.get("tickerMessages") {
         config.set("ticker_messages", sanitize_ticker_messages(messages));
     }
@@ -966,6 +974,13 @@ pub fn normalize_config(config: &mut ConfigFile) {
     config.set(
         "ticker_messages",
         sanitize_ticker_messages(config.get("ticker_messages").unwrap_or(&Value::Null)),
+    );
+    // Базовая валюта итогов: в ней показываются счёт стрима и панель.
+    // Пустое значение не принимаем — без кода сумму нечем назвать.
+    let base = crate::state::currency_code(config.get("base_currency").unwrap_or(&Value::Null));
+    config.set(
+        "base_currency",
+        Value::from(base.chars().take(8).collect::<String>()),
     );
     config.set(
         "ticker_paused",
@@ -1904,6 +1919,19 @@ mod tests {
         );
         assert_eq!(config.get("guest_turn_user"), Some(&json!("guest")));
         assert_eq!(config.get("guest_turn_password"), Some(&json!("secret")));
+    }
+
+    #[test]
+    fn the_base_currency_is_saved_in_uppercase() {
+        let fixture = Fixture::new("base-currency");
+        let mut config = fixture.config();
+
+        set_app_config(&mut config, &json!({ "baseCurrency": " usd " }));
+        assert_eq!(config.get("base_currency"), Some(&json!("USD")));
+
+        // Пустое значение — рубль: без кода валюты сумму нечем назвать.
+        set_app_config(&mut config, &json!({ "baseCurrency": "" }));
+        assert_eq!(config.get("base_currency"), Some(&json!("RUB")));
     }
 
     #[test]

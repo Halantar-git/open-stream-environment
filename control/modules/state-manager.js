@@ -36,6 +36,8 @@ export function createStateManager() {
     pollPresets: [],
     goal: { title: "Цель", current: 0, target: 1, currency: "RUB" },
     twitchChannel: "",
+    // Базовая валюта итогов: в ней показывается сумма за стрим.
+    baseCurrency: "RUB",
     twitchClientId: "",
     daClientId: "",
     youtubeClientId: "",
@@ -147,6 +149,7 @@ export function createStateManager() {
     state.pollPresets = payload.pollPresets || [];
     state.goal = payload.goal;
     state.twitchChannel = payload.twitchChannel;
+    state.baseCurrency = payload.baseCurrency || state.baseCurrency;
     state.twitchClientId = payload.twitchClientId;
     state.daClientId = payload.donationAlertsClientId;
     state.youtubeClientId = payload.youtubeClientId;

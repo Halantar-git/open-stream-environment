@@ -283,6 +283,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const streamdeckIconEnd = document.getElementById("streamdeckIconEnd");
   const streamdeckIconPause = document.getElementById("streamdeckIconPause");
   const appPortInput = document.getElementById("appPort");
+  const appBaseCurrencyInput = document.getElementById("appBaseCurrency");
   const savePortBtn = document.getElementById("savePortBtn");
   const appOverlayUrlInput = document.getElementById("appOverlayUrl");
   const copyOverlayUrlBtn = document.getElementById("copyOverlayUrlBtn");
@@ -567,6 +568,7 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   // ---- settings view ----
   function populateSettings() {
+    if (appBaseCurrencyInput) appBaseCurrencyInput.value = state.baseCurrency || "RUB";
     twitchChannelInput.value = state.twitchChannel || "";
     twitchClientIdInput.value = state.twitchClientId || "";
     daClientIdInput.value = state.daClientId || "";
@@ -717,6 +719,17 @@ const { EVENT_TYPES } = window.SharedEvents;
     setAppPort(next);
     send(EVENT_TYPES.CMD_SET_APP_CONFIG, { port: next });
   });
+
+  if (appBaseCurrencyInput) {
+    appBaseCurrencyInput.addEventListener("change", () => {
+      // ISO-код: не длиннее восьми символов и всегда в верхнем регистре — по
+      // нему таблица курсов ищет валюту.
+      const value = appBaseCurrencyInput.value.trim().toUpperCase().slice(0, 8) || "RUB";
+      appBaseCurrencyInput.value = value;
+      state.baseCurrency = value;
+      send(EVENT_TYPES.CMD_SET_APP_CONFIG, { baseCurrency: value });
+    });
+  }
 
   if (saveHudHotkeyBtn && hudHotkeyInput) {
     saveHudHotkeyBtn.addEventListener("click", () => {
