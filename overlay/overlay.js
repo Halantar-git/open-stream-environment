@@ -541,6 +541,9 @@
         bus.emit(EVENT_TYPES.ALERT, msg.payload);
         break;
       case EVENT_TYPES.CONNECTION_STATUS:
+        // Один и тот же статус прилетает повторно при переподключениях: не
+        // трогаем раскладку, иначе виджеты с canvas лишний раз перерисуются.
+        if (connectionStatus[msg.payload.service] === msg.payload.status) break;
         connectionStatus[msg.payload.service] = msg.payload.status;
         manager.syncLayout(currentLayout);
         if (OW.HudEditor) OW.HudEditor.refresh();

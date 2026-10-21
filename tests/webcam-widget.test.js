@@ -324,6 +324,21 @@ describe("WebcamWidget", () => {
     expect(w.context.send).toHaveBeenCalledWith(EVENT_TYPES.CMD_GUEST_SUBSCRIBE, { slot: "cam3" });
   });
 
+  test("обновление без изменений не пересобирает canvas камеры", () => {
+    const w = mount({ source: "camera" });
+    const render = jest.spyOn(w, "render");
+
+    // Снимок состояния приходит и без правок раскладки: canvas трогать нельзя,
+    // иначе кадр пропадает до следующего тика моста — это и есть мигание.
+    w.update({ config: {} });
+    expect(render).not.toHaveBeenCalled();
+
+    w.update({ config: { mirror: true } });
+    expect(render).toHaveBeenCalledTimes(1);
+
+    w.unmount();
+  });
+
   test("размонтирование освобождает только свой слот", () => {
     const w = mount({ source: "remote", guestSlot: "cam3" });
     w.context.send.mockClear();

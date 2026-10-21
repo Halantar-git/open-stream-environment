@@ -74,6 +74,19 @@
 
   const clamp = (v, min, max) => (v < min ? min : v > max ? max : v);
 
+  // Глубокое сравнение конфигов: `syncLayout` присылает новый объект на каждый
+  // снимок состояния, и ссылочного сравнения недостаточно.
+  function deepEqual(a, b) {
+    if (a === b) return true;
+    if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
+    if (Array.isArray(a) !== Array.isArray(b)) return false;
+    const keys = Object.keys(a);
+    if (keys.length !== Object.keys(b).length) return false;
+    return keys.every(
+      (key) => Object.prototype.hasOwnProperty.call(b, key) && deepEqual(a[key], b[key])
+    );
+  }
+
   class BaseWidget {
     // Ambient-виджеты (дыхание голограммы, медленный фликер, лёгкое покачивание)
     // не нуждаются в 30 FPS: 20 визуально неотличимы, а работы на треть меньше.
@@ -163,6 +176,7 @@
 
     update(newConfig = {}) {
       const prev = Object.assign({}, this.config);
+      const prevGeometry = { ...this.geometry };
       this.config = Object.assign({}, this.config, newConfig.config);
 
       if (newConfig.x !== undefined) this.geometry.x = newConfig.x;
@@ -172,11 +186,19 @@
       if (newConfig.z !== undefined) this.geometry.z = newConfig.z;
       if (newConfig.visible !== undefined) this.geometry.visible = !!newConfig.visible;
 
+      const configChanged = !deepEqual(prev, this.config);
+      const geometryChanged = ["x", "y", "w", "h", "z", "visible"].some(
+        (key) => prevGeometry[key] !== this.geometry[key]
+      );
+
       this._applyGeometry();
       this.onUpdate(prev, this.config);
 
-      // 2D re-renders on change; 3D is driven by the frame loop.
-      if (this.renderType === "2d") this.render();
+      // 2D re-renders only on a real change; 3D is driven by the frame loop.
+      // Раньше render() звался на каждый syncLayout: виджеты с canvas (камера)
+      // пересобирали разметку и теряли кадр, пока не придёт следующий — отсюда
+      // периодическое мигание при смене статусов связи или темы.
+      if (this.renderType === "2d" && (configChanged || geometryChanged)) this.render();
 
       this._syncLoop();
     }
