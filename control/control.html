@@ -861,12 +861,23 @@
             <h2 data-i18n="settings.goodgame">GoodGame</h2>
             <div class="md-switch is-on" id="goodgameEnabledSwitch" role="switch" aria-checked="true" data-i18n-title="settings.integrationSwitch"><div class="md-switch__thumb"></div></div>
           </div>
-          <p class="settings__desc" data-i18n="settings.goodgameDesc">Чат и события канала GoodGame: сообщения, фоллоу, донаты и премиумы. Подключение анонимное, токен не нужен; отправка сообщений пока не поддерживается.</p>
+          <p class="settings__desc" data-i18n="settings.goodgameDesc">Чат и события канала GoodGame: сообщения, фоллоу, донаты и премиумы. Чтение анонимное; чтобы отправлять сообщения, укажите ID и токен чата.</p>
           <div class="md-field">
             <label data-i18n="settings.goodgameChannel">Канал</label>
             <input type="text" id="goodgameChannel" data-i18n-placeholder="settings.goodgameChannelPlaceholder" placeholder="Miker" />
             <span class="md-field__hint" data-i18n="settings.goodgameChannelHint">Имя из адреса канала (например, Miker) или числовой id.</span>
           </div>
+          <div class="md-field">
+            <label data-i18n="settings.goodgameUserId">ID пользователя</label>
+            <input type="text" id="goodgameUserId" inputmode="numeric" data-i18n-placeholder="settings.goodgameUserIdPlaceholder" placeholder="123456" />
+            <span class="md-field__hint" data-i18n="settings.goodgameUserIdHint">Только для отправки сообщений — число из UserObj.id на сайте GoodGame.</span>
+          </div>
+          <div class="md-field">
+            <label data-i18n="settings.goodgameToken">Токен чата</label>
+            <input type="password" id="goodgameToken" placeholder="••••••••" autocomplete="off" />
+            <span class="md-field__hint" data-i18n="settings.goodgameTokenHint">Токен из UserObj.chatToken на goodgame.ru или OAuth2-токен. Оставьте пустым, чтобы не менять сохранённый — поле никогда не заполняется им само.</span>
+          </div>
+          <div class="settings__hint" id="goodgameTokenStatus"></div>
           <div class="settings__actions">
             <button class="md-button md-button--text" id="openGoodgameSite" data-i18n="settings.openGoodgameSite">Открыть goodgame.ru</button>
             <button class="md-button md-button--text" id="openGoodgameDocs" data-i18n="settings.openGoodgameDocs">Документация API</button>

@@ -279,10 +279,17 @@
     "youtubeVideoId": "Video ID (fallback)",
     "youtubeVideoIdPlaceholder": "Video/stream ID for live-chat lookup",
     "goodgame": "GoodGame",
-    "goodgameDesc": "GoodGame channel chat and events: messages, follows, donations and premiums. The connection is anonymous and needs no token; sending messages is not supported yet.",
+    "goodgameDesc": "GoodGame channel chat and events: messages, follows, donations and premiums. Reading is anonymous; to send messages, set the chat ID and token.",
     "goodgameChannel": "Channel",
     "goodgameChannelPlaceholder": "Miker",
     "goodgameChannelHint": "Name from the channel URL (for example, Miker) or the numeric id.",
+    "goodgameUserId": "User ID",
+    "goodgameUserIdPlaceholder": "123456",
+    "goodgameUserIdHint": "Sending only — the number from UserObj.id on the GoodGame site.",
+    "goodgameToken": "Chat token",
+    "goodgameTokenHint": "The token from UserObj.chatToken on goodgame.ru or an OAuth2 token. Leave empty to keep the saved one — the field is never filled with it.",
+    "goodgameTokenSaved": "Token saved — sending to chat is available",
+    "goodgameTokenMissing": "No token — chat is read-only",
     "openGoodgameSite": "Open goodgame.ru",
     "openGoodgameDocs": "API documentation",
     "app": "Application",
@@ -1703,9 +1710,9 @@
     "goodgame": {
       "title": "GoodGame",
       "p1": "GoodGame channel chat and events: messages, follows, donations, premiums and gifted premiums.",
-      "p2": "The connection is anonymous: no token or app registration is required, so chat is read-only — sending messages is not supported yet.",
+      "p2": "Reading is anonymous: no token or app registration is required. To send messages, set the chat ID and token from UserObj.id and UserObj.chatToken on the GoodGame site (open the browser console on your channel page) or an OAuth2 token.",
       "p3": "In Settings → GoodGame, enter the channel name from its URL (for example, Miker) or the numeric id. The channel can be changed on the fly — the service reconnects by itself.",
-      "p4": "Messages go to the same chat and ticker widgets as Twitch and YouTube; donations, follows and premiums trigger alerts and Recent events. GoodGame emotes are shown as their codes (`:name:`) for now, without images."
+      "p4": "Messages go to the same chat and ticker widgets as Twitch and YouTube; emotes are loaded from the channel sets, and donations, follows and premiums trigger alerts and Recent events."
     },
     "obs": {
       "title": "OBS WebSocket",

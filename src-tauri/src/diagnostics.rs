@@ -846,7 +846,7 @@ impl Diagnostics {
 
     /// Перезапустить чат GoodGame по текущим настройкам.
     pub fn restart_goodgame(&self) {
-        let (enabled, channel) = {
+        let (enabled, channel, user_id, token) = {
             let config = self.config();
             let service = config.get("goodgame");
             (
@@ -858,10 +858,29 @@ impl Diagnostics {
                     .and_then(Value::as_str)
                     .unwrap_or("")
                     .to_string(),
+                service
+                    .and_then(|service| service.get("userId"))
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string(),
+                service
+                    .and_then(|service| service.get("token"))
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string(),
             )
         };
         self.goodgame
-            .restart(enabled, &channel, self.goodgame_emit());
+            .restart(enabled, &channel, &user_id, &token, self.goodgame_emit());
+    }
+
+    /// Отправить сообщение в GoodGame, если служба подключена. `None` —
+    /// отправлять некуда (служба выключена или канал не задан).
+    pub fn goodgame_send(
+        &self,
+        message: &str,
+    ) -> Option<crate::integrations::goodgame_control::SendFuture> {
+        self.goodgame.send_message(message)
     }
 
     /// Сохранить токены Twitch и перезапустить EventSub — хвост возврата из

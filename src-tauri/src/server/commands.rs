@@ -276,7 +276,7 @@ pub fn handle_message(
                     diagnostics.restart_twitch_chat();
                     diagnostics.restart_chat_bot();
                 }
-                if payload.get("goodgameChannel").is_some() {
+                if payload.get("goodgameChannel").is_some() || payload.get("goodgame").is_some() {
                     diagnostics.restart_goodgame();
                 }
             } else {
@@ -292,8 +292,8 @@ pub fn handle_message(
                     diagnostics.restart_twitch_chat();
                     diagnostics.restart_chat_bot();
                 }
-                // Новый канал GoodGame — новое подключение.
-                if payload.get("goodgameChannel").is_some() {
+                // Новый канал, ID или токен — новое подключение.
+                if payload.get("goodgameChannel").is_some() || payload.get("goodgame").is_some() {
                     diagnostics.restart_goodgame();
                 }
                 // Новый external token DonateX — новое подключение.
@@ -337,9 +337,19 @@ pub fn handle_message(
             let client_id = payload.get("clientId").cloned().unwrap_or(Value::Null);
             let sender = diagnostics.chat_sender();
             let twitch = diagnostics.twitch_config();
+            // GoodGame — второе место, куда уходит та же реплика: чат-окно не
+            // выбирает платформу, а мультистрим обычно и хочет оба чата.
+            let goodgame = diagnostics.goodgame_send(&text);
             let clients = diagnostics.clients_arc();
             std::mem::drop(tauri::async_runtime::spawn(async move {
-                let result = sender.send_message(&twitch, &text).await;
+                let result = match goodgame {
+                    Some(goodgame) => {
+                        let (twitch_result, goodgame_result) =
+                            tokio::join!(sender.send_message(&twitch, &text), goodgame);
+                        combined_chat_result(twitch_result, Some(goodgame_result))
+                    }
+                    None => sender.send_message(&twitch, &text).await,
+                };
                 let mut out = Map::new();
                 out.insert("clientId".to_string(), client_id);
                 if let Value::Object(fields) = result {
@@ -1462,6 +1472,25 @@ fn preset_name(payload: &Value) -> (Option<String>, String) {
 
 fn now_ms() -> i64 {
     chrono::Utc::now().timestamp_millis()
+}
+
+/// Итог отправки в несколько чатов: успех любого — успех операции; если не
+/// вышло нигде, показываем содержательную ошибку, а не «Twitch не настроен»
+/// при живом GoodGame.
+fn combined_chat_result(twitch: Value, goodgame: Option<Value>) -> Value {
+    let succeeded = |value: &Value| value.get("ok") == Some(&Value::Bool(true));
+    if succeeded(&twitch) {
+        return twitch;
+    }
+    if let Some(goodgame) = goodgame {
+        if succeeded(&goodgame) {
+            return goodgame;
+        }
+        if twitch.get("error").and_then(Value::as_str) == Some("not_configured") {
+            return goodgame;
+        }
+    }
+    twitch
 }
 
 #[cfg(test)]

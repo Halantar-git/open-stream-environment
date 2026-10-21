@@ -47,6 +47,8 @@ export function createStateManager() {
     youtubeEnabled: true,
     goodgameEnabled: true,
     goodgameChannel: "",
+    goodgameUserId: "",
+    goodgameHasToken: false,
     notificationSound: true,
     notificationVolume: 0.8,
     notificationRepeats: 1,
@@ -152,6 +154,8 @@ export function createStateManager() {
     state.youtubeEnabled = payload.youtubeEnabled !== false;
     state.goodgameEnabled = payload.goodgameEnabled !== false;
     state.goodgameChannel = payload.goodgameChannel || "";
+    state.goodgameUserId = payload.goodgameUserId || "";
+    state.goodgameHasToken = payload.goodgameHasToken === true;
     state.notificationSound = payload.notificationSound !== false;
     state.notificationVolume = typeof payload.notificationVolume === "number" ? payload.notificationVolume : state.notificationVolume;
     state.notificationRepeats = typeof payload.notificationRepeats === "number" ? payload.notificationRepeats : state.notificationRepeats;

@@ -195,6 +195,9 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   const twitchChannelInput = document.getElementById("twitchChannel");
   const goodgameChannelInput = document.getElementById("goodgameChannel");
+  const goodgameUserIdInput = document.getElementById("goodgameUserId");
+  const goodgameTokenInput = document.getElementById("goodgameToken");
+  const goodgameTokenStatusEl = document.getElementById("goodgameTokenStatus");
   const twitchClientIdInput = document.getElementById("twitchClientId");
   const twitchClientSecretInput = document.getElementById("twitchClientSecret");
   const twitchRedirectUriEl = document.getElementById("twitchRedirectUri");
@@ -552,6 +555,14 @@ const { EVENT_TYPES } = window.SharedEvents;
   function populateSettings() {
     twitchChannelInput.value = state.twitchChannel || "";
     if (goodgameChannelInput) goodgameChannelInput.value = state.goodgameChannel || "";
+    if (goodgameUserIdInput) goodgameUserIdInput.value = state.goodgameUserId || "";
+    // Токен поле не показывает никогда: только его наличие.
+    if (goodgameTokenInput) goodgameTokenInput.value = "";
+    if (goodgameTokenStatusEl) {
+      goodgameTokenStatusEl.textContent = state.goodgameHasToken
+        ? t("settings.goodgameTokenSaved")
+        : t("settings.goodgameTokenMissing");
+    }
     twitchClientIdInput.value = state.twitchClientId || "";
     daClientIdInput.value = state.daClientId || "";
     youtubeClientIdInput.value = state.youtubeClientId || "";
@@ -679,6 +690,24 @@ const { EVENT_TYPES } = window.SharedEvents;
   if (goodgameChannelInput) {
     goodgameChannelInput.addEventListener("change", () => {
       send(EVENT_TYPES.CMD_SET_APP_CONFIG, { goodgameChannel: goodgameChannelInput.value.trim() });
+    });
+  }
+
+  if (goodgameUserIdInput) {
+    goodgameUserIdInput.addEventListener("change", () => {
+      send(EVENT_TYPES.CMD_SET_APP_CONFIG, {
+        goodgame: { userId: goodgameUserIdInput.value.trim() },
+      });
+    });
+  }
+
+  if (goodgameTokenInput) {
+    // Пустое поле — «не менять»: сохранённый токен обратно не показывается.
+    goodgameTokenInput.addEventListener("change", () => {
+      const value = goodgameTokenInput.value.trim();
+      if (!value) return;
+      send(EVENT_TYPES.CMD_SET_APP_CONFIG, { goodgame: { token: value } });
+      goodgameTokenInput.value = "";
     });
   }
 

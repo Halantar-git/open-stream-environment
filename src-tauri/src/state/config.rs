@@ -181,6 +181,20 @@ pub fn set_app_config(config: &mut ConfigFile, patch: &Value) {
         );
         config.set("goodgame", Value::Object(goodgame));
     }
+    if let Some(goodgame) = patch.get("goodgame") {
+        let mut service = section(config, "goodgame");
+        if let Some(user_id) = goodgame.get("userId") {
+            service.insert("userId".to_string(), Value::from(js_string(user_id).trim()));
+        }
+        // Пустое поле — «не менять»: токен вводится один раз и обратно не показывается.
+        if let Some(token) = goodgame.get("token").and_then(Value::as_str) {
+            let token = token.trim();
+            if !token.is_empty() {
+                service.insert("token".to_string(), Value::from(token));
+            }
+        }
+        config.set("goodgame", Value::Object(service));
+    }
     if let Some(port) = patch.get("port") {
         let raw = js_number_or_zero(Some(port));
         let port = if raw == 0.0 { 8710.0 } else { raw };
@@ -1109,12 +1123,19 @@ pub fn normalize_config(config: &mut ConfigFile) {
         }
     }
 
-    // Канал GoodGame — всегда строка: пустая значит «ещё не ввели».
+    // Канал и учётные данные GoodGame — всегда строки: пустые значат
+    // «ещё не ввели». Токен нужен только для отправки, чтение анонимное.
     let mut goodgame = object_or_empty(config.get("goodgame"));
     if !goodgame.get("channel").is_some_and(Value::is_string) {
         goodgame.insert("channel".to_string(), Value::from(""));
-        config.set("goodgame", Value::Object(goodgame));
     }
+    if !goodgame.get("userId").is_some_and(Value::is_string) {
+        goodgame.insert("userId".to_string(), Value::from(""));
+    }
+    if !goodgame.get("token").is_some_and(Value::is_string) {
+        goodgame.insert("token".to_string(), Value::from(""));
+    }
+    config.set("goodgame", Value::Object(goodgame));
 
     // External token DonateX — всегда строка, чтобы его можно было читать без
     // проверок (отсутствие ключа значит «ещё не вводили»).

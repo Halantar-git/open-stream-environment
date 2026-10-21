@@ -24,7 +24,8 @@
   position. Third-party emotes (BetterTTV, FrankerFaceZ, 7TV) never appear in
   that tag: they are matched by name, which is why configure() downloads the
   channel's sets once and renderEmotes() walks the text that is left between
-  native ranges.
+  native ranges. GoodGame emotes are sent as `:name:` tags; their global and
+  channel sets are downloaded from the public `global.json`.
 
   Each page keeps its own copy; a failed request (network, CORS, unknown
   channel) simply leaves that provider out instead of breaking the chat.
@@ -32,15 +33,19 @@
 (function (root) {
   const EMOTE_CDN = "https://static-cdn.jtvnw.net/emoticons/v2";
   const BTTV_CDN = "https://cdn.betterttv.net/emote";
+  const GOODGAME_GLOBAL_URL = "https://static.goodgame.ru/js/minified/global.json";
+  const GOODGAME_STATUS_URL = "https://goodgame.ru/api/getchannelstatus";
   const REQUEST_TIMEOUT_MS = 8000;
 
-  // Точка входа: `{ channel, channelId }` последнего configure(). Хранится,
-  // чтобы refresh() мог перезагрузить наборы, не дожидаясь нового STATE.
-  let current = { channel: "", channelId: "" };
+  // Точка входа: канал Twitch и канал GoodGame последнего configure().
+  // Хранится, чтобы refresh() мог перезагрузить наборы, не дожидаясь STATE.
+  let current = { channel: "", channelId: "", goodgameChannel: "" };
   let loadedKey = null;
   let loading = null;
   // Имя смайла -> URL картинки. Канальные наборы перекрывают глобальные.
   let thirdParty = new Map();
+  // `:имя:` -> URL картинки GoodGame.
+  let goodgame = new Map();
 
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -176,6 +181,45 @@
     return data && data.emote_set ? sevenTvEntries(data.emote_set.emotes) : [];
   }
 
+  // ---- GoodGame ----
+
+  function goodgameEntry(smile) {
+    const name = String((smile && smile.name) || "").trim();
+    if (!name) return null;
+    // Гифка, если она есть: в чате GoodGame анимированные смайлы обычны.
+    const url = smile.img_gif || smile.img || smile.img_big;
+    if (!url) return null;
+    return [`:${name}:`, String(url).startsWith("//") ? `https:${url}` : String(url)];
+  }
+
+  async function goodgameChannelId(channel) {
+    if (/^\d+$/.test(channel)) return channel;
+    const data = await fetchJson(
+      `${GOODGAME_STATUS_URL}?id=${encodeURIComponent(channel)}&fmt=json`
+    );
+    if (!data || typeof data !== "object" || Array.isArray(data)) return "";
+    return Object.keys(data).find((key) => /^\d+$/.test(key)) || "";
+  }
+
+  async function loadGoodgame(channel) {
+    const id = await goodgameChannelId(channel);
+    if (!id) return new Map();
+    const data = await fetchJson(GOODGAME_GLOBAL_URL);
+    if (!data) return new Map();
+    const map = new Map();
+    for (const smile of data.Smiles || []) {
+      const entry = goodgameEntry(smile);
+      if (entry) map.set(entry[0], entry[1]);
+    }
+    // Канальные смайлы важнее глобальных с тем же именем.
+    const channelSmiles = data.Channel_Smiles && data.Channel_Smiles[id];
+    for (const smile of channelSmiles || []) {
+      const entry = goodgameEntry(smile);
+      if (entry) map.set(entry[0], entry[1]);
+    }
+    return map;
+  }
+
   async function loadThirdParty(channel, channelId) {
     const [bttvG, ffzG, sevenG, bttvC, ffzC, sevenC] = await Promise.all([
       bttvGlobal(),
@@ -195,28 +239,37 @@
   }
 
   /**
-   * Загрузить сторонние наборы для канала. Повторный вызов с теми же каналом и
-   * id ничего не делает; смена канала перезагружает наборы.
+   * Загрузить сторонние наборы для каналов Twitch и GoodGame. Повторный вызов с
+   * теми же каналами ничего не делает; смена любого из них перезагружает
+   * наборы.
    */
   function configure(options) {
     const channel = String((options && options.channel) || "").trim().toLowerCase();
     const channelId = String((options && options.channelId) || "").trim();
-    current = { channel, channelId };
-    const key = `${channel}|${channelId}`;
-    if (key === loadedKey) return loading || Promise.resolve(thirdParty);
+    const goodgameChannel = String((options && options.goodgameChannel) || "").trim();
+    current = { channel, channelId, goodgameChannel };
+    const key = `${channel}|${channelId}|${goodgameChannel}`;
+    if (key === loadedKey) return loading || Promise.resolve();
 
     loadedKey = key;
     thirdParty = new Map();
-    loading = loadThirdParty(channel, channelId)
-      .then((map) => {
-        thirdParty = map;
+    goodgame = new Map();
+    loading = Promise.all([
+      loadThirdParty(channel, channelId),
+      goodgameChannel ? loadGoodgame(goodgameChannel) : Promise.resolve(new Map()),
+    ])
+      .then(([twitch, gg]) => {
+        // Пока шла загрузка, канал могли сменить ещё раз.
+        if (loadedKey !== key) return;
+        thirdParty = twitch;
+        goodgame = gg;
         loading = null;
-        return map;
       })
       .catch(() => {
+        if (loadedKey !== key) return;
         thirdParty = new Map();
+        goodgame = new Map();
         loading = null;
-        return thirdParty;
       });
     return loading;
   }
@@ -227,15 +280,30 @@
     return configure(current);
   }
 
+  // Смайл GoodGame — тег `:имя:` внутри слова, а не целое слово: он может
+  // стоять вплотную к знаку препинания или тексту.
+  function goodgameHtml(token) {
+    if (!goodgame.size || !token.includes(":")) return escapeHtml(token);
+    return token
+      .split(/(:[A-Za-z0-9_+.-]+:)/)
+      .map((part) => {
+        if (!part) return "";
+        const url = goodgame.get(part);
+        if (!url) return escapeHtml(part);
+        return `<img src="${escapeHtml(url)}" alt="${escapeHtml(part)}" title="${escapeHtml(part)}" class="twitch-emote" loading="lazy" />`;
+      })
+      .join("");
+  }
+
   function thirdPartyHtml(chunk) {
-    if (!thirdParty.size) return escapeHtml(chunk);
-    // Режем по пробелам, сохраняя их: имя смайла — это целое слово.
+    if (!thirdParty.size && !goodgame.size) return escapeHtml(chunk);
+    // Режем по пробелам, сохраняя их: имя смайла Twitch — это целое слово.
     return chunk
       .split(/(\s+)/)
       .map((token) => {
         if (!token || /^\s+$/.test(token)) return escapeHtml(token);
         const url = thirdParty.get(token);
-        if (!url) return escapeHtml(token);
+        if (!url) return goodgameHtml(token);
         return `<img src="${url}" alt="${escapeHtml(token)}" title="${escapeHtml(token)}" class="twitch-emote" loading="lazy" />`;
       })
       .join("");

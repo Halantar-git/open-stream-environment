@@ -253,6 +253,7 @@
           window.TwitchEmotes.configure({
             channel: msg.payload.twitchChannel,
             channelId: msg.payload.twitchBroadcasterId,
+            goodgameChannel: msg.payload.goodgameChannel,
           });
         }
         break;

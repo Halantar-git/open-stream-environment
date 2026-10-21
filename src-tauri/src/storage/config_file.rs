@@ -213,6 +213,7 @@ const SECRET_FIELDS: &[(&str, &str, &str)] = &[
     ("youtube", "accessToken", labels::YOUTUBE_ACCESS_TOKEN),
     ("youtube", "refreshToken", labels::YOUTUBE_REFRESH_TOKEN),
     ("donatex", "externalToken", labels::DONATEX_EXTERNAL_TOKEN),
+    ("goodgame", "token", labels::GOODGAME_TOKEN),
     ("obs", "password", labels::OBS_PASSWORD),
 ];
 
@@ -428,7 +429,7 @@ mod tests {
         // до первого сохранения.
         fs::write(
             dir.config(),
-            r#"{"port":8710,"twitch":{"clientSecret":"живой"},"obs":{"password":"пароль"},"donatex":{"externalToken":"dx-токен"}}"#,
+            r#"{"port":8710,"twitch":{"clientSecret":"живой"},"obs":{"password":"пароль"},"donatex":{"externalToken":"dx-токен"},"goodgame":{"token":"gg-токен"}}"#,
         )
         .unwrap();
 
@@ -442,6 +443,7 @@ mod tests {
             config.get("donatex").unwrap()["externalToken"],
             json!("dx-токен")
         );
+        assert_eq!(config.get("goodgame").unwrap()["token"], json!("gg-токен"));
 
         config.set("port", json!(9000));
         config.save();
@@ -465,10 +467,17 @@ mod tests {
                 "external token должен быть зашифрован: {donatex}"
             );
             assert!(!donatex.contains("dx-токен"));
+            let goodgame = saved["goodgame"]["token"].as_str().unwrap();
+            assert!(
+                super::secrets::is_sealed(goodgame),
+                "токен GoodGame должен быть зашифрован: {goodgame}"
+            );
+            assert!(!goodgame.contains("gg-токен"));
         } else {
             // Хранилища нет — значение остаётся открытым, но не пустым.
             assert_eq!(secret, "живой");
             assert_eq!(saved["donatex"]["externalToken"], json!("dx-токен"));
+            assert_eq!(saved["goodgame"]["token"], json!("gg-токен"));
         }
     }
 
