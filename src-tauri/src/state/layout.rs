@@ -769,6 +769,7 @@ mod tests {
             json!({ "id": "b", "type": "webcam", "config": { "source": "remote" } }),
             json!({ "id": "c", "type": "webcam", "config": { "source": "remote", "guestSlot": "" } }),
             json!({ "id": "d", "type": "webcam", "config": { "source": "camera" } }),
+            json!({ "id": "e", "type": "webcam", "config": { "source": "remote" } }),
         ]);
 
         let layout = layout(&db, &config);
@@ -784,6 +785,8 @@ mod tests {
         assert_eq!(slot("a"), json!("cam3"));
         assert_eq!(slot("b"), json!("cam2"));
         assert_eq!(slot("c"), json!("cam4"));
+        // Четвёртый гость получает cam5: гостевыми слотами их именно четыре.
+        assert_eq!(slot("e"), json!("cam5"));
         // Локальная камера — не гость, ей слот не нужен.
         assert!(layout
             .iter()

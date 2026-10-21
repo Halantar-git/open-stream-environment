@@ -34,7 +34,7 @@
 
   const SCHEME = "ose-join://v1";
   const CLOUD_SCHEME = "ose-join://v2";
-  const SLOTS = ["cam2", "cam3", "cam4"];
+  const SLOTS = ["cam2", "cam3", "cam4", "cam5"];
   const HOST_PATTERN = /^[a-z0-9.-]+$/i;
   const TOKEN_PATTERN = /^[a-z0-9_-]{16,64}$/i;
   const SIGNAL_PATTERN = /^wss?:\/\/[a-z0-9.:[\]-]+(?:\/[a-z0-9._~/-]*)?$/i;

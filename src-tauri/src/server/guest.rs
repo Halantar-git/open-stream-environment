@@ -38,9 +38,9 @@ pub const INVITE_TTL: Duration = Duration::from_secs(15 * 60);
 const PENDING_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Слоты гостевых камер. Первый слот — локальная камера хоста, поэтому
-/// гостевым остаются три: этого хватает для мультикама и не превращает
-/// интерфейс в список на десяток строк.
-pub const GUEST_SLOTS: [&str; 3] = ["cam2", "cam3", "cam4"];
+/// гостевым остаются четыре: этого хватает для мультикама, а список в панели
+/// ещё не превращается в простыню.
+pub const GUEST_SLOTS: [&str; 4] = ["cam2", "cam3", "cam4", "cam5"];
 
 /// Ограничение на длину имени: оно приходит от гостя и показывается в панели.
 const MAX_NAME_LEN: usize = 40;
@@ -1405,6 +1405,27 @@ mod tests {
         assert!(hub.bind("cam4", 31));
         assert_eq!(hub.decline("cam4"), Some(("cam4".to_string(), Some(31))));
         assert_eq!(hub.snapshot()["slots"][2]["state"], json!("free"));
+    }
+
+    #[test]
+    fn four_guest_slots_are_available() {
+        let hub = hub();
+        // Первый слот занят локальной камерой, гостевым остаются четыре.
+        for (index, slot) in ["cam2", "cam3", "cam4", "cam5"].iter().enumerate() {
+            let token = invite(&hub, slot);
+            assert!(
+                hub.open(slot, &token, "Гость"),
+                "слот {slot} должен приниматься"
+            );
+            assert!(hub.bind(slot, index as u64 + 1));
+            assert!(
+                hub.accept(slot).is_some(),
+                "слот {slot} должен подтверждаться"
+            );
+        }
+        assert_eq!(hub.snapshot()["slots"].as_array().unwrap().len(), 4);
+        // Пятого гостевого слота нет.
+        assert!(valid_slot("cam6").is_none());
     }
 
     #[test]

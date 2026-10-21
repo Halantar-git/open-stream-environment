@@ -18,7 +18,7 @@
 /*
   Настройки гостевых камер: слоты хоста и подключение к чужому стриму.
 
-  Хост видит три слота, для каждого — ссылку-приглашение и состояние. Гость
+  Хост видит четыре слота, для каждого — ссылку-приглашение и состояние. Гость
   вставляет приглашение и ждёт подтверждения; поток отправляет `guest-share`,
   а этот модуль только показывает состояние и передаёт события.
 */
@@ -33,7 +33,7 @@ function escapeHtml(value) {
 
 function defaultSlots() {
   const protocol = typeof window !== "undefined" ? window.GuestProtocol : null;
-  const slots = protocol && Array.isArray(protocol.SLOTS) ? protocol.SLOTS : ["cam2", "cam3", "cam4"];
+  const slots = protocol && Array.isArray(protocol.SLOTS) ? protocol.SLOTS : ["cam2", "cam3", "cam4", "cam5"];
   return slots.map((slot) => ({ slot, name: "", state: "free", guest: "" }));
 }
 
@@ -202,7 +202,7 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
 
   function render() {
     const slots = Array.isArray(state.guestSlots) && state.guestSlots.length ? state.guestSlots : defaultSlots();
-    // Порядок задаёт сервер (cam2…cam4); на случай старого снимка добавляем
+    // Порядок задаёт сервер (cam2…cam5); на случай старого снимка добавляем
     // недостающие слоты, чтобы ссылку всегда было куда вставить.
     const known = new Set(slots.map((item) => item.slot));
     const rows = slots.concat(defaultSlots().filter((item) => !known.has(item.slot)));

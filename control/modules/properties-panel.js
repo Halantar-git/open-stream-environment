@@ -189,7 +189,7 @@ export function initPropertiesPanel({
     const known =
       Array.isArray(state.guestSlots) && state.guestSlots.length
         ? state.guestSlots
-        : ["cam2", "cam3", "cam4"].map((slot) => ({ slot }));
+        : ["cam2", "cam3", "cam4", "cam5"].map((slot) => ({ slot }));
     const used = new Set(
       (state.layout || [])
         .filter(
@@ -545,7 +545,7 @@ export function initPropertiesPanel({
       const neonStrength = Math.max(2, Math.min(40, Math.round(Number(config.neonStrength) || 14)));
       const guestSlots = Array.isArray(state.guestSlots) && state.guestSlots.length
         ? state.guestSlots
-        : ["cam2", "cam3", "cam4"].map((slot) => ({ slot, state: "free" }));
+        : ["cam2", "cam3", "cam4", "cam5"].map((slot) => ({ slot, state: "free" }));
       const guestVolume = Math.round(Math.min(100, Math.max(0, Number(config.volume) || (config.volume === 0 ? 0 : 100))));
       const guestSlotOptions = guestSlots
         .map((item) => {
