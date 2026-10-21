@@ -166,6 +166,9 @@ pub struct Diagnostics {
     wheel: Arc<WheelCycle>,
     /// Синхронизация Longshot (таймер Executive Hangar): анкер и ленивый опрос.
     longshot: Arc<LongshotSync>,
+    /// Курсы валют: нужны, чтобы донат в долларах пополнял цель в рублях
+    /// (см. `integrations::exchange_rates`).
+    rates: crate::integrations::exchange_rates::Shared,
     /// Идёт ли сейчас добор пропущенных донатов (защита от параллельных вызовов).
     recovering: Arc<AtomicBool>,
     /// Куда уходит журнал служб: в панель (`terminal_log`/`debug_log`).
@@ -381,6 +384,7 @@ impl Diagnostics {
             pending_video: Mutex::new(None),
             wheel,
             longshot,
+            rates: crate::integrations::exchange_rates::shared(),
             recovering: Arc::new(AtomicBool::new(false)),
             log_bus,
             port: AtomicU16::new(0),
@@ -730,6 +734,7 @@ impl Diagnostics {
             database: Arc::clone(&self.database),
             remote_scene: Arc::clone(&self.remote_scene),
             notifier: Arc::clone(&self.notifier),
+            rates: Arc::clone(&self.rates),
         }
     }
 
@@ -896,6 +901,36 @@ impl Diagnostics {
                 if longshot.is_active() {
                     longshot.refresh().await;
                 }
+            }
+        }));
+    }
+
+    /// Загрузить курсы валют при старте и обновлять их в фоне. Без курсов
+    /// донат в чужой валюте цель не двигает, поэтому первая загрузка идёт
+    /// сразу, а после неудачи повторяется заметно быстрее суточного цикла.
+    pub fn start_exchange_rates(&self) {
+        use crate::integrations::exchange_rates;
+
+        let rates = Arc::clone(&self.rates);
+        let logger = self.logger("rates");
+        std::mem::drop(tauri::async_runtime::spawn(async move {
+            loop {
+                let delay = match exchange_rates::fetch().await {
+                    Some(values) => {
+                        let count = values.len();
+                        exchange_rates::store(&rates, values);
+                        logger.info(
+                            "курсы валют загружены",
+                            Some(&json!({ "currencies": count })),
+                        );
+                        exchange_rates::REFRESH_EVERY_SECS
+                    }
+                    None => {
+                        logger.warn("курсы валют недоступны", None);
+                        exchange_rates::RETRY_IN_SECS
+                    }
+                };
+                tokio::time::sleep(Duration::from_secs(delay)).await;
             }
         }));
     }
@@ -2413,6 +2448,7 @@ struct BusContext {
     database: Arc<Database>,
     remote_scene: Arc<OnceLock<RemoteSceneFn>>,
     notifier: Arc<OnceLock<NotifyFn>>,
+    rates: crate::integrations::exchange_rates::Shared,
 }
 
 fn apply_bus_event(event: &Value, ctx: &BusContext) {
@@ -2425,13 +2461,14 @@ fn apply_bus_event(event: &Value, ctx: &BusContext) {
         database,
         remote_scene,
         notifier,
+        rates,
     } = ctx;
     let kind = event["type"].as_str().unwrap_or("");
     let payload = event.get("payload").cloned().unwrap_or(Value::Null);
     match kind {
         "alert" => {
             publish_alert_static(&payload, config, queue, clients);
-            apply_alert_side_effects(&payload, config, runtime, database, clients);
+            apply_alert_side_effects(&payload, config, runtime, database, clients, rates);
             // Нативное уведомление — как `onStreamAlert` в `main.js`: когда панель
             // в фокусе, реальные события не дублируются (решает оболочка).
             if let Some(notify) = notifier.get() {
@@ -2569,6 +2606,7 @@ fn apply_alert_side_effects(
     runtime: &Arc<Mutex<Runtime>>,
     database: &Arc<Database>,
     clients: &Arc<ClientRegistry>,
+    rates: &crate::integrations::exchange_rates::Shared,
 ) {
     let kind = alert.get("kind").and_then(Value::as_str).unwrap_or("");
     if kind == "wheel_start" || kind == "wheel_winner" {
@@ -2641,8 +2679,8 @@ fn apply_alert_side_effects(
     let (goal, top) = {
         let mut config = config.lock().unwrap_or_else(|error| error.into_inner());
         // Цель ведётся в одной валюте: $100 не должны прибавляться как 100 ₽.
-        // Курсов в приложении нет, поэтому чужая валюта цель не двигает —
-        // лучше неверного числа только честное «без изменений».
+        // Чужую сумму пересчитываем по курсу, если он загружен; без курса
+        // цель не двигаем — «без изменений» честнее неверного числа.
         let donation_currency =
             crate::state::currency_code(alert.get("currency").unwrap_or(&Value::Null));
         let goal_currency = config
@@ -2650,11 +2688,21 @@ fn apply_alert_side_effects(
             .and_then(|goal| goal.get("currency"))
             .map(crate::state::currency_code)
             .unwrap_or_else(|| crate::state::currency_code(&Value::Null));
-        let goal = (donation_currency == goal_currency).then(|| {
-            crate::state::config::add_to_goal(
-                &mut config,
-                alert.get("amount").unwrap_or(&Value::Null),
+        let amount = js_number_or_zero(alert.get("amount"));
+        let converted = if donation_currency == goal_currency {
+            Some(amount)
+        } else {
+            crate::integrations::exchange_rates::convert(
+                rates,
+                amount,
+                &donation_currency,
+                &goal_currency,
             )
+        };
+        let goal = converted.map(|value| {
+            // Копейки в цели не нужны, а курс даёт длинную дробь.
+            let value = (value * 100.0).round() / 100.0;
+            crate::state::config::add_to_goal(&mut config, &json!(value))
         });
         let top = crate::state::scenes::maybe_update_top_donation(
             &mut config,
@@ -3429,7 +3477,7 @@ mod tests {
     }
 
     #[test]
-    fn a_foreign_currency_donation_does_not_add_rubles_to_the_goal() {
+    fn a_foreign_currency_donation_reaches_the_goal_by_the_rate() {
         let dir = TempDir::new("currency-effects");
         dir.write_config(
             r#"{ "alertQueue": { "enabled": false },
@@ -3443,7 +3491,7 @@ mod tests {
             "payload": { "kind": "donation", "user": "Вася", "amount": 100, "currency": "USD" },
         }));
 
-        // Цель в рублях: $100 не прибавляются как 100 ₽ — лучше не двигать её вовсе.
+        // Курсов ещё нет: цель не двигаем — $100 не превращаются в 100 ₽.
         assert_eq!(
             diagnostics.config().get("goal").unwrap()["current"],
             json!(500)
@@ -3456,6 +3504,21 @@ mod tests {
         assert_eq!(
             session["amounts"],
             json!([{ "currency": "USD", "amount": 100 }])
+        );
+
+        // Загрузили курс: $100 — это 9250 ₽, цель растёт на эту сумму.
+        let mut values = std::collections::HashMap::new();
+        values.insert("USD".to_string(), 1.0);
+        values.insert("RUB".to_string(), 92.5);
+        crate::integrations::exchange_rates::store(&diagnostics.rates, values);
+
+        emit(json!({
+            "type": event_types::ALERT,
+            "payload": { "kind": "donation", "user": "Петя", "amount": 100, "currency": "USD" },
+        }));
+        assert_eq!(
+            diagnostics.config().get("goal").unwrap()["current"],
+            json!(9750)
         );
     }
 

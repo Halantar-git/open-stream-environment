@@ -10,6 +10,7 @@ pub mod chat_moderation;
 pub mod donatex;
 pub mod donationalerts;
 pub mod donationalerts_control;
+pub mod exchange_rates;
 pub mod http;
 pub mod longshot_sync;
 pub mod nick_color;

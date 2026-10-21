@@ -210,6 +210,8 @@ pub fn run() {
             diagnostics.restart_youtube();
             // Пауза очереди алертов переживает перезапуск: срок живёт в настройках.
             diagnostics.restore_alert_pause();
+            // Курсы валют: по ним цель принимает донаты в другой валюте.
+            diagnostics.start_exchange_rates();
             // Сессия стрима — её начало и есть граница «только этот стрим».
             diagnostics.start_stream_session();
             // Longshot: фоновый цикл опроса, активность — по видимому таймеру в
