@@ -23,7 +23,6 @@
     connectTwitch: (creds) => invoke("connect_twitch", { creds }),
     connectDonationAlerts: (creds) => invoke("connect_donation_alerts", { creds }),
     connectYoutube: (creds) => invoke("connect_youtube", { creds }),
-    connectGoodgame: () => invoke("connect_goodgame"),
     exportConfig: () => invoke("export_config"),
     importConfig: () => invoke("import_config"),
     saveSupportBundle: () => invoke("save_support_bundle"),

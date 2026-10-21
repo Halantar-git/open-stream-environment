@@ -22,7 +22,6 @@ commands.allow = [
   "connect_twitch",
   "connect_donation_alerts",
   "connect_youtube",
-  "connect_goodgame",
   "export_config",
   "import_config",
   "save_support_bundle",

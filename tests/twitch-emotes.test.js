@@ -47,26 +47,6 @@ const RESPONSES = {
       ],
     },
   },
-  "https://goodgame.ru/api/getchannelstatus?id=Miker&fmt=json": {
-    "5": { key: "Miker", status: "Live" },
-  },
-  "https://goodgame.ru/api/getchannelstatus?id=bad&fmt=json": [],
-  "https://static.goodgame.ru/js/minified/global.json": {
-    Smiles: [
-      { name: "glob", img: "https://goodgame.ru/images/smiles/glob.png" },
-      { name: "dup", img: "https://goodgame.ru/images/smiles/dup-global.png" },
-    ],
-    Channel_Smiles: {
-      "5": [
-        {
-          name: "mikergold",
-          img_gif: "https://goodgame.ru/images/anismiles/mikergold-gif.gif",
-          img: "https://goodgame.ru/images/smiles/mikergold.png",
-        },
-        { name: "dup", img: "https://goodgame.ru/images/smiles/dup-channel.png" },
-      ],
-    },
-  },
 };
 
 let TwitchEmotes;
@@ -152,45 +132,5 @@ describe("TwitchEmotes — сторонние наборы", () => {
     // Три глобальных набора, канальные запросы не нужны.
     expect(global.fetch.mock.calls.length).toBe(3);
     expect(TwitchEmotes.renderEmotes("PogU", null)).toContain("bttv-global");
-  });
-});
-
-describe("TwitchEmotes — смайлы GoodGame", () => {
-  async function configureGoodgame(channel) {
-    await TwitchEmotes.configure({ goodgameChannel: channel });
-  }
-
-  test("глобальные и канальные смайлы подставляются по тегу :имя:", async () => {
-    await configureGoodgame("Miker");
-    const html = TwitchEmotes.renderEmotes("привет :mikergold: и :glob:!", null);
-    expect(html).toContain("https://goodgame.ru/images/anismiles/mikergold-gif.gif");
-    expect(html).toContain("https://goodgame.ru/images/smiles/glob.png");
-    expect(html).toContain('class="twitch-emote"');
-    // Остальной текст на месте, теги не потерялись.
-    expect(html).toContain("привет");
-    expect(html).toContain("!");
-  });
-
-  test("канальный смайл перекрывает глобальный", async () => {
-    await configureGoodgame("Miker");
-    const html = TwitchEmotes.renderEmotes(":dup:", null);
-    expect(html).toContain("dup-channel.png");
-    expect(html).not.toContain("dup-global.png");
-  });
-
-  test("числовой id канала не требует запроса статуса", async () => {
-    await configureGoodgame("5");
-    const urls = global.fetch.mock.calls.map(([url]) => url);
-    expect(urls).toContain("https://static.goodgame.ru/js/minified/global.json");
-    expect(urls.some((url) => url.startsWith("https://goodgame.ru/api/getchannelstatus"))).toBe(
-      false
-    );
-  });
-
-  test("неизвестный канал оставляет смайлы текстом", async () => {
-    await configureGoodgame("bad");
-    const html = TwitchEmotes.renderEmotes(":mikergold:", null);
-    expect(html).not.toContain("<img");
-    expect(html).toBe(":mikergold:");
   });
 });

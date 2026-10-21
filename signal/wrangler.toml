@@ -4,12 +4,6 @@
 #   cd signal
 #   npx wrangler deploy
 #
-# OAuth2 GoodGame (необязательно, без этого работает только signaling):
-#   npx wrangler secret put GOODGAME_CLIENT_ID
-#   npx wrangler secret put GOODGAME_CLIENT_SECRET
-#   npx wrangler secret put GOODGAME_REDIRECT_URI
-# Секрет приложения остаётся здесь и в приложение не попадает.
-#
 # Рабочий адрес: wss://ose-signal.halantar.workers.dev (он же — умолчание
 # в приложении). Свой домен можно привязать позже:
 #   signal.ose-overlay.ru  ->  worker ose-signal
@@ -26,17 +20,7 @@ compatibility_date = "2026-01-01"
 name = "ROOMS"
 class_name = "Room"
 
-# Одноразовые state и тикеты OAuth2 GoodGame: одна запись на вход, живут
-# минуты, поэтому отдельного KV не нужно.
-[[durable_objects.bindings]]
-name = "TICKETS"
-class_name = "TicketStore"
-
 # SQLite-backed Durable Objects доступны на бесплатном плане Workers.
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Room"]
-
-[[migrations]]
-tag = "v2"
-new_sqlite_classes = ["TicketStore"]

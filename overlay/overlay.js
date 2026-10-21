@@ -43,9 +43,9 @@
       : (msg) => escapeHtml(msg);
   // Сторонние смайлы (BTTV/FFZ/7TV) ищутся по имени, поэтому наборы грузятся
   // один раз, когда становится известен канал.
-  const configureEmotes = (channel, channelId, goodgameChannel) => {
+  const configureEmotes = (channel, channelId) => {
     if (window.TwitchEmotes && window.TwitchEmotes.configure) {
-      window.TwitchEmotes.configure({ channel, channelId, goodgameChannel });
+      window.TwitchEmotes.configure({ channel, channelId });
     }
   };
 
@@ -470,7 +470,7 @@
     switch (msg.type) {
       case EVENT_TYPES.STATE: {
         const p = msg.payload || {};
-        configureEmotes(p.twitchChannel, p.twitchBroadcasterId, p.goodgameChannel);
+        configureEmotes(p.twitchChannel, p.twitchBroadcasterId);
         state.goal = p.goal || state.goal;
         state.recentEvents = p.recentEvents || [];
         state.stats = p.stats || state.stats;

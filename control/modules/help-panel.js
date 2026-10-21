@@ -204,17 +204,6 @@ const SECTIONS = [
     ],
   },
   {
-    id: "goodgame",
-    title: "help.goodgame.title",
-    blocks: [
-      { type: "p", key: "help.goodgame.p1" },
-      { type: "p", key: "help.goodgame.p2" },
-      { type: "p", key: "help.goodgame.p3" },
-      { type: "p", key: "help.goodgame.p4" },
-      { type: "p", key: "help.goodgame.p5" },
-    ],
-  },
-  {
     id: "obs",
     title: "help.obs.title",
     blocks: [

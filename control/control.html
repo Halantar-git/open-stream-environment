@@ -705,7 +705,7 @@
             <h2 data-i18n="settings.chatBot">Бот чата</h2>
             <div class="md-switch" id="chatBotEnabledSwitch" role="switch" aria-checked="false" data-i18n-title="settings.integrationSwitch"><div class="md-switch__thumb"></div></div>
           </div>
-          <p class="settings__desc" data-i18n="settings.chatBotDesc">Команды и таймеры чата. Ответы на команды уходят в тот чат, откуда пришла команда; таймеры — по выбору ниже. Модерация работает на той платформе, где сработало правило, и требует прав в этом чате.</p>
+          <p class="settings__desc" data-i18n="settings.chatBotDesc">Команды и таймеры чата: бот отвечает в Twitch-чате от имени канала. Отправка требует подключения Twitch с правом user:write:chat.</p>
           <div class="md-field">
             <label data-i18n="settings.chatBotPrefix">Префикс команд</label>
             <input type="text" id="chatBotPrefix" placeholder="!" maxlength="4" />
@@ -853,48 +853,6 @@
           </div>
           <div class="settings__statuses">
             <span class="md-chip" id="chip-youtube"><span class="md-chip__dot"></span><span class="md-chip__label" data-i18n="settings.youtube">YouTube</span></span>
-          </div>
-        </div>
-
-        <div class="settings__card md-card" id="settingsCardGoodgame">
-          <div class="settings__card-head">
-            <h2 data-i18n="settings.goodgame">GoodGame</h2>
-            <div class="md-switch is-on" id="goodgameEnabledSwitch" role="switch" aria-checked="true" data-i18n-title="settings.integrationSwitch"><div class="md-switch__thumb"></div></div>
-          </div>
-          <p class="settings__desc" data-i18n="settings.goodgameDesc">Чат и события канала GoodGame: сообщения, фоллоу, донаты и премиумы. Чтение анонимное; чтобы отправлять сообщения, нажмите «Подключить GoodGame» — токен выдаст сервис авторизации.</p>
-          <div class="md-field">
-            <label data-i18n="settings.goodgameChannel">Канал</label>
-            <input type="text" id="goodgameChannel" data-i18n-placeholder="settings.goodgameChannelPlaceholder" placeholder="Miker" />
-            <span class="md-field__hint" data-i18n="settings.goodgameChannelHint">Имя из адреса канала (например, Miker) или числовой id.</span>
-          </div>
-          <div class="md-field">
-            <label data-i18n="settings.goodgameUserId">ID пользователя</label>
-            <input type="text" id="goodgameUserId" inputmode="numeric" data-i18n-placeholder="settings.goodgameUserIdPlaceholder" placeholder="123456" />
-            <span class="md-field__hint" data-i18n="settings.goodgameUserIdHint">Только для отправки сообщений — число из UserObj.id на сайте GoodGame.</span>
-          </div>
-          <div class="md-field">
-            <label data-i18n="settings.goodgameToken">Токен чата (вручную)</label>
-            <input type="password" id="goodgameToken" placeholder="••••••••" autocomplete="off" />
-            <span class="md-field__hint" data-i18n="settings.goodgameTokenHint">Запасной способ: токен из UserObj.chatToken на goodgame.ru. При подключении через OAuth2 поле не нужно. Оставьте пустым, чтобы не менять сохранённый — им поле не заполняется.</span>
-          </div>
-          <div class="settings__hint" id="goodgameTokenStatus"></div>
-          <div class="md-field">
-            <label data-i18n="settings.chatBotSendTo">Куда отправлять сообщения</label>
-            <select id="chatBotSendTo">
-              <option value="both" data-i18n="settings.chatBotSendToBoth">Twitch и GoodGame</option>
-              <option value="twitch" data-i18n="settings.chatBotSendToTwitch">Только Twitch</option>
-              <option value="goodgame" data-i18n="settings.chatBotSendToGoodgame">Только GoodGame</option>
-            </select>
-            <span class="md-field__hint" data-i18n="settings.chatBotSendToHint">Окно чата и таймеры бота. Ответы на команды уходят в чат, откуда пришла команда.</span>
-          </div>
-          <div class="settings__actions">
-            <button class="md-button md-button--text" id="openGoodgameSite" data-i18n="settings.openGoodgameSite">Открыть goodgame.ru</button>
-            <button class="md-button md-button--text" id="openGoodgameDocs" data-i18n="settings.openGoodgameDocs">Документация API</button>
-            <button class="md-button md-button--filled" id="connectGoodgameBtn" data-i18n="settings.connectGoodgame">Подключить GoodGame</button>
-          </div>
-          <div class="settings__hint" id="goodgameConnectStatus"></div>
-          <div class="settings__statuses">
-            <span class="md-chip" id="chip-goodgame"><span class="md-chip__dot"></span><span class="md-chip__label" data-i18n="settings.goodgame">GoodGame</span></span>
           </div>
         </div>
 

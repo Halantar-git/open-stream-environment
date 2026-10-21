@@ -194,12 +194,6 @@ const { EVENT_TYPES } = window.SharedEvents;
   const sceneFormEl = document.getElementById("sceneForm");
 
   const twitchChannelInput = document.getElementById("twitchChannel");
-  const goodgameChannelInput = document.getElementById("goodgameChannel");
-  const goodgameUserIdInput = document.getElementById("goodgameUserId");
-  const goodgameTokenInput = document.getElementById("goodgameToken");
-  const goodgameTokenStatusEl = document.getElementById("goodgameTokenStatus");
-  const connectGoodgameBtn = document.getElementById("connectGoodgameBtn");
-  const goodgameConnectStatusEl = document.getElementById("goodgameConnectStatus");
   const twitchClientIdInput = document.getElementById("twitchClientId");
   const twitchClientSecretInput = document.getElementById("twitchClientSecret");
   const twitchRedirectUriEl = document.getElementById("twitchRedirectUri");
@@ -216,7 +210,6 @@ const { EVENT_TYPES } = window.SharedEvents;
   const donatexTokenInput = document.getElementById("donatexToken");
   const donatexTokenStatusEl = document.getElementById("donatexTokenStatus");
   const youtubeEnabledSwitch = document.getElementById("youtubeEnabledSwitch");
-  const goodgameEnabledSwitch = document.getElementById("goodgameEnabledSwitch");
   const obsEnabledSwitch = document.getElementById("obsEnabledSwitch");
   const obsHostInput = document.getElementById("obsHost");
   const obsPortInput = document.getElementById("obsPort");
@@ -270,7 +263,6 @@ const { EVENT_TYPES } = window.SharedEvents;
   const createMarkerBtn = document.getElementById("createMarkerBtn");
   const chatBotEnabledSwitch = document.getElementById("chatBotEnabledSwitch");
   const chatBotPrefixInput = document.getElementById("chatBotPrefix");
-  const chatBotSendToSelect = document.getElementById("chatBotSendTo");
   const chatBotCommandsList = document.getElementById("chatBotCommandsList");
   const addChatBotCommandBtn = document.getElementById("addChatBotCommandBtn");
   const chatBotTimersList = document.getElementById("chatBotTimersList");
@@ -492,7 +484,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   // ---- status FAB → jump to the matching settings card ----
   function onStatusClick(service) {
     const cardId =
-      ({ twitchChat: "settingsCardTwitch", twitchEvents: "settingsCardTwitch", donationAlerts: "settingsCardDonationAlerts", donatex: "settingsCardDonatex", youtube: "settingsCardYoutube", goodgame: "settingsCardGoodgame", obs: "settingsCardObs" })[service];
+      ({ twitchChat: "settingsCardTwitch", twitchEvents: "settingsCardTwitch", donationAlerts: "settingsCardDonationAlerts", donatex: "settingsCardDonatex", youtube: "settingsCardYoutube", obs: "settingsCardObs" })[service];
     switchView("settings");
     const card = cardId && document.getElementById(cardId);
     if (card) {
@@ -557,15 +549,6 @@ const { EVENT_TYPES } = window.SharedEvents;
   // ---- settings view ----
   function populateSettings() {
     twitchChannelInput.value = state.twitchChannel || "";
-    if (goodgameChannelInput) goodgameChannelInput.value = state.goodgameChannel || "";
-    if (goodgameUserIdInput) goodgameUserIdInput.value = state.goodgameUserId || "";
-    // Токен поле не показывает никогда: только его наличие.
-    if (goodgameTokenInput) goodgameTokenInput.value = "";
-    if (goodgameTokenStatusEl) {
-      goodgameTokenStatusEl.textContent = state.goodgameHasToken
-        ? t("settings.goodgameTokenSaved")
-        : t("settings.goodgameTokenMissing");
-    }
     twitchClientIdInput.value = state.twitchClientId || "";
     daClientIdInput.value = state.daClientId || "";
     youtubeClientIdInput.value = state.youtubeClientId || "";
@@ -635,7 +618,6 @@ const { EVENT_TYPES } = window.SharedEvents;
       renderChatBotTimers();
       renderChatBotModeration();
     }
-    if (chatBotSendToSelect) chatBotSendToSelect.value = (state.chatBot && state.chatBot.sendTo) || "both";
     setSwitchState(notificationSoundSwitch, state.notificationSound !== false);
     if (notificationVolume) {
       const vol = Math.round((state.notificationVolume ?? 0.8) * 100);
@@ -690,30 +672,6 @@ const { EVENT_TYPES } = window.SharedEvents;
   twitchChannelInput.addEventListener("change", () => {
     send(EVENT_TYPES.CMD_SET_APP_CONFIG, { twitchChannel: twitchChannelInput.value.trim() });
   });
-
-  if (goodgameChannelInput) {
-    goodgameChannelInput.addEventListener("change", () => {
-      send(EVENT_TYPES.CMD_SET_APP_CONFIG, { goodgameChannel: goodgameChannelInput.value.trim() });
-    });
-  }
-
-  if (goodgameUserIdInput) {
-    goodgameUserIdInput.addEventListener("change", () => {
-      send(EVENT_TYPES.CMD_SET_APP_CONFIG, {
-        goodgame: { userId: goodgameUserIdInput.value.trim() },
-      });
-    });
-  }
-
-  if (goodgameTokenInput) {
-    // Пустое поле — «не менять»: сохранённый токен обратно не показывается.
-    goodgameTokenInput.addEventListener("change", () => {
-      const value = goodgameTokenInput.value.trim();
-      if (!value) return;
-      send(EVENT_TYPES.CMD_SET_APP_CONFIG, { goodgame: { token: value } });
-      goodgameTokenInput.value = "";
-    });
-  }
 
   if (donatexTokenInput) {
     // Пустое поле — «не менять»: сохранённый токен обратно не показывается.
@@ -1285,11 +1243,6 @@ const { EVENT_TYPES } = window.SharedEvents;
   if (chatBotPrefixInput) {
     chatBotPrefixInput.addEventListener("change", () => {
       sendChatBotConfig({ prefix: chatBotPrefixInput.value.trim() || "!" });
-    });
-  }
-  if (chatBotSendToSelect) {
-    chatBotSendToSelect.addEventListener("change", () => {
-      sendChatBotConfig({ sendTo: chatBotSendToSelect.value });
     });
   }
   if (addChatBotCommandBtn) {
@@ -1958,30 +1911,6 @@ const { EVENT_TYPES } = window.SharedEvents;
   document.getElementById("openTwitchConsole").addEventListener("click", () => window.desktop?.openExternal("https://dev.twitch.tv/console/apps"));
   document.getElementById("openDaConsole").addEventListener("click", () => window.desktop?.openExternal("https://www.donationalerts.com/application/clients"));
   document.getElementById("openYoutubeConsole").addEventListener("click", () => window.desktop?.openExternal("https://console.cloud.google.com/apis/credentials"));
-  if (connectGoodgameBtn) {
-    connectGoodgameBtn.addEventListener("click", async () => {
-      if (!window.desktop?.connectGoodgame) return;
-      connectGoodgameBtn.disabled = true;
-      if (goodgameConnectStatusEl) goodgameConnectStatusEl.textContent = t("settings.goodgameConnecting");
-      try {
-        const result = await window.desktop.connectGoodgame();
-        if (goodgameConnectStatusEl) {
-          goodgameConnectStatusEl.textContent = result?.ok
-            ? t("settings.goodgameConnectOpened")
-            : `${t("settings.goodgameConnectFailed")} ${result?.error || ""}`.trim();
-        }
-      } catch (error) {
-        if (goodgameConnectStatusEl) {
-          goodgameConnectStatusEl.textContent = `${t("settings.goodgameConnectFailed")} ${error}`.trim();
-        }
-      } finally {
-        connectGoodgameBtn.disabled = false;
-      }
-    });
-  }
-
-  document.getElementById("openGoodgameSite")?.addEventListener("click", () => window.desktop?.openExternal("https://goodgame.ru/"));
-  document.getElementById("openGoodgameDocs")?.addEventListener("click", () => window.desktop?.openExternal("https://github.com/GoodGame/API"));
 
   function setSwitchState(el, on) {
     if (!el) return;
@@ -1994,11 +1923,10 @@ const { EVENT_TYPES } = window.SharedEvents;
     setSwitchState(donationAlertsEnabledSwitch, state.donationAlertsEnabled);
     setSwitchState(donatexEnabledSwitch, state.donatexEnabled);
     setSwitchState(youtubeEnabledSwitch, state.youtubeEnabled);
-    setSwitchState(goodgameEnabledSwitch, state.goodgameEnabled);
     setSwitchState(obsEnabledSwitch, state.obs ? !!state.obs.enabled : false);
   }
 
-  [[twitchEnabledSwitch, "twitch"], [donationAlertsEnabledSwitch, "donationAlerts"], [donatexEnabledSwitch, "donatex"], [youtubeEnabledSwitch, "youtube"], [goodgameEnabledSwitch, "goodgame"], [obsEnabledSwitch, "obs"]].forEach(([el, service]) => {
+  [[twitchEnabledSwitch, "twitch"], [donationAlertsEnabledSwitch, "donationAlerts"], [donatexEnabledSwitch, "donatex"], [youtubeEnabledSwitch, "youtube"], [obsEnabledSwitch, "obs"]].forEach(([el, service]) => {
     if (!el) return;
     el.addEventListener("click", () => {
       const on = !el.classList.contains("is-on");

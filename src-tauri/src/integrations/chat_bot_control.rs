@@ -24,7 +24,6 @@ use tokio::sync::oneshot;
 
 use crate::integrations::chat_bot::{self, BotEngine, Clock, ModCommand};
 use crate::integrations::chat_moderation::{ModerationEngine, ModerationStore, WarnsBackend};
-use crate::integrations::goodgame_control::GoodgameControl;
 use crate::integrations::twitch_chat::ChatSender;
 use crate::integrations::twitch_chat_control::SpawnFn;
 use crate::storage::db::Database;
@@ -42,47 +41,6 @@ struct BotRuntime {
     moderation: ModerationEngine,
     prefix: String,
     channel: String,
-    /// Куда отправлять таймеры. Ответы на команды идут в чат-источник.
-    send_to: SendTargets,
-}
-
-/// Платформы, куда бот имеет право писать.
-#[derive(Clone, Copy)]
-struct SendTargets {
-    twitch: bool,
-    goodgame: bool,
-}
-
-impl SendTargets {
-    fn from_value(value: Option<&Value>) -> Self {
-        match value.and_then(Value::as_str).unwrap_or("both") {
-            "twitch" => Self {
-                twitch: true,
-                goodgame: false,
-            },
-            "goodgame" => Self {
-                twitch: false,
-                goodgame: true,
-            },
-            _ => Self {
-                twitch: true,
-                goodgame: true,
-            },
-        }
-    }
-
-    fn for_source(source: &str) -> Self {
-        match source {
-            "goodgame" => Self {
-                twitch: false,
-                goodgame: true,
-            },
-            _ => Self {
-                twitch: true,
-                goodgame: false,
-            },
-        }
-    }
 }
 
 /// Чат-бот приложения.
@@ -92,8 +50,6 @@ pub struct ChatBot {
     clock: Clock,
     /// Настройки Twitch на момент отправки.
     twitch: Arc<dyn Fn() -> Value + Send + Sync>,
-    /// Живое соединение GoodGame; `None` — бот не умеет туда писать.
-    goodgame: Option<Arc<GoodgameControl>>,
     /// Варны модерации: один счётчик на бота, чтобы они не терялись при
     /// пересборке движка (смена настроек, переподключение).
     moderation: Arc<ModerationStore>,
@@ -111,7 +67,6 @@ impl ChatBot {
         spawn: SpawnFn,
         clock: Clock,
         twitch: Arc<dyn Fn() -> Value + Send + Sync>,
-        goodgame: Option<Arc<GoodgameControl>>,
         moderation: Arc<ModerationStore>,
     ) -> Self {
         Self {
@@ -119,7 +74,6 @@ impl ChatBot {
             spawn,
             clock,
             twitch,
-            goodgame,
             moderation,
             runtime: Mutex::new(None),
             user_ids: Mutex::new(HashMap::new()),
@@ -156,14 +110,12 @@ impl ChatBot {
             chat_bot.get("moderation").unwrap_or(&Value::Null),
             Arc::clone(&self.moderation),
         );
-        let send_to = SendTargets::from_value(chat_bot.get("sendTo"));
 
         *self.lock(&self.runtime) = Some(BotRuntime {
             engine,
             moderation,
             prefix,
             channel: channel.to_string(),
-            send_to,
         });
         self.start_tick();
     }
@@ -179,9 +131,8 @@ impl ChatBot {
         if js_truthy(msg.get("isTest")) {
             return;
         }
-        // Источник решает, какими правами считается автор и куда уходит ответ.
-        let source = msg.get("source").and_then(Value::as_str).unwrap_or("");
-        if !matches!(source, "twitch" | "goodgame") {
+        // Бот умеет только Twitch: уровни из Twitch-бейджей, ответы в Helix.
+        if msg.get("source").and_then(Value::as_str) != Some("twitch") {
             return;
         }
         let text = msg.get("message").and_then(Value::as_str).unwrap_or("");
@@ -204,18 +155,13 @@ impl ChatBot {
             .to_string();
         if let Some(user_id) = msg.get("userId").filter(|value| js_truthy(Some(value))) {
             self.lock(&self.user_ids)
-                .insert(user_key(source, &user), crate::state::js_string(user_id));
+                .insert(user.to_lowercase(), crate::state::js_string(user_id));
         }
         let badges = msg.get("badges").cloned().unwrap_or(Value::Null);
-        // Имя Twitch-канала к GoodGame не относится: там стримера видно по бейджу.
-        let level = chat_bot::user_level(
-            &user,
-            &badges,
-            if source == "twitch" { &channel } else { "" },
-        );
+        let level = chat_bot::user_level(&user, &badges, &channel);
 
         if let Some(mod_cmd) = chat_bot::parse_mod_command(&prefix, text) {
-            self.handle_mod_command(source, &user, &mod_cmd, level);
+            self.handle_mod_command(&user, &mod_cmd, level);
             return;
         }
 
@@ -235,7 +181,7 @@ impl ChatBot {
         if let Some(verdict) = verdict {
             if let Some(message) = verdict.get("message").and_then(Value::as_str) {
                 if !message.is_empty() {
-                    self.send_reply(source, message.to_string());
+                    self.send_reply(message.to_string());
                 }
             }
             let duration = verdict.get("timeoutSec").and_then(Value::as_f64);
@@ -245,7 +191,6 @@ impl ChatBot {
                 .unwrap_or("")
                 .to_string();
             self.moderate(
-                source,
                 msg.get("userId").cloned().unwrap_or(Value::Null),
                 duration,
                 &reason,
@@ -264,171 +209,79 @@ impl ChatBot {
             })
         };
         if let Some(reply) = reply {
-            self.send_reply(source, reply);
+            self.send_reply(reply);
         }
     }
 
-    fn handle_mod_command(
-        self: &Arc<Self>,
-        source: &str,
-        user: &str,
-        mod_cmd: &ModCommand,
-        level: &str,
-    ) {
+    fn handle_mod_command(self: &Arc<Self>, user: &str, mod_cmd: &ModCommand, level: &str) {
         if level != "moderator" && level != "broadcaster" {
-            self.send_reply(source, format!("@{user}, у вас нет прав на модерацию."));
+            self.send_reply(format!("@{user}, у вас нет прав на модерацию."));
             return;
         }
         let target = mod_cmd.target.clone();
         if target.is_empty() {
-            self.send_reply(
-                source,
-                "Использование: !timeout @user [сек] | !ban @user".to_string(),
-            );
+            self.send_reply("Использование: !timeout @user [сек] | !ban @user".to_string());
             return;
         }
         let target_id = self
             .lock(&self.user_ids)
-            .get(&user_key(source, &target))
+            .get(&target.to_lowercase())
             .cloned();
         let Some(target_id) = target_id else {
-            self.send_reply(
-                source,
-                format!("@{user}, не знаю ID пользователя {target} — он ещё не писал в чат."),
-            );
+            self.send_reply(format!(
+                "@{user}, не знаю ID пользователя {target} — он ещё не писал в чат."
+            ));
             return;
         };
 
+        let sender = self.sender.clone();
+        let twitch = (self.twitch)();
+        let this = Arc::clone(self);
         if mod_cmd.name == "ban" {
             let reason = format!("Бан по команде {user}");
-            if source == "goodgame" {
-                let Some(control) = self.goodgame.clone() else {
-                    return;
-                };
-                let this = Arc::clone(self);
-                (self.spawn)(Box::pin(async move {
-                    if let Some(future) = control.moderate_user(&target_id, None, &reason) {
-                        if future.await["ok"] == Value::Bool(true) {
-                            this.send_reply("goodgame", format!("@{target} забанен."));
-                        }
-                    }
-                }));
-                return;
-            }
-            let sender = self.sender.clone();
-            let twitch = (self.twitch)();
-            let this = Arc::clone(self);
             (self.spawn)(Box::pin(async move {
                 let result = sender
                     .moderate_user(&twitch, &Value::from(target_id), None, &reason)
                     .await;
                 if result["ok"] == Value::Bool(true) {
-                    this.send_reply("twitch", format!("@{target} забанен."));
+                    this.send_reply(format!("@{target} забанен."));
                 }
             }));
-            return;
-        }
-
-        let duration = timeout_seconds(mod_cmd.duration_raw.as_deref());
-        let reason = format!("Таймаут по команде {user}");
-        if source == "goodgame" {
-            let Some(control) = self.goodgame.clone() else {
-                return;
-            };
-            let this = Arc::clone(self);
+        } else {
+            let duration = timeout_seconds(mod_cmd.duration_raw.as_deref());
+            let reason = format!("Таймаут по команде {user}");
             (self.spawn)(Box::pin(async move {
-                if let Some(future) = control.moderate_user(&target_id, Some(duration), &reason) {
-                    if future.await["ok"] == Value::Bool(true) {
-                        this.send_reply(
-                            "goodgame",
-                            format!("@{target} в таймауте на {duration} сек."),
-                        );
-                    }
+                let result = sender
+                    .moderate_user(&twitch, &Value::from(target_id), Some(duration), &reason)
+                    .await;
+                if result["ok"] == Value::Bool(true) {
+                    this.send_reply(format!("@{target} в таймауте на {duration} сек."));
                 }
             }));
-            return;
         }
-        let sender = self.sender.clone();
-        let twitch = (self.twitch)();
-        let this = Arc::clone(self);
-        (self.spawn)(Box::pin(async move {
-            let result = sender
-                .moderate_user(&twitch, &Value::from(target_id), Some(duration), &reason)
-                .await;
-            if result["ok"] == Value::Bool(true) {
-                this.send_reply("twitch", format!("@{target} в таймауте на {duration} сек."));
-            }
-        }));
     }
 
     /// Отправить ответ бота и запомнить его, чтобы не отвечать на собственное эхо.
-    /// `source` — чат, откуда пришла команда; `all` — таймер (по настройке sendTo).
-    fn send_reply(self: &Arc<Self>, source: &str, text: String) {
-        let targets = self.targets_for(source);
+    fn send_reply(self: &Arc<Self>, text: String) {
         let sender = self.sender.clone();
         let twitch = (self.twitch)();
-        let goodgame = self.goodgame.clone();
         let this = Arc::clone(self);
         (self.spawn)(Box::pin(async move {
-            let mut sent = false;
-            if targets.twitch {
-                let result = sender.send_message(&twitch, &text).await;
-                sent |= result["ok"] == Value::Bool(true);
-            }
-            if targets.goodgame {
-                if let Some(control) = goodgame {
-                    if let Some(future) = control.send_message(&text) {
-                        sent |= future.await["ok"] == Value::Bool(true);
-                    }
-                }
-            }
-            if sent {
+            let result = sender.send_message(&twitch, &text).await;
+            if result["ok"] == Value::Bool(true) {
                 this.remember_reply(&text);
             }
         }));
     }
 
-    fn targets_for(&self, source: &str) -> SendTargets {
-        if source != "all" {
-            return SendTargets::for_source(source);
-        }
-        let runtime = self.lock(&self.runtime);
-        runtime
-            .as_ref()
-            .map(|runtime| runtime.send_to)
-            .unwrap_or(SendTargets {
-                twitch: true,
-                goodgame: true,
-            })
-    }
-
     /// Забанить или затаймаутить без ответа (авто-модерация).
-    /// Забанить или затаймаутить без ответа (авто-модерация).
-    fn moderate(
-        self: &Arc<Self>,
-        source: &str,
-        user_id: Value,
-        duration: Option<f64>,
-        reason: &str,
-    ) {
+    fn moderate(self: &Arc<Self>, user_id: Value, duration: Option<f64>, reason: &str) {
         if !js_truthy(Some(&user_id)) {
-            return;
-        }
-        let reason = reason.to_string();
-        if source == "goodgame" {
-            let Some(control) = self.goodgame.clone() else {
-                return;
-            };
-            let target = crate::state::js_string(&user_id);
-            (self.spawn)(Box::pin(async move {
-                if let Some(future) = control.moderate_user(&target, duration, &reason) {
-                    let _ = future.await;
-                }
-            }));
             return;
         }
         let sender = self.sender.clone();
         let twitch = (self.twitch)();
+        let reason = reason.to_string();
         (self.spawn)(Box::pin(async move {
             let _ = sender
                 .moderate_user(&twitch, &user_id, duration, &reason)
@@ -445,7 +298,7 @@ impl ChatBot {
             }
         };
         for reply in replies {
-            self.send_reply("all", reply);
+            self.send_reply(reply);
         }
     }
 
@@ -493,11 +346,6 @@ impl ChatBot {
     fn lock<'a, T>(&self, mutex: &'a Mutex<T>) -> std::sync::MutexGuard<'a, T> {
         mutex.lock().unwrap_or_else(|error| error.into_inner())
     }
-}
-
-/// Ключ пользователя в карте ID: платформы раздают свои номера.
-fn user_key(source: &str, user: &str) -> String {
-    format!("{source}:{}", user.trim().to_lowercase())
 }
 
 /// `Math.max(1, Math.min(1209600, Math.round(Number(raw) || 600)))`.
@@ -597,7 +445,6 @@ mod tests {
             spawn,
             Arc::new(|| 1_000),
             twitch(),
-            None,
             Arc::new(ModerationStore::new()),
         ))
     }
@@ -633,90 +480,6 @@ mod tests {
         let recorded = recorded.lock().unwrap();
         assert_eq!(recorded.len(), 1);
         assert_eq!(recorded[0]["message"], json!("привет, viewer!"));
-    }
-
-    #[tokio::test]
-    async fn a_goodgame_command_is_answered_in_goodgame() {
-        use std::collections::VecDeque;
-
-        use crate::integrations::goodgame_control::GoodgameControl;
-        use crate::integrations::twitch_chat::{ChatTransport, RecvFuture, SendFuture};
-
-        struct GGTransport {
-            incoming: VecDeque<String>,
-            sent: Arc<Mutex<Vec<String>>>,
-        }
-
-        impl ChatTransport for GGTransport {
-            fn send(&mut self, line: String) -> SendFuture<'_> {
-                self.sent.lock().unwrap().push(line);
-                Box::pin(async { Ok(()) })
-            }
-
-            fn recv(&mut self) -> RecvFuture<'_> {
-                match self.incoming.pop_front() {
-                    Some(frame) => Box::pin(async move { Ok(Some(frame)) }),
-                    None => Box::pin(std::future::pending()),
-                }
-            }
-        }
-
-        let sent = Arc::new(Mutex::new(Vec::new()));
-        let sent_in_connect = Arc::clone(&sent);
-        let connect: crate::integrations::twitch_chat_control::ConnectFn =
-            Arc::new(move |_url: String| {
-                let sent = Arc::clone(&sent_in_connect);
-                Box::pin(async move {
-                    let incoming = [
-                        r#"{"type":"success_auth","data":{"user_id":"7"}}"#,
-                        r#"{"type":"success_join","data":{"channel_id":"5"}}"#,
-                    ]
-                    .iter()
-                    .map(|frame| (*frame).to_string())
-                    .collect();
-                    Ok(Box::new(GGTransport { incoming, sent }) as Box<dyn ChatTransport>)
-                })
-            });
-        let resolve: crate::integrations::goodgame_control::ResolveFn =
-            Arc::new(|_channel| Box::pin(async { Ok("5".to_string()) }));
-        let control = Arc::new(GoodgameControl::new(
-            connect,
-            resolve,
-            Arc::new(|task| {
-                std::mem::drop(tokio::spawn(task));
-            }),
-        ));
-        control.restart(true, "Miker", "7", "tok", Arc::new(|_| {}));
-        tokio::time::sleep(Duration::from_millis(50)).await;
-
-        let recorded = Arc::new(Mutex::new(Vec::new()));
-        let (spawn, tasks) = slot();
-        let chat = Arc::new(ChatBot::new(
-            sender(Arc::clone(&recorded)),
-            spawn,
-            Arc::new(|| 1_000),
-            twitch(),
-            Some(Arc::clone(&control)),
-            Arc::new(ModerationStore::new()),
-        ));
-        chat.restart(&config(), "chan", Some(0));
-        tasks.lock().unwrap().clear();
-
-        chat.handle_message(&json!({
-            "source": "goodgame", "user": "viewer", "userId": "7", "badges": [], "message": "!hi",
-        }));
-        drain(&tasks).await;
-
-        // Twitch не трогали: ответ ушёл в чат-источник.
-        assert!(recorded.lock().unwrap().is_empty());
-        let sent = sent.lock().unwrap();
-        assert!(
-            sent.iter()
-                .any(|frame| frame.contains(r#""type":"send_message""#)
-                    && frame.contains("привет, viewer!")),
-            "ответ должен уйти в GoodGame: {sent:?}"
-        );
-        control.stop();
     }
 
     #[tokio::test]

@@ -130,7 +130,6 @@ pub fn run() {
             desktop::connect_twitch,
             desktop::connect_donation_alerts,
             desktop::connect_youtube,
-            desktop::connect_goodgame,
             desktop::get_chat_always_on_top,
             desktop::toggle_chat_always_on_top,
             desktop::change_language,
@@ -209,10 +208,6 @@ pub fn run() {
             diagnostics.restart_obs();
             // YouTube Live — поиск эфира и опрос чата.
             diagnostics.restart_youtube();
-            // GoodGame — чат и события канала.
-            diagnostics.restart_goodgame();
-            // GoodGame — токен OAuth2 обновляется до истечения срока.
-            diagnostics.start_goodgame_refresh();
             // Пауза очереди алертов переживает перезапуск: срок живёт в настройках.
             diagnostics.restore_alert_pause();
             // Сессия стрима — её начало и есть граница «только этот стрим».

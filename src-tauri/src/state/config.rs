@@ -172,33 +172,6 @@ pub fn set_app_config(config: &mut ConfigFile, patch: &Value) {
         );
         config.set("twitch", Value::Object(twitch));
     }
-    if let Some(channel) = patch.get("goodgameChannel") {
-        let mut goodgame = section(config, "goodgame");
-        // Регистр в GoodGame не важен, но имя показывается в поле как есть.
-        goodgame.insert(
-            "channel".to_string(),
-            Value::from(js_string(channel).trim()),
-        );
-        config.set("goodgame", Value::Object(goodgame));
-    }
-    if let Some(goodgame) = patch.get("goodgame") {
-        let mut service = section(config, "goodgame");
-        if let Some(user_id) = goodgame.get("userId") {
-            service.insert("userId".to_string(), Value::from(js_string(user_id).trim()));
-        }
-        // Пустое поле — «не менять»: токен вводится один раз и обратно не показывается.
-        if let Some(token) = goodgame.get("token").and_then(Value::as_str) {
-            let token = token.trim();
-            if !token.is_empty() {
-                service.insert("token".to_string(), Value::from(token));
-                // Ручной токен отменяет OAuth-пару: иначе фоновое обновление
-                // когда-нибудь перезаписало бы его токеном из воркера.
-                service.insert("refreshToken".to_string(), Value::from(""));
-                service.insert("expiresAt".to_string(), Value::from(0));
-            }
-        }
-        config.set("goodgame", Value::Object(service));
-    }
     if let Some(port) = patch.get("port") {
         let raw = js_number_or_zero(Some(port));
         let port = if raw == 0.0 { 8710.0 } else { raw };
@@ -495,13 +468,6 @@ pub fn set_chat_bot_config(config: &mut ConfigFile, patch: &Value) -> Value {
         normalize_chat_bot_moderation(&moderation),
     );
 
-    let send_to = match next.get("sendTo").and_then(Value::as_str) {
-        Some("twitch") => "twitch",
-        Some("goodgame") => "goodgame",
-        _ => "both",
-    };
-    next.insert("sendTo".to_string(), Value::from(send_to));
-
     put_section(config, "chatBot", next)
 }
 
@@ -741,16 +707,6 @@ pub fn save_youtube_tokens(config: &mut ConfigFile, patch: &Value) {
     );
 }
 
-/// Токены GoodGame из OAuth2: `token` — то же поле, куда пишется ручной токен.
-pub fn save_goodgame_tokens(config: &mut ConfigFile, patch: &Value) {
-    save_tokens(
-        config,
-        "goodgame",
-        patch,
-        &["token", "refreshToken", "userId", "expiresAt"],
-    );
-}
-
 fn save_tokens(config: &mut ConfigFile, key: &str, patch: &Value, fields: &[&str]) {
     let mut tokens = section(config, key);
     for field in fields {
@@ -781,7 +737,6 @@ pub fn set_integration_enabled(
         "donationAlerts" => "donationAlerts",
         "donatex" => "donatex",
         "youtube" => "youtube",
-        "goodgame" => "goodgame",
         "obs" => "obs",
         _ => return None,
     };
@@ -1136,35 +1091,13 @@ pub fn normalize_config(config: &mut ConfigFile) {
     );
 
     // Службы по умолчанию включены, если флага ещё нет.
-    for key in ["twitch", "donationAlerts", "donatex", "youtube", "goodgame"] {
+    for key in ["twitch", "donationAlerts", "donatex", "youtube"] {
         let mut service = object_or_empty(config.get(key));
         if !service.contains_key("enabled") {
             service.insert("enabled".to_string(), Value::Bool(true));
             config.set(key, Value::Object(service));
         }
     }
-
-    // Канал и учётные данные GoodGame — всегда строки: пустые значат
-    // «ещё не ввели». Токен нужен только для отправки, чтение анонимное.
-    let mut goodgame = object_or_empty(config.get("goodgame"));
-    if !goodgame.get("channel").is_some_and(Value::is_string) {
-        goodgame.insert("channel".to_string(), Value::from(""));
-    }
-    if !goodgame.get("userId").is_some_and(Value::is_string) {
-        goodgame.insert("userId".to_string(), Value::from(""));
-    }
-    if !goodgame.get("token").is_some_and(Value::is_string) {
-        goodgame.insert("token".to_string(), Value::from(""));
-    }
-    // Refresh-токен и срок приходят от OAuth2; ручной токен их не имеет, и
-    // тогда срок `0` значит «неизвестен» — обновлять нечего.
-    if !goodgame.get("refreshToken").is_some_and(Value::is_string) {
-        goodgame.insert("refreshToken".to_string(), Value::from(""));
-    }
-    if !goodgame.get("expiresAt").is_some_and(Value::is_number) {
-        goodgame.insert("expiresAt".to_string(), Value::from(0));
-    }
-    config.set("goodgame", Value::Object(goodgame));
 
     // External token DonateX — всегда строка, чтобы его можно было читать без
     // проверок (отсутствие ключа значит «ещё не вводили»).
@@ -1231,7 +1164,6 @@ pub fn replace_config(
         "donationAlerts",
         "donatex",
         "youtube",
-        "goodgame",
         "goal",
         "donationVoice",
     ] {
@@ -1534,12 +1466,6 @@ fn normalized_chat_bot(current: &Map<String, Value>) -> Map<String, Value> {
         "moderation".to_string(),
         normalize_chat_bot_moderation(current.get("moderation").unwrap_or(&Value::Null)),
     );
-    let send_to = match current.get("sendTo").and_then(Value::as_str) {
-        Some("twitch") => "twitch",
-        Some("goodgame") => "goodgame",
-        _ => "both",
-    };
-    bot.insert("sendTo".to_string(), Value::from(send_to));
     bot
 }
 

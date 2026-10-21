@@ -73,8 +73,6 @@ pub mod labels {
     pub const YOUTUBE_ACCESS_TOKEN: &str = "YouTube Access Token";
     pub const YOUTUBE_REFRESH_TOKEN: &str = "YouTube Refresh Token";
     pub const DONATEX_EXTERNAL_TOKEN: &str = "DonateX External Token";
-    pub const GOODGAME_TOKEN: &str = "GoodGame Chat Token";
-    pub const GOODGAME_REFRESH_TOKEN: &str = "GoodGame Refresh Token";
     pub const OBS_PASSWORD: &str = "OBS Password";
 }
 

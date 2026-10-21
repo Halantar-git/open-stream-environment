@@ -212,13 +212,12 @@ event_types! {
 }
 
 /// Службы, состояние которых показывают чипы связи: `CONNECTION_SERVICES`.
-pub const CONNECTION_SERVICES: [&str; 7] = [
+pub const CONNECTION_SERVICES: [&str; 6] = [
     "twitchChat",
     "twitchEvents",
     "donationAlerts",
     "donatex",
     "youtube",
-    "goodgame",
     "obs",
 ];
 

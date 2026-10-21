@@ -43,7 +43,6 @@ use tokio::sync::{mpsc, oneshot};
 use tower_http::services::{ServeDir, ServeFile};
 
 use crate::diagnostics::{Diagnostics, ServerHost};
-use crate::integrations::goodgame_oauth;
 use crate::integrations::http;
 use crate::protocol::event_types;
 use crate::server::locales::Locales;
@@ -816,7 +815,6 @@ struct OAuthRoutes {
 struct OAuthCallbackQuery {
     code: Option<String>,
     state: Option<String>,
-    ticket: Option<String>,
     error: Option<String>,
     error_description: Option<String>,
 }
@@ -829,7 +827,6 @@ fn oauth_routes(diagnostics: Arc<Diagnostics>) -> Router {
             get(oauth_donation_alerts_callback),
         )
         .route("/oauth/youtube/callback", get(oauth_youtube_callback))
-        .route("/oauth/goodgame/callback", get(oauth_goodgame_callback))
         .with_state(OAuthRoutes { diagnostics })
 }
 
@@ -1190,150 +1187,6 @@ async fn oauth_youtube_callback(
     connected_page("YouTube")
 }
 
-/// Возврат GoodGame: браузер приходит из воркера с одноразовым тикетом.
-///
-/// Тикет меняется на токены только отсюда — с этой машины: иначе чужой запрос
-/// из сети мог бы забрать чужой вход. `state` к этому моменту обязан быть свой.
-async fn oauth_goodgame_callback(
-    State(routes): State<OAuthRoutes>,
-    ConnectInfo(address): ConnectInfo<SocketAddr>,
-    Query(query): Query<OAuthCallbackQuery>,
-) -> Response {
-    if !access::is_loopback_addr(&address.ip()) {
-        routes.diagnostics.access().increment_denied_http();
-        routes
-            .diagnostics
-            .logger("goodgame")
-            .warn("goodgame: oauth callback from outside localhost", None);
-        return html_page(
-            StatusCode::FORBIDDEN,
-            oauth::result_page(
-                "GoodGame: запрос отклонён",
-                "Возврат из авторизации принимается только на этой машине.",
-                false,
-            ),
-        );
-    }
-
-    let now = Utc::now().timestamp_millis();
-    let state = query.state.as_deref().unwrap_or_default();
-    if let Some(error) = query.error.as_deref().filter(|value| !value.is_empty()) {
-        // Неудачная попытка тоже закрывает state: возвращаться к ней незачем.
-        let _ = goodgame_oauth::pending().take(state, now);
-        let description = query
-            .error_description
-            .as_deref()
-            .filter(|value| !value.is_empty())
-            .unwrap_or(error);
-        return html_page(
-            StatusCode::BAD_REQUEST,
-            oauth::result_page("GoodGame: ошибка авторизации", description, false),
-        );
-    }
-
-    let Some(verifier) = goodgame_oauth::pending().take(state, now) else {
-        return html_page(
-            StatusCode::BAD_REQUEST,
-            oauth::result_page(
-                "GoodGame: недействительный запрос",
-                "state не совпадает, попробуйте подключиться заново.",
-                false,
-            ),
-        );
-    };
-    let ticket = query
-        .ticket
-        .as_deref()
-        .unwrap_or_default()
-        .trim()
-        .to_string();
-    if ticket.is_empty() {
-        return html_page(
-            StatusCode::BAD_REQUEST,
-            oauth::result_page(
-                "GoodGame: недействительный запрос",
-                "Сервис авторизации не выдал одноразовый пропуск: начните подключение заново.",
-                false,
-            ),
-        );
-    }
-    let Some(base) = goodgame_oauth::oauth_worker_base(&routes.diagnostics.guest_signal_url())
-    else {
-        return html_page(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            oauth::result_page(
-                "GoodGame: не удалось подключиться",
-                "Адрес signaling в настройках задан неверно — нужен ws:// или wss://.",
-                false,
-            ),
-        );
-    };
-
-    let outcome = http::form_post(
-        &goodgame_oauth::worker_route(&base, "/oauth/goodgame/ticket"),
-        &[
-            ("state".to_string(), state.to_string()),
-            ("verifier".to_string(), verifier),
-            ("ticket".to_string(), ticket),
-        ],
-    )
-    .await;
-    let access = outcome.body.get("access_token").and_then(Value::as_str);
-    if !(200..300).contains(&outcome.status) || access.is_none() {
-        routes.diagnostics.logger("goodgame").error(
-            "goodgame: token exchange failed",
-            Some(&json!({
-                "status": outcome.status,
-                "response": outcome.body.get("error"),
-            })),
-        );
-        return html_page(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            oauth::result_page(
-                "GoodGame: не удалось подключиться",
-                &goodgame_oauth::exchange_failure_message(outcome.status, &outcome.body),
-                false,
-            ),
-        );
-    }
-
-    // Владелец токена = владелец канала. Если канал ещё не вписан, подставляем
-    // его имя: стримеру не приходится искать себя по id.
-    let (user_id, name) = {
-        let (_, profile) = http::bearer_get(
-            goodgame_oauth::PROFILE_URL.to_string(),
-            access.unwrap_or_default().to_string(),
-        )
-        .await;
-        goodgame_oauth::profile_identity(&profile)
-    };
-    if let Some(name) = name {
-        let empty = {
-            let config = routes.diagnostics.config();
-            config
-                .get("goodgame")
-                .and_then(|service| service.get("channel"))
-                .and_then(Value::as_str)
-                .unwrap_or("")
-                .trim()
-                .is_empty()
-        };
-        if empty {
-            let mut config = routes.diagnostics.config();
-            crate::state::config::set_app_config(&mut config, &json!({ "goodgameChannel": name }));
-        }
-    }
-
-    let mut patch = goodgame_oauth::tokens_patch(&outcome.body, Utc::now().timestamp_millis());
-    if let Some(id) = user_id {
-        patch.insert("userId".to_string(), Value::from(id));
-    }
-    routes
-        .diagnostics
-        .save_goodgame_tokens_and_restart(&Value::Object(patch));
-    connected_page("GoodGame")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1656,51 +1509,6 @@ mod tests {
         let text = String::from_utf8(body).expect("страница — UTF-8");
         assert!(text.contains("YouTube: не удалось подключиться"), "{text}");
         assert!(text.contains("Не заполнено"), "{text}");
-    }
-
-    #[tokio::test]
-    async fn goodgame_callback_rejects_a_foreign_state() {
-        let fixture = Fixture::new();
-        // Тикет без своего `state` не обменивается: чужой возврат из браузера
-        // не должен ставить токены.
-        let (status, body) =
-            get(&fixture, "/oauth/goodgame/callback?state=bogus&ticket=aaaa").await;
-        assert_eq!(status, StatusCode::BAD_REQUEST);
-        let text = String::from_utf8(body).expect("страница — UTF-8");
-        assert!(text.contains("GoodGame: недействительный запрос"), "{text}");
-    }
-
-    #[tokio::test]
-    async fn goodgame_callback_is_loopback_only() {
-        let fixture = Fixture::new();
-        // Токены забирает приложение на этой машине: из локальной сети возврат
-        // отклоняется, даже если state угадан.
-        let response = fixture
-            .app()
-            .oneshot(request_from(
-                "/oauth/goodgame/callback?state=bogus&ticket=aaaa",
-                [192, 168, 1, 5],
-            ))
-            .await
-            .expect("запрос должен дойти до сервера");
-        assert_eq!(response.status(), StatusCode::FORBIDDEN);
-    }
-
-    #[tokio::test]
-    async fn goodgame_callback_consumes_its_state_without_a_ticket() {
-        let fixture = Fixture::new();
-        let state = crate::integrations::goodgame_oauth::pending()
-            .begin(Utc::now().timestamp_millis())
-            .0;
-        let (status, _) = get(&fixture, &format!("/oauth/goodgame/callback?state={state}")).await;
-        assert_eq!(status, StatusCode::BAD_REQUEST);
-        // Повтор с тем же `state` уже не пройдёт: он одноразовый.
-        let (again, _) = get(
-            &fixture,
-            &format!("/oauth/goodgame/callback?state={state}&ticket=aaaa"),
-        )
-        .await;
-        assert_eq!(again, StatusCode::BAD_REQUEST);
     }
 
     #[test]
