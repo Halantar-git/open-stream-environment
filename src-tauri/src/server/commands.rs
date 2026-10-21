@@ -337,18 +337,24 @@ pub fn handle_message(
             let client_id = payload.get("clientId").cloned().unwrap_or(Value::Null);
             let sender = diagnostics.chat_sender();
             let twitch = diagnostics.twitch_config();
-            // GoodGame — второе место, куда уходит та же реплика: чат-окно не
-            // выбирает платформу, а мультистрим обычно и хочет оба чата.
-            let goodgame = diagnostics.goodgame_send(&text);
+            // Настройка «Куда отправлять» одна для окна чата и таймеров бота.
+            let (to_twitch, to_goodgame) = diagnostics.chat_send_targets();
+            let goodgame = if to_goodgame {
+                diagnostics.goodgame_send(&text)
+            } else {
+                None
+            };
             let clients = diagnostics.clients_arc();
             std::mem::drop(tauri::async_runtime::spawn(async move {
-                let result = match goodgame {
-                    Some(goodgame) => {
+                let result = match (to_twitch, goodgame) {
+                    (true, Some(goodgame)) => {
                         let (twitch_result, goodgame_result) =
                             tokio::join!(sender.send_message(&twitch, &text), goodgame);
                         combined_chat_result(twitch_result, Some(goodgame_result))
                     }
-                    None => sender.send_message(&twitch, &text).await,
+                    (true, None) => sender.send_message(&twitch, &text).await,
+                    (false, Some(goodgame)) => goodgame.await,
+                    (false, None) => json!({ "ok": false, "error": "not_configured" }),
                 };
                 let mut out = Map::new();
                 out.insert("clientId".to_string(), client_id);

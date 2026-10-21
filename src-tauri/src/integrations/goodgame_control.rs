@@ -35,9 +35,19 @@ pub type ResolveFn = Arc<dyn Fn(String) -> ResolveFuture + Send + Sync>;
 /// Результат отправки сообщения (`{ ok, error? }`).
 pub type SendFuture = Pin<Box<dyn Future<Output = Value> + Send>>;
 
+/// Что отправить в живое соединение.
+pub enum OutgoingKind {
+    Message(String),
+    Moderate {
+        user_id: String,
+        duration: Option<f64>,
+        reason: String,
+    },
+}
+
 /// Сообщение на отправку вместе с местом под ответ.
 pub struct Outgoing {
-    pub message: String,
+    pub kind: OutgoingKind,
     pub reply: oneshot::Sender<Value>,
 }
 
@@ -181,7 +191,49 @@ impl GoodgameControl {
         let (reply, answer) = oneshot::channel();
         if sender
             .send(Outgoing {
-                message: text,
+                kind: OutgoingKind::Message(text),
+                reply,
+            })
+            .is_err()
+        {
+            return Some(Box::pin(async {
+                json!({ "ok": false, "error": "not_connected" })
+            }));
+        }
+        Some(Box::pin(async move {
+            answer
+                .await
+                .unwrap_or_else(|_| json!({ "ok": false, "error": "not_connected" }))
+        }))
+    }
+
+    /// Забанить или затаймаутить пользователя GoodGame; `duration: None` —
+    /// бессрочно. `None` — служба не подключена.
+    pub fn moderate_user(
+        &self,
+        user_id: &str,
+        duration: Option<f64>,
+        reason: &str,
+    ) -> Option<SendFuture> {
+        let sender = self
+            .outgoing
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .clone()?;
+        let target = user_id.trim().to_string();
+        if target.is_empty() || target.parse::<u64>().is_err() {
+            return Some(Box::pin(async {
+                json!({ "ok": false, "error": "missing_user_id" })
+            }));
+        }
+        let (reply, answer) = oneshot::channel();
+        if sender
+            .send(Outgoing {
+                kind: OutgoingKind::Moderate {
+                    user_id: target,
+                    duration,
+                    reason: reason.to_string(),
+                },
                 reply,
             })
             .is_err()
@@ -291,9 +343,15 @@ pub async fn run_chat<T, E>(
                 } else if !authenticated {
                     json!({ "ok": false, "error": "auth_error" })
                 } else {
-                    let sent = transport
-                        .send(message_frame(channel_id, &out.message).to_string())
-                        .await;
+                    let frame = match &out.kind {
+                        OutgoingKind::Message(text) => message_frame(channel_id, text),
+                        OutgoingKind::Moderate {
+                            user_id,
+                            duration,
+                            reason,
+                        } => moderate_frame(channel_id, user_id, *duration, reason),
+                    };
+                    let sent = transport.send(frame.to_string()).await;
                     match sent {
                         Ok(()) => json!({ "ok": true }),
                         Err(_) => {
@@ -333,6 +391,31 @@ pub fn message_frame(channel_id: &str, text: &str) -> Value {
             "icon": "",
             "role": "",
             "mobile": 0,
+        },
+    })
+}
+
+/// Кадр бана/таймаута. У GoodGame тип `0` — на время (минуты), `2` — бессрочно.
+pub fn moderate_frame(
+    channel_id: &str,
+    user_id: &str,
+    duration: Option<f64>,
+    reason: &str,
+) -> Value {
+    let temporary = duration.is_some();
+    let minutes = duration
+        .map(|seconds| (seconds.max(1.0) / 60.0).ceil() as i64)
+        .unwrap_or(0);
+    json!({
+        "type": "ban2",
+        "data": {
+            "userId": user_id.parse::<u64>().unwrap_or(0),
+            "roomId": channel_id,
+            "reason": reason,
+            "comment": "",
+            "type": if temporary { 0 } else { 2 },
+            "duration": minutes,
+            "deleteMessage": false,
         },
     })
 }
@@ -430,6 +513,19 @@ mod tests {
 
     fn failing_connect() -> ConnectFn {
         Arc::new(|_url| Box::pin(async { Err("нет TLS".to_string()) }))
+    }
+
+    #[test]
+    fn moderation_frames_map_duration_to_minutes() {
+        let timeout = moderate_frame("5", "42", Some(120.0), "спам");
+        assert_eq!(timeout["type"], json!("ban2"));
+        assert_eq!(timeout["data"]["type"], json!(0));
+        assert_eq!(timeout["data"]["duration"], json!(2));
+        assert_eq!(timeout["data"]["userId"], json!(42));
+
+        let permanent = moderate_frame("5", "42", None, "спам");
+        assert_eq!(permanent["data"]["type"], json!(2));
+        assert_eq!(permanent["data"]["duration"], json!(0));
     }
 
     #[tokio::test]
@@ -576,7 +672,7 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(20)).await;
         let (reply, answer) = oneshot::channel();
         tx.send(Outgoing {
-            message: "привет".to_string(),
+            kind: OutgoingKind::Message("привет".to_string()),
             reply,
         })
         .unwrap();
@@ -610,7 +706,7 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(20)).await;
         let (reply, answer) = oneshot::channel();
         tx.send(Outgoing {
-            message: "привет".to_string(),
+            kind: OutgoingKind::Message("привет".to_string()),
             reply,
         })
         .unwrap();

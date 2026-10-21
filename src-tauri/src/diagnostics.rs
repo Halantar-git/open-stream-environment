@@ -153,7 +153,7 @@ pub struct Diagnostics {
     /// YouTube Live: поиск эфира и опрос чата.
     youtube: YoutubeLiveControl,
     /// GoodGame: чат и события канала по WebSocket.
-    goodgame: GoodgameControl,
+    goodgame: Arc<GoodgameControl>,
     /// Текущая сессия стрима (или `None`): её время — граница «этого стрима».
     current_session: Arc<Mutex<Option<Value>>>,
     /// Гостевые камеры: приглашения и signaling. Под `Arc`: исходящее
@@ -233,24 +233,6 @@ impl Diagnostics {
         let config = Arc::new(Mutex::new(config));
         let alert_queue = build_alert_queue(Arc::clone(&config), Arc::clone(&clients));
         let chat_sender = build_chat_sender(Arc::clone(&config));
-        let chat_bot = {
-            let config = Arc::clone(&config);
-            let twitch: Arc<dyn Fn() -> Value + Send + Sync> = Arc::new(move || {
-                config
-                    .lock()
-                    .unwrap_or_else(|error| error.into_inner())
-                    .get("twitch")
-                    .cloned()
-                    .unwrap_or(Value::Null)
-            });
-            Arc::new(ChatBot::new(
-                chat_sender.clone(),
-                spawn_task(),
-                Arc::new(|| chrono::Utc::now().timestamp_millis()),
-                twitch,
-                store_from_database(Arc::clone(&database)),
-            ))
-        };
         let twitch_events = TwitchEventsControl::new(
             Arc::new(crate::integrations::twitch_chat_socket::websocket_connect),
             build_eventsub_subscribe(Arc::clone(&config), twitch_tokens(Arc::clone(&config))),
@@ -314,20 +296,20 @@ impl Diagnostics {
             };
             YoutubeLiveControl::new(get, tokens, reader, spawn_task())
         };
-        let goodgame = {
-            let resolve: ResolveFn = Arc::new(|channel: String| {
-                Box::pin(async move {
-                    // Уже числовой id — не тратим запрос на поиск.
-                    if !channel.is_empty() && channel.chars().all(|ch| ch.is_ascii_digit()) {
-                        return Ok(channel);
-                    }
-                    match http::fetch_json(&goodgame::status_url(&channel)).await {
-                        Ok(body) => goodgame::channel_id_from_status(&body)
-                            .ok_or_else(|| format!("канал не найден: {channel}")),
-                        Err(error) => Err(error),
-                    }
-                })
-            });
+        let resolve: ResolveFn = Arc::new(|channel: String| {
+            Box::pin(async move {
+                // Уже числовой id — не тратим запрос на поиск.
+                if !channel.is_empty() && channel.chars().all(|ch| ch.is_ascii_digit()) {
+                    return Ok(channel);
+                }
+                match http::fetch_json(&goodgame::status_url(&channel)).await {
+                    Ok(body) => goodgame::channel_id_from_status(&body)
+                        .ok_or_else(|| format!("канал не найден: {channel}")),
+                    Err(error) => Err(error),
+                }
+            })
+        });
+        let goodgame = Arc::new(
             GoodgameControl::new(
                 Arc::new(crate::integrations::twitch_chat_socket::websocket_connect),
                 resolve,
@@ -335,6 +317,25 @@ impl Diagnostics {
             )
             .with_reconnect(Duration::from_millis(
                 crate::integrations::goodgame_control::RECONNECT_DELAY_MS,
+            )),
+        );
+        let chat_bot = {
+            let config = Arc::clone(&config);
+            let twitch: Arc<dyn Fn() -> Value + Send + Sync> = Arc::new(move || {
+                config
+                    .lock()
+                    .unwrap_or_else(|error| error.into_inner())
+                    .get("twitch")
+                    .cloned()
+                    .unwrap_or(Value::Null)
+            });
+            Arc::new(ChatBot::new(
+                chat_sender.clone(),
+                spawn_task(),
+                Arc::new(|| chrono::Utc::now().timestamp_millis()),
+                twitch,
+                Some(Arc::clone(&goodgame)),
+                store_from_database(Arc::clone(&database)),
             ))
         };
 
@@ -881,6 +882,21 @@ impl Diagnostics {
         message: &str,
     ) -> Option<crate::integrations::goodgame_control::SendFuture> {
         self.goodgame.send_message(message)
+    }
+
+    /// Куда отправлять сообщения из окна чата и таймеры бота: `(twitch, goodgame)`.
+    pub fn chat_send_targets(&self) -> (bool, bool) {
+        let config = self.config();
+        match config
+            .get("chatBot")
+            .and_then(|bot| bot.get("sendTo"))
+            .and_then(Value::as_str)
+            .unwrap_or("both")
+        {
+            "twitch" => (true, false),
+            "goodgame" => (false, true),
+            _ => (true, true),
+        }
     }
 
     /// Сохранить токены Twitch и перезапустить EventSub — хвост возврата из

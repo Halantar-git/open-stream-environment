@@ -86,6 +86,8 @@ pub fn chat_message(data: &Value) -> Option<Value> {
 
     Some(json!({
         "user": if user.is_empty() { "GG".to_string() } else { user },
+        "userId": data.get("user_id").cloned().unwrap_or(Value::Null),
+        "messageId": data.get("message_id").cloned().unwrap_or(Value::Null),
         "message": text,
         "source": "goodgame",
         "color": nick_color(&seed),
@@ -256,6 +258,7 @@ mod tests {
         });
         let message = chat_message(&data).expect("сообщение");
         assert_eq!(message["user"], json!("Resmile"));
+        assert_eq!(message["userId"], json!(162675));
         assert_eq!(message["message"], json!("<b>привет</b> & как дела"));
         assert_eq!(message["source"], json!("goodgame"));
         assert_eq!(message["badges"], json!(["moderator", "subscriber"]));

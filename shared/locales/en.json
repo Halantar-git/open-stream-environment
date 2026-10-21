@@ -448,7 +448,12 @@
     "notificationVolume": "Notification volume",
     "notificationRepeats": "Notification sound repeats",
     "chatBot": "Chat bot",
-    "chatBotDesc": "Chat commands and timers: the bot replies in Twitch chat as the channel. Sending requires connecting Twitch with the user:write:chat scope.",
+    "chatBotDesc": "Chat commands and timers. Replies to commands go to the chat they came from; timers follow the «Where to send messages» setting in the GoodGame card. Moderation runs on the platform where the rule fired and needs rights in that chat.",
+    "chatBotSendTo": "Where to send messages",
+    "chatBotSendToBoth": "Twitch and GoodGame",
+    "chatBotSendToTwitch": "Twitch only",
+    "chatBotSendToGoodgame": "GoodGame only",
+    "chatBotSendToHint": "Chat window and bot timers. Replies to commands go to the chat they came from.",
     "chatBotPrefix": "Command prefix",
     "chatBotCommands": "Commands",
     "chatBotCommandsDesc": "Responses support $(user), $(channel), $(args), $(count) and $(random a|b|c).",
@@ -1686,9 +1691,9 @@
     "chatbot": {
       "title": "Chat bot and moderation",
       "p1": "In Settings → Chat bot you can enable the bot, set the command prefix and add your own commands (responses support $(user), $(channel), $(args), $(count), $(random a|b|c)) and timers. Each command has an access level (everyone / subscribers / moderators / broadcaster), a global cooldown and a per-user cooldown. The built-in !commands command lists the commands available to the viewer.",
-      "p2": "The bot can only reply when Twitch is connected with the user:write:chat scope — messages are posted as the channel via Twitch Helix.",
+      "p2": "Bot replies go to the chat they came from: Twitch needs a connection with the user:write:chat scope, GoodGame needs the chat ID and token. Timers and chat-window messages go to the targets selected under «Where to send messages».",
       "p3": "The Moderation section enables auto moderation: link protection (with an allowed-domain whitelist), a blocked-word list with de-leetization of lookalike characters, caps and emote limits, and cumulative warnings: first offense clears the message and warns, second times out, third bans.",
-      "p4": "Timeouts and bans require the additional moderator:manage:banned_users scope — reconnect Twitch. In the terminal, the modtest <message> command checks a message without actually banning."
+      "p4": "Twitch timeouts and bans require the additional moderator:manage:banned_users scope — reconnect Twitch. GoodGame needs moderator rights in the channel and the chat token; the bot sends ban2 for a timeout or permanently. In the terminal, the modtest <message> command checks a message without actually banning."
     },
     "donationalerts": {
       "title": "DonationAlerts",

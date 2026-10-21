@@ -491,6 +491,13 @@ pub fn set_chat_bot_config(config: &mut ConfigFile, patch: &Value) -> Value {
         normalize_chat_bot_moderation(&moderation),
     );
 
+    let send_to = match next.get("sendTo").and_then(Value::as_str) {
+        Some("twitch") => "twitch",
+        Some("goodgame") => "goodgame",
+        _ => "both",
+    };
+    next.insert("sendTo".to_string(), Value::from(send_to));
+
     put_section(config, "chatBot", next)
 }
 
@@ -1505,6 +1512,12 @@ fn normalized_chat_bot(current: &Map<String, Value>) -> Map<String, Value> {
         "moderation".to_string(),
         normalize_chat_bot_moderation(current.get("moderation").unwrap_or(&Value::Null)),
     );
+    let send_to = match current.get("sendTo").and_then(Value::as_str) {
+        Some("twitch") => "twitch",
+        Some("goodgame") => "goodgame",
+        _ => "both",
+    };
+    bot.insert("sendTo".to_string(), Value::from(send_to));
     bot
 }
 

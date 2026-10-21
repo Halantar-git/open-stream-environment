@@ -268,6 +268,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const createMarkerBtn = document.getElementById("createMarkerBtn");
   const chatBotEnabledSwitch = document.getElementById("chatBotEnabledSwitch");
   const chatBotPrefixInput = document.getElementById("chatBotPrefix");
+  const chatBotSendToSelect = document.getElementById("chatBotSendTo");
   const chatBotCommandsList = document.getElementById("chatBotCommandsList");
   const addChatBotCommandBtn = document.getElementById("addChatBotCommandBtn");
   const chatBotTimersList = document.getElementById("chatBotTimersList");
@@ -632,6 +633,7 @@ const { EVENT_TYPES } = window.SharedEvents;
       renderChatBotTimers();
       renderChatBotModeration();
     }
+    if (chatBotSendToSelect) chatBotSendToSelect.value = (state.chatBot && state.chatBot.sendTo) || "both";
     setSwitchState(notificationSoundSwitch, state.notificationSound !== false);
     if (notificationVolume) {
       const vol = Math.round((state.notificationVolume ?? 0.8) * 100);
@@ -1281,6 +1283,11 @@ const { EVENT_TYPES } = window.SharedEvents;
   if (chatBotPrefixInput) {
     chatBotPrefixInput.addEventListener("change", () => {
       sendChatBotConfig({ prefix: chatBotPrefixInput.value.trim() || "!" });
+    });
+  }
+  if (chatBotSendToSelect) {
+    chatBotSendToSelect.addEventListener("change", () => {
+      sendChatBotConfig({ sendTo: chatBotSendToSelect.value });
     });
   }
   if (addChatBotCommandBtn) {

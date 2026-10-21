@@ -705,7 +705,7 @@
             <h2 data-i18n="settings.chatBot">Бот чата</h2>
             <div class="md-switch" id="chatBotEnabledSwitch" role="switch" aria-checked="false" data-i18n-title="settings.integrationSwitch"><div class="md-switch__thumb"></div></div>
           </div>
-          <p class="settings__desc" data-i18n="settings.chatBotDesc">Команды и таймеры чата: бот отвечает в Twitch-чате от имени канала. Отправка требует подключения Twitch с правом user:write:chat.</p>
+          <p class="settings__desc" data-i18n="settings.chatBotDesc">Команды и таймеры чата. Ответы на команды уходят в тот чат, откуда пришла команда; таймеры — по выбору ниже. Модерация работает на той платформе, где сработало правило, и требует прав в этом чате.</p>
           <div class="md-field">
             <label data-i18n="settings.chatBotPrefix">Префикс команд</label>
             <input type="text" id="chatBotPrefix" placeholder="!" maxlength="4" />
@@ -878,6 +878,15 @@
             <span class="md-field__hint" data-i18n="settings.goodgameTokenHint">Токен из UserObj.chatToken на goodgame.ru или OAuth2-токен. Оставьте пустым, чтобы не менять сохранённый — поле никогда не заполняется им само.</span>
           </div>
           <div class="settings__hint" id="goodgameTokenStatus"></div>
+          <div class="md-field">
+            <label data-i18n="settings.chatBotSendTo">Куда отправлять сообщения</label>
+            <select id="chatBotSendTo">
+              <option value="both" data-i18n="settings.chatBotSendToBoth">Twitch и GoodGame</option>
+              <option value="twitch" data-i18n="settings.chatBotSendToTwitch">Только Twitch</option>
+              <option value="goodgame" data-i18n="settings.chatBotSendToGoodgame">Только GoodGame</option>
+            </select>
+            <span class="md-field__hint" data-i18n="settings.chatBotSendToHint">Окно чата и таймеры бота. Ответы на команды уходят в чат, откуда пришла команда.</span>
+          </div>
           <div class="settings__actions">
             <button class="md-button md-button--text" id="openGoodgameSite" data-i18n="settings.openGoodgameSite">Открыть goodgame.ru</button>
             <button class="md-button md-button--text" id="openGoodgameDocs" data-i18n="settings.openGoodgameDocs">Документация API</button>
