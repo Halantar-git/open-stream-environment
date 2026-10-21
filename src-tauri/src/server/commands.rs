@@ -410,6 +410,43 @@ pub fn handle_message(
                 &json!({ "action": "TICKER_MESSAGE", "payload": payload }),
             );
         }
+        event_types::CMD_TICKER_PAUSE => {
+            let paused = payload
+                .get("paused")
+                .is_some_and(|value| js_truthy(Some(value)));
+            // Сохраняем в настройки: перезагрузка Browser Source в OBS не должна
+            // снимать паузу без ведома стримера.
+            config::set_app_config(
+                &mut diagnostics.config(),
+                &json!({ "tickerPaused": paused }),
+            );
+            broadcast(
+                diagnostics,
+                event_types::TICKER_PAUSE,
+                json!({ "paused": paused }),
+            );
+        }
+        event_types::CMD_TICKER_CONTROL => {
+            let action = payload.get("action").and_then(Value::as_str).unwrap_or("");
+            // Длина та же, что у сообщения в ленте (см. `remote::ticker_message`):
+            // так текст из панели точно совпадёт с тем, что лежит в оверлее.
+            let text: String = payload
+                .get("text")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .trim()
+                .chars()
+                .take(300)
+                .collect();
+            let frame = match action {
+                "clear" => Some(json!({ "action": "clear" })),
+                "remove" if !text.is_empty() => Some(json!({ "action": "remove", "text": text })),
+                _ => None,
+            };
+            if let Some(frame) = frame {
+                broadcast(diagnostics, event_types::TICKER_CONTROL, frame);
+            }
+        }
         event_types::CMD_ALERT_QUEUE_PAUSE => {
             let minutes = js_number_or_zero(payload.get("minutes")).max(0.0);
             let snapshot = diagnostics.alert_queue().pause(minutes);

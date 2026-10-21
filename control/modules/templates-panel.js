@@ -45,6 +45,10 @@ export function initTemplatesPanel({ t, ICONS, send, EVENT_TYPES, state }) {
   const statusEl = el("templatesStatus");
   let statusTimer = 0;
 
+  if (!Array.isArray(state.tickerMessages)) state.tickerMessages = [];
+  if (!Array.isArray(state.tickerSent)) state.tickerSent = [];
+  if (typeof state.tickerPaused !== "boolean") state.tickerPaused = false;
+
   function messages() {
     return Array.isArray(state.tickerMessages) ? state.tickerMessages.slice() : [];
   }
@@ -70,7 +74,35 @@ export function initTemplatesPanel({ t, ICONS, send, EVENT_TYPES, state }) {
     const value = String(text || "").trim().slice(0, MAX_LENGTH);
     if (!value) return;
     send(EVENT_TYPES.CMD_TICKER_MESSAGE, { text: value, priority });
+    if (priority !== "breaking") {
+      // Список «отправлено» живёт в панели: по нему видно, что сейчас крутится,
+      // и это можно убрать из ленты, не дожидаясь, пока вытеснят события.
+      if (!state.tickerSent.includes(value)) state.tickerSent = [...state.tickerSent, value];
+      render();
+    }
     setStatus(priority === "breaking" ? t("templates.sentBreaking") : t("templates.sentTicker"));
+  }
+
+  function removeSent(text) {
+    const value = String(text || "").trim();
+    if (!value) return;
+    state.tickerSent = state.tickerSent.filter((item) => item !== value);
+    send(EVENT_TYPES.CMD_TICKER_CONTROL, { action: "remove", text: value });
+    render();
+    setStatus(t("templates.removed"));
+  }
+
+  function clearTickerMessages() {
+    state.tickerSent = [];
+    send(EVENT_TYPES.CMD_TICKER_CONTROL, { action: "clear" });
+    render();
+    setStatus(t("templates.removed"));
+  }
+
+  function togglePause() {
+    state.tickerPaused = !state.tickerPaused;
+    send(EVENT_TYPES.CMD_TICKER_PAUSE, { paused: state.tickerPaused });
+    render();
   }
 
   function rowHtml(text, index) {
@@ -83,6 +115,32 @@ export function initTemplatesPanel({ t, ICONS, send, EVENT_TYPES, state }) {
     </div>`;
   }
 
+  function controlsHtml() {
+    const pause = state.tickerPaused ? t("templates.resumeTicker") : t("templates.pauseTicker");
+    return `<div class="templates-toolbar">
+      <button class="terminal-panel__btn${state.tickerPaused ? " is-active" : ""}" type="button" data-ticker-action="pause">${escapeHtml(pause)}</button>
+      <button class="terminal-panel__btn" type="button" data-ticker-action="clear">${escapeHtml(t("templates.clearTicker"))}</button>
+    </div>`;
+  }
+
+  // Объявления из шаблонов, которые сейчас в ленте. Ряд этого списка — не
+  // сохранённый шаблон, а отправленная копия: её можно убрать отдельно.
+  function sentHtml() {
+    const list = state.tickerSent || [];
+    if (!list.length) return "";
+    const rows = list
+      .map(
+        (text, index) => `<div class="templates-live-row">
+          <span class="templates-live-row__text">${escapeHtml(text)}</span>
+          <button class="terminal-panel__btn templates-row__btn" type="button" data-unsend="${index}">${escapeHtml(
+            t("templates.removeFromTicker")
+          )}</button>
+        </div>`
+      )
+      .join("");
+    return `<div class="templates-section-title">${escapeHtml(t("templates.sentTitle"))}</div>${rows}`;
+  }
+
   function render() {
     if (!body) return;
     const list = messages();
@@ -92,6 +150,8 @@ export function initTemplatesPanel({ t, ICONS, send, EVENT_TYPES, state }) {
     // Заголовок раздела: в панели могут появиться и другие наборы, и должно
     // быть видно, что этот — именно для бегущей строки.
     body.innerHTML =
+      controlsHtml() +
+      sentHtml() +
       `<div class="templates-section-title">${escapeHtml(t("templates.tickerTitle"))}</div>` +
       `<p class="templates-hint">${escapeHtml(t("templates.hint"))}</p>${rows}`;
   }
@@ -129,6 +189,19 @@ export function initTemplatesPanel({ t, ICONS, send, EVENT_TYPES, state }) {
     });
 
     body.addEventListener("click", (event) => {
+      const tickerAction = event.target.closest("[data-ticker-action]");
+      if (tickerAction) {
+        if (tickerAction.dataset.tickerAction === "pause") togglePause();
+        else clearTickerMessages();
+        return;
+      }
+      const unsend = event.target.closest("[data-unsend]");
+      if (unsend) {
+        const index = Number(unsend.dataset.unsend);
+        const list = state.tickerSent || [];
+        if (Number.isInteger(index) && index >= 0 && index < list.length) removeSent(list[index]);
+        return;
+      }
       const remove = event.target.closest("[data-remove]");
       if (remove) {
         const index = Number(remove.dataset.remove);
@@ -177,7 +250,17 @@ export function initTemplatesPanel({ t, ICONS, send, EVENT_TYPES, state }) {
     });
   }
 
+  // Пауза — общее состояние ленты, а не разовая команда: сервер присылает её
+  // при подключении и после каждого переключения.
+  function handleMessage(message) {
+    if (!message || message.type !== EVENT_TYPES.TICKER_PAUSE) return;
+    const paused = !!(message.payload && message.payload.paused);
+    if (paused === state.tickerPaused) return;
+    state.tickerPaused = paused;
+    if (panel && !panel.hidden) render();
+  }
+
   refreshLabel();
 
-  return { toggle, setOpen, refreshLabel, render };
+  return { toggle, setOpen, refreshLabel, render, handleMessage };
 }

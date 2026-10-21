@@ -322,6 +322,77 @@ describe("WidgetTicker", () => {
     w.unmount();
   });
 
+  test("пауза останавливает ленту и не теряет место", () => {
+    const ctx = makeContext();
+    const w = new WidgetTicker(item(), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.TICKER_MESSAGE, { text: "Стоп" });
+    expect(w._raf).toBeTruthy();
+
+    // Пока лента стоит, новые события копятся, но не двигают строку.
+    ctx.bus.emit(EVENT_TYPES.TICKER_PAUSE, { paused: true });
+    expect(w._raf).toBe(0);
+
+    ctx.bus.emit(EVENT_TYPES.TICKER_PAUSE, { paused: false });
+    expect(w._raf).toBeTruthy();
+
+    w.unmount();
+  });
+
+  test("пауза из снимка состояния действует сразу после монтирования", () => {
+    const ctx = makeContext({
+      state: {
+        recentEvents: [{ kind: "follow", user: "alice" }],
+        goal: null,
+        topDonation: null,
+        tickerPaused: true,
+      },
+    });
+    const w = new WidgetTicker(item(), ctx);
+    w.mount(makeEl("div"));
+
+    expect(w._items()).toHaveLength(1);
+    expect(w._raf).toBe(0);
+
+    w.unmount();
+  });
+
+  test("объявление можно убрать из ленты по тексту", () => {
+    const ctx = makeContext();
+    const w = new WidgetTicker(item(), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "donation", user: "bob", amount: 100 });
+    ctx.bus.emit(EVENT_TYPES.TICKER_MESSAGE, { text: "Заходите в Discord" });
+    // Повторное объявление не должно остаться даже после удаления одного.
+    ctx.bus.emit(EVENT_TYPES.TICKER_MESSAGE, { text: "Заходите в Discord" });
+
+    ctx.bus.emit(EVENT_TYPES.TICKER_CONTROL, { action: "remove", text: "Заходите в Discord" });
+
+    const items = w._items();
+    expect(items).toHaveLength(1);
+    expect(items[0].kind).toBe("donation");
+
+    w.unmount();
+  });
+
+  test("очистка убирает только объявления, не трогая события", () => {
+    const ctx = makeContext();
+    const w = new WidgetTicker(item(), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "follow", user: "alice" });
+    ctx.bus.emit(EVENT_TYPES.TICKER_MESSAGE, { text: "Одно" });
+    ctx.bus.emit(EVENT_TYPES.TICKER_MESSAGE, { text: "Два" });
+
+    ctx.bus.emit(EVENT_TYPES.TICKER_CONTROL, { action: "clear" });
+
+    expect(w._items().map((i) => i.kind)).toEqual(["follow"]);
+
+    w.unmount();
+  });
+
   test("срочное сообщение показывается полосой и уступает место следующему", () => {
     jest.useFakeTimers();
     const ctx = makeContext();

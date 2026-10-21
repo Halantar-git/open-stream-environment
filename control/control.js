@@ -4032,6 +4032,8 @@ const { EVENT_TYPES } = window.SharedEvents;
     // Гостевые события разбирает отдельный модуль: они не относятся к
     // раскладке и не должны разрастаться в общий switch.
     guestPanel.handleMessage(msg);
+    // Пауза ленты — тоже отдельное состояние: её знает панель «Шаблоны».
+    templatesPanel.handleMessage(msg);
     switch (msg.type) {
       case EVENT_TYPES.STATE:
         state.applySnapshot(msg.payload);

@@ -407,6 +407,14 @@ async fn handle_socket(
             guest::status_payload(&bus.diagnostics),
         )
         .await;
+        // Пауза новостной ленты — состояние, а не разовая команда: оверлей
+        // после перезагрузки должен сразу знать, что строка стоит.
+        send_frame(
+            &mut socket,
+            event_types::TICKER_PAUSE,
+            json!({ "paused": bus.diagnostics.ticker_paused() }),
+        )
+        .await;
 
         // Перезагрузка страницы OBS не должна съедать то, что играет: очередь знает
         // текущий алерт, поэтому отдаём его заново — как в JS.

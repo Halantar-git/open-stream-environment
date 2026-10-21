@@ -127,6 +127,10 @@ export function createStateManager() {
     longshot: null,
     // Сохранённые заготовки для панели «Шаблоны».
     tickerMessages: [],
+    // Объявления, отправленные в ленту из панели за эту сессию.
+    tickerSent: [],
+    // Лента стоит на паузе — состояние хранится в настройках приложения.
+    tickerPaused: false,
   };
 
   // Maps the server's `state` snapshot payload into this object.

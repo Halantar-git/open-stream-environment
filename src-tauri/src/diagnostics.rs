@@ -467,6 +467,15 @@ impl Diagnostics {
             .to_string()
     }
 
+    /// Новостная лента стоит на паузе: новое окно оверлея должно узнать это
+    /// сразу, а не ждать следующей команды.
+    pub fn ticker_paused(&self) -> bool {
+        self.config()
+            .get("ticker_paused")
+            .and_then(Value::as_bool)
+            .unwrap_or(false)
+    }
+
     /// Цикл колеса — общее состояние для команд панели и действий пульта.
     pub fn wheel(&self) -> &Arc<WheelCycle> {
         &self.wheel

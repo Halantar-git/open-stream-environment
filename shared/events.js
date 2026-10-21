@@ -35,6 +35,8 @@
     RECENT_EVENT: "recent_event",
     REWARD_REDEEM: "reward_redeem", // { user, rewardTitle, message } — награда за баллы канала вне очереди алертов
     TICKER_MESSAGE: "ticker_message", // { text, priority: "normal"|"breaking", durationMs? } — произвольное сообщение в новостную ленту
+    TICKER_PAUSE: "ticker_pause", // { paused } — лента стоит: оверлеи останавливают бегущую строку
+    TICKER_CONTROL: "ticker_control", // { action: "remove"|"clear", text? } — убрать отправленное сообщение из ленты
     GOAL_UPDATE: "goal_update", // { current, target, title, currency }
     DONATEX_AI_EVENT: "donatex_ai_event", // { characterName, aiText, aiAudio, user?, amount?, currency?, message? } — ответ ИИ-персонажа DonateX
     CONNECTION_STATUS: "connection_status", // { service, status }
@@ -111,6 +113,8 @@
     CMD_SET_GOAL: "cmd_set_goal", // { title?, current?, target?, currency? }
     CMD_TEST_ALERT: "cmd_test_alert", // { kind }
     CMD_TICKER_MESSAGE: "cmd_ticker_message", // { text, priority? } — сообщение в новостную ленту
+    CMD_TICKER_PAUSE: "cmd_ticker_pause", // { paused } — остановить или продолжить бегущую строку
+    CMD_TICKER_CONTROL: "cmd_ticker_control", // { action: "remove"|"clear", text? } — убрать сообщение из ленты
     // Очередь алертов (см. server/alert-queue.js): панель и пульт могут
     // вмешаться в то, что играет и что ждёт.
     CMD_ALERT_QUEUE_PAUSE: "cmd_alert_queue_pause", // { minutes? } — без минут: до снятия вручную

@@ -252,6 +252,11 @@ pub fn set_app_config(config: &mut ConfigFile, patch: &Value) {
             Value::from(ice_text(ice.get("turnPassword"), 200)),
         );
     }
+    if let Some(paused) = patch.get("tickerPaused") {
+        // Пауза ленты переживает перезагрузку оверлея в OBS: поток начинается
+        // заново, а стример не ждёт, что строка поедет без его команды.
+        config.set("ticker_paused", Value::Bool(js_truthy(Some(paused))));
+    }
     if let Some(messages) = patch.get("tickerMessages") {
         config.set("ticker_messages", sanitize_ticker_messages(messages));
     }
@@ -961,6 +966,10 @@ pub fn normalize_config(config: &mut ConfigFile) {
     config.set(
         "ticker_messages",
         sanitize_ticker_messages(config.get("ticker_messages").unwrap_or(&Value::Null)),
+    );
+    config.set(
+        "ticker_paused",
+        Value::Bool(config.get("ticker_paused") == Some(&Value::Bool(true))),
     );
 
     // Уведомления.
@@ -1895,6 +1904,18 @@ mod tests {
         );
         assert_eq!(config.get("guest_turn_user"), Some(&json!("guest")));
         assert_eq!(config.get("guest_turn_password"), Some(&json!("secret")));
+    }
+
+    #[test]
+    fn ticker_pause_is_kept_as_a_flag() {
+        let fixture = Fixture::new("ticker-pause");
+        let mut config = fixture.config();
+
+        set_app_config(&mut config, &json!({ "tickerPaused": true }));
+        assert_eq!(config.get("ticker_paused"), Some(&json!(true)));
+
+        set_app_config(&mut config, &json!({ "tickerPaused": false }));
+        assert_eq!(config.get("ticker_paused"), Some(&json!(false)));
     }
 
     #[test]

@@ -97,6 +97,8 @@
       this._raf = 0;
       this._lastTs = 0;
       this._fontSize = 0;
+      // Лента стоит на паузе: стример остановил её панелью «Шаблоны».
+      this._paused = false;
     }
 
     // ---- lifecycle ----
@@ -134,6 +136,11 @@
         this._ingestAlert(reward, { breaking: this.rewardsBreaking })
       );
       this.subscribe(E.TICKER_MESSAGE, (message) => this._ingestTickerMessage(message));
+      this.subscribe(E.TICKER_PAUSE, (payload) => {
+        this._paused = !!(payload && payload.paused);
+        this._syncLoop();
+      });
+      this.subscribe(E.TICKER_CONTROL, (payload) => this._applyTickerControl(payload));
       this.subscribe(E.GOAL_UPDATE, (goal) => {
         this._goal = goal || null;
         this._rebuild();
@@ -219,6 +226,9 @@
       if (this._seeded) return;
       this._seeded = true;
       const state = this.context.state || {};
+      // Пауза — часть снимка: виджет мог смонтироваться уже после кадра
+      // `ticker_pause`, и без этого строка поехала бы вопреки настройке.
+      this._paused = state.tickerPaused === true;
       const recent = Array.isArray(state.recentEvents) ? state.recentEvents : [];
       recent
         .slice(0, this._maxItems())
@@ -313,6 +323,22 @@
         return;
       }
       this._push({ kind: "message", message: text, count: ++this._messageSeq });
+    }
+
+    // Убрать сообщение из ленты: ищется по тексту, а не по индексу — оверлей
+    // мог пережить пересборку раскладки, а индекс к этому времени другой.
+    _applyTickerControl(payload) {
+      const action = String((payload && payload.action) || "");
+      if (action === "clear") {
+        this._events = this._events.filter((event) => event.kind !== "message");
+        this._rebuild();
+        return;
+      }
+      const text = String((payload && payload.text) || "").trim();
+      if (action !== "remove" || !text) return;
+      const before = this._events.length;
+      this._events = this._events.filter((event) => !(event.kind === "message" && event.message === text));
+      if (this._events.length !== before) this._rebuild();
     }
 
     _showBreaking(text, durationMs) {
@@ -593,7 +619,7 @@
         this.element.offsetWidth > 0 &&
         typeof document !== "undefined" &&
         !document.hidden;
-      if (hasContent && visible && !this._reducedMotion()) this._start();
+      if (hasContent && visible && !this._paused && !this._reducedMotion()) this._start();
       else this._stop();
     }
 

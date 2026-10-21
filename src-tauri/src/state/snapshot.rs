@@ -100,6 +100,12 @@ pub fn snapshot(config: &ConfigFile, db: &Database, runtime: &Runtime) -> Value 
         Value::Array(layout::list_layout_presets(db)),
     );
     out.insert("goal".to_string(), field(config, "goal"));
+    // Пауза новостной ленты — в снимке: оверлей, перезагрузившийся в OBS,
+    // сразу знает, что строка стоит, и не ждёт отдельного кадра.
+    out.insert(
+        "tickerPaused".to_string(),
+        Value::Bool(config.get("ticker_paused") == Some(&Value::Bool(true))),
+    );
     out.insert("port".to_string(), field(config, "port"));
     out.insert(
         "notificationSound".to_string(),

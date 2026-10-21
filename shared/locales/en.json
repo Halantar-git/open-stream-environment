@@ -649,7 +649,13 @@
     "remove": "Remove",
     "saved": "Saved",
     "sentTicker": "Sent to the ticker",
-    "sentBreaking": "Sent to breaking"
+    "sentBreaking": "Sent to breaking",
+    "pauseTicker": "Pause ticker",
+    "resumeTicker": "Resume ticker",
+    "clearTicker": "Clear announcements",
+    "sentTitle": "Sent to the ticker",
+    "removeFromTicker": "Remove",
+    "removed": "Removed from the ticker"
   },
   "ticker": {
     "label": "ON AIR",
@@ -1761,7 +1767,8 @@
       "title": "Templates",
       "p1": "The Templates button in the header opens a panel with ready-made phrases for the news ticker. Type into the New template field and press Add — the phrase is saved in settings and survives a restart.",
       "p2": "Each row has two buttons: To ticker puts the phrase into the common event flow, To breaking shows it as a separate bar above the ticker without waiting for the cycle to end. Edits happen right in the row; an empty row and a duplicate remove themselves.",
-      "p3": "Up to 20 phrases of 200 characters each are stored. The same message can be sent from the terminal with ticker [breaking] <text> or from the Web Remote."
+      "p3": "Up to 20 phrases of 200 characters each are stored. The same message can be sent from the terminal with ticker [breaking] <text> or from the Web Remote.",
+      "p4": "Pause ticker stops the running line without clearing events: Resume ticker continues from the same place. Sent announcements are listed under Sent to the ticker — remove them one by one or all at once with Clear announcements. The pause is saved in settings and survives a Browser Source reload in OBS."
     },
     "wheel": {
       "title": "Fortune Wheel",
