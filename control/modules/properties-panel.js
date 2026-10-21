@@ -693,15 +693,20 @@ export function initPropertiesPanel({
         </div>
         <div id="pCustomFields"></div>`;
     } else if (inst.type === "donatex-ai") {
+      const bridge = String(config.donationUrl || config.url || "").trim() !== "";
       extraHtml = `
-        <div class="md-field"><label>${t("properties.donatexAiName")}</label><input type="text" id="pDonatexName" value="${escapeAttr(config.characterName || "")}" placeholder="${escapeAttr(t("donatexAi.defaultName"))}"></div>
+        <div class="md-field"><label>${t("properties.donatexDonationLink")}</label><input type="text" id="pDonatexDonationUrl" value="${escapeAttr(config.donationUrl || "")}" placeholder="https://..."></div>
         <div class="md-field"><label>${t("properties.donatexAiLink")}</label><input type="text" id="pDonatexUrl" value="${escapeAttr(config.url || "")}" placeholder="https://..."></div>
-        <div class="md-field"><label>${t("properties.donatexAiAvatar")}</label><input type="text" id="pDonatexAvatar" value="${escapeAttr(config.avatarUrl || "")}" placeholder="https://..."></div>
-        <div class="properties__toggle-row"><label>${t("properties.donatexAiShowName")}</label>${switchHtml("pDonatexShowName", config.showName !== false)}</div>
-        <div class="properties__toggle-row"><label>${t("properties.donatexAiShowDonor")}</label>${switchHtml("pDonatexShowDonor", config.showDonor !== false)}</div>
-        <div class="properties__toggle-row"><label>${t("properties.queue")}</label>${switchHtml("pDonatexQueue", config.queue !== false)}</div>
-        <div class="md-field"><label>${t("properties.volume")}: <span id="pDonatexVolumeValue">${Math.round((config.volume ?? 0.8) * 100)}%</span></label><input type="range" id="pDonatexVolume" min="0" max="100" step="1" value="${Math.round((config.volume ?? 0.8) * 100)}"></div>
-        <div class="md-field"><label>${t("properties.donatexAiHideDelay")}</label><input type="number" id="pDonatexHideDelay" min="500" max="60000" step="500" value="${config.hideDelayMs || 5000}"></div>`;
+        <p class="properties__hint">${t("properties.donatexBridgeHint")}</p>
+        <div ${bridge ? "style=\"display:none\"" : ""}>
+          <div class="md-field"><label>${t("properties.donatexAiName")}</label><input type="text" id="pDonatexName" value="${escapeAttr(config.characterName || "")}" placeholder="${escapeAttr(t("donatexAi.defaultName"))}"></div>
+          <div class="md-field"><label>${t("properties.donatexAiAvatar")}</label><input type="text" id="pDonatexAvatar" value="${escapeAttr(config.avatarUrl || "")}" placeholder="https://..."></div>
+          <div class="properties__toggle-row"><label>${t("properties.donatexAiShowName")}</label>${switchHtml("pDonatexShowName", config.showName !== false)}</div>
+          <div class="properties__toggle-row"><label>${t("properties.donatexAiShowDonor")}</label>${switchHtml("pDonatexShowDonor", config.showDonor !== false)}</div>
+          <div class="properties__toggle-row"><label>${t("properties.queue")}</label>${switchHtml("pDonatexQueue", config.queue !== false)}</div>
+          <div class="md-field"><label>${t("properties.volume")}: <span id="pDonatexVolumeValue">${Math.round((config.volume ?? 0.8) * 100)}%</span></label><input type="range" id="pDonatexVolume" min="0" max="100" step="1" value="${Math.round((config.volume ?? 0.8) * 100)}"></div>
+          <div class="md-field"><label>${t("properties.donatexAiHideDelay")}</label><input type="number" id="pDonatexHideDelay" min="500" max="60000" step="500" value="${config.hideDelayMs || 5000}"></div>
+        </div>`;
     } else if (inst.type === "music") {
       extraHtml = `
         <div class="properties__toggle-row"><label>${t("properties.musicAutoplay")}</label>${switchHtml("pMusicAutoplay", config.autoplay !== false)}</div>
@@ -1170,8 +1175,9 @@ export function initPropertiesPanel({
         send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { mode: e.target.value } } });
       });
     } else if (inst.type === "donatex-ai") {
-      propertiesEl.querySelector("#pDonatexName").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { characterName: e.target.value.trim() } } }));
+      propertiesEl.querySelector("#pDonatexDonationUrl").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { donationUrl: e.target.value.trim() } } }));
       propertiesEl.querySelector("#pDonatexUrl").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { url: e.target.value.trim() } } }));
+      propertiesEl.querySelector("#pDonatexName").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { characterName: e.target.value.trim() } } }));
       propertiesEl.querySelector("#pDonatexAvatar").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { avatarUrl: e.target.value.trim() } } }));
       wireSwitch(propertiesEl.querySelector("#pDonatexShowName"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showName: on } } }));
       wireSwitch(propertiesEl.querySelector("#pDonatexShowDonor"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showDonor: on } } }));

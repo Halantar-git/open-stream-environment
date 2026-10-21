@@ -130,12 +130,44 @@ function mountWidget(config = {}) {
 }
 
 describe("donatex-ai widget", () => {
-  test("режим iframe при заданной ссылке", () => {
+  test("ссылка на ИИ-виджет включает аудио-мост", () => {
     const { w } = mountWidget({ url: "https://example.com/ai-character" });
     expect(w.iframeHost.firstChild.tagName).toBe("IFRAME");
     expect(w.iframeHost.firstChild.src).toBe("https://example.com/ai-character");
+    expect(w.iframeHost.firstChild.className).toContain("widget-donatex-ai__frame--audio");
     expect(w.iframeHost.style.display).toBe("");
     expect(w.eventHost.style.display).toBe("none");
+    w.unmount();
+  });
+
+  test("донатный и ИИ-виджеты вставляются двумя iframe'ами", () => {
+    const { w } = mountWidget({
+      donationUrl: "https://example.com/donation",
+      url: "https://example.com/ai",
+    });
+    expect(w.iframeHost.children.length).toBe(2);
+    expect(w.iframeHost.children[0].src).toBe("https://example.com/donation");
+    expect(w.iframeHost.children[1].src).toBe("https://example.com/ai");
+    w.unmount();
+  });
+
+  test("в режиме ссылок реплика не рисуется", () => {
+    const { w } = mountWidget({ url: "https://example.com/ai" });
+    w.context.bus.emit(EVENT_TYPES.DONATEX_AI_EVENT, { aiText: "Привет" });
+    expect(w.eventHost.style.display).toBe("none");
+    w.unmount();
+  });
+
+  test("без ссылок снова работает встроенный персонаж", () => {
+    const { w } = mountWidget({ url: "https://example.com/ai" });
+    w.update({ config: { url: "" } });
+
+    expect(w.iframeHost.children.length).toBe(0);
+    expect(w.iframeHost.style.display).toBe("none");
+
+    w.context.bus.emit(EVENT_TYPES.DONATEX_AI_EVENT, { aiText: "Привет" });
+    expect(w.eventHost.style.display).toBe("flex");
+    expect(w.textEl.textContent).toBe("Привет");
     w.unmount();
   });
 

@@ -1,5 +1,5 @@
 {
-  "sourceHash": "5638a01a86631643",
+  "sourceHash": "7a358c37fc3ccb0f",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -1819,7 +1819,7 @@
     "donatex-ai": {
       "type": "donatex-ai",
       "label": "ИИ-персонаж DonateX",
-      "description": "Реплики ИИ-персонажа DonateX с озвучкой, именем, донатером и очередью; можно встроить и внешнюю ссылку",
+      "description": "Озвучка донатного и ИИ-виджетов DonateX без картинки; без ссылок — встроенный персонаж",
       "icon": "widgetDonatexAi",
       "services": [
         "donatex"
@@ -1833,6 +1833,8 @@
       "minW": 16,
       "minH": 10,
       "defaultConfig": {
+        "donationUrl": "",
+        "url": "",
         "characterName": "",
         "showName": true,
         "showDonor": true,

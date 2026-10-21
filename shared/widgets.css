@@ -2456,8 +2456,23 @@
   color: var(--md-on-surface, #e8e5dd);
   font-family: var(--font-body, "Segoe UI", sans-serif);
 }
-.widget-donatex-ai__frame-host,
 .widget-donatex-ai__frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+/* Аудио-мост: iframe'ы полноразмерные, чтобы виджет DonateX не счёл себя
+   скрытым и проигрывал звук, но прозрачные и без мыши — картинку рисует OSE. */
+.widget-donatex-ai__audio {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+.widget-donatex-ai__frame--audio {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   border: 0;

@@ -707,7 +707,7 @@
     "custom": "Custom widget",
     "customDesc": "Text, image or custom HTML",
     "donatex-ai": "DonateX AI character",
-    "donatex-aiDesc": "DonateX AI character line with voice; a full external URL can be embedded too",
+    "donatex-aiDesc": "Audio from the DonateX donation and AI widgets — no picture; without links the built-in character is used",
     "music": "Donation music",
     "musicDesc": "Track attached to a donation: cover art, title, requester and progress",
     "uec-transfer": "UEC transfer",
@@ -1045,7 +1045,9 @@
   },
   "properties": {
     "goalTitle": "Goal title",
-    "donatexAiLink": "Character link (iframe)",
+    "donatexAiLink": "AI widget link",
+    "donatexDonationLink": "Donation widget link",
+    "donatexBridgeHint": "The links enable audio-only mode: DonateX widgets play sound but are not drawn. Without links the built-in character is used.",
     "donatexAiAvatar": "Avatar link",
     "donatexAiName": "Character name",
     "donatexAiShowName": "Show character name",
@@ -1613,7 +1615,7 @@
       "p6": "The webcam frame has two modes. Frame only is decoration: corners, a thin border and a LIVE badge in the current theme color; the camera is a separate OBS source. Live video from the panel makes the control panel capture the camera and send frames to the overlay; device, frame width, FPS (up to 60), codec, bitrate or JPEG quality are configurable, plus mirror and fit. H.264 through WebCodecs is used by default; if the browser or hardware cannot handle it, the panel falls back to JPEG. The OBS browser source itself has no camera access. The corner colour can be set separately from the frame (empty — taken from the theme), and the Neon toggle adds a glow around the frame and corners; the glow strength is 2–40 px.",
       "p7": "The news ticker is a scrolling line of stream events: donations, follows, subs, rewards, and optionally chat, the goal and the top donation. Speed is set in pixels per second and does not depend on message length; direction and sources are toggled in the inspector. There is a flat 2D variant and 3D tickers in the theme sets with a slight perspective. Ready-made phrases for it live in the Templates panel — send one into the ticker or the breaking bar in one click.",
       "p8": "3D chats have a Show time toggle: it affects new messages only — chat keeps no history, just the rows on screen, so messages already shown keep their time. The TESO chat has no time at all.",
-      "p9": "DonateX widgets — Donation music and the AI character — show what came with the donation: a track with cover art and progress, or a voiced reply. The inspector sets volume, the donor amount, the character name and the queue: when donations arrive back to back, the next track or reply waits its turn instead of cutting off the current one. If the track link points to a YouTube page, there is no audio to play — the widget shows the cover and a twenty-second progress bar, then takes the next one."
+      "p9": "DonateX widgets — Donation music and the AI character — show what came with the donation: a track with cover art and progress, or a voiced reply. The inspector sets volume, the donor amount, the character name and the queue: when donations arrive back to back, the next track or reply waits its turn instead of cutting off the current one. The AI character can take links to the DonateX donation and AI widgets — then it only plays their sound and draws nothing; without links the built-in character is used. If the track link points to a YouTube page, there is no audio to play — the widget shows the cover and a twenty-second progress bar, then takes the next one."
     },
     "guests": {
       "title": "Guest cameras",

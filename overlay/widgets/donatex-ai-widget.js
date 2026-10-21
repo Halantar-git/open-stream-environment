@@ -18,17 +18,16 @@
 /*
   DonateX AI character widget.
 
-  Primary mode (event-driven): listens for `donatex_ai_event` pushed by the
-  backend from the single DonateX SignalR connection and shows a speaking
-  avatar + dialog bubble, playing the generated voice line. The bubble shows
-  who donated and how much when DonateX sends this with the reply.
+  Two modes. With links it is an audio bridge: the DonateX donation widget and
+  the DonateX AI widget are embedded as full-size transparent iframes, so their
+  voices play but nothing is drawn. This is the mode for streamers who already
+  have their own alerts: DonateX supplies the sound, OSE — the picture.
 
-  Replies wait in a queue while the previous line is speaking: a donation
-  should not silence the one before it. The queue can be turned off in the
-  inspector.
-
-  Fallback mode: if `config.url` is set, the widget embeds that link in an
-  iframe instead (for a full DonateX character/overlay URL).
+  Without links the widget keeps the built-in character: it listens for
+  `donatex_ai_event` pushed by the backend from the single DonateX SignalR
+  connection and shows a speaking avatar + dialog bubble, playing the generated
+  voice line. The bubble shows who donated and how much when DonateX sends this
+  with the reply. Replies wait in a queue while the previous line is speaking.
 */
 (function (root, factory) {
   const BaseWidget =
@@ -60,7 +59,8 @@
 
       this._audio = null;
       this._hideTimer = null;
-      this._renderedUrl = null;
+      this._frames = { donation: null, ai: null };
+      this._bridgeActive = false;
       this._active = false;
       this._current = null;
       this.queue = [];
@@ -84,6 +84,7 @@
     onUnmount() {
       this.stopAudio();
       this.clearHideTimer();
+      this.clearFrames();
       this._active = false;
       this._current = null;
       this.queue.length = 0;
@@ -91,7 +92,7 @@
 
     buildIframeHost() {
       this.iframeHost = document.createElement("div");
-      this.iframeHost.className = "widget-donatex-ai__frame-host";
+      this.iframeHost.className = "widget-donatex-ai__audio";
       this.iframeHost.style.display = "none";
       this.host.appendChild(this.iframeHost);
     }
@@ -135,10 +136,12 @@
     }
 
     applyMode() {
-      const url = String(this.config.url || "").trim();
+      // Ссылки на виджеты DonateX включают режим аудио-моста: iframe'ы полноразмерные, но
+      // прозрачные, поэтому играет только звук. Без ссылок остаётся встроенный
+      // персонаж с аватаром и пузырём.
+      this._bridgeActive = this.applyBridge();
 
-      if (url) {
-        // Iframe fallback: embeds a full character/overlay URL, events are ignored.
+      if (this._bridgeActive) {
         this.stopAudio();
         this.clearHideTimer();
         this.host.classList.remove("is-active");
@@ -147,28 +150,58 @@
         this._current = null;
         this.queue.length = 0;
         this.renderQueue();
-
         this.eventHost.style.display = "none";
-        this.iframeHost.style.display = "";
-        if (url !== this._renderedUrl) {
-          this._renderedUrl = url;
-          this.iframeHost.innerHTML = "";
-          const iframe = document.createElement("iframe");
-          iframe.className = "widget-donatex-ai__frame";
-          iframe.src = url;
-          iframe.title = "";
-          iframe.allow = "autoplay; fullscreen; clipboard-write; picture-in-picture";
-          iframe.allowFullscreen = true;
-          iframe.setAttribute("referrerpolicy", "no-referrer");
-          this.iframeHost.appendChild(iframe);
-        }
         return;
       }
 
-      this._renderedUrl = null;
-      this.iframeHost.style.display = "none";
       this.applyAvatar();
       this.renderQueue();
+    }
+
+    applyBridge() {
+      const donation = String(this.config.donationUrl || "").trim();
+      const ai = String(this.config.url || "").trim();
+      if (!donation && !ai) {
+        this.clearFrames();
+        this.iframeHost.style.display = "none";
+        return false;
+      }
+      this.syncFrame("donation", donation);
+      this.syncFrame("ai", ai);
+      this.iframeHost.style.display = "";
+      return true;
+    }
+
+    /// Один iframe на виджет: ссылку не перезагружаем, если она не поменялась — иначе
+    /// очередное сохранение настроек перезапускало бы звук с начала.
+    syncFrame(kind, url) {
+      const current = this._frames[kind];
+      if (!url) {
+        if (current && current.el.parentNode) current.el.parentNode.removeChild(current.el);
+        this._frames[kind] = null;
+        return;
+      }
+      if (current && current.url === url) return;
+      if (current && current.el.parentNode) current.el.parentNode.removeChild(current.el);
+
+      const iframe = document.createElement("iframe");
+      iframe.className = "widget-donatex-ai__frame widget-donatex-ai__frame--audio";
+      iframe.src = url;
+      iframe.title = kind === "donation" ? "DonateX donation widget" : "DonateX AI widget";
+      iframe.allow = "autoplay; encrypted-media; clipboard-write";
+      iframe.setAttribute("referrerpolicy", "no-referrer");
+      iframe.setAttribute("aria-hidden", "true");
+      iframe.setAttribute("tabindex", "-1");
+      this.iframeHost.appendChild(iframe);
+      this._frames[kind] = { el: iframe, url };
+    }
+
+    clearFrames() {
+      for (const kind of Object.keys(this._frames)) {
+        const frame = this._frames[kind];
+        if (frame && frame.el.parentNode) frame.el.parentNode.removeChild(frame.el);
+        this._frames[kind] = null;
+      }
     }
 
     applyAvatar() {
@@ -186,7 +219,7 @@
     }
 
     trigger(data) {
-      if (!data || String(this.config.url || "").trim()) return;
+      if (!data || this._bridgeActive) return;
       if (!this.eventHost) return;
 
       if (this._active && this.queueEnabled()) {
