@@ -36,6 +36,7 @@ use crate::integrations::donationalerts_control::{
 };
 use crate::integrations::goodgame;
 use crate::integrations::goodgame_control::{GoodgameControl, ResolveFn};
+use crate::integrations::goodgame_oauth;
 use crate::integrations::longshot_sync::LongshotSync;
 use crate::integrations::obs_websocket_control::ObsClient;
 use crate::integrations::token_refresh::{TokenRefresher, TokenRefresherConfig};
@@ -928,6 +929,86 @@ impl Diagnostics {
             crate::state::config::save_youtube_tokens(&mut config, patch);
         }
         self.restart_youtube();
+    }
+
+    /// Сохранить токены GoodGame из OAuth2 и перезапустить чат.
+    pub fn save_goodgame_tokens_and_restart(&self, patch: &Value) {
+        {
+            let mut config = self.config();
+            crate::state::config::save_goodgame_tokens(&mut config, patch);
+        }
+        self.restart_goodgame();
+    }
+
+    /// Фоновое обновление токена GoodGame.
+    ///
+    /// Access-токен живёт ограниченное время, а эфир бывает длиннее. Токен
+    /// обновляется через тот же Worker, где лежит секрет приложения; после
+    /// обновления чат переподключается с новым токеном. Ручной токен
+    /// (`expiresAt = 0`) не трогается: срока у него нет.
+    pub fn start_goodgame_refresh(self: &Arc<Self>) {
+        let this = Arc::clone(self);
+        std::mem::drop(tauri::async_runtime::spawn(async move {
+            let mut ticker = tokio::time::interval(Duration::from_secs(60));
+            loop {
+                ticker.tick().await;
+                this.refresh_goodgame_tokens_if_due().await;
+            }
+        }));
+    }
+
+    async fn refresh_goodgame_tokens_if_due(&self) {
+        let (enabled, refresh_token, expires_at) = {
+            let config = self.config();
+            let service = config.get("goodgame");
+            (
+                service
+                    .map(|service| js_truthy(service.get("enabled")))
+                    .unwrap_or(false),
+                service
+                    .and_then(|service| service.get("refreshToken"))
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .trim()
+                    .to_string(),
+                service
+                    .and_then(|service| service.get("expiresAt"))
+                    .map(|value| js_number_or_zero(Some(value)) as i64)
+                    .unwrap_or(0),
+            )
+        };
+        if !enabled || refresh_token.is_empty() || expires_at == 0 {
+            return;
+        }
+        if chrono::Utc::now().timestamp_millis() < expires_at {
+            return;
+        }
+        let Some(base) = goodgame_oauth::oauth_worker_base(&self.guest_signal_url()) else {
+            return;
+        };
+        let outcome = http::form_post(
+            &goodgame_oauth::worker_route(&base, "/oauth/goodgame/refresh"),
+            &[("refresh_token".to_string(), refresh_token)],
+        )
+        .await;
+        if !(200..300).contains(&outcome.status)
+            || outcome
+                .body
+                .get("access_token")
+                .and_then(Value::as_str)
+                .is_none()
+        {
+            self.logger("goodgame").error(
+                "goodgame: token refresh failed",
+                Some(&json!({ "status": outcome.status, "response": outcome.body })),
+            );
+            return;
+        }
+        let patch = Value::Object(goodgame_oauth::tokens_patch(
+            &outcome.body,
+            chrono::Utc::now().timestamp_millis(),
+        ));
+        self.save_goodgame_tokens_and_restart(&patch);
     }
 
     // ---- Longshot (таймер Executive Hangar) ----

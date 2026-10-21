@@ -211,6 +211,7 @@ const SECTIONS = [
       { type: "p", key: "help.goodgame.p2" },
       { type: "p", key: "help.goodgame.p3" },
       { type: "p", key: "help.goodgame.p4" },
+      { type: "p", key: "help.goodgame.p5" },
     ],
   },
   {

@@ -191,6 +191,10 @@ pub fn set_app_config(config: &mut ConfigFile, patch: &Value) {
             let token = token.trim();
             if !token.is_empty() {
                 service.insert("token".to_string(), Value::from(token));
+                // Ручной токен отменяет OAuth-пару: иначе фоновое обновление
+                // когда-нибудь перезаписало бы его токеном из воркера.
+                service.insert("refreshToken".to_string(), Value::from(""));
+                service.insert("expiresAt".to_string(), Value::from(0));
             }
         }
         config.set("goodgame", Value::Object(service));
@@ -737,6 +741,16 @@ pub fn save_youtube_tokens(config: &mut ConfigFile, patch: &Value) {
     );
 }
 
+/// Токены GoodGame из OAuth2: `token` — то же поле, куда пишется ручной токен.
+pub fn save_goodgame_tokens(config: &mut ConfigFile, patch: &Value) {
+    save_tokens(
+        config,
+        "goodgame",
+        patch,
+        &["token", "refreshToken", "userId", "expiresAt"],
+    );
+}
+
 fn save_tokens(config: &mut ConfigFile, key: &str, patch: &Value, fields: &[&str]) {
     let mut tokens = section(config, key);
     for field in fields {
@@ -1141,6 +1155,14 @@ pub fn normalize_config(config: &mut ConfigFile) {
     }
     if !goodgame.get("token").is_some_and(Value::is_string) {
         goodgame.insert("token".to_string(), Value::from(""));
+    }
+    // Refresh-токен и срок приходят от OAuth2; ручной токен их не имеет, и
+    // тогда срок `0` значит «неизвестен» — обновлять нечего.
+    if !goodgame.get("refreshToken").is_some_and(Value::is_string) {
+        goodgame.insert("refreshToken".to_string(), Value::from(""));
+    }
+    if !goodgame.get("expiresAt").is_some_and(Value::is_number) {
+        goodgame.insert("expiresAt".to_string(), Value::from(0));
     }
     config.set("goodgame", Value::Object(goodgame));
 

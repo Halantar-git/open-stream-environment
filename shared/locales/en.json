@@ -279,17 +279,21 @@
     "youtubeVideoId": "Video ID (fallback)",
     "youtubeVideoIdPlaceholder": "Video/stream ID for live-chat lookup",
     "goodgame": "GoodGame",
-    "goodgameDesc": "GoodGame channel chat and events: messages, follows, donations and premiums. Reading is anonymous; to send messages, set the chat ID and token.",
+    "goodgameDesc": "GoodGame channel chat and events: messages, follows, donations and premiums. Reading is anonymous; to send messages, press Connect GoodGame — the authorization service issues the token.",
     "goodgameChannel": "Channel",
     "goodgameChannelPlaceholder": "Miker",
     "goodgameChannelHint": "Name from the channel URL (for example, Miker) or the numeric id.",
     "goodgameUserId": "User ID",
     "goodgameUserIdPlaceholder": "123456",
     "goodgameUserIdHint": "Sending only — the number from UserObj.id on the GoodGame site.",
-    "goodgameToken": "Chat token",
-    "goodgameTokenHint": "The token from UserObj.chatToken on goodgame.ru or an OAuth2 token. Leave empty to keep the saved one — the field is never filled with it.",
+    "goodgameToken": "Chat token (manual)",
+    "goodgameTokenHint": "Fallback: the token from UserObj.chatToken on goodgame.ru. Not needed when connecting via OAuth2. Leave empty to keep the saved one — the field is never filled with it.",
     "goodgameTokenSaved": "Token saved — sending to chat is available",
     "goodgameTokenMissing": "No token — chat is read-only",
+    "connectGoodgame": "Connect GoodGame",
+    "goodgameConnecting": "Preparing GoodGame sign-in…",
+    "goodgameConnectOpened": "Browser opened: allow access and return to the app.",
+    "goodgameConnectFailed": "Could not start the connection:",
     "openGoodgameSite": "Open goodgame.ru",
     "openGoodgameDocs": "API documentation",
     "app": "Application",
@@ -1691,7 +1695,7 @@
     "chatbot": {
       "title": "Chat bot and moderation",
       "p1": "In Settings → Chat bot you can enable the bot, set the command prefix and add your own commands (responses support $(user), $(channel), $(args), $(count), $(random a|b|c)) and timers. Each command has an access level (everyone / subscribers / moderators / broadcaster), a global cooldown and a per-user cooldown. The built-in !commands command lists the commands available to the viewer.",
-      "p2": "Bot replies go to the chat they came from: Twitch needs a connection with the user:write:chat scope, GoodGame needs the chat ID and token. Timers and chat-window messages go to the targets selected under «Where to send messages».",
+      "p2": "Bot replies go to the chat they came from: Twitch needs a connection with the user:write:chat scope, GoodGame needs Connect GoodGame (or the chat ID and token entered manually). Timers and chat-window messages go to the targets selected under «Where to send messages».",
       "p3": "The Moderation section enables auto moderation: link protection (with an allowed-domain whitelist), a blocked-word list with de-leetization of lookalike characters, caps and emote limits, and cumulative warnings: first offense clears the message and warns, second times out, third bans.",
       "p4": "Twitch timeouts and bans require the additional moderator:manage:banned_users scope — reconnect Twitch. GoodGame needs moderator rights in the channel and the chat token; the bot sends ban2 for a timeout or permanently. In the terminal, the modtest <message> command checks a message without actually banning."
     },
@@ -1715,9 +1719,10 @@
     "goodgame": {
       "title": "GoodGame",
       "p1": "GoodGame channel chat and events: messages, follows, donations, premiums and gifted premiums.",
-      "p2": "Reading is anonymous: no token or app registration is required. To send messages, set the chat ID and token from UserObj.id and UserObj.chatToken on the GoodGame site (open the browser console on your channel page) or an OAuth2 token.",
+      "p2": "Reading is anonymous: no token or app registration is required. To send messages, press Connect GoodGame — the browser opens the consent page and the app receives the tokens by itself. The app secret lives only in the OSE authorization service (a Cloudflare Worker), so each streamer does not need a separate domain.",
       "p3": "In Settings → GoodGame, enter the channel name from its URL (for example, Miker) or the numeric id. The channel can be changed on the fly — the service reconnects by itself.",
-      "p4": "Messages go to the same chat and ticker widgets as Twitch and YouTube; emotes are loaded from the channel sets, and donations, follows and premiums trigger alerts and Recent events."
+      "p4": "Messages go to the same chat and ticker widgets as Twitch and YouTube; emotes are loaded from the channel sets, and donations, follows and premiums trigger alerts and Recent events.",
+      "p5": "While the service is enabled, the token is refreshed before it expires. Fallback manual method: ID and chat token from UserObj.id and UserObj.chatToken (browser console on your page) — needed only when browser sign-in is unavailable."
     },
     "obs": {
       "title": "OBS WebSocket",

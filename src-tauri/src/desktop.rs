@@ -766,6 +766,48 @@ pub fn connect_youtube(
     open_authorize(&app, url)
 }
 
+/// `oauth:connect-goodgame` — подготовить вход в Worker и открыть браузер.
+///
+/// Секрет приложения остаётся в воркере: сюда приходит только адрес
+/// авторизации, а токены — позже, на локальный callback (`server/mod.rs`).
+#[tauri::command]
+pub async fn connect_goodgame(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, DesktopState>,
+) -> Result<Value, String> {
+    let Some(base) = crate::integrations::goodgame_oauth::oauth_worker_base(
+        &state.diagnostics.guest_signal_url(),
+    ) else {
+        return Ok(json!({ "ok": false, "error": "адрес signaling задан неверно" }));
+    };
+    let now = chrono::Utc::now().timestamp_millis();
+    let (pending, verifier) = crate::integrations::goodgame_oauth::pending().begin(now);
+    let fields = vec![
+        ("state".to_string(), pending.clone()),
+        ("verifier".to_string(), verifier),
+        ("port".to_string(), state.diagnostics.port().to_string()),
+    ];
+    let outcome = crate::integrations::http::form_post(
+        &crate::integrations::goodgame_oauth::worker_route(&base, "/oauth/goodgame/prepare"),
+        &fields,
+    )
+    .await;
+    if !(200..300).contains(&outcome.status) {
+        crate::integrations::goodgame_oauth::pending().take(&pending, now);
+        return Ok(json!({
+            "ok": false,
+            "error": crate::integrations::goodgame_oauth::exchange_failure_message(
+                outcome.status,
+                &outcome.body,
+            ),
+        }));
+    }
+    let Some(url) = outcome.body.get("authorize_url").and_then(Value::as_str) else {
+        return Ok(json!({ "ok": false, "error": "сервис авторизации не вернул адрес входа" }));
+    };
+    Ok(open_authorize(&app, url.to_string()))
+}
+
 /// Ключи приложения из присланного объекта — как `save*App` их ждёт.
 fn app_keys(creds: &Value) -> Value {
     json!({

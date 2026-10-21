@@ -198,6 +198,8 @@ const { EVENT_TYPES } = window.SharedEvents;
   const goodgameUserIdInput = document.getElementById("goodgameUserId");
   const goodgameTokenInput = document.getElementById("goodgameToken");
   const goodgameTokenStatusEl = document.getElementById("goodgameTokenStatus");
+  const connectGoodgameBtn = document.getElementById("connectGoodgameBtn");
+  const goodgameConnectStatusEl = document.getElementById("goodgameConnectStatus");
   const twitchClientIdInput = document.getElementById("twitchClientId");
   const twitchClientSecretInput = document.getElementById("twitchClientSecret");
   const twitchRedirectUriEl = document.getElementById("twitchRedirectUri");
@@ -1956,6 +1958,28 @@ const { EVENT_TYPES } = window.SharedEvents;
   document.getElementById("openTwitchConsole").addEventListener("click", () => window.desktop?.openExternal("https://dev.twitch.tv/console/apps"));
   document.getElementById("openDaConsole").addEventListener("click", () => window.desktop?.openExternal("https://www.donationalerts.com/application/clients"));
   document.getElementById("openYoutubeConsole").addEventListener("click", () => window.desktop?.openExternal("https://console.cloud.google.com/apis/credentials"));
+  if (connectGoodgameBtn) {
+    connectGoodgameBtn.addEventListener("click", async () => {
+      if (!window.desktop?.connectGoodgame) return;
+      connectGoodgameBtn.disabled = true;
+      if (goodgameConnectStatusEl) goodgameConnectStatusEl.textContent = t("settings.goodgameConnecting");
+      try {
+        const result = await window.desktop.connectGoodgame();
+        if (goodgameConnectStatusEl) {
+          goodgameConnectStatusEl.textContent = result?.ok
+            ? t("settings.goodgameConnectOpened")
+            : `${t("settings.goodgameConnectFailed")} ${result?.error || ""}`.trim();
+        }
+      } catch (error) {
+        if (goodgameConnectStatusEl) {
+          goodgameConnectStatusEl.textContent = `${t("settings.goodgameConnectFailed")} ${error}`.trim();
+        }
+      } finally {
+        connectGoodgameBtn.disabled = false;
+      }
+    });
+  }
+
   document.getElementById("openGoodgameSite")?.addEventListener("click", () => window.desktop?.openExternal("https://goodgame.ru/"));
   document.getElementById("openGoodgameDocs")?.addEventListener("click", () => window.desktop?.openExternal("https://github.com/GoodGame/API"));
 

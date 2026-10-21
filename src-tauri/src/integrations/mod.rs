@@ -12,6 +12,7 @@ pub mod donationalerts;
 pub mod donationalerts_control;
 pub mod goodgame;
 pub mod goodgame_control;
+pub mod goodgame_oauth;
 pub mod http;
 pub mod longshot_sync;
 pub mod nick_color;

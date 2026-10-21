@@ -214,6 +214,7 @@ const SECRET_FIELDS: &[(&str, &str, &str)] = &[
     ("youtube", "refreshToken", labels::YOUTUBE_REFRESH_TOKEN),
     ("donatex", "externalToken", labels::DONATEX_EXTERNAL_TOKEN),
     ("goodgame", "token", labels::GOODGAME_TOKEN),
+    ("goodgame", "refreshToken", labels::GOODGAME_REFRESH_TOKEN),
     ("obs", "password", labels::OBS_PASSWORD),
 ];
 
