@@ -449,7 +449,11 @@ pub fn handle_message(
                 .collect();
             let frame = match action {
                 "clear" => Some(json!({ "action": "clear" })),
-                "remove" if !text.is_empty() => Some(json!({ "action": "remove", "text": text })),
+                // «Пауза» объявления — это скрытие по тексту, а не остановка
+                // всей строки: остальные события продолжают идти.
+                "remove" | "hide" | "show" if !text.is_empty() => {
+                    Some(json!({ "action": action, "text": text }))
+                }
                 _ => None,
             };
             if let Some(frame) = frame {

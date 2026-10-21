@@ -99,6 +99,8 @@
       this._fontSize = 0;
       // Лента стоит на паузе: стример остановил её панелью «Шаблоны».
       this._paused = false;
+      // Объявления, скрытые кнопкой «Пауза» в панели: текст → не показывать.
+      this._hiddenMessages = new Set();
     }
 
     // ---- lifecycle ----
@@ -206,6 +208,7 @@
       this._events = [];
       this._goal = null;
       this._top = null;
+      this._hiddenMessages = new Set();
       this._breakingQueue = [];
       this._breakingActive = false;
       this.labelEl = null;
@@ -322,20 +325,38 @@
         this._showBreaking(text, message.durationMs);
         return;
       }
+      // Повторная отправка — явное намерение показать объявление снова. Скрытые
+      // копии убираем, иначе они всплыли бы разом с новой после снятия паузы.
+      if (this._hiddenMessages.has(text)) {
+        this._events = this._events.filter(
+          (event) => !(event.kind === "message" && event.message === text)
+        );
+        this._hiddenMessages.delete(text);
+      }
       this._push({ kind: "message", message: text, count: ++this._messageSeq });
     }
 
-    // Убрать сообщение из ленты: ищется по тексту, а не по индексу — оверлей
-    // мог пережить пересборку раскладки, а индекс к этому времени другой.
+    // Управление объявлениями в ленте: скрыть (пауза), вернуть, убрать совсем.
+    // Ищем по тексту, а не по индексу — оверлей мог пережить пересборку
+    // раскладки, а индекс к этому времени другой.
     _applyTickerControl(payload) {
       const action = String((payload && payload.action) || "");
       if (action === "clear") {
         this._events = this._events.filter((event) => event.kind !== "message");
+        this._hiddenMessages.clear();
         this._rebuild();
         return;
       }
       const text = String((payload && payload.text) || "").trim();
-      if (action !== "remove" || !text) return;
+      if (!text) return;
+      if (action === "hide" || action === "show") {
+        if (action === "hide") this._hiddenMessages.add(text);
+        else this._hiddenMessages.delete(text);
+        this._rebuild();
+        return;
+      }
+      if (action !== "remove") return;
+      this._hiddenMessages.delete(text);
       const before = this._events.length;
       this._events = this._events.filter((event) => !(event.kind === "message" && event.message === text));
       if (this._events.length !== before) this._rebuild();
@@ -464,6 +485,7 @@
 
     _items() {
       const items = this._events
+        .filter((raw) => !(raw.kind === "message" && this._hiddenMessages.has(raw.message)))
         .map((raw) => {
           const text = this._textOf(raw);
           return text ? { kind: raw.kind, tag: this._tagOf(raw.kind), text } : null;

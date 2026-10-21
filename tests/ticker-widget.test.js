@@ -377,6 +377,39 @@ describe("WidgetTicker", () => {
     w.unmount();
   });
 
+  test("объявление можно скрыть на паузу и вернуть", () => {
+    const ctx = makeContext();
+    const w = new WidgetTicker(item(), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "follow", user: "alice" });
+    ctx.bus.emit(EVENT_TYPES.TICKER_MESSAGE, { text: "Скоро начало" });
+    expect(w._items().map((i) => i.kind)).toEqual(["follow", "message"]);
+
+    // Пауза шаблона прячет только объявление, остальные события идут.
+    ctx.bus.emit(EVENT_TYPES.TICKER_CONTROL, { action: "hide", text: "Скоро начало" });
+    expect(w._items().map((i) => i.kind)).toEqual(["follow"]);
+
+    ctx.bus.emit(EVENT_TYPES.TICKER_CONTROL, { action: "show", text: "Скоро начало" });
+    expect(w._items().map((i) => i.kind)).toEqual(["follow", "message"]);
+
+    w.unmount();
+  });
+
+  test("повторная отправка скрытого объявления показывает его один раз", () => {
+    const ctx = makeContext();
+    const w = new WidgetTicker(item(), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.TICKER_MESSAGE, { text: "Скоро" });
+    ctx.bus.emit(EVENT_TYPES.TICKER_CONTROL, { action: "hide", text: "Скоро" });
+    ctx.bus.emit(EVENT_TYPES.TICKER_MESSAGE, { text: "Скоро" });
+
+    expect(w._items().map((i) => i.text)).toEqual(["Скоро"]);
+
+    w.unmount();
+  });
+
   test("очистка убирает только объявления, не трогая события", () => {
     const ctx = makeContext();
     const w = new WidgetTicker(item(), ctx);

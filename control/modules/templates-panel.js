@@ -47,6 +47,10 @@ export function initTemplatesPanel({ t, ICONS, send, EVENT_TYPES, state }) {
 
   if (!Array.isArray(state.tickerMessages)) state.tickerMessages = [];
   if (!Array.isArray(state.tickerSent)) state.tickerSent = [];
+  // Старый формат (просто строки) не должен ломать панель.
+  state.tickerSent = state.tickerSent
+    .map((item) => (typeof item === "string" ? { text: item, paused: false } : item))
+    .filter((item) => item && typeof item.text === "string" && item.text);
   if (typeof state.tickerPaused !== "boolean") state.tickerPaused = false;
 
   function messages() {
@@ -70,14 +74,28 @@ export function initTemplatesPanel({ t, ICONS, send, EVENT_TYPES, state }) {
     send(EVENT_TYPES.CMD_SET_APP_CONFIG, { tickerMessages: next });
   }
 
+  function sentEntry(text) {
+    return (state.tickerSent || []).find((item) => item && item.text === text) || null;
+  }
+
   function sendToTicker(text, priority) {
-    const value = String(text || "").trim().slice(0, MAX_LENGTH);
+    const value = String(text || "")
+      .trim()
+      .slice(0, MAX_LENGTH);
     if (!value) return;
     send(EVENT_TYPES.CMD_TICKER_MESSAGE, { text: value, priority });
     if (priority !== "breaking") {
-      // Список «отправлено» живёт в панели: по нему видно, что сейчас крутится,
-      // и это можно убрать из ленты, не дожидаясь, пока вытеснят события.
-      if (!state.tickerSent.includes(value)) state.tickerSent = [...state.tickerSent, value];
+      // Отправка — явное намерение показать объявление: если оно стояло на
+      // паузе, возвращаем его в ленту и снимаем пометку.
+      const entry = sentEntry(value);
+      if (entry) {
+        if (entry.paused) {
+          entry.paused = false;
+          send(EVENT_TYPES.CMD_TICKER_CONTROL, { action: "show", text: value });
+        }
+      } else {
+        state.tickerSent.push({ text: value, paused: false });
+      }
       render();
     }
     setStatus(priority === "breaking" ? t("templates.sentBreaking") : t("templates.sentTicker"));
@@ -86,10 +104,22 @@ export function initTemplatesPanel({ t, ICONS, send, EVENT_TYPES, state }) {
   function removeSent(text) {
     const value = String(text || "").trim();
     if (!value) return;
-    state.tickerSent = state.tickerSent.filter((item) => item !== value);
+    state.tickerSent = (state.tickerSent || []).filter((item) => item.text !== value);
     send(EVENT_TYPES.CMD_TICKER_CONTROL, { action: "remove", text: value });
     render();
     setStatus(t("templates.removed"));
+  }
+
+  // «Пауза» шаблона прячет его объявление в ленте, не удаляя: остальные
+  // события продолжают идти, а объявление можно вернуть кнопкой «Продолжить».
+  function toggleSentPause(text) {
+    const value = String(text || "").trim();
+    const entry = sentEntry(value);
+    if (!entry) return;
+    entry.paused = !entry.paused;
+    send(EVENT_TYPES.CMD_TICKER_CONTROL, { action: entry.paused ? "hide" : "show", text: value });
+    render();
+    setStatus(entry.paused ? t("templates.paused") : t("templates.resumed"));
   }
 
   function clearTickerMessages() {
@@ -105,12 +135,28 @@ export function initTemplatesPanel({ t, ICONS, send, EVENT_TYPES, state }) {
     render();
   }
 
+  // Текст строки, к которой относится кнопка: поле ввода могло быть изменено
+  // без сохранения, а «change» при уходе из поля перерисует список.
+  function rowText(index) {
+    const input = body ? body.querySelector(`[data-message="${index}"]`) : null;
+    return input ? input.value.trim().slice(0, MAX_LENGTH) : messages()[index] || "";
+  }
+
   function rowHtml(text, index) {
     const value = escapeHtml(text);
+    const entry = sentEntry(text);
+    const paused = !!(entry && entry.paused);
+    const pauseLabel = paused ? t("templates.resumeMessage") : t("templates.pauseMessage");
+    const pauseTitle = paused ? t("templates.resumeMessageTitle") : t("templates.pauseMessageTitle");
+    // Управлять можно только тем, что уже отправлено: иначе кнопки обещают
+    // действие, которого не будет.
+    const disabled = entry ? "" : " disabled";
     return `<div class="templates-row">
       <input class="templates-field__input" type="text" data-message="${index}" value="${value}" maxlength="${MAX_LENGTH}" autocomplete="off" spellcheck="false">
       <button class="terminal-panel__btn templates-row__btn" type="button" data-send="${index}" data-priority="normal">${escapeHtml(t("templates.sendTicker"))}</button>
       <button class="terminal-panel__btn templates-row__btn" type="button" data-send="${index}" data-priority="breaking">${escapeHtml(t("templates.sendBreaking"))}</button>
+      <button class="terminal-panel__btn templates-row__btn${paused ? " is-active" : ""}" type="button" data-pause="${index}" title="${escapeHtml(pauseTitle)}"${disabled}>${escapeHtml(pauseLabel)}</button>
+      <button class="terminal-panel__btn templates-row__btn" type="button" data-unsend="${index}" title="${escapeHtml(t("templates.removeFromTickerTitle"))}"${disabled}>${escapeHtml(t("templates.removeFromTicker"))}</button>
       <button class="terminal-panel__btn templates-row__btn" type="button" data-remove="${index}" title="${escapeHtml(t("templates.remove"))}">×</button>
     </div>`;
   }
@@ -123,24 +169,6 @@ export function initTemplatesPanel({ t, ICONS, send, EVENT_TYPES, state }) {
     </div>`;
   }
 
-  // Объявления из шаблонов, которые сейчас в ленте. Ряд этого списка — не
-  // сохранённый шаблон, а отправленная копия: её можно убрать отдельно.
-  function sentHtml() {
-    const list = state.tickerSent || [];
-    if (!list.length) return "";
-    const rows = list
-      .map(
-        (text, index) => `<div class="templates-live-row">
-          <span class="templates-live-row__text">${escapeHtml(text)}</span>
-          <button class="terminal-panel__btn templates-row__btn" type="button" data-unsend="${index}">${escapeHtml(
-            t("templates.removeFromTicker")
-          )}</button>
-        </div>`
-      )
-      .join("");
-    return `<div class="templates-section-title">${escapeHtml(t("templates.sentTitle"))}</div>${rows}`;
-  }
-
   function render() {
     if (!body) return;
     const list = messages();
@@ -151,7 +179,6 @@ export function initTemplatesPanel({ t, ICONS, send, EVENT_TYPES, state }) {
     // быть видно, что этот — именно для бегущей строки.
     body.innerHTML =
       controlsHtml() +
-      sentHtml() +
       `<div class="templates-section-title">${escapeHtml(t("templates.tickerTitle"))}</div>` +
       `<p class="templates-hint">${escapeHtml(t("templates.hint"))}</p>${rows}`;
   }
@@ -198,8 +225,15 @@ export function initTemplatesPanel({ t, ICONS, send, EVENT_TYPES, state }) {
       const unsend = event.target.closest("[data-unsend]");
       if (unsend) {
         const index = Number(unsend.dataset.unsend);
-        const list = state.tickerSent || [];
-        if (Number.isInteger(index) && index >= 0 && index < list.length) removeSent(list[index]);
+        const next = messages();
+        if (Number.isInteger(index) && index >= 0 && index < next.length) removeSent(rowText(index));
+        return;
+      }
+      const pause = event.target.closest("[data-pause]");
+      if (pause) {
+        const index = Number(pause.dataset.pause);
+        const next = messages();
+        if (Number.isInteger(index) && index >= 0 && index < next.length) toggleSentPause(rowText(index));
         return;
       }
       const remove = event.target.closest("[data-remove]");
