@@ -106,4 +106,13 @@
       }
     });
   }
+  // F5 и Ctrl+R в WebView2 перезагружают страницу, как в браузере. Окна
+  // приложения — не веб-страницы: перезагрузка сбрасывает панель к заставке и
+  // теряет несохранённые правки в редакторах. Жёсткую перезагрузку
+  // Ctrl+Shift+R оставляем — ею пользуются при разработке.
+  window.addEventListener("keydown", (event) => {
+    const plainReload =
+      (event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === "r";
+    if (event.key === "F5" || plainReload) event.preventDefault();
+  });
 })();
