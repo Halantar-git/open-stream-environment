@@ -194,10 +194,7 @@
       row.className = "wardogs-chat__row";
       row.style.cssText = `font-family:${FONT_DISPLAY};font-size:14px;line-height:1.45;color:${this.textColor};`;
 
-      const time =
-        this.config.showTime === false
-          ? ""
-          : new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const time = this.config.showTime === false ? "" : BaseWidget.clockTime();
       const badges = (msg.badges || [])
         .slice(0, 3)
         .map((b, i) => {

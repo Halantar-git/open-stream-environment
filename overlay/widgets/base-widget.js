@@ -80,6 +80,16 @@
     // Функциональные анимации (радар, прогресс цели, алерты) остаются на 30.
     static AMBIENT_FPS = 20;
 
+    /*
+      Время в эфире — всегда 24-часовое `HH:MM`, независимо от локали системы.
+      `toLocaleTimeString` на английской машине отдаёт «05:00 PM», и чат внезапно
+      меняет формат от машины к машине; для чата в эфире это лишняя разница.
+    */
+    static clockTime(date = new Date()) {
+      const pad = (value) => String(value).padStart(2, "0");
+      return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
     constructor(config = {}, context = {}) {
       this.id = config.id != null ? String(config.id) : null;
       this.type = config.type || "custom";

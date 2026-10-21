@@ -171,6 +171,20 @@ describe("WidgetGrimHexChat", () => {
     w.unmount();
   });
 
+  test("время всегда в 24-часовом формате, как бы ни была настроена система", () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 0, 1, 17, 5));
+    const ctx = makeContext("grimhex");
+    const w = new WidgetGrimHexChat(item(), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "bob", message: "hi", badges: [] });
+
+    expect(w.messagesInner.children[0].innerHTML).toContain("[17:05]");
+    w.unmount();
+    jest.useRealTimers();
+  });
+
   test("время можно отключить", () => {
     const ctx = makeContext("grimhex");
     const w = new WidgetGrimHexChat(item({ config: { showTime: false } }), ctx);
