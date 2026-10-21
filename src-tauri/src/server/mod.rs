@@ -517,17 +517,24 @@ fn handle_guest_message(bus: &Bus, slot: &str, raw: &str) {
 
 /// Сигнал от локального окна (панели или виджета): хосту — своему гостю,
 /// гостю — исходящему соединению.
-fn handle_local_guest_signal(diagnostics: &Diagnostics, message: &Value) {
+///
+/// Направление задаёт роль окна, а не слот: панель всегда сторона гостя,
+/// оверлей и сцена — сторона хоста. По номеру слота их не различить: `cam2`
+/// может одновременно быть приглашением у себя и слотом у другого стримера.
+fn handle_local_guest_signal(diagnostics: &Diagnostics, message: &Value, role: &str) {
     let slot = message
         .get("payload")
         .and_then(|payload| payload.get("slot"))
         .and_then(Value::as_str)
         .unwrap_or_default();
-    // На хосте — входящему LAN-гостю или облачной ссылке, у гостя —
-    // исходящему соединению. Модуль комнат выбирает канал сам.
-    diagnostics
-        .guests()
-        .send_local_signal(slot, &message.to_string(), diagnostics.clients());
+    let frame = message.to_string();
+    if role == "control" {
+        diagnostics.guests().send_to_host(slot, &frame);
+    } else {
+        diagnostics
+            .guests()
+            .send_to_hosted_guest(slot, &frame, diagnostics.clients());
+    }
 }
 
 /// Один входящий кадр: разбор, журнал, ограничитель частоты, команда.
@@ -557,7 +564,7 @@ fn handle_client_message(bus: &Bus, id: u64, role: &str, external: bool, raw: &s
         // Только локальные окна: пульт с телефона не должен управлять
         // чужим SDP, а гость вообще не доходит до этого разбора.
         if !external && matches!(role, "control" | "overlay" | "scene") {
-            handle_local_guest_signal(&bus.diagnostics, &message);
+            handle_local_guest_signal(&bus.diagnostics, &message, role);
         }
         return;
     }
@@ -1276,6 +1283,40 @@ mod tests {
             .to_bytes()
             .to_vec();
         (status, body)
+    }
+
+    #[test]
+    fn a_lan_guest_and_an_outgoing_guest_do_not_share_a_slot() {
+        let fixture = Fixture::new();
+        let diagnostics = &fixture.diagnostics;
+
+        // Входящий гость уже принят на cam2 и ждёт сигналы от оверлея.
+        let invite = diagnostics
+            .guests()
+            .create("cam2", "Аня")
+            .expect("приглашение");
+        let token = invite["token"].as_str().expect("токен").to_string();
+        assert!(diagnostics.guests().open("cam2", &token, "Аня"));
+
+        let (sender, mut receiver) = mpsc::unbounded_channel();
+        let guest = diagnostics.clients().add("guest".to_string(), true, sender);
+        assert!(diagnostics.guests().bind("cam2", guest));
+        assert!(diagnostics.guests().accept("cam2").is_some());
+        assert!(diagnostics.guests().subscribe("cam2", 99).is_some());
+
+        let frame = json!({
+            "type": event_types::GUEST_SIGNAL,
+            "payload": { "slot": "cam2", "payload": { "type": "answer", "sdp": "v=0" } },
+        });
+
+        // Оверлей — сторона хоста: кадр уходит входящему гостю.
+        handle_local_guest_signal(diagnostics, &frame, "overlay");
+        assert!(receiver.try_recv().is_ok());
+
+        // Панель — сторона гостя. Слот cam2 у неё тот же, но кадр предназначен
+        // другому хосту, а не своему гостю.
+        handle_local_guest_signal(diagnostics, &frame, "control");
+        assert!(receiver.try_recv().is_err());
     }
 
     #[tokio::test]

@@ -490,8 +490,11 @@ impl GuestHub {
         self.send_cloud(slot, frame)
     }
 
-    /// Сигнал от локального окна: хост отдаёт его гостю, гость — хосту.
-    pub fn send_local_signal(&self, slot: &str, frame: &str, clients: &ClientRegistry) -> bool {
+    /// Сигнал от окна хоста: уходит его гостю — LAN-клиенту или облачной
+    /// ссылке. Отдельный метод от [`Self::send_to_host`]: один и тот же слот
+    /// (`cam2`) может быть занят сразу с двух сторон — у себя хостом и у
+    /// другого стримера гостем, — и тогда по номеру слота их не различить.
+    pub fn send_to_hosted_guest(&self, slot: &str, frame: &str, clients: &ClientRegistry) -> bool {
         let guest = {
             let inner = self.lock();
             inner
@@ -503,10 +506,12 @@ impl GuestHub {
         if let Some(client) = guest {
             return clients.send_text(client, frame);
         }
-        if self.send_outgoing_for(slot, frame) {
-            return true;
-        }
         self.send_cloud(slot, frame)
+    }
+
+    /// Сигнал от панели гостя: уходит хосту по исходящей ссылке.
+    pub fn send_to_host(&self, slot: &str, frame: &str) -> bool {
+        self.send_outgoing_for(slot, frame)
     }
 
     fn has_cloud(&self, slot: &str, generation: u64) -> bool {
@@ -718,7 +723,9 @@ impl GuestHub {
         kind: &str,
         reason: Option<&str>,
     ) {
-        let mut payload = json!({ "slot": slot });
+        // Метка `outgoing`: панель в это же время может принимать своего гостя
+        // на том же слоте, и событие не должно закрыть чужую сессию.
+        let mut payload = json!({ "slot": slot, "outgoing": true });
         if let Some(reason) = reason {
             payload["reason"] = Value::from(reason);
         }
@@ -1226,7 +1233,7 @@ fn encode_query(value: &str) -> String {
 /// signaling, отбрасывается: удалённая сторона не должна уметь присылать
 /// команды или состояние.
 fn forward_guest_frame(raw: &str) -> Option<String> {
-    let value: Value = serde_json::from_str(raw).ok()?;
+    let mut value: Value = serde_json::from_str(raw).ok()?;
     let kind = value.get("type").and_then(Value::as_str)?;
     if !matches!(
         kind,
@@ -1237,6 +1244,11 @@ fn forward_guest_frame(raw: &str) -> Option<String> {
             | event_types::GUEST_SIGNAL
     ) {
         return None;
+    }
+    // Метка «это наша исходящая сессия»: панель может одновременно принимать
+    // своего гостя на том же слоте, и без неё спутала бы события.
+    if let Some(payload) = value.get_mut("payload").and_then(Value::as_object_mut) {
+        payload.insert("outgoing".to_string(), Value::Bool(true));
     }
     Some(value.to_string())
 }
@@ -1425,9 +1437,10 @@ mod tests {
     #[test]
     fn only_signaling_frames_come_back_from_the_host() {
         let signal = json!({"type": "guest_signal", "payload": {"slot": "cam2"}}).to_string();
+        let forwarded = forward_guest_frame(&signal).expect("кадр гостя");
         assert_eq!(
-            forward_guest_frame(&signal).as_deref(),
-            Some(signal.as_str())
+            serde_json::from_str::<Value>(&forwarded).expect("json"),
+            json!({"type": "guest_signal", "payload": {"slot": "cam2", "outgoing": true}})
         );
         // Команды и произвольные кадры от удалённой стороны не принимаются.
         assert!(forward_guest_frame(&json!({"type": "cmd_add_widget"}).to_string()).is_none());

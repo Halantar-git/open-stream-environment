@@ -318,6 +318,14 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
     return !!(state.guestShare && state.guestShare.slot === slot);
   }
 
+  // Событие касается нашего исходящего подключения (мы гость у другого
+  // стримера), а не гостя, которого принимаем сами. Слоты могут совпадать
+  // (cam2 с обеих сторон), поэтому смотрим ещё и на метку источника.
+  function joinedOutgoing(slot, payload) {
+    if (!joinedSlot(slot)) return false;
+    return payload.outgoing === true || payload.local === true;
+  }
+
   function handleMessage(message) {
     const type = message && message.type;
     const payload = (message && message.payload) || {};
@@ -359,19 +367,19 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
         // Настройки ICE хоста — для соединения, а не для полей ввода: свои
         // значения гость не теряет.
         if (payload.ice && typeof payload.ice === "object") state.guestRemoteIce = payload.ice;
-        if (joinedSlot(payload.slot)) share.markAccepted(payload.slot);
+        if (joinedOutgoing(payload.slot, payload)) share.markAccepted(payload.slot);
         render();
         break;
       case EVENT_TYPES.GUEST_RECEIVER_READY:
-        if (joinedSlot(payload.slot)) {
+        if (joinedOutgoing(payload.slot, payload)) {
           share.start(payload.slot, payload.ice || state.guestRemoteIce || state.guestIce);
         }
         break;
       case EVENT_TYPES.GUEST_SIGNAL:
-        if (joinedSlot(payload.slot)) share.handleSignal(payload.payload);
+        if (joinedOutgoing(payload.slot, payload)) share.handleSignal(payload.payload);
         break;
       case EVENT_TYPES.GUEST_DECLINED:
-        if (joinedSlot(payload.slot)) {
+        if (joinedOutgoing(payload.slot, payload)) {
           share.stop();
           state.guestOutgoing = null;
           // Причина есть у сетевой ошибки (сервер недоступен), у отказа хоста
@@ -389,7 +397,7 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
         }
         break;
       case EVENT_TYPES.GUEST_LEFT:
-        if (joinedSlot(payload.slot)) {
+        if (joinedOutgoing(payload.slot, payload)) {
           share.stop();
           state.guestOutgoing = null;
           state.guestRemoteIce = null;
