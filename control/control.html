@@ -856,6 +856,26 @@
           </div>
         </div>
 
+        <div class="settings__card md-card" id="settingsCardGoodgame">
+          <div class="settings__card-head">
+            <h2 data-i18n="settings.goodgame">GoodGame</h2>
+            <div class="md-switch is-on" id="goodgameEnabledSwitch" role="switch" aria-checked="true" data-i18n-title="settings.integrationSwitch"><div class="md-switch__thumb"></div></div>
+          </div>
+          <p class="settings__desc" data-i18n="settings.goodgameDesc">Чат и события канала GoodGame: сообщения, фоллоу, донаты и премиумы. Подключение анонимное, токен не нужен; отправка сообщений пока не поддерживается.</p>
+          <div class="md-field">
+            <label data-i18n="settings.goodgameChannel">Канал</label>
+            <input type="text" id="goodgameChannel" data-i18n-placeholder="settings.goodgameChannelPlaceholder" placeholder="Miker" />
+            <span class="md-field__hint" data-i18n="settings.goodgameChannelHint">Имя из адреса канала (например, Miker) или числовой id.</span>
+          </div>
+          <div class="settings__actions">
+            <button class="md-button md-button--text" id="openGoodgameSite" data-i18n="settings.openGoodgameSite">Открыть goodgame.ru</button>
+            <button class="md-button md-button--text" id="openGoodgameDocs" data-i18n="settings.openGoodgameDocs">Документация API</button>
+          </div>
+          <div class="settings__statuses">
+            <span class="md-chip" id="chip-goodgame"><span class="md-chip__dot"></span><span class="md-chip__label" data-i18n="settings.goodgame">GoodGame</span></span>
+          </div>
+        </div>
+
         <div class="settings__card md-card" id="settingsCardObs">
           <div class="settings__card-head">
             <h2 data-i18n="settings.obs">OBS WebSocket</h2>

@@ -34,6 +34,8 @@ use crate::integrations::donationalerts::{
 use crate::integrations::donationalerts_control::{
     DonationAlertsControl, Oauth, OauthFn, SubscribeFn as DaSubscribeFn,
 };
+use crate::integrations::goodgame;
+use crate::integrations::goodgame_control::{GoodgameControl, ResolveFn};
 use crate::integrations::longshot_sync::LongshotSync;
 use crate::integrations::obs_websocket_control::ObsClient;
 use crate::integrations::token_refresh::{TokenRefresher, TokenRefresherConfig};
@@ -150,6 +152,8 @@ pub struct Diagnostics {
     donatex: DonatexControl,
     /// YouTube Live: поиск эфира и опрос чата.
     youtube: YoutubeLiveControl,
+    /// GoodGame: чат и события канала по WebSocket.
+    goodgame: GoodgameControl,
     /// Текущая сессия стрима (или `None`): её время — граница «этого стрима».
     current_session: Arc<Mutex<Option<Value>>>,
     /// Гостевые камеры: приглашения и signaling. Под `Arc`: исходящее
@@ -310,6 +314,29 @@ impl Diagnostics {
             };
             YoutubeLiveControl::new(get, tokens, reader, spawn_task())
         };
+        let goodgame = {
+            let resolve: ResolveFn = Arc::new(|channel: String| {
+                Box::pin(async move {
+                    // Уже числовой id — не тратим запрос на поиск.
+                    if !channel.is_empty() && channel.chars().all(|ch| ch.is_ascii_digit()) {
+                        return Ok(channel);
+                    }
+                    match http::fetch_json(&goodgame::status_url(&channel)).await {
+                        Ok(body) => goodgame::channel_id_from_status(&body)
+                            .ok_or_else(|| format!("канал не найден: {channel}")),
+                        Err(error) => Err(error),
+                    }
+                })
+            });
+            GoodgameControl::new(
+                Arc::new(crate::integrations::twitch_chat_socket::websocket_connect),
+                resolve,
+                spawn_task(),
+            )
+            .with_reconnect(Duration::from_millis(
+                crate::integrations::goodgame_control::RECONNECT_DELAY_MS,
+            ))
+        };
 
         let runtime = Arc::new(Mutex::new(Runtime::new(
             chrono::Utc::now().timestamp_millis(),
@@ -374,6 +401,7 @@ impl Diagnostics {
             donation_alerts,
             donatex,
             youtube,
+            goodgame,
             current_session: Arc::new(Mutex::new(None)),
             guests: Arc::new(crate::server::guest::GuestHub::new()),
             obs,
@@ -816,6 +844,26 @@ impl Diagnostics {
         self.youtube.restart(enabled, self.youtube_emit());
     }
 
+    /// Перезапустить чат GoodGame по текущим настройкам.
+    pub fn restart_goodgame(&self) {
+        let (enabled, channel) = {
+            let config = self.config();
+            let service = config.get("goodgame");
+            (
+                service
+                    .map(|service| js_truthy(service.get("enabled")))
+                    .unwrap_or(false),
+                service
+                    .and_then(|service| service.get("channel"))
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string(),
+            )
+        };
+        self.goodgame
+            .restart(enabled, &channel, self.goodgame_emit());
+    }
+
     /// Сохранить токены Twitch и перезапустить EventSub — хвост возврата из
     /// авторизации, как `hooks.onTwitchConnected` в JS.
     ///
@@ -1016,6 +1064,21 @@ impl Diagnostics {
     /// События YouTube: статус — как у остальных служб, сообщения чата — ещё и
     /// чат-боту (не-Twitch он отсеивает сам), алерты — обработчикам шины.
     fn youtube_emit(&self) -> EmitFn {
+        let base = self.chat_emit();
+        let ctx = self.bus_context();
+        Arc::new(move |event: Value| {
+            let kind = event["type"].as_str().unwrap_or("");
+            if kind == event_types::CHAT_MESSAGE || kind == event_types::CONNECTION_STATUS {
+                base(event);
+            } else {
+                apply_bus_event(&event, &ctx);
+            }
+        })
+    }
+
+    /// Как события GoodGame попадают в шину: чат — общим путём (история,
+    /// розыгрыш, опрос), алерты — обработчиками шины, как у остальных служб.
+    fn goodgame_emit(&self) -> EmitFn {
         let base = self.chat_emit();
         let ctx = self.bus_context();
         Arc::new(move |event: Value| {
@@ -1339,6 +1402,7 @@ impl Diagnostics {
         self.restart_donation_alerts();
         self.restart_donatex();
         self.restart_youtube();
+        self.restart_goodgame();
         // Импорт мог принести раскладку с таймером (или убрать его).
         self.sync_longshot_activity();
         self.broadcast_state();

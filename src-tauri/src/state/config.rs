@@ -172,6 +172,15 @@ pub fn set_app_config(config: &mut ConfigFile, patch: &Value) {
         );
         config.set("twitch", Value::Object(twitch));
     }
+    if let Some(channel) = patch.get("goodgameChannel") {
+        let mut goodgame = section(config, "goodgame");
+        // Регистр в GoodGame не важен, но имя показывается в поле как есть.
+        goodgame.insert(
+            "channel".to_string(),
+            Value::from(js_string(channel).trim()),
+        );
+        config.set("goodgame", Value::Object(goodgame));
+    }
     if let Some(port) = patch.get("port") {
         let raw = js_number_or_zero(Some(port));
         let port = if raw == 0.0 { 8710.0 } else { raw };
@@ -737,6 +746,7 @@ pub fn set_integration_enabled(
         "donationAlerts" => "donationAlerts",
         "donatex" => "donatex",
         "youtube" => "youtube",
+        "goodgame" => "goodgame",
         "obs" => "obs",
         _ => return None,
     };
@@ -1091,12 +1101,19 @@ pub fn normalize_config(config: &mut ConfigFile) {
     );
 
     // Службы по умолчанию включены, если флага ещё нет.
-    for key in ["twitch", "donationAlerts", "donatex", "youtube"] {
+    for key in ["twitch", "donationAlerts", "donatex", "youtube", "goodgame"] {
         let mut service = object_or_empty(config.get(key));
         if !service.contains_key("enabled") {
             service.insert("enabled".to_string(), Value::Bool(true));
             config.set(key, Value::Object(service));
         }
+    }
+
+    // Канал GoodGame — всегда строка: пустая значит «ещё не ввели».
+    let mut goodgame = object_or_empty(config.get("goodgame"));
+    if !goodgame.get("channel").is_some_and(Value::is_string) {
+        goodgame.insert("channel".to_string(), Value::from(""));
+        config.set("goodgame", Value::Object(goodgame));
     }
 
     // External token DonateX — всегда строка, чтобы его можно было читать без
@@ -1164,6 +1181,7 @@ pub fn replace_config(
         "donationAlerts",
         "donatex",
         "youtube",
+        "goodgame",
         "goal",
         "donationVoice",
     ] {

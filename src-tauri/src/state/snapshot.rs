@@ -117,6 +117,10 @@ pub fn snapshot(config: &ConfigFile, db: &Database, runtime: &Runtime) -> Value 
         "twitchChannel".to_string(),
         nested(config, "twitch", "channel"),
     );
+    out.insert(
+        "goodgameChannel".to_string(),
+        nested(config, "goodgame", "channel"),
+    );
     // Числовой id канала нужен фронту для наборов смайлов BetterTTV и 7TV:
     // их API ищет канал только по нему, в отличие от FrankerFaceZ (по логину).
     out.insert(
@@ -182,6 +186,10 @@ pub fn snapshot(config: &ConfigFile, db: &Database, runtime: &Runtime) -> Value 
     out.insert(
         "youtubeEnabled".to_string(),
         nested(config, "youtube", "enabled"),
+    );
+    out.insert(
+        "goodgameEnabled".to_string(),
+        nested(config, "goodgame", "enabled"),
     );
     out.insert("obs".to_string(), obs);
     out.insert("soundboard".to_string(), field(config, "soundboard"));

@@ -103,6 +103,21 @@ impl Runtime {
             "youtube".to_string(),
             Value::from(initial_status(config, "youtube", "accessToken")),
         );
+        // GoodGame читается без токена: «настроено» — это заданный канал.
+        let goodgame_channel = config
+            .get("goodgame")
+            .and_then(|service| service.get("channel"))
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .unwrap_or("");
+        connection_status.insert(
+            "goodgame".to_string(),
+            Value::from(if goodgame_channel.is_empty() {
+                "not_configured"
+            } else {
+                "connecting"
+            }),
+        );
         connection_status.insert("obs".to_string(), Value::from("not_configured"));
 
         Self {

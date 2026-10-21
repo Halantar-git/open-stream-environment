@@ -276,6 +276,9 @@ pub fn handle_message(
                     diagnostics.restart_twitch_chat();
                     diagnostics.restart_chat_bot();
                 }
+                if payload.get("goodgameChannel").is_some() {
+                    diagnostics.restart_goodgame();
+                }
             } else {
                 {
                     let mut config = diagnostics.config();
@@ -288,6 +291,10 @@ pub fn handle_message(
                 if payload.get("twitchChannel").is_some() {
                     diagnostics.restart_twitch_chat();
                     diagnostics.restart_chat_bot();
+                }
+                // Новый канал GoodGame — новое подключение.
+                if payload.get("goodgameChannel").is_some() {
+                    diagnostics.restart_goodgame();
                 }
                 // Новый external token DonateX — новое подключение.
                 if payload.get("donatex").is_some() {
@@ -307,6 +314,7 @@ pub fn handle_message(
                 Some("donationAlerts") => diagnostics.restart_donation_alerts(),
                 Some("donatex") => diagnostics.restart_donatex(),
                 Some("youtube") => diagnostics.restart_youtube(),
+                Some("goodgame") => diagnostics.restart_goodgame(),
                 Some("obs") => diagnostics.restart_obs(),
                 _ => {}
             }
@@ -1036,6 +1044,7 @@ pub fn handle_message(
                 "donationAlerts" => diagnostics.restart_donation_alerts(),
                 "donatex" => diagnostics.restart_donatex(),
                 "youtube" => diagnostics.restart_youtube(),
+                "goodgame" => diagnostics.restart_goodgame(),
                 "obs" => diagnostics.restart_obs(),
                 _ => {}
             }

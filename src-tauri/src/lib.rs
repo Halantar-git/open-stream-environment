@@ -208,6 +208,8 @@ pub fn run() {
             diagnostics.restart_obs();
             // YouTube Live — поиск эфира и опрос чата.
             diagnostics.restart_youtube();
+            // GoodGame — чат и события канала.
+            diagnostics.restart_goodgame();
             // Пауза очереди алертов переживает перезапуск: срок живёт в настройках.
             diagnostics.restore_alert_pause();
             // Сессия стрима — её начало и есть граница «только этот стрим».

@@ -1,5 +1,5 @@
 {
-  "sourceHash": "545bb853e1a097ff",
+  "sourceHash": "dbf08adf6c3ed760",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -7,6 +7,7 @@
       "description": "Всплывающие карточки: фоллоу, сабы, донаты",
       "icon": "widgetAlerts",
       "services": [
+        "goodgame",
         "twitchEvents",
         "donationAlerts",
         "youtube"
@@ -27,6 +28,7 @@
       "description": "Прогресс-бар сбора",
       "icon": "widgetGoal",
       "services": [
+        "goodgame",
         "donationAlerts",
         "youtube"
       ],
@@ -48,6 +50,7 @@
       "description": "Лента сообщений чата канала",
       "icon": "widgetChat",
       "services": [
+        "goodgame",
         "twitchChat",
         "youtube"
       ],
@@ -70,6 +73,7 @@
       "description": "Список последних фоллоу / сабов / донатов",
       "icon": "widgetRecent",
       "services": [
+        "goodgame",
         "twitchEvents",
         "donationAlerts",
         "youtube"
@@ -92,6 +96,7 @@
       "description": "Бегущая строка событий стрима: донаты, фоллоу, сабы и чат",
       "icon": "widgetTicker",
       "services": [
+        "goodgame",
         "twitchEvents",
         "twitchChat",
         "donationAlerts",
@@ -157,6 +162,7 @@
       "description": "Фолловеры, подписчики, топ донат или донаты за стрим — плашкой",
       "icon": "widgetStat",
       "services": [
+        "goodgame",
         "twitchEvents",
         "donationAlerts",
         "youtube"
@@ -450,6 +456,7 @@
       "description": "Чат стрима в неоновом HUD Grim HEX (только для темы Grim HEX)",
       "icon": "widgetGrimHexChat",
       "services": [
+        "goodgame",
         "twitchChat",
         "youtube"
       ],
@@ -475,6 +482,7 @@
       "description": "Донат-цель из 5 неоновых секторов (только для темы Grim HEX)",
       "icon": "widgetGrimHexGoal",
       "services": [
+        "goodgame",
         "donationAlerts",
         "youtube"
       ],
@@ -499,6 +507,7 @@
       "description": "Входящая передача: канал, позывной и сумма — в стиле Star Citizen",
       "icon": "widgetUecTransfer",
       "services": [
+        "goodgame",
         "twitchEvents",
         "donationAlerts",
         "donatex",
@@ -525,6 +534,7 @@
       "description": "Голографический терминал с вращающимся 3D-значком (только для темы Grim HEX)",
       "icon": "widgetGrimHexHoloAlert",
       "services": [
+        "goodgame",
         "twitchEvents",
         "donationAlerts",
         "youtube"
@@ -548,6 +558,7 @@
       "description": "Голографический радар с кораблями-донатерами (только для темы Grim HEX)",
       "icon": "widgetGrimHexRadar",
       "services": [
+        "goodgame",
         "donationAlerts",
         "youtube"
       ],
@@ -572,6 +583,7 @@
       "description": "3D-очередь событий с выездом слева (только для темы Grim HEX)",
       "icon": "widgetRecent",
       "services": [
+        "goodgame",
         "twitchEvents",
         "donationAlerts",
         "youtube"
@@ -598,6 +610,7 @@
       "description": "Бегущая строка событий в HUD Grim HEX (только для темы Grim HEX)",
       "icon": "widgetTicker",
       "services": [
+        "goodgame",
         "twitchEvents",
         "twitchChat",
         "donationAlerts",
@@ -659,6 +672,7 @@
       "description": "Чат стрима в радиоактивном HUD (только для темы Nuclear)",
       "icon": "widgetNuclearChat",
       "services": [
+        "goodgame",
         "twitchChat",
         "youtube"
       ],
@@ -684,6 +698,7 @@
       "description": "Донат-цель из радиоактивных секторов (только для темы Nuclear)",
       "icon": "widgetNuclearGoal",
       "services": [
+        "goodgame",
         "donationAlerts",
         "youtube"
       ],
@@ -708,6 +723,7 @@
       "description": "Радиоактивный терминал с вращающимся 3D-значком (только для темы Nuclear)",
       "icon": "widgetNuclearHoloAlert",
       "services": [
+        "goodgame",
         "twitchEvents",
         "donationAlerts",
         "youtube"
@@ -731,6 +747,7 @@
       "description": "3D-очередь событий с выездом слева (только для темы Nuclear)",
       "icon": "widgetRecent",
       "services": [
+        "goodgame",
         "twitchEvents",
         "donationAlerts",
         "youtube"
@@ -757,6 +774,7 @@
       "description": "Бегущая строка событий в радиоактивном HUD (только для темы Nuclear)",
       "icon": "widgetTicker",
       "services": [
+        "goodgame",
         "twitchEvents",
         "twitchChat",
         "donationAlerts",
@@ -837,6 +855,7 @@
       "description": "Чат стрима в оранжевом HUD Cobra Mk II (только для темы Cobra Mk II)",
       "icon": "widgetCobraChat",
       "services": [
+        "goodgame",
         "twitchChat",
         "youtube"
       ],
@@ -862,6 +881,7 @@
       "description": "Донат-цель из оранжевых секторов (только для темы Cobra Mk II)",
       "icon": "widgetCobraGoal",
       "services": [
+        "goodgame",
         "donationAlerts",
         "youtube"
       ],
@@ -886,6 +906,7 @@
       "description": "Голографический терминал с вращающимся кораблём (только для темы Cobra Mk II)",
       "icon": "widgetCobraHoloAlert",
       "services": [
+        "goodgame",
         "twitchEvents",
         "donationAlerts",
         "youtube"
@@ -909,6 +930,7 @@
       "description": "Донат-цель с кораблём и кольцами щита (только для темы Cobra Mk II)",
       "icon": "widgetCobraShield",
       "services": [
+        "goodgame",
         "donationAlerts",
         "youtube"
       ],
@@ -933,6 +955,7 @@
       "description": "Перспективный круговой радар с кораблями-донатерами (только для темы Cobra Mk II)",
       "icon": "widgetCobraRadar",
       "services": [
+        "goodgame",
         "donationAlerts",
         "youtube"
       ],
@@ -957,6 +980,7 @@
       "description": "3D-очередь событий с выездом слева (только для темы Cobra Mk II)",
       "icon": "widgetRecent",
       "services": [
+        "goodgame",
         "twitchEvents",
         "donationAlerts",
         "youtube"
@@ -983,6 +1007,7 @@
       "description": "Бегущая строка событий в оранжевом HUD (только для темы Cobra Mk II)",
       "icon": "widgetTicker",
       "services": [
+        "goodgame",
         "twitchEvents",
         "twitchChat",
         "donationAlerts",
@@ -1044,6 +1069,7 @@
       "description": "Чат стрима в золотом HUD TESO (только для темы TESO)",
       "icon": "widgetTesoChat",
       "services": [
+        "goodgame",
         "twitchChat",
         "youtube"
       ],
@@ -1069,6 +1095,7 @@
       "description": "ХП-бар цели в стиле TESO (только для темы TESO)",
       "icon": "widgetTesoGoal",
       "services": [
+        "goodgame",
         "donationAlerts",
         "youtube"
       ],
@@ -1093,6 +1120,7 @@
       "description": "Голографический терминал с вращающейся золотой печатью (только для темы TESO)",
       "icon": "widgetTesoHoloAlert",
       "services": [
+        "goodgame",
         "twitchEvents",
         "donationAlerts",
         "youtube"
@@ -1116,6 +1144,7 @@
       "description": "3D-очередь событий с выездом слева (только для темы TESO)",
       "icon": "widgetRecent",
       "services": [
+        "goodgame",
         "twitchEvents",
         "donationAlerts",
         "youtube"
@@ -1142,6 +1171,7 @@
       "description": "Бегущая строка событий в золотом HUD (только для темы TESO)",
       "icon": "widgetTicker",
       "services": [
+        "goodgame",
         "twitchEvents",
         "twitchChat",
         "donationAlerts",
@@ -1183,6 +1213,7 @@
       "description": "Донат-цель как шкала загрузки из HUD WarDogs (только для темы Wardogs)",
       "icon": "widgetWardogsGoal",
       "services": [
+        "goodgame",
         "donationAlerts",
         "youtube"
       ],
@@ -1207,6 +1238,7 @@
       "description": "Чат стрима в HUD WarDogs (только для темы Wardogs)",
       "icon": "widgetWardogsChat",
       "services": [
+        "goodgame",
         "twitchChat",
         "youtube"
       ],
@@ -1232,6 +1264,7 @@
       "description": "Всплывающий алерт с голографическим значком (только для темы Wardogs)",
       "icon": "widgetWardogsHoloAlert",
       "services": [
+        "goodgame",
         "twitchEvents",
         "donationAlerts",
         "youtube"
@@ -1276,6 +1309,7 @@
       "description": "3D-очередь событий с выездом слева (только для темы Wardogs)",
       "icon": "widgetRecent",
       "services": [
+        "goodgame",
         "twitchEvents",
         "donationAlerts",
         "youtube"
@@ -1302,6 +1336,7 @@
       "description": "Бегущая строка событий в HUD WarDogs (только для темы Wardogs)",
       "icon": "widgetTicker",
       "services": [
+        "goodgame",
         "twitchEvents",
         "twitchChat",
         "donationAlerts",
@@ -1363,6 +1398,7 @@
       "description": "Чат стрима на приподнятой карточке Material You (только для темы Material You)",
       "icon": "widgetMd3Chat",
       "services": [
+        "goodgame",
         "twitchChat",
         "youtube"
       ],
@@ -1388,6 +1424,7 @@
       "description": "Донат-цель с градиентным прогрессом в стиле Material You (только для темы Material You)",
       "icon": "widgetMd3Goal",
       "services": [
+        "goodgame",
         "donationAlerts",
         "youtube"
       ],
@@ -1412,6 +1449,7 @@
       "description": "Всплывающий алерт с вращающимся 3D-значком (только для темы Material You)",
       "icon": "widgetMd3HoloAlert",
       "services": [
+        "goodgame",
         "twitchEvents",
         "donationAlerts",
         "youtube"
@@ -1435,6 +1473,7 @@
       "description": "3D-очередь событий с выездом слева (только для темы Material You)",
       "icon": "widgetRecent",
       "services": [
+        "goodgame",
         "twitchEvents",
         "donationAlerts",
         "youtube"
@@ -1461,6 +1500,7 @@
       "description": "Бегущая строка событий на мягкой карточке Material You (только для темы Material You)",
       "icon": "widgetTicker",
       "services": [
+        "goodgame",
         "twitchEvents",
         "twitchChat",
         "donationAlerts",
@@ -1522,6 +1562,7 @@
       "description": "Пиксельный чат на плоской панели (только для темы Pixel Perfect)",
       "icon": "widgetPixelChat",
       "services": [
+        "goodgame",
         "twitchChat",
         "youtube"
       ],
@@ -1547,6 +1588,7 @@
       "description": "Блочная пиксельная шкала донат-цели (только для темы Pixel Perfect)",
       "icon": "widgetPixelGoal",
       "services": [
+        "goodgame",
         "donationAlerts",
         "youtube"
       ],
@@ -1571,6 +1613,7 @@
       "description": "Пиксельный алерт с вращающимся значком (только для темы Pixel Perfect)",
       "icon": "widgetPixelHoloAlert",
       "services": [
+        "goodgame",
         "twitchEvents",
         "donationAlerts",
         "youtube"
@@ -1594,6 +1637,7 @@
       "description": "3D-очередь событий с выездом слева (только для темы Pixel Perfect)",
       "icon": "widgetRecent",
       "services": [
+        "goodgame",
         "twitchEvents",
         "donationAlerts",
         "youtube"
@@ -1620,6 +1664,7 @@
       "description": "Бегущая строка событий на пиксельной панели (только для темы Pixel Perfect)",
       "icon": "widgetTicker",
       "services": [
+        "goodgame",
         "twitchEvents",
         "twitchChat",
         "donationAlerts",
@@ -1661,6 +1706,7 @@
       "description": "Донат-цель с неоновой шкалой и закатной заливкой (только для темы Retrowave)",
       "icon": "widgetRetrowaveGoal",
       "services": [
+        "goodgame",
         "donationAlerts",
         "youtube"
       ],
@@ -1687,6 +1733,7 @@
       "description": "Чат стрима на неоновой панели с косой кромкой (только для темы Retrowave)",
       "icon": "widgetRetrowaveChat",
       "services": [
+        "goodgame",
         "twitchChat",
         "youtube"
       ],
@@ -1712,6 +1759,7 @@
       "description": "Всплывающий неоновый алерт с полосатым солнцем (только для темы Retrowave)",
       "icon": "widgetRetrowaveHoloAlert",
       "services": [
+        "goodgame",
         "twitchEvents",
         "donationAlerts",
         "youtube"
@@ -1755,6 +1803,7 @@
       "description": "3D-очередь событий с выездом слева (только для темы Retrowave)",
       "icon": "widgetRecent",
       "services": [
+        "goodgame",
         "twitchEvents",
         "donationAlerts",
         "youtube"
@@ -1781,6 +1830,7 @@
       "description": "Неоновая бегущая строка событий с косой кромкой (только для темы Retrowave)",
       "icon": "widgetTicker",
       "services": [
+        "goodgame",
         "twitchEvents",
         "twitchChat",
         "donationAlerts",

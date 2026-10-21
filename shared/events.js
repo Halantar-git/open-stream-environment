@@ -200,7 +200,7 @@
     TERMINAL_FILTER: "terminal_filter", // { level } — server -> client: filter log levels
   };
 
-  const CONNECTION_SERVICES = ["twitchChat", "twitchEvents", "donationAlerts", "donatex", "youtube", "obs"];
+  const CONNECTION_SERVICES = ["twitchChat", "twitchEvents", "donationAlerts", "donatex", "youtube", "goodgame", "obs"];
 
   const ALERT_DURATIONS_MS = {
     follow: 5000,

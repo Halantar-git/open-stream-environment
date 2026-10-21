@@ -194,6 +194,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const sceneFormEl = document.getElementById("sceneForm");
 
   const twitchChannelInput = document.getElementById("twitchChannel");
+  const goodgameChannelInput = document.getElementById("goodgameChannel");
   const twitchClientIdInput = document.getElementById("twitchClientId");
   const twitchClientSecretInput = document.getElementById("twitchClientSecret");
   const twitchRedirectUriEl = document.getElementById("twitchRedirectUri");
@@ -210,6 +211,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const donatexTokenInput = document.getElementById("donatexToken");
   const donatexTokenStatusEl = document.getElementById("donatexTokenStatus");
   const youtubeEnabledSwitch = document.getElementById("youtubeEnabledSwitch");
+  const goodgameEnabledSwitch = document.getElementById("goodgameEnabledSwitch");
   const obsEnabledSwitch = document.getElementById("obsEnabledSwitch");
   const obsHostInput = document.getElementById("obsHost");
   const obsPortInput = document.getElementById("obsPort");
@@ -484,7 +486,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   // ---- status FAB → jump to the matching settings card ----
   function onStatusClick(service) {
     const cardId =
-      ({ twitchChat: "settingsCardTwitch", twitchEvents: "settingsCardTwitch", donationAlerts: "settingsCardDonationAlerts", donatex: "settingsCardDonatex", youtube: "settingsCardYoutube", obs: "settingsCardObs" })[service];
+      ({ twitchChat: "settingsCardTwitch", twitchEvents: "settingsCardTwitch", donationAlerts: "settingsCardDonationAlerts", donatex: "settingsCardDonatex", youtube: "settingsCardYoutube", goodgame: "settingsCardGoodgame", obs: "settingsCardObs" })[service];
     switchView("settings");
     const card = cardId && document.getElementById(cardId);
     if (card) {
@@ -549,6 +551,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   // ---- settings view ----
   function populateSettings() {
     twitchChannelInput.value = state.twitchChannel || "";
+    if (goodgameChannelInput) goodgameChannelInput.value = state.goodgameChannel || "";
     twitchClientIdInput.value = state.twitchClientId || "";
     daClientIdInput.value = state.daClientId || "";
     youtubeClientIdInput.value = state.youtubeClientId || "";
@@ -672,6 +675,12 @@ const { EVENT_TYPES } = window.SharedEvents;
   twitchChannelInput.addEventListener("change", () => {
     send(EVENT_TYPES.CMD_SET_APP_CONFIG, { twitchChannel: twitchChannelInput.value.trim() });
   });
+
+  if (goodgameChannelInput) {
+    goodgameChannelInput.addEventListener("change", () => {
+      send(EVENT_TYPES.CMD_SET_APP_CONFIG, { goodgameChannel: goodgameChannelInput.value.trim() });
+    });
+  }
 
   if (donatexTokenInput) {
     // Пустое поле — «не менять»: сохранённый токен обратно не показывается.
@@ -1911,6 +1920,8 @@ const { EVENT_TYPES } = window.SharedEvents;
   document.getElementById("openTwitchConsole").addEventListener("click", () => window.desktop?.openExternal("https://dev.twitch.tv/console/apps"));
   document.getElementById("openDaConsole").addEventListener("click", () => window.desktop?.openExternal("https://www.donationalerts.com/application/clients"));
   document.getElementById("openYoutubeConsole").addEventListener("click", () => window.desktop?.openExternal("https://console.cloud.google.com/apis/credentials"));
+  document.getElementById("openGoodgameSite")?.addEventListener("click", () => window.desktop?.openExternal("https://goodgame.ru/"));
+  document.getElementById("openGoodgameDocs")?.addEventListener("click", () => window.desktop?.openExternal("https://github.com/GoodGame/API"));
 
   function setSwitchState(el, on) {
     if (!el) return;
@@ -1923,10 +1934,11 @@ const { EVENT_TYPES } = window.SharedEvents;
     setSwitchState(donationAlertsEnabledSwitch, state.donationAlertsEnabled);
     setSwitchState(donatexEnabledSwitch, state.donatexEnabled);
     setSwitchState(youtubeEnabledSwitch, state.youtubeEnabled);
+    setSwitchState(goodgameEnabledSwitch, state.goodgameEnabled);
     setSwitchState(obsEnabledSwitch, state.obs ? !!state.obs.enabled : false);
   }
 
-  [[twitchEnabledSwitch, "twitch"], [donationAlertsEnabledSwitch, "donationAlerts"], [donatexEnabledSwitch, "donatex"], [youtubeEnabledSwitch, "youtube"], [obsEnabledSwitch, "obs"]].forEach(([el, service]) => {
+  [[twitchEnabledSwitch, "twitch"], [donationAlertsEnabledSwitch, "donationAlerts"], [donatexEnabledSwitch, "donatex"], [youtubeEnabledSwitch, "youtube"], [goodgameEnabledSwitch, "goodgame"], [obsEnabledSwitch, "obs"]].forEach(([el, service]) => {
     if (!el) return;
     el.addEventListener("click", () => {
       const on = !el.classList.contains("is-on");

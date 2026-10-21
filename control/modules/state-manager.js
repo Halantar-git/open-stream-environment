@@ -45,6 +45,8 @@ export function createStateManager() {
     donatexEnabled: true,
     donatex: { enabled: true, hasToken: false },
     youtubeEnabled: true,
+    goodgameEnabled: true,
+    goodgameChannel: "",
     notificationSound: true,
     notificationVolume: 0.8,
     notificationRepeats: 1,
@@ -148,6 +150,8 @@ export function createStateManager() {
     state.donatexEnabled = payload.donatexEnabled !== false;
     state.donatex = payload.donatex || state.donatex;
     state.youtubeEnabled = payload.youtubeEnabled !== false;
+    state.goodgameEnabled = payload.goodgameEnabled !== false;
+    state.goodgameChannel = payload.goodgameChannel || "";
     state.notificationSound = payload.notificationSound !== false;
     state.notificationVolume = typeof payload.notificationVolume === "number" ? payload.notificationVolume : state.notificationVolume;
     state.notificationRepeats = typeof payload.notificationRepeats === "number" ? payload.notificationRepeats : state.notificationRepeats;

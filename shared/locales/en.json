@@ -277,7 +277,14 @@
     "openYoutubeConsole": "Open console.cloud.google.com",
     "connectYoutube": "Connect YouTube",
     "youtubeVideoId": "Video ID (fallback)",
-    "youtubeVideoIdPlaceholder": "Video/stream ID for live chat lookup",
+    "youtubeVideoIdPlaceholder": "Video/stream ID for live-chat lookup",
+    "goodgame": "GoodGame",
+    "goodgameDesc": "GoodGame channel chat and events: messages, follows, donations and premiums. The connection is anonymous and needs no token; sending messages is not supported yet.",
+    "goodgameChannel": "Channel",
+    "goodgameChannelPlaceholder": "Miker",
+    "goodgameChannelHint": "Name from the channel URL (for example, Miker) or the numeric id.",
+    "openGoodgameSite": "Open goodgame.ru",
+    "openGoodgameDocs": "API documentation",
     "app": "Application",
     "port": "Local server port",
     "portHint": "Restart the app after saving.",
@@ -1310,6 +1317,7 @@
     "donationAlerts": "DonationAlerts",
     "donatex": "DonateX",
     "youtube": "YouTube",
+    "goodgame": "GoodGame",
     "connected": "connected",
     "connecting": "connecting…",
     "disconnected": "disconnected",
@@ -1691,6 +1699,13 @@
       "s2": "Enable the YouTube Data API v3 for the project.",
       "s3": "Set the Redirect URI shown in Settings → YouTube and paste the Client ID/Secret.",
       "s4": "Connect, then optionally set a Video ID as a fallback for live-chat lookup."
+    },
+    "goodgame": {
+      "title": "GoodGame",
+      "p1": "GoodGame channel chat and events: messages, follows, donations, premiums and gifted premiums.",
+      "p2": "The connection is anonymous: no token or app registration is required, so chat is read-only — sending messages is not supported yet.",
+      "p3": "In Settings → GoodGame, enter the channel name from its URL (for example, Miker) or the numeric id. The channel can be changed on the fly — the service reconnects by itself.",
+      "p4": "Messages go to the same chat and ticker widgets as Twitch and YouTube; donations, follows and premiums trigger alerts and Recent events. GoodGame emotes are shown as their codes (`:name:`) for now, without images."
     },
     "obs": {
       "title": "OBS WebSocket",
