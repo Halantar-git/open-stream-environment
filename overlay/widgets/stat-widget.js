@@ -57,18 +57,23 @@
       this.host.innerHTML = `<div class="widget-stat__icon">${icon}</div><div class="widget-stat__info"><span class="widget-stat__label">${this.context.escapeHtml(label)}</span><span class="widget-stat__value">${this.context.escapeHtml(value)}</span></div>`;
     }
 
-    // Сумма стрима может прийти в нескольких валютах: DonationAlerts не
-    // конвертирует, поэтому каждую показываем отдельно. Основная валюта —
-    // первая; старый снимок без `amounts` читается как раньше.
+    // Итог стрима ведётся в рублях: чужие валюты уже пересчитаны по курсу.
+    // Что пересчитать не удалось, показываем отдельной строкой.
     _sessionAmount(session) {
       const { formatMoney, currencySymbol } = this.context;
-      const list = session && Array.isArray(session.amounts) ? session.amounts : null;
-      const source = list && list.length ? list : [{ amount: session.amount, currency: session.currency }];
-      const parts = source
+      const baseAmount = Number(session.amount) || 0;
+      const baseCurrency = session.currency || "RUB";
+      const extra = (Array.isArray(session.unconverted) ? session.unconverted : [])
         .map((item) => ({ amount: Number(item && item.amount) || 0, currency: (item && item.currency) || "" }))
-        .filter((item) => item.amount > 0)
-        .map((item) => `${formatMoney(item.amount)}${item.currency ? ` ${currencySymbol(item.currency)}` : ""}`);
-      return parts.length ? parts.join(" + ") : formatMoney(0);
+        .filter((item) => item.amount > 0);
+      const parts = [];
+      if (baseAmount > 0 || !extra.length) {
+        parts.push(`${formatMoney(baseAmount)}${baseCurrency ? ` ${currencySymbol(baseCurrency)}` : ""}`);
+      }
+      for (const item of extra) {
+        parts.push(`${formatMoney(item.amount)}${item.currency ? ` ${currencySymbol(item.currency)}` : ""}`);
+      }
+      return parts.join(" + ");
     }
 
     _content() {

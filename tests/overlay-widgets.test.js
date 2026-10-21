@@ -221,21 +221,39 @@ describe("overlay widgets", () => {
     expect(w.host.innerHTML).toContain("RUB");
   });
 
-  test("StatWidget не смешивает валюты в одну сумму", () => {
+  test("StatWidget показывает итог стрима в рублях по курсу", () => {
     const ctx = makeContext();
     ctx.state.sessionDonations = {
       count: 2,
-      amount: 500,
+      amount: 9750,
       currency: "RUB",
       amounts: [
         { currency: "RUB", amount: 500 },
         { currency: "USD", amount: 100 },
       ],
+      unconverted: [],
     };
     const { w } = mountWidget(StatWidget, ctx, { type: "stat", config: { metric: "sessionAmount" } });
 
-    // 500 ₽ и $100 — две суммы, а не 600 «рублей».
-    expect(w.host.innerHTML).toContain("500 RUB + 100 USD");
+    // $100 пересчитаны по курсу и сложены с рублями, а не приписаны рядом.
+    expect(w.host.innerHTML).toContain("9750 RUB");
+  });
+
+  test("StatWidget не теряет сумму без курса", () => {
+    const ctx = makeContext();
+    ctx.state.sessionDonations = {
+      count: 3,
+      amount: 9250,
+      currency: "RUB",
+      amounts: [
+        { currency: "RUB", amount: 500 },
+        { currency: "USD", amount: 200 },
+      ],
+      unconverted: [{ currency: "USD", amount: 100 }],
+    };
+    const { w } = mountWidget(StatWidget, ctx, { type: "stat", config: { metric: "sessionAmount" } });
+
+    expect(w.host.innerHTML).toContain("9250 RUB + 100 USD");
   });
 
   test("DeathWidget рендерит счётчик и обновляется по death_count_update", () => {

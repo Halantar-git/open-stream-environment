@@ -440,16 +440,21 @@
       return;
     }
     // Формат суммы — как в строке «в эфире» выше (alertNowSummary): число и код
-    // валюты. Пульт намеренно не тянет за собой таблицу символов. Валюты
-    // перечисляются отдельно: $100 — не 100 ₽.
-    const list = Array.isArray(sessionStats.amounts) && sessionStats.amounts.length
-      ? sessionStats.amounts
-      : [{ amount, currency: sessionStats.currency }];
-    const text = list
+    // валюты. Пульт намеренно не тянет за собой таблицу символов. Итог ведётся
+    // в рублях; что не удалось пересчитать, идёт отдельной строкой.
+    const baseAmount = Number(sessionStats.amount) || 0;
+    const baseCurrency = sessionStats.currency || "RUB";
+    const extra = (Array.isArray(sessionStats.unconverted) ? sessionStats.unconverted : [])
       .map((item) => ({ amount: Number(item && item.amount) || 0, currency: (item && item.currency) || "" }))
-      .filter((item) => item.amount > 0)
-      .map((item) => `${item.amount}${item.currency ? ` ${item.currency}` : ""}`)
-      .join(" + ") || "0";
+      .filter((item) => item.amount > 0);
+    const parts = [];
+    if (baseAmount > 0 || !extra.length) {
+      parts.push(`${baseAmount}${baseCurrency ? ` ${baseCurrency}` : ""}`);
+    }
+    for (const item of extra) {
+      parts.push(`${item.amount}${item.currency ? ` ${item.currency}` : ""}`);
+    }
+    const text = parts.join(" + ") || "0";
     queueSession.hidden = false;
     queueSession.innerHTML =
       `<span class="queue-panel__session-count">${escapeHtml(t("session.count", { count }))}</span>` +

@@ -369,17 +369,24 @@ const { EVENT_TYPES } = window.SharedEvents;
   }
   const CURRENCY_SYMBOLS = { RUB: "₽", USD: "$", EUR: "€", UAH: "₴", KZT: "₸", GBP: "£" };
   function currencySymbol(code) { return CURRENCY_SYMBOLS[String(code || "").toUpperCase()] || code || ""; }
-  // Счёт стрима может быть в нескольких валютах: DonationAlerts не конвертирует
-  // суммы, поэтому 500 ₽ и $100 нельзя сложить в одно число. Показываем
-  // каждую валюту отдельно, основная (первая) — впереди.
+  // Счёт стрима ведётся в рублях. Чужие валюты пересчитаны по курсу ещё на
+  // приходе; то, что пересчитать не удалось (курса не было), показываем
+  // отдельной строкой — сумму нельзя терять и нельзя выдавать за рубли.
   function formatSessionAmount(session) {
-    const list = session && Array.isArray(session.amounts) ? session.amounts : null;
-    const source = list && list.length ? list : session ? [{ amount: session.amount, currency: session.currency }] : [];
-    const parts = source
+    if (!session) return formatMoney(0);
+    const baseAmount = Number(session.amount) || 0;
+    const baseCurrency = session.currency || "RUB";
+    const extra = (Array.isArray(session.unconverted) ? session.unconverted : [])
       .map((item) => ({ amount: Number(item && item.amount) || 0, currency: (item && item.currency) || "" }))
-      .filter((item) => item.amount > 0)
-      .map((item) => `${formatMoney(item.amount)}${item.currency ? ` ${currencySymbol(item.currency)}` : ""}`);
-    return parts.length ? parts.join(" + ") : formatMoney(0);
+      .filter((item) => item.amount > 0);
+    const parts = [];
+    if (baseAmount > 0 || !extra.length) {
+      parts.push(`${formatMoney(baseAmount)}${baseCurrency ? ` ${currencySymbol(baseCurrency)}` : ""}`);
+    }
+    for (const item of extra) {
+      parts.push(`${formatMoney(item.amount)}${item.currency ? ` ${currencySymbol(item.currency)}` : ""}`);
+    }
+    return parts.join(" + ");
   }
   function alertToastTitle(kind, event) {
     if (kind === "gift_sub") return t("alert.giftSub", { count: event.count ?? event.amount ?? 1 });

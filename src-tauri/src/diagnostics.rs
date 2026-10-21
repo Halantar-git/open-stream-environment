@@ -2666,6 +2666,21 @@ fn apply_alert_side_effects(
     }
     // Подтянутые с DonationAlerts донаты случились в прошлой сессии — их в
     // «за этот стрим» не считаем (цель и лучший донат при этом обновляем).
+    let donation_currency =
+        crate::state::currency_code(alert.get("currency").unwrap_or(&Value::Null));
+    let donated = js_number_or_zero(alert.get("amount"));
+    // Итог стрима — в рублях: пересчитываем на приходе, чтобы потом курс
+    // не менял уже показанную сумму. Нет курса — сумма останется отдельной.
+    let base_amount = if donation_currency == crate::state::runtime::BASE_CURRENCY {
+        Some(donated)
+    } else {
+        crate::integrations::exchange_rates::convert(
+            rates,
+            donated,
+            &donation_currency,
+            crate::state::runtime::BASE_CURRENCY,
+        )
+    };
     if !js_truthy(alert.get("recovered")) {
         let session = runtime
             .lock()
@@ -2673,6 +2688,7 @@ fn apply_alert_side_effects(
             .add_donation_to_session(
                 alert.get("amount").unwrap_or(&Value::Null),
                 alert.get("currency").unwrap_or(&Value::Null),
+                base_amount,
             );
         broadcast_clients(clients, event_types::SESSION_STATS, session);
     }
@@ -2681,20 +2697,17 @@ fn apply_alert_side_effects(
         // Цель ведётся в одной валюте: $100 не должны прибавляться как 100 ₽.
         // Чужую сумму пересчитываем по курсу, если он загружен; без курса
         // цель не двигаем — «без изменений» честнее неверного числа.
-        let donation_currency =
-            crate::state::currency_code(alert.get("currency").unwrap_or(&Value::Null));
         let goal_currency = config
             .get("goal")
             .and_then(|goal| goal.get("currency"))
             .map(crate::state::currency_code)
             .unwrap_or_else(|| crate::state::currency_code(&Value::Null));
-        let amount = js_number_or_zero(alert.get("amount"));
         let converted = if donation_currency == goal_currency {
-            Some(amount)
+            Some(donated)
         } else {
             crate::integrations::exchange_rates::convert(
                 rates,
-                amount,
+                donated,
                 &donation_currency,
                 &goal_currency,
             )
@@ -3496,13 +3509,18 @@ mod tests {
             diagnostics.config().get("goal").unwrap()["current"],
             json!(500)
         );
-        // А счёт стрима знает обе валюты и не смешивает их в одно число.
+        // А счёт стрима ведётся в рублях: без курса чужой донат лежит отдельно,
+        // но не теряется и не выдаётся за рубли.
         let session = diagnostics.runtime().session_donations();
         assert_eq!(session["count"], json!(1));
-        assert_eq!(session["amount"], json!(100));
-        assert_eq!(session["currency"], json!("USD"));
+        assert_eq!(session["amount"], json!(0));
+        assert_eq!(session["currency"], json!("RUB"));
         assert_eq!(
             session["amounts"],
+            json!([{ "currency": "USD", "amount": 100 }])
+        );
+        assert_eq!(
+            session["unconverted"],
             json!([{ "currency": "USD", "amount": 100 }])
         );
 
@@ -3519,6 +3537,14 @@ mod tests {
         assert_eq!(
             diagnostics.config().get("goal").unwrap()["current"],
             json!(9750)
+        );
+        // Счёт стрима тоже пополняется в рублях по курсу; старый $100 без курса
+        // остаётся отдельной строкой.
+        let session = diagnostics.runtime().session_donations();
+        assert_eq!(session["amount"], json!(9250));
+        assert_eq!(
+            session["unconverted"],
+            json!([{ "currency": "USD", "amount": 100 }])
         );
     }
 
