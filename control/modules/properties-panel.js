@@ -805,6 +805,15 @@ export function initPropertiesPanel({
           <div class="properties__toggle-row"><label>${t("properties.queue")}</label>${switchHtml("pDonatexQueue", config.queue !== false)}</div>
           <div class="md-field"><label>${t("properties.volume")}: <span id="pDonatexVolumeValue">${Math.round((config.volume ?? 0.8) * 100)}%</span></label><input type="range" id="pDonatexVolume" min="0" max="100" step="1" value="${Math.round((config.volume ?? 0.8) * 100)}"></div>
           <div class="md-field"><label>${t("properties.donatexAiHideDelay")}</label><input type="number" id="pDonatexHideDelay" min="500" max="60000" step="500" value="${config.hideDelayMs || 5000}"></div>
+          <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>
+          <div class="md-field"><label>${t("properties.perspectiveDirection")}</label>
+            <select id="pPerspectiveDirection">
+              <option value="left" ${(config.perspectiveDirection || "left") === "left" ? "selected" : ""}>${t("properties.perspectiveLeft")}</option>
+              <option value="right" ${config.perspectiveDirection === "right" ? "selected" : ""}>${t("properties.perspectiveRight")}</option>
+              <option value="up" ${config.perspectiveDirection === "up" ? "selected" : ""}>${t("properties.perspectiveUp")}</option>
+              <option value="down" ${config.perspectiveDirection === "down" ? "selected" : ""}>${t("properties.perspectiveDown")}</option>
+            </select>
+          </div>
         </div>`;
     } else if (inst.type === "music") {
       extraHtml = `
@@ -1304,6 +1313,21 @@ export function initPropertiesPanel({
         send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { volume: value / 100 } } });
       });
       propertiesEl.querySelector("#pDonatexHideDelay").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { hideDelayMs: Math.max(500, Number(e.target.value) || 5000) } } }));
+      const donatexAiPerspective = propertiesEl.querySelector("#pPerspective");
+      if (donatexAiPerspective) {
+        donatexAiPerspective.addEventListener("input", (e) => {
+          const value = Number(e.target.value);
+          const label = propertiesEl.querySelector("#pPerspectiveValue");
+          if (label) label.textContent = String(value);
+          send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { perspective: value } } });
+        });
+      }
+      const donatexAiPerspectiveDirection = propertiesEl.querySelector("#pPerspectiveDirection");
+      if (donatexAiPerspectiveDirection) {
+        donatexAiPerspectiveDirection.addEventListener("change", (e) =>
+          send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { perspectiveDirection: e.target.value } } }),
+        );
+      }
     } else if (inst.type === "music") {
       wireSwitch(propertiesEl.querySelector("#pMusicAutoplay"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { autoplay: on } } }));
       wireSwitch(propertiesEl.querySelector("#pMusicQueue"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { queue: on } } }));

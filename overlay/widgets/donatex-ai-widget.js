@@ -75,17 +75,48 @@
       this.buildIframeHost();
       this.buildEventDom();
       this.applyMode();
+      this._applyPerspective();
 
       this.subscribe(this.context.EVENT_TYPES.DONATEX_AI_EVENT, (data) => this.trigger(data));
     }
 
-    onUpdate() {
+    onUpdate(prev, next) {
+      if (
+        prev.perspective !== next.perspective ||
+        prev.perspectiveDirection !== next.perspectiveDirection
+      ) {
+        this._applyPerspective();
+      }
       this.applyMode();
       if (this.config.queue === false && this.queue.length) {
         this.queue.length = 0;
         this.renderQueue();
       }
       if (this._current) this.renderSpeaker(this._current);
+    }
+
+    // Наклон как у остальных виджетов: `perspective` 0–100 и направление, в
+    // какую сторону уходит дальний край. Пузырь и аватар наклоняются вместе.
+    _applyPerspective() {
+      const value = Math.max(0, Math.min(100, Number(this.config.perspective) || 0));
+      if (!value) {
+        this._setTilt("");
+        return;
+      }
+      const magnitude = value * 0.15;
+      const direction = this.config.perspectiveDirection || "left";
+      let ry = -magnitude;
+      let rx = magnitude * 0.2;
+      if (direction === "right") {
+        ry = magnitude;
+      } else if (direction === "up") {
+        ry = 0;
+        rx = magnitude;
+      } else if (direction === "down") {
+        ry = 0;
+        rx = -magnitude;
+      }
+      this._setTilt(`perspective(1200px) rotateY(${ry}deg) rotateX(${rx}deg)`);
     }
 
     onUnmount() {

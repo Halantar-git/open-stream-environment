@@ -544,7 +544,13 @@ export function initCanvasEditor({
         );
         const icon = bridge ? ICONS.widgetSoundboard : ICONS.widgetDonatexAi;
         const label = bridge ? t("preview.donatexAudio") : t("widgets.donatex-ai");
-        return `<div class="canvas-widget__placeholder">${icon}<span>${escapeHtml(label)}</span></div>`;
+        const html = `<div class="canvas-widget__placeholder">${icon}<span>${escapeHtml(label)}</span></div>`;
+        // Наклон виден и в редакторе: пузырь на канвасе не должен лежать ровно,
+        // если в эфире он стоит под углом.
+        const transform = perspectiveStyle(config);
+        return transform
+          ? `<div style="width:100%;height:100%;transform:${transform};transform-style:preserve-3d;">${html}</div>`
+          : html;
       }
       case "music":
         // Та же строка, что в эфире: без неё виджет на канвасе — пустой

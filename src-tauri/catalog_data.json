@@ -1,5 +1,5 @@
 {
-  "sourceHash": "2e829be84c76442b",
+  "sourceHash": "4b6e9afb712ac575",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -1843,7 +1843,9 @@
         "showDonor": true,
         "queue": true,
         "volume": 0.8,
-        "hideDelayMs": 5000
+        "hideDelayMs": 5000,
+        "perspective": 0,
+        "perspectiveDirection": "left"
       }
     },
     "music": {

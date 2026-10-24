@@ -1023,7 +1023,7 @@
       defaultGeometry: { x: 30, y: 58, w: 40, h: 30 },
       minW: 16,
       minH: 10,
-      defaultConfig: { donationUrl: "", url: "", characterName: "", showName: true, showDonor: true, queue: true, volume: 0.8, hideDelayMs: 5000 },
+      defaultConfig: { donationUrl: "", url: "", characterName: "", showName: true, showDonor: true, queue: true, volume: 0.8, hideDelayMs: 5000, perspective: 0, perspectiveDirection: "left" },
     },
     music: {
       type: "music",
