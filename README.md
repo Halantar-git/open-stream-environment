@@ -8,6 +8,7 @@
   <a href="https://github.com/Halantar-git/open-stream-environment/releases"><img src="https://img.shields.io/github/v/release/Halantar-git/open-stream-environment?color=7ee0d6" alt="GitHub Release" /></a>
   <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPLv3" /></a>
   <a href="https://github.com/Halantar-git/open-stream-environment/actions/workflows/ci.yml"><img src="https://github.com/Halantar-git/open-stream-environment/actions/workflows/ci.yml/badge.svg" alt="Build Status" /></a>
+  <a href="docs/api.md"><img src="https://img.shields.io/badge/API-docs-7ee0d6" alt="API documentation" /></a>
 </p>
 
 Стрим-оверлей в стиле Material Design 3 + интуитивный визуальный редактор
