@@ -1,0 +1,470 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Open Stream Environment — HTTP API",
+    "version": "1.0.0",
+    "summary": "Локальный HTTP-сервер OSE: здоровье, пакеты виджетов и тем, медиа и возвраты OAuth.",
+    "description": "Схема описывает только HTTP-часть. Шина WebSocket (`/ws`), роли, кадры и действия пульта описаны в `docs/api.md`. Версия контракта — `info.version`; версия приложения — в `version` ответа `/healthz`. Код доступа нужен только подключениям из локальной сети: страницы и файлы приложения отдаются открыто, потому что OBS-источник может открываться в другом браузере. `/support-bundle` доступен только с этой машины.",
+    "license": {
+      "name": "GPL-3.0-only",
+      "url": "https://www.gnu.org/licenses/gpl-3.0.html"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8710",
+      "description": "Порт по умолчанию. Фактический порт — в поле `port` ответа `/healthz`."
+    }
+  ],
+  "tags": [
+    { "name": "health", "description": "Состояние сервера" },
+    { "name": "plugins", "description": "Пакеты виджетов и тем" },
+    { "name": "media", "description": "Пользовательские медиа" },
+    { "name": "oauth", "description": "Возвраты OAuth" }
+  ],
+  "paths": {
+    "/healthz": {
+      "get": {
+        "tags": ["health"],
+        "operationId": "getHealth",
+        "summary": "Короткий отчёт о состоянии",
+        "description": "Публичный: путей к данным и секретов в ответе нет. `ok` равен `false`, если `problems` не пуст.",
+        "responses": {
+          "200": {
+            "description": "Отчёт",
+            "headers": {
+              "Cache-Control": {
+                "schema": { "type": "string", "const": "no-store" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthReport" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/support-bundle": {
+      "get": {
+        "tags": ["health"],
+        "operationId": "getSupportBundle",
+        "summary": "Полный отчёт для поддержки",
+        "description": "Только с этой машины (loopback). Отчёт приходит текстом с `Content-Disposition: attachment`.",
+        "responses": {
+          "200": {
+            "description": "Отчёт",
+            "headers": {
+              "Content-Disposition": {
+                "schema": { "type": "string", "example": "attachment; filename=\"ose-support-2026-10-24-22-10-00.txt\"" }
+              },
+              "Cache-Control": {
+                "schema": { "type": "string", "const": "no-store" }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": { "type": "string" }
+              }
+            }
+          },
+          "403": {
+            "description": "Запрос пришёл не с этой машины",
+            "content": {
+              "text/plain": {
+                "schema": { "type": "string", "example": "403: отчёт доступен только с этой машины" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plugins": {
+      "get": {
+        "tags": ["plugins"],
+        "operationId": "listPlugins",
+        "summary": "Список пакетов виджетов и тем",
+        "description": "Ошибки отдельных пакетов не меняют статус: они приходят в `errors`, а остальные пакеты остаются доступны. Реестр читается при старте приложения, поэтому установка и удаление требуют перезапуска.",
+        "responses": {
+          "200": {
+            "description": "Реестр пакетов",
+            "headers": {
+              "Cache-Control": {
+                "schema": { "type": "string", "const": "no-store" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PluginsResponse" },
+                "examples": {
+                  "widgetAndTheme": {
+                    "summary": "Пакетный виджет и тема",
+                    "value": {
+                      "apiVersion": 1,
+                      "plugins": [
+                        {
+                          "kind": "widget",
+                          "id": "hello",
+                          "type": "plugin:hello",
+                          "name": "Привет",
+                          "description": "Карточка с текстом",
+                          "version": "1.0.0",
+                          "author": "Автор",
+                          "baseUrl": "/plugins/hello/",
+                          "entry": "widget.js",
+                          "styles": ["widget.css"],
+                          "icon": "widgetCustom",
+                          "geometry": { "x": 40, "y": 42, "w": 20, "h": 10 },
+                          "minW": 8,
+                          "minH": 4,
+                          "settings": {
+                            "text": { "type": "string", "label": "Текст", "default": "Привет" }
+                          }
+                        },
+                        {
+                          "kind": "theme",
+                          "id": "plugin:plain-theme",
+                          "pluginId": "plain-theme",
+                          "name": "Plain",
+                          "version": "1.0.0",
+                          "author": "Автор",
+                          "baseUrl": "/plugins/plain-theme/",
+                          "css": "theme.css",
+                          "tokens": { "--md-primary": "#7aa2f7" },
+                          "colors": ["#7aa2f7", null, null]
+                        }
+                      ],
+                      "errors": []
+                    }
+                  },
+                  "withError": {
+                    "summary": "Один пакет не разобрался",
+                    "value": {
+                      "apiVersion": 1,
+                      "plugins": [],
+                      "errors": [
+                        { "dir": "broken", "error": "JSON: expected value at line 1 column 3" }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plugins/{id}/{file}": {
+      "get": {
+        "tags": ["plugins"],
+        "operationId": "getPluginFile",
+        "summary": "Файл пакета",
+        "description": "Манифест, код, стили и ресурсы из каталога пакета. Пути внутри манифеста не могут выходить за каталог пакета.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Идентификатор пакета — имя папки (латиница в нижнем регистре, цифры, «.», «-», «_»).",
+            "schema": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" }
+          },
+          {
+            "name": "file",
+            "in": "path",
+            "required": true,
+            "description": "Путь внутри пакета. Может содержать подкаталоги (`assets/cover.png`).",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Файл пакета",
+            "content": {
+              "application/octet-stream": {
+                "schema": { "type": "string", "format": "binary" }
+              }
+            }
+          },
+          "404": { "description": "Пакета или файла нет" }
+        }
+      }
+    },
+    "/media/{file}": {
+      "get": {
+        "tags": ["media"],
+        "operationId": "getMedia",
+        "summary": "Пользовательское медиа",
+        "description": "Звуки, картинки и видео из каталога `media` в данных пользователя. Поддерживает `Range`: без этого `<video>` не перематывается.",
+        "parameters": [
+          {
+            "name": "file",
+            "in": "path",
+            "required": true,
+            "description": "Путь внутри каталога `media`.",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "Range",
+            "in": "header",
+            "required": false,
+            "description": "Байтовый диапазон, например `bytes=0-1023`.",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Файл целиком",
+            "headers": {
+              "Cache-Control": { "schema": { "type": "string", "const": "no-cache" } },
+              "Accept-Ranges": { "schema": { "type": "string", "const": "bytes" } }
+            },
+            "content": {
+              "application/octet-stream": {
+                "schema": { "type": "string", "format": "binary" }
+              }
+            }
+          },
+          "206": { "description": "Запрошенный диапазон" },
+          "404": { "description": "Файла нет" }
+        }
+      }
+    },
+    "/oauth/twitch/callback": {
+      "get": {
+        "tags": ["oauth"],
+        "operationId": "twitchCallback",
+        "summary": "Возврат OAuth Twitch",
+        "description": "Адрес возврата задаётся в приложении Twitch и должен совпадать с портом сервера. Результат — HTML-страница; токены в ответе не показываются.",
+        "parameters": [
+          { "name": "code", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "state", "in": "query", "required": false, "description": "Одноразовый guard; чужой или просроченный отклоняется.", "schema": { "type": "string" } },
+          { "name": "error", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "error_description", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Подключено", "content": { "text/html": { "schema": { "type": "string" } } } },
+          "400": { "description": "Отказ сервиса, чужой state или незаполненные ключи приложения", "content": { "text/html": { "schema": { "type": "string" } } } },
+          "500": { "description": "Код не удалось обменять на токен", "content": { "text/html": { "schema": { "type": "string" } } } }
+        }
+      }
+    },
+    "/oauth/donationalerts/callback": {
+      "get": {
+        "tags": ["oauth"],
+        "operationId": "donationAlertsCallback",
+        "summary": "Возврат OAuth DonationAlerts",
+        "parameters": [
+          { "name": "code", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "state", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "error", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "error_description", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Подключено", "content": { "text/html": { "schema": { "type": "string" } } } },
+          "400": { "description": "Отказ сервиса, чужой state или незаполненные ключи приложения", "content": { "text/html": { "schema": { "type": "string" } } } },
+          "500": { "description": "Код не удалось обменять на токен", "content": { "text/html": { "schema": { "type": "string" } } } }
+        }
+      }
+    },
+    "/oauth/youtube/callback": {
+      "get": {
+        "tags": ["oauth"],
+        "operationId": "youtubeCallback",
+        "summary": "Возврат OAuth YouTube",
+        "parameters": [
+          { "name": "code", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "state", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "error", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "error_description", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Подключено", "content": { "text/html": { "schema": { "type": "string" } } } },
+          "400": { "description": "Отказ сервиса, чужой state или незаполненные ключи приложения", "content": { "text/html": { "schema": { "type": "string" } } } },
+          "500": { "description": "Код не удалось обменять на токен", "content": { "text/html": { "schema": { "type": "string" } } } }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthReport": {
+        "type": "object",
+        "required": ["at", "ok", "version", "port", "listening", "server", "problems"],
+        "properties": {
+          "at": { "type": "integer", "description": "Момент отчёта, Unix ms" },
+          "ok": { "type": "boolean" },
+          "app": { "type": "string" },
+          "version": { "type": "string", "examples": ["4.4.0"] },
+          "mode": { "type": "string", "examples": ["tauri"] },
+          "pid": { "type": "integer" },
+          "uptimeSec": { "type": "number" },
+          "port": { "type": ["integer", "null"] },
+          "listening": { "type": "boolean" },
+          "server": {
+            "type": "object",
+            "required": ["clients", "byRole"],
+            "properties": {
+              "clients": { "type": "integer" },
+              "byRole": {
+                "type": "object",
+                "additionalProperties": { "type": "integer" }
+              }
+            }
+          },
+          "session": {
+            "type": ["object", "null"],
+            "properties": {
+              "id": { "type": ["string", "null"] },
+              "channel": { "type": ["string", "null"] },
+              "startedAt": { "type": ["integer", "null"] }
+            }
+          },
+          "integrations": {
+            "type": "object",
+            "description": "Статус сервисов: `twitchChat`, `twitchEvents`, `donationAlerts`, `youtube`, `obs`.",
+            "additionalProperties": { "type": "string" }
+          },
+          "storage": { "type": ["object", "null"], "additionalProperties": true },
+          "writes": { "type": ["object", "null"], "additionalProperties": true },
+          "perf": { "type": ["object", "null"], "additionalProperties": true },
+          "longrun": { "type": ["object", "null"], "additionalProperties": true },
+          "security": { "type": ["object", "null"], "additionalProperties": true },
+          "problems": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": true
+      },
+      "PluginsResponse": {
+        "type": "object",
+        "required": ["apiVersion", "plugins", "errors"],
+        "properties": {
+          "apiVersion": { "type": "integer", "const": 1 },
+          "plugins": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Plugin" }
+          },
+          "errors": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PluginError" }
+          }
+        }
+      },
+      "Plugin": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/WidgetPlugin" },
+          { "$ref": "#/components/schemas/ThemePlugin" }
+        ],
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "widget": "#/components/schemas/WidgetPlugin",
+            "theme": "#/components/schemas/ThemePlugin"
+          }
+        }
+      },
+      "WidgetPlugin": {
+        "type": "object",
+        "required": ["kind", "id", "type", "name", "baseUrl", "entry", "geometry", "minW", "minH", "settings"],
+        "properties": {
+          "kind": { "type": "string", "const": "widget" },
+          "id": { "type": "string" },
+          "type": { "type": "string", "description": "Тип в раскладке: `plugin:<id>`.", "examples": ["plugin:hello"] },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "version": { "type": "string" },
+          "author": { "type": "string" },
+          "baseUrl": { "type": "string", "examples": ["/plugins/hello/"] },
+          "entry": { "type": "string", "description": "JS-файл, который подключает страница." },
+          "styles": { "type": "array", "items": { "type": "string" } },
+          "icon": { "type": "string", "description": "Ключ из `shared/icons.js`; неизвестный заменяется на `widgetCustom`." },
+          "geometry": { "$ref": "#/components/schemas/Geometry" },
+          "minW": { "type": "number" },
+          "minH": { "type": "number" },
+          "settings": {
+            "type": "object",
+            "additionalProperties": { "$ref": "#/components/schemas/Setting" }
+          }
+        }
+      },
+      "ThemePlugin": {
+        "type": "object",
+        "required": ["kind", "id", "pluginId", "name", "baseUrl", "tokens"],
+        "properties": {
+          "kind": { "type": "string", "const": "theme" },
+          "id": { "type": "string", "description": "Идентификатор темы: `plugin:<id>`.", "examples": ["plugin:plain-theme"] },
+          "pluginId": { "type": "string", "examples": ["plain-theme"] },
+          "name": { "type": "string" },
+          "version": { "type": "string" },
+          "author": { "type": "string" },
+          "baseUrl": { "type": "string" },
+          "css": { "type": ["string", "null"], "description": "Необязательный CSS пакета." },
+          "tokens": {
+            "type": "object",
+            "description": "Токены темы; имена начинаются с `--`.",
+            "additionalProperties": { "type": "string" }
+          },
+          "colors": {
+            "type": "array",
+            "description": "Основной, вторичный и третичный цвета для карточки темы.",
+            "items": { "type": ["string", "null"] },
+            "minItems": 3,
+            "maxItems": 3
+          }
+        }
+      },
+      "Geometry": {
+        "type": "object",
+        "required": ["x", "y", "w", "h"],
+        "properties": {
+          "x": { "type": "number", "minimum": 0, "maximum": 100 },
+          "y": { "type": "number", "minimum": 0, "maximum": 100 },
+          "w": { "type": "number", "minimum": 1, "maximum": 100 },
+          "h": { "type": "number", "minimum": 1, "maximum": 100 }
+        },
+        "description": "Проценты холста 16:9."
+      },
+      "Setting": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["string", "text", "number", "range", "color", "boolean", "select"]
+          },
+          "label": { "type": "string" },
+          "default": {},
+          "min": { "type": "number" },
+          "max": { "type": "number" },
+          "step": { "type": "number" },
+          "options": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                { "type": "string" },
+                {
+                  "type": "object",
+                  "required": ["value"],
+                  "properties": {
+                    "value": { "type": "string" },
+                    "label": { "type": "string" }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "PluginError": {
+        "type": "object",
+        "required": ["dir", "error"],
+        "properties": {
+          "dir": { "type": "string", "description": "Имя папки пакета." },
+          "error": { "type": "string", "description": "Почему пакет не загрузился." }
+        }
+      }
+    }
+  }
+}

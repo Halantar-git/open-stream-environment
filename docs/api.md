@@ -79,6 +79,9 @@ http://localhost:8710
 `Accept-Ranges`: заставки и видео должны перематываться и не залипать в кэше
 webview. Неизвестный путь — `404`.
 
+Машиночитаемая схема HTTP-части — [`openapi.json`](openapi.json) (OpenAPI 3.1).
+Шина WebSocket в неё не входит: кадры и роли описаны ниже.
+
 ### `GET /healthz`
 
 Публичный (код не нужен): по нему мониторинг отвечает на вопрос «сервер жив?».
@@ -376,6 +379,135 @@ ws://<host>:<port>/ws?role=guest&slot=cam2&token=<токен>&name=<имя>
 Сервер проверяет одноразовый токен, привязывает сокет к слоту и принимает от
 гостя только `guest_signal` с тем же слотом. `SDP` и `ICE` пересылаются
 подписанному виджету хоста как есть; медиа идёт напрямую между браузерами.
+
+## Примеры
+
+HTTP-часть проверяется любым клиентом; шина — `websocat` или встроенным в
+Node 22 `WebSocket`. Кадры — однострочный JSON, поэтому в консоли их удобно
+заключать в одинарные кавычки.
+
+### Проверить сервер
+
+```bash
+curl http://localhost:8710/healthz
+```
+
+Сокращённо (полный ответ — в `openapi.json`):
+
+```json
+{ "ok": true, "port": 8710, "version": "4.4.0", "problems": [] }
+```
+
+### Список пакетов и файл пакета
+
+```bash
+curl http://localhost:8710/api/plugins
+curl -o hello.js http://localhost:8710/plugins/hello/widget.js
+```
+
+### Отчёт для поддержки
+
+```bash
+curl -o ose-support.txt http://localhost:8710/support-bundle
+```
+
+Сработает только с этой машины: из сети — `403`.
+
+### Подключиться к шине
+
+```bash
+websocat "ws://localhost:8710/ws?role=control"
+```
+
+Сразу придут `locales`, `state`, настройки колеса/микрофона/камеры,
+`guest_status` и `ticker_pause`. Дальше в ту же сессию можно вводить кадры.
+
+### Переключить сцену
+
+```json
+{"type":"remote_action","action":"SCENE_SET","payload":{"scene":"brb"}}
+```
+
+Допустимые сцены — `start`, `main`, `pause`, `brb`, `talk`, `guests`, `end`,
+`wheel`, `poll`. Переход на `main` из служебной сцены и вход в служебную
+проходят через заставку, если она настроена.
+
+### Отправить сообщение в ленту
+
+```json
+{"type":"cmd_ticker_message","payload":{"text":"Через 10 минут розыгрыш","priority":"normal"}}
+```
+
+`priority: "breaking"` показывает сообщение срочной полосой. Ответ — кадр
+`ticker_message` всем клиентам.
+
+### Поставить пакетный виджет
+
+```json
+{"type":"cmd_add_widget","payload":{"type":"plugin:hello"}}
+```
+
+Ответ — `layout_update` с новой раскладкой. Для сцены добавьте адресата:
+
+```json
+{"type":"cmd_add_widget","payload":{"type":"chat","target":"guests"}}
+```
+
+`plugin:hello` — тип из примера `docs/examples/plugins/hello`; без
+установленного пакета сервер такой тип отклонит.
+
+### Выбрать пакетную тему
+
+```json
+{"type":"cmd_set_active_theme","payload":{"id":"plugin:plain-theme"}}
+```
+
+Ответ — `theme_update` с токенами новой темы. `plugin:plain-theme` — тема из
+`docs/examples/plugins/plain-theme`.
+
+### Управлять музыкой донатов
+
+```json
+{"type":"cmd_music_control","payload":{"action":"skip"}}
+```
+
+`action: "stop"` останавливает трек и очищает очередь.
+
+### Скрипт на Node
+
+Node 22 умеет `WebSocket` без зависимостей: скрипт подключается, ждёт
+`ticker_message` и выходит.
+
+```js
+const ws = new WebSocket("ws://localhost:8710/ws?role=control");
+
+ws.addEventListener("open", () => {
+  ws.send(
+    JSON.stringify({
+      type: "cmd_ticker_message",
+      payload: { text: "Привет из скрипта", priority: "normal" },
+    }),
+  );
+});
+
+ws.addEventListener("message", (event) => {
+  const frame = JSON.parse(event.data);
+  if (frame.type === "ticker_message") {
+    console.log(frame.payload.text);
+    ws.close();
+  }
+});
+```
+
+### Из локальной сети
+
+С этой машины код не нужен. С телефона или другого компьютера добавьте его в
+адрес шины или заголовок HTTP:
+
+```bash
+websocat "ws://192.168.1.42:8710/ws?role=remote&token=<код>"
+curl -H "x-ose-token: <код>" http://192.168.1.42:8710/api/plugins
+```
 
 ## Пакеты виджетов и тем
 
