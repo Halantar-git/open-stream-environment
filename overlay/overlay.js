@@ -598,6 +598,12 @@
         // Ответ ИИ-персонажа DonateX — подписчику donatex-ai.
         bus.emit(EVENT_TYPES.DONATEX_AI_EVENT, msg.payload);
         break;
+      case EVENT_TYPES.MUSIC_PLAY:
+      case EVENT_TYPES.MUSIC_CONTROL:
+        // Трек из доната, проверка из инспектора и опрос DonateX приходят
+        // отдельными кадрами — их слушает виджет музыки на шине.
+        bus.emit(msg.type, msg.payload || {});
+        break;
       case EVENT_TYPES.LONGSHOT_UPDATE:
         state.longshot = (msg.payload && msg.payload.longshot) || state.longshot;
         bus.emit(EVENT_TYPES.LONGSHOT_UPDATE, state.longshot);

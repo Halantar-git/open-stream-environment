@@ -422,6 +422,12 @@
       case EVENT_TYPES.DONATEX_AI_EVENT:
         bus.emit(EVENT_TYPES.DONATEX_AI_EVENT, msg.payload);
         break;
+      case EVENT_TYPES.MUSIC_PLAY:
+      case EVENT_TYPES.MUSIC_CONTROL:
+        // Виджет музыки можно поставить и на сцену — кадры трека и
+        // управления плеером идут туда же.
+        bus.emit(msg.type, msg.payload || {});
+        break;
       case EVENT_TYPES.LONGSHOT_UPDATE:
         state.longshot = (msg.payload && msg.payload.longshot) || state.longshot;
         bus.emit(EVENT_TYPES.LONGSHOT_UPDATE, state.longshot);
