@@ -642,6 +642,7 @@ mod tests {
 
     #[test]
     fn failed_flush_does_not_prevent_report_and_exit() {
+        let _serial = crate::test_support::panic_serial();
         let dir = TempDir::new("flush-failed");
         let calls = Arc::new(Calls::default());
         let log_calls = Arc::clone(&calls);
@@ -661,6 +662,7 @@ mod tests {
 
     #[test]
     fn second_failure_during_handling_exits_without_recursion() {
+        let _serial = crate::test_support::panic_serial();
         let calls = Arc::new(Calls::default());
         let mut settings = options(None, &calls);
         settings.on_fatal = Some(Arc::new(|_report| panic!("диалог не открылся")));
@@ -752,6 +754,8 @@ mod tests {
 
     #[test]
     fn panic_hook_is_installed_and_removed() {
+        // Без очереди чужая паника из параллельного теста попадёт в этот хук.
+        let _serial = crate::test_support::panic_serial();
         let dir = TempDir::new("hook");
         let calls = Arc::new(Calls::default());
         let guard = Arc::new(CrashGuard::new(options(Some(&dir.0), &calls)));

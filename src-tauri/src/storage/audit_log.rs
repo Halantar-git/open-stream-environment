@@ -351,6 +351,9 @@ mod tests {
 
     #[test]
     fn on_entry_receives_the_record_and_its_failure_is_swallowed() {
+        // Обработчик ниже падает нарочно: без общей очереди эта паника
+        // могла бы попасть в хук из параллельного теста crash_guard.
+        let _serial = crate::test_support::panic_serial();
         let seen = Arc::new(Mutex::new(Vec::<Value>::new()));
         let collector = Arc::clone(&seen);
         let log = AuditLog::new(

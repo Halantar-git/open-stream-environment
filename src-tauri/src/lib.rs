@@ -26,6 +26,27 @@ pub mod themes;
 #[cfg(test)]
 mod fingerprint;
 
+/*
+  Общая очередь для тестов, которые нарочно паникуют.
+
+  Хук паники глобальный: если в момент проверки хука в параллельном тесте
+  упадёт `flush`, `on_fatal` или обработчик журнала, чужой отчёт попадёт в наш
+  guard и пометит его остановленным. Тогда настоящая паника теста уже не
+  запишет отчёт, и проверка станет плавающей.
+*/
+#[cfg(test)]
+mod test_support {
+    use std::sync::{Mutex, MutexGuard};
+
+    static PANIC_SERIAL: Mutex<()> = Mutex::new(());
+
+    pub fn panic_serial() -> MutexGuard<'static, ()> {
+        PANIC_SERIAL
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+    }
+}
+
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
