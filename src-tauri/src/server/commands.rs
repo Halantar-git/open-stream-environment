@@ -1139,8 +1139,8 @@ pub fn handle_message(
             diagnostics.test_donation_media(&rule_id);
         }
         event_types::CMD_TEST_MUSIC => {
-            // Проверка виджета музыки: ссылка из инспектора звучит сразу и
-            // только в нём — донат, алерт и цель при этом не поднимаются.
+            // Проверка виджета музыки по API: ссылка звучит сразу и только
+            // в нём — донат, алерт и цель при этом не поднимаются.
             let url = payload
                 .get("url")
                 .map(crate::state::js_string)

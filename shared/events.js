@@ -185,7 +185,7 @@
     CMD_SET_SOUNDBOARD_CONFIG: "cmd_set_soundboard_config",
     CMD_SET_DONATION_MEDIA_CONFIG: "cmd_set_donation_media_config", // { config: { enabled?, volume?, rules? } }
     CMD_TEST_DONATION_MEDIA: "cmd_test_donation_media", // { ruleId } // { config }
-    CMD_TEST_MUSIC: "cmd_test_music", // { url } — проиграть ссылку из инспектора виджета музыки
+    CMD_TEST_MUSIC: "cmd_test_music", // { url } — проверить ссылку в виджете музыки (API-команда)
     CMD_MUSIC_CONTROL: "cmd_music_control", // { action: "skip" | "stop" }
     CMD_SET_CHAT_BOT_CONFIG: "cmd_set_chat_bot_config", // { config }
     CMD_SET_TTS_CONFIG: "cmd_set_tts_config", // { config: { enabled?, volume?, rate?, lang? } }
