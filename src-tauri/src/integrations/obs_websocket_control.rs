@@ -524,7 +524,9 @@ impl ObsClient {
             }
 
             // Новый элемент сцена ставит по центру: оверлею нужен левый
-            // верхний угол холста, иначе часть картинки уходит за кадр.
+            // верхний угол холста, иначе часть картинки уходит за кадр. Замок
+            // закрывает случайный сдвиг мышью в превью: источник стоит ровно
+            // по кадру, и ловить его заново не должно понадобиться.
             if let Some(item_id) = item_id.filter(|id| !id.is_null()) {
                 let _ = self
                     .request(
@@ -537,6 +539,16 @@ impl ObsClient {
                                 "positionX": 0,
                                 "positionY": 0,
                             },
+                        }),
+                    )
+                    .await;
+                let _ = self
+                    .request(
+                        "SetSceneItemLocked",
+                        &serde_json::json!({
+                            "sceneName": scene,
+                            "sceneItemId": item_id,
+                            "sceneItemLocked": true,
                         }),
                     )
                     .await;
@@ -883,13 +895,22 @@ mod tests {
                     let id = frame["d"]["requestId"].clone();
                     // На служебный запрос списка сцен отвечаем как настоящая OBS:
                     // имена придут объектами с `sceneName`.
-                    let response_data = if frame["d"]["requestType"] == json!("GetSceneList") {
+                    let request_type = frame["d"]["requestType"].clone();
+                    // На служебный запрос списка сцен отвечаем как настоящая OBS:
+                    // имена придут объектами с `sceneName`.
+                    let response_data = if request_type == json!("GetSceneList") {
                         json!({
                             "scenes": [
                                 { "sceneName": "Main", "sceneIndex": 0 },
                                 { "sceneName": "Opening", "sceneIndex": 1 },
                             ],
                         })
+                    } else if request_type == json!("CreateInput")
+                        || request_type == json!("CreateSceneItem")
+                        || request_type == json!("GetSceneItemId")
+                    {
+                        // Номер элемента нужен для трансформа и замка.
+                        json!({ "sceneItemId": 7 })
                     } else {
                         json!({ "ok": 1 })
                     };
@@ -1205,6 +1226,14 @@ mod tests {
             inputs[0]["d"]["requestData"]["inputSettings"]["height"],
             json!(1080.0)
         );
+
+        // Каждый поставленный источник сразу блокируется: сдвинуть его мышью
+        // в превью нельзя, и картинка остаётся в кадре.
+        let locks = requests(&sent, "SetSceneItemLocked");
+        assert_eq!(locks.len(), inputs.len());
+        assert!(locks
+            .iter()
+            .all(|lock| lock["d"]["requestData"]["sceneItemLocked"] == json!(true)));
 
         client.stop();
     }
