@@ -39,6 +39,7 @@
     TICKER_CONTROL: "ticker_control", // { action: "remove"|"clear", text? } — убрать отправленное сообщение из ленты
     GOAL_UPDATE: "goal_update", // { current, target, title, currency }
     DONATEX_AI_EVENT: "donatex_ai_event", // { characterName, aiText, aiAudio, user?, amount?, currency?, message? } — ответ ИИ-персонажа DonateX
+    OBS_SCENES_SETUP: "obs_scenes_setup", // { ok, sceneMap, createdScenes, createdSources, updatedSources, errors } — итог кнопки «Настроить сцены в OBS»
     CONNECTION_STATUS: "connection_status", // { service, status }
     THEME_UPDATE: "theme_update", // { activeThemeId, enable3d, activeThemeId3d, tokens, themes }
     THEME_DRAFT_PREVIEW: "theme_draft_preview", // { tokens, customCss, themeId, name, clear? } — live draft for the theme preview window
@@ -196,6 +197,7 @@
     CMD_GUEST_SUBSCRIBE: "cmd_guest_subscribe", // { slot } — какой виджет принимает поток // { config }
     CMD_GUEST_UNSUBSCRIBE: "cmd_guest_unsubscribe", // { slot } — виджет отпустил только этот слот
     CMD_RUN_OBS_COMMAND: "cmd_run_obs_command", // { id }
+    CMD_SETUP_OBS_SCENES: "cmd_setup_obs_scenes", // {} — создать недостающие сцены и источники оверлея
     CMD_SET_CAMERA_ANGLE: "cmd_set_camera_angle", // { angleId }
     CMD_TRIGGER_CAMERA_FILTER: "cmd_trigger_camera_filter", // { filterId }
     EXEC_CLI_COMMAND: "exec_cli_command", // { command } — control panel CLI console

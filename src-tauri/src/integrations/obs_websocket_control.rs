@@ -24,7 +24,8 @@ use serde_json::Value;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::integrations::obs_websocket::{
-    build_camera_switch_plan, identify_frame, request_frame, resolve_filter_duration,
+    build_camera_switch_plan, build_setup_plan, identify_frame, request_frame,
+    resolve_filter_duration,
 };
 use crate::integrations::twitch_chat_control::{ConnectFn, EmitFn, SpawnFn};
 use crate::protocol::event_types;
@@ -371,6 +372,177 @@ impl ObsClient {
         Ok(serde_json::json!({ "filterId": filter_id, "active": next }))
     }
 
+    /// Создать недостающие сцены и разложить в них источники оверлея.
+    ///
+    /// Повторный запуск безопасен и заодно чинит порт: существующие сцены не
+    /// трогаем, у уже созданных источников обновляем адрес (`localhost:порт`
+    /// мог смениться) и ставим их в сцену, если их там ещё нет.
+    pub async fn setup_scenes(&self, defaults: &Value, port: u16) -> Result<Value, String> {
+        let scene_map = (self.config)()
+            .get("sceneMap")
+            .cloned()
+            .unwrap_or_else(|| serde_json::json!({}));
+
+        let scene_list = self.request("GetSceneList", &serde_json::json!({})).await?;
+        let existing_scenes: Vec<String> = scene_names(Some(&scene_list)).into_iter().collect();
+        let input_list = self.request("GetInputList", &serde_json::json!({})).await?;
+        let existing_inputs = input_names(&input_list);
+
+        // Размер источника — холст OBS. Иначе оверлей окажется в углу или будет
+        // обрезан, и пользователь будет править это руками.
+        let canvas = self
+            .request("GetVideoSettings", &serde_json::json!({}))
+            .await
+            .unwrap_or(Value::Null);
+        let width = canvas
+            .get("baseWidth")
+            .and_then(Value::as_f64)
+            .unwrap_or(1920.0);
+        let height = canvas
+            .get("baseHeight")
+            .and_then(Value::as_f64)
+            .unwrap_or(1080.0);
+
+        let plan = build_setup_plan(
+            &scene_map,
+            defaults,
+            port,
+            &existing_scenes,
+            &existing_inputs,
+        );
+        let mut created_scenes: Vec<String> = Vec::new();
+        let mut created_sources: Vec<String> = Vec::new();
+        let mut updated_sources: Vec<String> = Vec::new();
+        let mut errors: Vec<Value> = Vec::new();
+        let mut next_map = serde_json::Map::new();
+
+        for step in &plan {
+            let role = step["role"].as_str().unwrap_or_default();
+            let scene = crate::state::js_string(&step["sceneName"]);
+            let source = crate::state::js_string(&step["sourceName"]);
+            let url = crate::state::js_string(&step["url"]);
+            next_map.insert(role.to_string(), Value::from(scene.clone()));
+
+            if js_truthy(step.get("createScene")) {
+                match self
+                    .request("CreateScene", &serde_json::json!({ "sceneName": scene }))
+                    .await
+                {
+                    Ok(_) => created_scenes.push(scene.clone()),
+                    // Сцену успели создать руками, пока шёл запрос.
+                    Err(error) if is_duplicate(&error) => {}
+                    Err(error) => {
+                        errors.push(serde_json::json!({ "scene": scene, "message": error }));
+                        continue;
+                    }
+                }
+            }
+
+            let mut item_id = None;
+            if js_truthy(step.get("createSource")) {
+                match self
+                    .request(
+                        "CreateInput",
+                        &serde_json::json!({
+                            "sceneName": scene,
+                            "inputName": source,
+                            "inputKind": "browser_source",
+                            "inputSettings": {
+                                "url": url,
+                                "width": width,
+                                "height": height,
+                                // Источник не выгружается при уходе со сцены:
+                                // иначе страница перезагружается на каждом
+                                // переходе и теряет состояние виджетов.
+                                "shutdown": false,
+                                "restart_when_active": false,
+                            },
+                            "sceneItemEnabled": true,
+                        }),
+                    )
+                    .await
+                {
+                    Ok(data) => {
+                        created_sources.push(source.clone());
+                        item_id = data.get("sceneItemId").cloned();
+                    }
+                    Err(error) => errors.push(serde_json::json!({
+                        "scene": scene,
+                        "source": source,
+                        "message": error,
+                    })),
+                }
+            } else {
+                match self
+                    .request(
+                        "SetInputSettings",
+                        &serde_json::json!({
+                            "inputName": source,
+                            "inputSettings": { "url": url },
+                            // `overlay` сохраняет остальные настройки источника.
+                            "overlay": true,
+                        }),
+                    )
+                    .await
+                {
+                    Ok(_) => updated_sources.push(source.clone()),
+                    Err(error) => errors.push(serde_json::json!({
+                        "scene": scene,
+                        "source": source,
+                        "message": error,
+                    })),
+                }
+                // Источник в OBS глобальный: в этой сцене его может ещё не быть.
+                match self
+                    .request(
+                        "CreateSceneItem",
+                        &serde_json::json!({ "sceneName": scene, "sourceName": source }),
+                    )
+                    .await
+                {
+                    Ok(data) => item_id = data.get("sceneItemId").cloned(),
+                    Err(error) if is_duplicate(&error) => {
+                        let item = self
+                            .request(
+                                "GetSceneItemId",
+                                &serde_json::json!({ "sceneName": scene, "sourceName": source }),
+                            )
+                            .await;
+                        item_id = item.ok().and_then(|data| data.get("sceneItemId").cloned());
+                    }
+                    Err(_) => {}
+                }
+            }
+
+            // Новый элемент сцена ставит по центру: оверлею нужен левый
+            // верхний угол холста, иначе часть картинки уходит за кадр.
+            if let Some(item_id) = item_id.filter(|id| !id.is_null()) {
+                let _ = self
+                    .request(
+                        "SetSceneItemTransform",
+                        &serde_json::json!({
+                            "sceneName": scene,
+                            "sceneItemId": item_id,
+                            "sceneItemTransform": {
+                                "alignment": 5,
+                                "positionX": 0,
+                                "positionY": 0,
+                            },
+                        }),
+                    )
+                    .await;
+            }
+        }
+
+        Ok(serde_json::json!({
+            "sceneMap": Value::Object(next_map),
+            "createdScenes": created_scenes,
+            "createdSources": created_sources,
+            "updatedSources": updated_sources,
+            "errors": errors,
+        }))
+    }
+
     /// Показать или скрыть вебкамеру в текущей сцене.
     pub async fn toggle_webcam(&self, source_name: &str) -> Result<bool, String> {
         if source_name.is_empty() {
@@ -613,6 +785,27 @@ async fn handle_message(
         }
         _ => {}
     }
+}
+
+/// OBS отвечает кодом 600 на уже существующее имя сцены или источника:
+/// для повторного запуска настройки это не ошибка, а «уже есть».
+fn is_duplicate(error: &str) -> bool {
+    error.contains("(600)")
+}
+
+/// Имена источников из `GetInputList`: так настройка узнаёт, что источник уже
+/// создан, и не пытается создать его второй раз.
+fn input_names(data: &Value) -> Vec<String> {
+    data.get("inputs")
+        .and_then(Value::as_array)
+        .map(|inputs| {
+            inputs
+                .iter()
+                .filter_map(|input| input.get("inputName").map(crate::state::js_string))
+                .filter(|name| !name.is_empty())
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 /// Имена сцен из `GetSceneList`/`SceneListChanged`.
@@ -933,6 +1126,65 @@ mod tests {
             .iter()
             .any(|event| event["type"] == json!("camera_angle_changed")
                 && event["payload"]["activeCameraAngle"] == json!("cam_side")));
+        client.stop();
+    }
+
+    #[tokio::test]
+    async fn the_setup_creates_only_the_missing_scenes_and_adds_every_source() {
+        let sent = Arc::new(Mutex::new(Vec::new()));
+        let client = Arc::new(ObsClient::new(
+            fake_connect(Arc::clone(&sent)),
+            real_spawn(),
+            Arc::new(|| {
+                json!({
+                    "host": "127.0.0.1",
+                    "port": 4455,
+                    "password": "pass",
+                    "sceneMap": { "main": "Main", "start": "Start" },
+                })
+            }),
+        ));
+        let (emit, _events) = collector();
+        client.restart(true, emit);
+        assert!(wait_connected(&client).await, "OBS должен подключиться");
+
+        let report = client
+            .setup_scenes(&json!({}), 8710)
+            .await
+            .expect("настройка сцен");
+
+        // `Main` уже есть (его отдал фейковый OBS), `Start` — нет.
+        assert_eq!(report["sceneMap"]["main"], json!("Main"));
+        let created = report["createdScenes"].as_array().expect("список сцен");
+        assert!(created.contains(&json!("Start")));
+        assert!(!created.contains(&json!("Main")));
+
+        // Источников в OBS нет — создаётся по одному на каждую сцену.
+        let inputs = requests(&sent, "CreateInput");
+        assert_eq!(inputs.len(), report["sceneMap"].as_object().unwrap().len());
+        assert_eq!(
+            inputs[0]["d"]["requestData"]["inputKind"],
+            json!("browser_source")
+        );
+        assert_eq!(
+            inputs[0]["d"]["requestData"]["inputSettings"]["url"],
+            json!("http://localhost:8710/overlay/overlay.html")
+        );
+        // Оверлей не должен выгружаться при уходе со сцены.
+        assert_eq!(
+            inputs[0]["d"]["requestData"]["inputSettings"]["shutdown"],
+            json!(false)
+        );
+        // Размер — холст OBS; фейковый сервер его не отдал, значит 1920×1080.
+        assert_eq!(
+            inputs[0]["d"]["requestData"]["inputSettings"]["width"],
+            json!(1920.0)
+        );
+        assert_eq!(
+            inputs[0]["d"]["requestData"]["inputSettings"]["height"],
+            json!(1080.0)
+        );
+
         client.stop();
     }
 

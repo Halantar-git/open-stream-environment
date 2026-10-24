@@ -226,6 +226,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const obsSceneVideoInput = document.getElementById("obsSceneVideo");
   const obsScenePollInput = document.getElementById("obsScenePoll");
   const obsScenePauseInput = document.getElementById("obsScenePause");
+  const setupObsScenesBtn = document.getElementById("setupObsScenesBtn");
   const splashSettingsFormEl = document.getElementById("splashSettingsForm");
   const obsCommandsList = document.getElementById("obsCommandsList");
   const addObsCommandBtn = document.getElementById("addObsCommandBtn");
@@ -600,6 +601,7 @@ const { EVENT_TYPES } = window.SharedEvents;
       obsScenePollInput.value = sm.poll || "";
       obsScenePauseInput.value = sm.pause || "";
     }
+    updateObsSetupButton();
     renderObsCommands();
     renderCameraAngles();
     renderCameraFilters();
@@ -914,6 +916,22 @@ const { EVENT_TYPES } = window.SharedEvents;
   obsSceneVideoInput.addEventListener("change", () => sendObsConfig({ sceneMap: { video: obsSceneVideoInput.value.trim() } }));
   obsScenePollInput.addEventListener("change", () => sendObsConfig({ sceneMap: { poll: obsScenePollInput.value.trim() } }));
   obsScenePauseInput.addEventListener("change", () => sendObsConfig({ sceneMap: { pause: obsScenePauseInput.value.trim() } }));
+
+  // Кнопка имеет смысл только при живом соединении: без него сервер вернёт
+  // ошибку, а человек будет ждать, что сцены всё-таки появятся.
+  function updateObsSetupButton() {
+    if (!setupObsScenesBtn) return;
+    const connected = (state.connectionStatus || {}).obs === "connected";
+    setupObsScenesBtn.disabled = !connected;
+    setupObsScenesBtn.title = connected ? "" : t("settings.obsSetupScenesNotConnected");
+  }
+
+  if (setupObsScenesBtn) {
+    setupObsScenesBtn.addEventListener("click", () => {
+      if (!confirm(t("settings.obsSetupScenesConfirm"))) return;
+      send(EVENT_TYPES.CMD_SETUP_OBS_SCENES, {});
+    });
+  }
 
   function updateObsCommand(id, patch) {
     const commands = (state.obs.customCommands || []).map((c) => (c.id === id ? { ...c, ...patch } : c));
@@ -4288,6 +4306,33 @@ const { EVENT_TYPES } = window.SharedEvents;
         // Один из оверлеев не смог разобрать H.264 — переходим на JPEG для всех.
         cameraBridge._fallbackToJpeg("overlay-decode");
         break;
+      case EVENT_TYPES.OBS_SCENES_SETUP: {
+        const payload = msg.payload || {};
+        if (!payload.ok) {
+          showToast(t("settings.obsSetupScenesFailed", { error: payload.error || "" }), "", "obs");
+          break;
+        }
+        // Сервер уже сохранил имена сцен — панель показывает их сразу, не
+        // дожидаясь следующего снимка состояния.
+        if (state.obs) {
+          state.obs.sceneMap = { ...(state.obs.sceneMap || {}), ...(payload.sceneMap || {}) };
+        }
+        populateSettings();
+        showToast(
+          t("settings.obsSetupScenesDone", {
+            scenes: (payload.createdScenes || []).length,
+            sources: (payload.createdSources || []).length,
+            updated: (payload.updatedSources || []).length,
+          }),
+          "",
+          "obs"
+        );
+        const errors = payload.errors || [];
+        if (errors.length) {
+          showToast(t("settings.obsSetupScenesErrors", { error: errors[0].message || "" }), "", "obs");
+        }
+        break;
+      }
       case EVENT_TYPES.GOAL_UPDATE:
         state.goal = msg.payload;
         canvasEditor.renderCanvas();
@@ -4297,6 +4342,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         state.connectionStatus[msg.payload.service] = msg.payload.status;
         wsClient.updateStatus(msg.payload.service, msg.payload.status);
         if (msg.payload.service === "donationAlerts") daPanel.applyStatus(msg.payload.status);
+        if (msg.payload.service === "obs") updateObsSetupButton();
         canvasEditor.renderCanvas();
         canvasEditor.renderLayers();
         break;

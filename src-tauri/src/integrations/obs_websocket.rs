@@ -101,6 +101,83 @@ pub fn build_camera_switch_plan(
         .unwrap_or_default()
 }
 
+/// Роли сцен, которые настраиваются в OBS одной кнопкой: роль, имя источника
+/// в OBS и путь страницы. Порядок — порядок создания.
+///
+/// Имена источников постоянные и на латинице: по ним повторный запуск узнаёт
+/// уже созданный источник и не плодит дубликаты.
+pub const SETUP_SOURCES: [(&str, &str, &str); 9] = [
+    ("main", "OSE Overlay", "/overlay/overlay.html"),
+    ("start", "OSE Start", "/overlay/scene.html?type=start"),
+    ("brb", "OSE BRB", "/overlay/scene.html?type=brb"),
+    ("talk", "OSE Talk", "/overlay/scene.html?type=talk"),
+    ("pause", "OSE Pause", "/overlay/scene.html?type=pause"),
+    ("end", "OSE End", "/overlay/scene.html?type=end"),
+    ("wheel", "OSE Wheel", "/overlay/wheel-scene.html"),
+    ("poll", "OSE Poll", "/overlay/poll-scene.html"),
+    ("video", "OSE Opening", "/overlay/video-splash.html"),
+];
+
+/// Имя сцены по умолчанию, если словаря интерфейса нет под рукой.
+pub fn default_scene_name(role: &str) -> &'static str {
+    match role {
+        "main" => "Основной",
+        "start" => "Старт",
+        "brb" => "Перерыв",
+        "talk" => "Разговор",
+        "pause" => "Пауза",
+        "end" => "Конец",
+        "wheel" => "Колесо",
+        "poll" => "Голосование",
+        "video" => "Заставка",
+        _ => "",
+    }
+}
+
+/// План настройки сцен OBS.
+///
+/// `scene_map` из настроек важнее `defaults`: пользователь мог переименовать
+/// сцены у себя. Ничего не удаляем и не переименовываем — только создаём
+/// недостающее. Одна сцена на две роли (ошибка в маппинге) попадает в план
+/// один раз: OBS не хранит две сцены с одним именем.
+pub fn build_setup_plan(
+    scene_map: &Value,
+    defaults: &Value,
+    port: u16,
+    existing_scenes: &[String],
+    existing_inputs: &[String],
+) -> Vec<Value> {
+    let mut used: std::collections::HashSet<String> = std::collections::HashSet::new();
+    SETUP_SOURCES
+        .iter()
+        .filter_map(|(role, source_name, path)| {
+            let name = scene_name(scene_map, role)
+                .or_else(|| scene_name(defaults, role))
+                .unwrap_or_else(|| default_scene_name(role).to_string());
+            if name.is_empty() || !used.insert(name.clone()) {
+                return None;
+            }
+            Some(json!({
+                "role": role,
+                "sceneName": name,
+                "sourceName": source_name,
+                "url": format!("http://localhost:{port}{path}"),
+                "createScene": !existing_scenes.iter().any(|scene| scene == &name),
+                "createSource": !existing_inputs.iter().any(|input| input == source_name),
+            }))
+        })
+        .collect()
+}
+
+/// Непустое имя сцены из объекта по роли.
+fn scene_name(map: &Value, role: &str) -> Option<String> {
+    map.get(role)
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+        .map(str::to_string)
+}
+
 /// Длительность включённого фильтра: `override` важнее настроенной, отрицательные
 /// значения зажимаются в ноль (как `Math.max(0, Number(...) || 0)`).
 pub fn resolve_filter_duration(configured: f64, override_seconds: Option<f64>) -> f64 {
@@ -186,5 +263,89 @@ mod tests {
         assert_eq!(resolve_filter_duration(5.0, Some(0.0)), 0.0);
         assert_eq!(resolve_filter_duration(5.0, Some(2.0)), 2.0);
         assert_eq!(resolve_filter_duration(-1.0, None), 0.0);
+    }
+
+    #[test]
+    fn the_setup_plan_creates_only_what_is_missing() {
+        let defaults = json!({ "main": "Main", "start": "Start" });
+        let plan = build_setup_plan(
+            &json!({}),
+            &defaults,
+            8710,
+            &["Main".to_string()],
+            &["OSE Start".to_string()],
+        );
+        // Все девять ролей в плане: даже существующие нужны, чтобы переключение
+        // сцен работало и адрес источника был актуальным.
+        assert_eq!(plan.len(), SETUP_SOURCES.len());
+
+        let main = &plan[0];
+        assert_eq!(main["sceneName"], json!("Main"));
+        assert_eq!(main["createScene"], json!(false));
+        assert_eq!(main["createSource"], json!(true));
+
+        let start = &plan[1];
+        assert_eq!(start["createScene"], json!(true));
+        assert_eq!(start["createSource"], json!(false));
+    }
+
+    #[test]
+    fn the_setup_plan_prefers_the_configured_scene_names() {
+        let plan = build_setup_plan(
+            &json!({ "main": "  Моя игра  ", "brb": "" }),
+            &json!({ "main": "Main", "brb": "Перерыв" }),
+            9000,
+            &[],
+            &[],
+        );
+        let main = &plan[0];
+        assert_eq!(main["sceneName"], json!("Моя игра"));
+        // Пустое поле в настройках — не имя: берём умолчание.
+        let brb = &plan[2];
+        assert_eq!(brb["sceneName"], json!("Перерыв"));
+    }
+
+    #[test]
+    fn the_setup_plan_maps_each_role_to_its_own_page() {
+        let plan = build_setup_plan(&json!({}), &json!({}), 8710, &[], &[]);
+        let url = |role: &str| {
+            plan.iter()
+                .find(|step| step["role"] == json!(role))
+                .map(|step| step["url"].as_str().unwrap_or_default().to_string())
+                .unwrap_or_default()
+        };
+        assert_eq!(url("main"), "http://localhost:8710/overlay/overlay.html");
+        assert_eq!(
+            url("start"),
+            "http://localhost:8710/overlay/scene.html?type=start"
+        );
+        assert_eq!(
+            url("wheel"),
+            "http://localhost:8710/overlay/wheel-scene.html"
+        );
+        assert_eq!(url("poll"), "http://localhost:8710/overlay/poll-scene.html");
+        assert_eq!(
+            url("video"),
+            "http://localhost:8710/overlay/video-splash.html"
+        );
+    }
+
+    #[test]
+    fn the_setup_plan_does_not_repeat_a_scene() {
+        // Две роли на одно имя: OBS не создаст вторую сцену, и план не должен
+        // обещать этого — иначе второй шаг всегда кончался бы ошибкой.
+        let plan = build_setup_plan(
+            &json!({ "main": "Сцена", "talk": "Сцена" }),
+            &json!({}),
+            8710,
+            &[],
+            &[],
+        );
+        assert_eq!(
+            plan.iter()
+                .filter(|step| step["sceneName"] == json!("Сцена"))
+                .count(),
+            1
+        );
     }
 }

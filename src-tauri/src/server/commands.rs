@@ -1385,6 +1385,12 @@ pub fn handle_message(
             // Своя команда OBS по id: уходит в OBS WebSocket как есть.
             diagnostics.run_obs_command(payload.get("id").cloned().unwrap_or(Value::Null));
         }
+        event_types::CMD_SETUP_OBS_SCENES => {
+            // Настройка сцен — это серия запросов к OBS, поэтому работа уходит
+            // в фон: итог придёт кадром `obs_scenes_setup`, а имена сцен
+            // сохранит диагностика.
+            diagnostics.setup_obs_scenes(obs_scene_defaults(locales, diagnostics.language()));
+        }
 
         // ---- Счёт текущего стрима и микрокадры ----
         event_types::CMD_RESET_SESSION_STATS => {
@@ -1476,6 +1482,29 @@ fn layout_target(payload: &Value) -> &str {
 }
 
 /// Состояние целиком — самый частый ответ на правку настроек.
+/// Имена сцен по умолчанию для автозастройки OBS.
+///
+/// Имена берутся из словаря интерфейса: одна и та же кнопка создаёт сцены на
+/// языке пользователя. Без словаря (тесты, ранний старт) остаётся встроенный
+/// русский набор — без имён настройка не смогла бы создать ни одной сцены.
+fn obs_scene_defaults(locales: Option<&Locales>, lang: &str) -> Value {
+    let mut defaults = Map::new();
+    for (role, _, _) in crate::integrations::obs_websocket::SETUP_SOURCES {
+        let key = format!("settings.obsSceneDefault.{role}");
+        let translated = locales
+            .and_then(|locales| locales.lookup(lang, &key))
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|name| !name.is_empty());
+        let name = match translated {
+            Some(name) => name.to_string(),
+            None => crate::integrations::obs_websocket::default_scene_name(role).to_string(),
+        };
+        defaults.insert(role.to_string(), Value::String(name));
+    }
+    Value::Object(defaults)
+}
+
 fn broadcast_state(diagnostics: &Diagnostics) {
     let snapshot = diagnostics.state_snapshot();
     broadcast(diagnostics, event_types::STATE, snapshot);

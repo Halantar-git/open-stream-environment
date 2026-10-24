@@ -1077,6 +1077,39 @@ impl Diagnostics {
         Arc::clone(&self.obs)
     }
 
+    /// Создать в OBS недостающие сцены и положить в них оверлей.
+    ///
+    /// Команда панели синхронная, а запросы к OBS асинхронные, поэтому работа
+    /// уходит в фон, а итог возвращается кадром `obs_scenes_setup`. Имена сцен
+    /// сохраняются в настройках: после этого пульт переключает их без ручного
+    /// ввода.
+    pub fn setup_obs_scenes(&self, defaults: Value) {
+        let obs = self.obs();
+        let port = self.port();
+        let config = Arc::clone(&self.config);
+        let clients = Arc::clone(&self.clients);
+        std::mem::drop(tauri::async_runtime::spawn(async move {
+            let payload = match obs.setup_scenes(&defaults, port).await {
+                Ok(report) => {
+                    let scene_map = report.get("sceneMap").cloned().unwrap_or_else(|| json!({}));
+                    {
+                        let mut config = config.lock().unwrap_or_else(|error| error.into_inner());
+                        crate::state::config::set_obs_config(
+                            &mut config,
+                            &json!({ "sceneMap": scene_map }),
+                        );
+                    }
+                    let mut payload = report;
+                    payload["ok"] = json!(true);
+                    payload
+                }
+                Err(error) => json!({ "ok": false, "error": error }),
+            };
+            let frame = json!({ "type": event_types::OBS_SCENES_SETUP, "payload": payload });
+            clients.broadcast_text(&frame.to_string());
+        }));
+    }
+
     /// Запустить звук саундборда (кнопка панели и внешние триггеры): ищем звук в
     /// настройках и рассылаем `soundboard_play`, как `triggerSoundboardSound`.
     pub fn trigger_soundboard(&self, sound_id: &str, user: &str) -> bool {
