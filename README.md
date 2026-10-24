@@ -798,41 +798,55 @@ obs-websocket v5 (название + `requestType`), запускаются из
 ```mermaid
 flowchart TD
     subgraph world["Внешний мир"]
-        Twitch["Twitch API / EventSub"]
-        DA["DonationAlerts Centrifugo"]
+        Twitch["Twitch: EventSub, Helix, IRC"]
+        DA["DonationAlerts (Centrifugo)"]
         YT["YouTube Live API"]
+        DX["DonateX: SignalR, REST, страницы виджетов"]
+        ObsWs["OBS Studio: obs-websocket"]
+        Signal["Signaling гостей (Cloudflare Worker)"]
+        Rates["Курсы валют"]
     end
 
-    subgraph backend["Локальный Бэкенд (Rust / tokio + axum)"]
-        Bus["Единая событийная шина"]
-        DB[("Локальное хранилище: снапшот JSON + append-only JSONL")]
-        Crypt["Шифрование секретов: DPAPI / Keychain / libsecret"]
-        CLI["Интерактивный CLI Контроллер"]
-        Bot["Чат-бот: команды и таймеры"]
+    subgraph backend["Локальный бэкенд (Rust / tokio + axum)"]
+        Bus["Единая событийная шина (WebSocket /ws)"]
+        Http["HTTP: страницы, ассеты, API плагинов"]
+        DB[("config.json, снапшот и append-only JSONL")]
+        Crypt["Секреты: DPAPI / Keychain / libsecret"]
+        Bot["Чат-бот: команды, таймеры, автомодерация"]
+        Cli["CLI-контроллер команд"]
+        Poll["Фоновые опросы: музыка DonateX, Longshot, курсы"]
+        Guests["Гостевые камеры: приглашения и signaling"]
     end
 
-    subgraph ui["Окна и Отображение (системный webview / OBS)"]
-        Admin["Панель управления (WebView2) / Редактор Figma"]
-        Remote["Мобильный пульт Web Remote / Stream Deck"]
-        OBS["OBS Studio Browser Source"]
+    subgraph ui["Окна и отображение (системный webview / OBS)"]
+        Admin["Панель управления и редакторы"]
+        Overlay["Оверлей и сцены"]
+        Remote["Веб-пульт и Stream Deck"]
+        Hud["HUD и окно чата поверх игры"]
     end
 
-    %% Связи внешних сервисов
-    Twitch -->|"OAuth2 / WebSockets"| Bus
-    DA -->|"Centrifugo Stream"| Bus
+    Twitch -->|"OAuth2 / EventSub / IRC"| Bus
+    DA -->|"Centrifugo"| Bus
     YT -->|"Data API v3"| Bus
-
-    %% Связи бэкенда
+    DX <-->|"SignalR + REST"| Bus
+    Bus <-->|"сцены, камеры, фильтры, RAW"| ObsWs
+    Rates --> Poll
+    Poll -->|"курс, трек, анкер"| Bus
+    Guests <-->|"SDP / ICE"| Signal
+    Guests -->|"WebRTC-камеры"| Overlay
     Bus <--> DB
     DB <--> Crypt
-    CLI <--> Bus
     Bus -->|"chat_message"| Bot
-    Bot -->|"Helix chat/messages"| Twitch
-
-    %% Связи отображения
-    Admin <-->|"Локальный WebSocket /ws"| Bus
-    Remote <-->|"Адаптивный HTTP / WebSockets"| Bus
-    Bus ==>|"Единый URL 1920x1080 60FPS"| OBS
+    Bot -->|"Helix: чат и модерация"| Twitch
+    Cli <-->|"команды"| Bus
+    Http -->|"страницы и плагины"| Admin
+    Http -->|"страницы и ассеты"| Overlay
+    Http -->|"страницы и ассеты"| Remote
+    Admin <-->|"WebSocket /ws"| Bus
+    Remote <-->|"HTTP + WebSocket"| Bus
+    Hud <-->|"WebSocket /ws"| Bus
+    Bus ==>|"снимок раскладки, темы, события"| Overlay
+    DX -.->|"скрытые страницы виджетов (звук)"| Overlay
 ```
 
 ## Доступ из сети
