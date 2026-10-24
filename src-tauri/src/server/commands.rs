@@ -123,22 +123,11 @@ pub fn handle_message(
             let patch = payload.get("patch").cloned().unwrap_or_else(|| json!({}));
             let updated = if layout::is_scene_target(target) {
                 let mut config = diagnostics.config();
-                layout::update_scene_widget(&mut config, target, id, &patch)
+                layout::update_scene_widget(&mut config, target, id, &patch).is_some()
             } else {
-                layout::update_widget(diagnostics.database(), id, &patch)
+                layout::update_widget(diagnostics.database(), id, &patch).is_some()
             };
-            if let Some(widget) = &updated {
-                // Громкость музыки звучит на странице DonateX: наш конфиг
-                // хранит значение, а применяет его сервис.
-                if widget.get("type").and_then(Value::as_str) == Some("music") {
-                    if let Some(volume) = patch
-                        .get("config")
-                        .and_then(|config| config.get("volume"))
-                        .and_then(Value::as_f64)
-                    {
-                        diagnostics.sync_donatex_music_volume(volume);
-                    }
-                }
+            if updated {
                 broadcast_layout(diagnostics, target);
             }
             // Правка `visible` может включить или выключить опрос Longshot.

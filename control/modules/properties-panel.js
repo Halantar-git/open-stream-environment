@@ -820,8 +820,6 @@ export function initPropertiesPanel({
         <p class="properties__hint">${t("properties.musicDonatexHint")}</p>
         <div class="properties__toggle-row"><label>${t("properties.musicAutoplay")}</label>${switchHtml("pMusicAutoplay", config.autoplay !== false)}</div>
         <div class="properties__toggle-row"><label>${t("properties.queue")}</label>${switchHtml("pMusicQueue", config.queue !== false)}</div>
-        <div class="md-field"><label>${t("properties.volume")}: <span id="pMusicVolumeValue">${Math.round((config.volume ?? 1) * 100)}%</span></label><input type="range" id="pMusicVolume" min="0" max="100" step="1" value="${Math.round((config.volume ?? 1) * 100)}"></div>
-        <p class="properties__hint">${t("properties.musicVolumeHint")}</p>
         <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>
         <div class="md-field"><label>${t("properties.perspectiveDirection")}</label>
           <select id="pPerspectiveDirection">
@@ -1330,12 +1328,6 @@ export function initPropertiesPanel({
     } else if (inst.type === "music") {
       wireSwitch(propertiesEl.querySelector("#pMusicAutoplay"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { autoplay: on } } }));
       wireSwitch(propertiesEl.querySelector("#pMusicQueue"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { queue: on } } }));
-      propertiesEl.querySelector("#pMusicVolume").addEventListener("input", (e) => {
-        const value = Number(e.target.value);
-        const label = propertiesEl.querySelector("#pMusicVolumeValue");
-        if (label) label.textContent = `${value}%`;
-        send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { volume: value / 100 } } });
-      });
       const musicPerspective = propertiesEl.querySelector("#pPerspective");
       if (musicPerspective) {
         musicPerspective.addEventListener("input", (e) => {
