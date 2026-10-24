@@ -415,12 +415,13 @@
     "guestTurnUser": "TURN user",
     "guestTurnPassword": "TURN password",
     "guestConnect": "Connect to a streamer",
-    "guestConnectDesc": "Paste the invite the host sent you. Your camera and microphone are sent only after the host confirms.",
+    "guestConnectDesc": "Paste the invite the host sent you. You can join several streamers — repeat the step for each one.",
+    "guestLinks": "My connections",
     "guestInvite": "Invite",
     "guestInvitePlaceholder": "ose-join://…",
     "guestYourName": "Your name",
     "guestJoin": "Connect",
-    "guestLeave": "Disconnect",
+    "guestLeave": "Disconnect all",
     "cameraAngles": "Camera angles (Multicam)",
     "cameraAnglesDesc": "Permanently switch the active camera via Twitch points or manually (no timer).",
     "addCameraAngle": "+ Add angle",
@@ -1280,12 +1281,16 @@
       "OverconstrainedError": "the device does not support the selected mode",
       "connection": "could not establish the connection",
       "offer": "could not create the offer",
-      "answer": "could not negotiate the connection"
+      "answer": "could not negotiate the connection",
+      "join-failed": "could not start the connection"
     },
     "invite": "Invite",
     "accept": "Allow",
     "decline": "Decline",
     "revoke": "Disconnect",
+    "disconnect": "Disconnect",
+    "linkTitle": "Connection {{number}}",
+    "limitReached": "The limit of simultaneous connections is reached ({{count}}).",
     "copy": "Copy",
     "waitingWidgetHint": "The guest is confirmed, but no widget is receiving the stream. Add a Webcam widget with the Guest camera source and this slot.",
     "noLanAddress": "This machine has no LAN address — the guest cannot connect. Check Wi-Fi or Ethernet."
@@ -1646,7 +1651,8 @@
       "p4": "An invite can be created for the internet (through a signaling service) or for the local network. For the guest's voice to reach the stream, enable “Control audio via OBS” on the Browser Source. The signaling address is set in Settings; see signal/README.md for deploying your own service.",
       "p5": "The slot is assigned automatically: a new widget with the Guest camera source gets the first free one, and slots already chosen are left alone. Without a slot the widget shows No slot selected and accepts no stream — change it by hand only to pin a guest to a specific place.",
       "p6": "The video goes directly over WebRTC: the internet invite travels through the signaling service, but the video itself never reaches it. STUN servers are built in — they help both sides learn their public addresses. If someone sits behind a strict NAT (mobile internet, some providers), a TURN server is required: the host enters its address, user and password in Settings, and the guest receives them with the confirmation. With TURN the video is relayed through its server, so you need your own or a rented one.",
-      "p7": "Both roles can run at once: host your own guest and be a guest on another streamer's channel. Your camera goes out through the outgoing connection while the guest comes into your overlay; identical slot names (cam2 on both sides, for example) do not interfere. You can be a guest on only one stream at a time."
+      "p7": "Both roles can run at once: host your own guest and be a guest on several other streamers' channels. Your camera goes out through the outgoing connections while guests come into your overlay; identical slot names (cam2 on both sides, for example) do not interfere.",
+      "p8": "You can hold several connections: paste the next invite and press Connect again — each connection gets its own row in My connections and its own Disconnect button. That is how a mesh is built: with four participants each of them invites the other three and accepts three invites. The camera is captured once but encoded separately for each host, so outgoing traffic and load grow with the number of connections; the limit is four."
     },
     "presets": {
       "title": "Layout presets",

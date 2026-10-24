@@ -113,17 +113,20 @@ export function createStateManager() {
     // Фактический кадр моста: что отдаёт устройство и что уходит в эфир.
     // Живёт только в панели, серверу не нужен.
     cameraStreamInfo: null,
-    // Гостевые камеры: слоты хоста, приглашения и состояние исходящего
-    // подключения (гость). Ссылки живут только в панели до перезапуска.
+    // Гостевые камеры: слоты хоста, приглашения и исходящие подключения
+    // (гость). Ссылки живут только в панели до перезапуска.
     guestSlots: [],
     guestInvites: {},
     guestPending: {},
-    guestOutgoing: null,
+    // Список связей собирает сервер; в сетке их несколько, и слот их не
+    // различает — только `link`.
+    guestOutgoing: [],
+    guestOutgoingLimit: 4,
     guestSignalUrl: "",
     // STUN/TURN гостевых камер; пустые поля — встроенные STUN-серверы.
     guestIce: { stunUrls: "", turnUrls: "", turnUser: "", turnPassword: "" },
-    // ICE-настройки хоста, когда панель работает стороной гостя.
-    guestRemoteIce: null,
+    // Состояния исходящих связей по `link` и статус формы подключения.
+    guestShares: {},
     guestShare: { slot: "", status: "idle", detail: "" },
     // Последний снимок конфига Longshot (Executive Hangar), если получен.
     longshot: null,

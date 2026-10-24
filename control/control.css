@@ -1645,6 +1645,18 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .guest-slot__state[data-state="connected"] {
   color: #4ade80;
 }
+
+.guest-slot__state[data-state="live"] {
+  color: #4ade80;
+}
+
+.guest-slot__state[data-state="error"] {
+  color: var(--md-error);
+}
+
+.guest-slot__state[data-state="disconnected"] {
+  color: var(--md-secondary);
+}
 .guest-slot__actions {
   display: flex;
   gap: 6px;

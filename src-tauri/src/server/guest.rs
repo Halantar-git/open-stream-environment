@@ -42,6 +42,12 @@ const PENDING_TIMEOUT: Duration = Duration::from_secs(10);
 /// ещё не превращается в простыню.
 pub const GUEST_SLOTS: [&str; 4] = ["cam2", "cam3", "cam4", "cam5"];
 
+/// Сколько исходящих подключений держит одна машина. Полная сетка на четырёх
+/// участников — это три: каждый отправляет камеру остальным. Четвёртый слот
+/// оставлен запасом, но дальше растёт не только трафик: камера кодируется
+/// отдельно для каждого хоста, и четыре кодировщика — уже ощутимая нагрузка.
+pub const OUTGOING_LIMIT: usize = 4;
+
 /// Ограничение на длину имени: оно приходит от гостя и показывается в панели.
 const MAX_NAME_LEN: usize = 40;
 
@@ -108,6 +114,9 @@ impl Slot {
 }
 
 struct Outgoing {
+    /// Идентификатор для панели и маршрутизации сигналов. Слот для этого не
+    /// годится: разные хосты могут выдать один и тот же `cam2`.
+    link: String,
     slot: String,
     generation: u64,
     tx: mpsc::UnboundedSender<String>,
@@ -122,7 +131,9 @@ struct CloudLink {
 
 struct Inner {
     slots: HashMap<&'static str, Slot>,
-    outgoing: Option<Outgoing>,
+    /// Исходящие подключения по идентификатору связи. В сетке их несколько:
+    /// каждый участник отправляет камеру нескольким стримерам сразу.
+    outgoing: HashMap<String, Outgoing>,
     cloud: HashMap<&'static str, CloudLink>,
 }
 
@@ -134,7 +145,7 @@ impl Default for Inner {
         }
         Self {
             slots,
-            outgoing: None,
+            outgoing: HashMap::new(),
             cloud: HashMap::new(),
         }
     }
@@ -457,14 +468,29 @@ impl GuestHub {
         })
     }
 
-    /// Отправить кадр исходящему соединению (гость -> хост), если оно
-    /// относится к этому слоту.
-    pub fn send_outgoing_for(&self, slot: &str, frame: &str) -> bool {
+    /// Отправить кадр исходящему соединению (гость -> хост). Без `link`
+    /// подходит только однозначный случай: пока подключение одно, слот его
+    /// различает; в сетке два хоста могут выдать один слот, и адресат берётся
+    /// по идентификатору связи.
+    pub fn send_to_host(&self, link: Option<&str>, slot: &str, frame: &str) -> bool {
         let inner = self.lock();
-        match &inner.outgoing {
-            Some(outgoing) if outgoing.slot == slot => outgoing.tx.send(frame.to_string()).is_ok(),
-            _ => false,
+        if let Some(link) = link {
+            return inner
+                .outgoing
+                .get(link)
+                .filter(|outgoing| outgoing.slot == slot)
+                .is_some_and(|outgoing| outgoing.tx.send(frame.to_string()).is_ok());
         }
+        let mut found = None;
+        for outgoing in inner.outgoing.values() {
+            if outgoing.slot == slot {
+                if found.is_some() {
+                    return false;
+                }
+                found = Some(outgoing);
+            }
+        }
+        found.is_some_and(|outgoing| outgoing.tx.send(frame.to_string()).is_ok())
     }
 
     /// Отправить кадр хост-ссылке публичного signaling.
@@ -507,11 +533,6 @@ impl GuestHub {
             return clients.send_text(client, frame);
         }
         self.send_cloud(slot, frame)
-    }
-
-    /// Сигнал от панели гостя: уходит хосту по исходящей ссылке.
-    pub fn send_to_host(&self, slot: &str, frame: &str) -> bool {
-        self.send_outgoing_for(slot, frame)
     }
 
     fn has_cloud(&self, slot: &str, generation: u64) -> bool {
@@ -607,10 +628,8 @@ impl GuestHub {
         slot: &str,
         token: &str,
         guest_name: &str,
-    ) -> bool {
-        let Some(slot) = valid_slot(slot) else {
-            return false;
-        };
+    ) -> Option<String> {
+        let slot = valid_slot(slot)?;
         // Адрес и токен приходят из разобранного приглашения, но проверяем
         // ещё раз: строка собирается в URL, и посторонние символы не должны
         // дописывать собственные query-параметры.
@@ -620,7 +639,7 @@ impl GuestHub {
                 .chars()
                 .all(|ch| ch.is_ascii_alphanumeric() || ch == '.' || ch == '-');
         if !host_ok || port == 0 || !valid_token(token) {
-            return false;
+            return None;
         }
         let url = format!(
             "ws://{host}:{port}/ws?role=guest&slot={slot}&token={token}&name={}",
@@ -638,15 +657,11 @@ impl GuestHub {
         token: &str,
         slot: &str,
         guest_name: &str,
-    ) -> bool {
-        let Some(slot) = valid_slot(slot) else {
-            return false;
-        };
-        let Some(signal) = valid_signal(signal) else {
-            return false;
-        };
+    ) -> Option<String> {
+        let slot = valid_slot(slot)?;
+        let signal = valid_signal(signal)?;
         if !valid_room(room) || !valid_token(token) {
-            return false;
+            return None;
         }
         let url = format!(
             "{signal}/ws?role=guest&room={room}&token={token}&name={}",
@@ -660,44 +675,73 @@ impl GuestHub {
         clients: Arc<ClientRegistry>,
         slot: &'static str,
         url: String,
-    ) -> bool {
+    ) -> Option<String> {
         let generation = self.generation.fetch_add(1, Ordering::SeqCst) + 1;
+        let link = uuid::Uuid::new_v4().simple().to_string();
         let (tx, rx) = mpsc::unbounded_channel::<String>();
         {
             let mut inner = self.lock();
-            inner.outgoing = Some(Outgoing {
-                slot: slot.to_string(),
-                generation,
-                tx,
-            });
+            if inner.outgoing.len() >= OUTGOING_LIMIT {
+                return None;
+            }
+            inner.outgoing.insert(
+                link.clone(),
+                Outgoing {
+                    link: link.clone(),
+                    slot: slot.to_string(),
+                    generation,
+                    tx,
+                },
+            );
         }
-        guest_link_loop(Arc::clone(self), clients, slot, generation, url, rx);
-        true
+        guest_link_loop(
+            Arc::clone(self),
+            clients,
+            link.clone(),
+            slot,
+            generation,
+            url,
+            rx,
+        );
+        Some(link)
     }
 
-    fn outgoing_is(&self, slot: &str, generation: u64) -> bool {
+    fn outgoing_is(&self, link: &str, generation: u64) -> bool {
         let inner = self.lock();
         inner
             .outgoing
-            .as_ref()
-            .is_some_and(|outgoing| outgoing.slot == slot && outgoing.generation == generation)
+            .get(link)
+            .is_some_and(|outgoing| outgoing.generation == generation)
     }
 
-    /// Закрыть исходящее соединение по просьбе панели.
-    pub fn leave(&self) -> Option<String> {
+    /// Закрыть исходящие соединения по просьбе панели: одно (по `link`) или
+    /// все сразу. Возвращает пары «связь, слот», чтобы панель погасила строки.
+    pub fn leave(&self, link: Option<&str>) -> Vec<(String, String)> {
         let mut inner = self.lock();
-        let outgoing = inner.outgoing.take()?;
-        Some(outgoing.slot)
+        let links: Vec<String> = match link {
+            Some(link) if inner.outgoing.contains_key(link) => vec![link.to_string()],
+            Some(_) => Vec::new(),
+            None => inner.outgoing.keys().cloned().collect(),
+        };
+        links
+            .into_iter()
+            .filter_map(|id| {
+                inner
+                    .outgoing
+                    .remove(&id)
+                    .map(|outgoing| (outgoing.link, outgoing.slot))
+            })
+            .collect()
     }
 
-    fn clear_outgoing(&self, slot: &str, generation: u64) -> bool {
+    fn clear_outgoing(&self, link: &str, generation: u64) -> bool {
         let mut inner = self.lock();
         if inner
             .outgoing
-            .as_ref()
-            .is_some_and(|outgoing| outgoing.slot == slot && outgoing.generation == generation)
+            .get(link)
+            .is_some_and(|outgoing| outgoing.generation == generation)
         {
-            inner.outgoing = None;
+            inner.outgoing.remove(link);
             return true;
         }
         false
@@ -719,13 +763,14 @@ impl GuestHub {
     fn broadcast_outgoing(
         &self,
         clients: &ClientRegistry,
+        link: &str,
         slot: &str,
         kind: &str,
         reason: Option<&str>,
     ) {
-        // Метка `outgoing`: панель в это же время может принимать своего гостя
-        // на том же слоте, и событие не должно закрыть чужую сессию.
-        let mut payload = json!({ "slot": slot, "outgoing": true });
+        // Метка `outgoing` и `link`: панель в это же время может принимать
+        // своего гостя на том же слоте, а в сетке у неё несколько связей.
+        let mut payload = json!({ "slot": slot, "link": link, "outgoing": true });
         if let Some(reason) = reason {
             payload["reason"] = Value::from(reason);
         }
@@ -774,11 +819,23 @@ impl GuestHub {
                 })
             })
             .collect();
+        // Порядок — по времени подключения: строки в панели не должны
+        // перескакивать при добавлении новой связи.
+        let mut links: Vec<_> = inner.outgoing.values().collect();
+        links.sort_by_key(|outgoing| outgoing.generation);
+        let outgoing: Vec<Value> = links
+            .into_iter()
+            .map(|outgoing| {
+                json!({
+                    "link": outgoing.link,
+                    "slot": outgoing.slot,
+                })
+            })
+            .collect();
         let payload = json!({
             "slots": slots,
-            "outgoing": inner.outgoing.as_ref().map(|outgoing| json!({
-                "slot": outgoing.slot,
-            })),
+            "outgoing": outgoing,
+            "outgoingLimit": OUTGOING_LIMIT,
         });
         drop(inner);
         // Истёкшее облачное приглашение больше не должно держать комнату.
@@ -873,12 +930,13 @@ fn ipv4_first(mut addrs: Vec<std::net::SocketAddr>) -> Vec<std::net::SocketAddr>
 
 /// Гостевая ссылка (LAN или облако) с переподключением.
 ///
-/// Панель может отменить соединение в любой момент: `rx` закрывается, и
-/// задача выходит, не трогая новый слот. Пять неудачных попыток подряд —
+/// Панель может отменить одно соединение в любой момент: `rx` закрывается, и
+/// задача выходит, не трогая остальные ссылки. Пять неудачных попыток подряд —
 /// сигнал панели, что хост недоступен, а не бесконечное «подключение».
 fn guest_link_loop(
     hub: Arc<GuestHub>,
     clients: Arc<ClientRegistry>,
+    link: String,
     slot: &'static str,
     generation: u64,
     url: String,
@@ -887,7 +945,7 @@ fn guest_link_loop(
     tauri::async_runtime::spawn(async move {
         let mut failures = 0u32;
         loop {
-            if !hub.outgoing_is(slot, generation) {
+            if !hub.outgoing_is(&link, generation) {
                 break;
             }
             let connected =
@@ -895,13 +953,17 @@ fn guest_link_loop(
             let Ok(Ok(socket)) = connected else {
                 failures += 1;
                 if failures >= 5 {
-                    hub.clear_outgoing(slot, generation);
+                    hub.clear_outgoing(&link, generation);
                     hub.broadcast_outgoing(
                         &clients,
+                        &link,
                         slot,
                         event_types::GUEST_DECLINED,
                         Some("signaling-unreachable"),
                     );
+                    // Список подключений в панели строится по снимку хаба:
+                    // без него закрытая ссылка осталась бы висеть строкой.
+                    broadcast_hub_status(&hub, &clients);
                     return;
                 }
                 sleep(Duration::from_secs(2)).await;
@@ -923,7 +985,7 @@ fn guest_link_loop(
                             if matches!(kind.as_deref(), Some("joined") | Some("peer_joined") | Some("peer_left")) {
                                 continue;
                             }
-                            if let Some(forwarded) = forward_guest_frame(text.as_str()) {
+                            if let Some(forwarded) = forward_guest_frame(text.as_str(), &link) {
                                 clients.broadcast_text_to_role("control", &forwarded);
                             }
                             if kind.as_deref() == Some(event_types::GUEST_DECLINED) {
@@ -946,28 +1008,32 @@ fn guest_link_loop(
                             }
                         }
                         None => {
-                            hub.clear_outgoing(slot, generation);
+                            hub.clear_outgoing(&link, generation);
+                            broadcast_hub_status(&hub, &clients);
                             return;
                         }
                     }
                 }
             }
             if declined {
-                hub.clear_outgoing(slot, generation);
+                hub.clear_outgoing(&link, generation);
+                broadcast_hub_status(&hub, &clients);
                 return;
             }
-            if !hub.outgoing_is(slot, generation) {
+            if !hub.outgoing_is(&link, generation) {
                 return;
             }
             failures += 1;
             if failures >= 5 {
-                hub.clear_outgoing(slot, generation);
+                hub.clear_outgoing(&link, generation);
                 hub.broadcast_outgoing(
                     &clients,
+                    &link,
                     slot,
                     event_types::GUEST_DECLINED,
                     Some("signaling-unreachable"),
                 );
+                broadcast_hub_status(&hub, &clients);
                 return;
             }
             sleep(Duration::from_secs(2)).await;
@@ -1232,7 +1298,7 @@ fn encode_query(value: &str) -> String {
 /// Проверить и переслать кадр от хоста гостю. Всё, что не относится к
 /// signaling, отбрасывается: удалённая сторона не должна уметь присылать
 /// команды или состояние.
-fn forward_guest_frame(raw: &str) -> Option<String> {
+fn forward_guest_frame(raw: &str, link: &str) -> Option<String> {
     let mut value: Value = serde_json::from_str(raw).ok()?;
     let kind = value.get("type").and_then(Value::as_str)?;
     if !matches!(
@@ -1245,10 +1311,12 @@ fn forward_guest_frame(raw: &str) -> Option<String> {
     ) {
         return None;
     }
-    // Метка «это наша исходящая сессия»: панель может одновременно принимать
-    // своего гостя на том же слоте, и без неё спутала бы события.
+    // Метки «это наша исходящая сессия» и `link`: панель может одновременно
+    // принимать своего гостя на том же слоте, а в сетке у неё несколько
+    // исходящих, и события разных хостов нельзя смешивать.
     if let Some(payload) = value.get_mut("payload").and_then(Value::as_object_mut) {
         payload.insert("outgoing".to_string(), Value::Bool(true));
+        payload.insert("link".to_string(), Value::from(link));
     }
     Some(value.to_string())
 }
@@ -1458,14 +1526,97 @@ mod tests {
     #[test]
     fn only_signaling_frames_come_back_from_the_host() {
         let signal = json!({"type": "guest_signal", "payload": {"slot": "cam2"}}).to_string();
-        let forwarded = forward_guest_frame(&signal).expect("кадр гостя");
+        let forwarded = forward_guest_frame(&signal, "link-a").expect("кадр гостя");
         assert_eq!(
             serde_json::from_str::<Value>(&forwarded).expect("json"),
-            json!({"type": "guest_signal", "payload": {"slot": "cam2", "outgoing": true}})
+            json!({"type": "guest_signal", "payload": {"slot": "cam2", "outgoing": true, "link": "link-a"}})
         );
         // Команды и произвольные кадры от удалённой стороны не принимаются.
-        assert!(forward_guest_frame(&json!({"type": "cmd_add_widget"}).to_string()).is_none());
-        assert!(forward_guest_frame("junk").is_none());
+        assert!(
+            forward_guest_frame(&json!({"type": "cmd_add_widget"}).to_string(), "link-a").is_none()
+        );
+        assert!(forward_guest_frame("junk", "link-a").is_none());
+    }
+
+    /// Подложить исходящую связь без сети: задача signaling здесь не нужна,
+    /// проверяется только маршрутизация сигналов.
+    fn fake_outgoing(hub: &GuestHub, link: &str, slot: &str) -> mpsc::UnboundedReceiver<String> {
+        let (tx, rx) = mpsc::unbounded_channel();
+        hub.lock().outgoing.insert(
+            link.to_string(),
+            Outgoing {
+                link: link.to_string(),
+                slot: slot.to_string(),
+                generation: 1,
+                tx,
+            },
+        );
+        rx
+    }
+
+    #[test]
+    fn several_outgoing_links_route_by_link_not_by_slot() {
+        let hub = hub();
+        // Два разных хоста выдали один и тот же слот — в сетке это норма.
+        let mut first = fake_outgoing(&hub, "link-a", "cam2");
+        let mut second = fake_outgoing(&hub, "link-b", "cam2");
+
+        assert!(hub.send_to_host(Some("link-a"), "cam2", "one"));
+        assert!(hub.send_to_host(Some("link-b"), "cam2", "two"));
+        assert_eq!(first.try_recv().expect("первая связь"), "one");
+        assert_eq!(second.try_recv().expect("вторая связь"), "two");
+
+        // Слот чужой связи и несуществующий id не должны уводить кадр.
+        assert!(!hub.send_to_host(Some("link-a"), "cam3", "three"));
+        assert!(!hub.send_to_host(Some("link-missing"), "cam2", "four"));
+        assert!(first.try_recv().is_err());
+        assert!(second.try_recv().is_err());
+
+        // Без `link` слот неоднозначен: лучше не отправить, чем не тому.
+        assert!(!hub.send_to_host(None, "cam2", "five"));
+    }
+
+    #[test]
+    fn the_snapshot_lists_every_outgoing_link() {
+        let hub = hub();
+        let _first = fake_outgoing(&hub, "link-a", "cam2");
+        let _second = fake_outgoing(&hub, "link-b", "cam4");
+        let snapshot = hub.snapshot();
+        let outgoing = snapshot["outgoing"].as_array().expect("список связей");
+        assert_eq!(outgoing.len(), 2);
+        assert!(outgoing
+            .iter()
+            .any(|item| item["link"] == json!("link-a") && item["slot"] == json!("cam2")));
+        assert!(outgoing
+            .iter()
+            .any(|item| item["link"] == json!("link-b") && item["slot"] == json!("cam4")));
+        assert_eq!(snapshot["outgoingLimit"], json!(OUTGOING_LIMIT));
+    }
+
+    #[test]
+    fn leaving_one_link_keeps_the_rest() {
+        let hub = hub();
+        let first = fake_outgoing(&hub, "link-a", "cam2");
+        let mut second = fake_outgoing(&hub, "link-b", "cam3");
+
+        assert_eq!(
+            hub.leave(Some("link-a")),
+            vec![("link-a".to_string(), "cam2".to_string())]
+        );
+        // Закрытая связь отпускает приёмник: задача signaling выходит из цикла.
+        drop(first);
+        assert!(hub.snapshot()["outgoing"]
+            .as_array()
+            .expect("список")
+            .iter()
+            .all(|item| item["link"] != json!("link-a")));
+        assert!(!hub.send_to_host(Some("link-a"), "cam2", "late"));
+        assert!(hub.send_to_host(Some("link-b"), "cam3", "still"));
+        assert_eq!(second.try_recv().expect("вторая связь"), "still");
+
+        let left = hub.leave(None);
+        assert_eq!(left, vec![("link-b".to_string(), "cam3".to_string())]);
+        assert!(hub.snapshot()["outgoing"].as_array().unwrap().is_empty());
     }
 
     #[test]

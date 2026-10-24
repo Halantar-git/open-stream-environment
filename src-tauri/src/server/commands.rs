@@ -1269,7 +1269,7 @@ pub fn handle_message(
                 .and_then(Value::as_str)
                 .unwrap_or("");
             let mode = payload.get("mode").and_then(Value::as_str).unwrap_or("lan");
-            if mode == "cloud" {
+            let joined = if mode == "cloud" {
                 let signal = payload.get("signal").and_then(Value::as_str).unwrap_or("");
                 let room = payload.get("room").and_then(Value::as_str).unwrap_or("");
                 diagnostics.guests_arc().join_cloud(
@@ -1279,7 +1279,7 @@ pub fn handle_message(
                     token,
                     slot,
                     name,
-                );
+                )
             } else {
                 let host = payload.get("host").and_then(Value::as_str).unwrap_or("");
                 let port = payload.get("port").and_then(Value::as_u64).unwrap_or(0) as u16;
@@ -1290,16 +1290,34 @@ pub fn handle_message(
                     slot,
                     token,
                     name,
-                );
+                )
+            };
+            // Связь не началась: приглашение битое или исчерпан предел
+            // одновременных подключений. Панель ждёт событие, иначе строка
+            // «Подключение…» осталась бы висеть.
+            if joined.is_none() {
+                if let Some(id) = client {
+                    let frame = json!({
+                        "type": event_types::GUEST_DECLINED,
+                        "payload": { "slot": slot, "outgoing": true, "reason": "join-failed" },
+                    });
+                    diagnostics.clients().send_text(id, &frame.to_string());
+                }
             }
             guest::broadcast_status(diagnostics);
         }
         event_types::CMD_GUEST_LEAVE => {
-            if let Some(slot) = diagnostics.guests().leave() {
+            // Без `link` — отключиться от всех, с ним — только от одного
+            // стримера: в сетке панель держит несколько связей сразу.
+            let link = payload
+                .get("link")
+                .and_then(Value::as_str)
+                .filter(|link| !link.is_empty());
+            for (link, slot) in diagnostics.guests().leave(link) {
                 guest::broadcast_control(
                     diagnostics,
                     event_types::GUEST_LEFT,
-                    json!({ "slot": slot, "local": true }),
+                    json!({ "slot": slot, "link": link, "local": true }),
                 );
             }
             guest::broadcast_status(diagnostics);

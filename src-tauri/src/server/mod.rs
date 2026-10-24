@@ -527,9 +527,16 @@ fn handle_local_guest_signal(diagnostics: &Diagnostics, message: &Value, role: &
         .and_then(|payload| payload.get("slot"))
         .and_then(Value::as_str)
         .unwrap_or_default();
+    // `link` есть только у панели: у неё может быть несколько исходящих
+    // подключений, и слот их не различает (два хоста могут выдать один cam2).
+    let link = message
+        .get("payload")
+        .and_then(|payload| payload.get("link"))
+        .and_then(Value::as_str)
+        .filter(|link| !link.is_empty());
     let frame = message.to_string();
     if role == "control" {
-        diagnostics.guests().send_to_host(slot, &frame);
+        diagnostics.guests().send_to_host(link, slot, &frame);
     } else {
         diagnostics
             .guests()

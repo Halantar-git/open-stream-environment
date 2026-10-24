@@ -16,11 +16,15 @@
  */
 
 /*
-  Настройки гостевых камер: слоты хоста и подключение к чужому стриму.
+  Настройки гостевых камер: слоты хоста и подключение к чужим стримам.
 
   Хост видит четыре слота, для каждого — ссылку-приглашение и состояние. Гость
-  вставляет приглашение и ждёт подтверждения; поток отправляет `guest-share`,
+  вставляет приглашения и ждёт подтверждения; поток отправляет `guest-share`,
   а этот модуль только показывает состояние и передаёт события.
+
+  Подключений у гостя может быть несколько: в сетке каждый отправляет камеру
+  нескольким стримерам, а те — ему. Поэтому состояния живут по `link`, а не по
+  слоту: два хоста могут выдать один и тот же `cam2`.
 */
 
 import { createGuestShare } from "./guest-share.js";
@@ -39,6 +43,8 @@ function defaultSlots() {
 
 export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
   const list = document.getElementById("guestSlotsList");
+  const linksList = document.getElementById("guestLinksList");
+  const linksHead = document.getElementById("guestLinksHead");
   const joinInput = document.getElementById("guestJoinInvite");
   const nameInput = document.getElementById("guestJoinName");
   const joinBtn = document.getElementById("guestJoinBtn");
@@ -55,10 +61,13 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
   if (!state.guestSlots || !state.guestSlots.length) state.guestSlots = defaultSlots();
   if (!state.guestInvites) state.guestInvites = {};
   if (!state.guestPending) state.guestPending = {};
+  // Исходящие связи: сервер отдаёт список, `guestShares` — их живые состояния.
+  if (!Array.isArray(state.guestOutgoing)) state.guestOutgoing = [];
+  if (!state.guestShares || typeof state.guestShares !== "object") state.guestShares = {};
+  if (!state.guestOutgoingLimit) state.guestOutgoingLimit = 4;
   if (!state.guestShare) state.guestShare = { slot: "", status: "idle", detail: "" };
   if (!state.guestSignalUrl) state.guestSignalUrl = "";
   if (!state.guestIce) state.guestIce = { stunUrls: "", turnUrls: "", turnUser: "", turnPassword: "" };
-  if (!state.guestRemoteIce) state.guestRemoteIce = null;
   const ICE_INPUTS = [
     [stunInput, "stunUrls"],
     [turnInput, "turnUrls"],
@@ -132,18 +141,17 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
     return text === key ? value : text;
   }
 
+  function statusLabel(value) {
+    const key = `guests.status.${value || "idle"}`;
+    const text = t(key);
+    return text === key ? value || "" : text;
+  }
+
   function errorDetail(detail) {
     if (!detail) return "";
     const key = `guests.error.${detail}`;
     const text = t(key);
     return text === key ? detail : text;
-  }
-
-  function shareStatus() {
-    const info = state.guestShare || { status: "idle" };
-    const key = `guests.status.${info.status || "idle"}`;
-    const text = t(key);
-    return text !== key ? text : info.status || "";
   }
 
   function slotRow(info) {
@@ -200,6 +208,34 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
     </div>`;
   }
 
+  // Строка исходящего подключения: слот, который выдал хост, и состояние
+  // именно этой связи. Отключается отдельно — остальные продолжают идти.
+  function outgoingRow(info, index) {
+    const local = state.guestShares[info.link] || { status: "joining", detail: "" };
+    const status = local.status || "joining";
+    const detail = local.detail
+      ? ` <span class="guest-slot__guest">(${escapeHtml(errorDetail(local.detail))})</span>`
+      : "";
+    return `<div class="guest-slot" data-link="${escapeHtml(info.link)}">
+      <div class="guest-slot__head">
+        <span class="guest-slot__name">${escapeHtml(
+          t("guests.linkTitle", { number: index + 1 })
+        )} · ${escapeHtml(slotLabel(info.slot, ""))}</span>
+        ${detail}
+        <span class="guest-slot__state" data-state="${escapeHtml(status)}">${escapeHtml(statusLabel(status))}</span>
+      </div>
+      <div class="guest-slot__actions">
+        <button class="md-button md-button--text" data-action="disconnect" data-link="${escapeHtml(
+          info.link
+        )}">${escapeHtml(t("guests.disconnect"))}</button>
+      </div>
+    </div>`;
+  }
+
+  function outgoingList() {
+    return Array.isArray(state.guestOutgoing) ? state.guestOutgoing : [];
+  }
+
   function render() {
     const slots = Array.isArray(state.guestSlots) && state.guestSlots.length ? state.guestSlots : defaultSlots();
     // Порядок задаёт сервер (cam2…cam5); на случай старого снимка добавляем
@@ -217,21 +253,25 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
       if (input && document.activeElement !== input) input.value = state.guestIce[key] || "";
     }
 
-    const outgoing = state.guestOutgoing;
+    const outgoing = outgoingList();
+    if (linksList) linksList.innerHTML = outgoing.map(outgoingRow).join("");
+    if (linksHead) linksHead.hidden = outgoing.length === 0;
+
+    const joining = state.guestShare && state.guestShare.status === "joining";
     if (statusEl) {
       const parts = [];
-      if (outgoing && outgoing.slot) parts.push(shareStatus());
-      else if (state.guestShare && state.guestShare.status && state.guestShare.status !== "idle") {
-        parts.push(shareStatus());
-      }
+      const formStatus = state.guestShare && state.guestShare.status !== "idle" ? state.guestShare.status : "";
+      if (formStatus) parts.push(statusLabel(formStatus));
       if (state.guestShare && state.guestShare.detail) {
         parts.push(`(${errorDetail(state.guestShare.detail)})`);
       }
+      if (!parts.length && outgoing.length >= state.guestOutgoingLimit) {
+        parts.push(t("guests.limitReached", { count: state.guestOutgoingLimit }));
+      }
       statusEl.textContent = parts.join(" ");
     }
-    const joining = state.guestShare && state.guestShare.status === "joining";
-    joinBtn.disabled = !!outgoing || !!joining;
-    leaveBtn.disabled = !outgoing && !joining;
+    joinBtn.disabled = !!joining || outgoing.length >= state.guestOutgoingLimit;
+    leaveBtn.disabled = !outgoing.length && !joining;
   }
 
   async function copyInvite(slot) {
@@ -267,6 +307,19 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
     }
   });
 
+  if (linksList) {
+    linksList.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-action=\"disconnect\"]");
+      const link = button && button.dataset.link;
+      if (!link) return;
+      share.stop(link);
+      delete state.guestShares[link];
+      state.guestOutgoing = outgoingList().filter((item) => item.link !== link);
+      send(EVENT_TYPES.CMD_GUEST_LEAVE, { link });
+      render();
+    });
+  }
+
   joinBtn.addEventListener("click", () => {
     const protocol = typeof window !== "undefined" ? window.GuestProtocol : null;
     const invite = protocol ? protocol.parseInvite(joinInput.value) : null;
@@ -282,6 +335,9 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
       /* приватный режим */
     }
     state.guestShare = { slot: invite.slot, status: "joining", detail: "" };
+    // Поле очищаем сразу: следующее приглашение вставляется на его место, а
+    // ссылка уже ушла на сервер.
+    joinInput.value = "";
     render();
     if (invite.mode === "cloud") {
       send(EVENT_TYPES.CMD_GUEST_JOIN, {
@@ -305,37 +361,60 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
   });
 
   leaveBtn.addEventListener("click", () => {
-    share.stop();
-    state.guestRemoteIce = null;
+    share.stopAll();
+    state.guestShares = {};
+    state.guestOutgoing = [];
+    state.guestShare = { slot: "", status: "idle", detail: "" };
     send(EVENT_TYPES.CMD_GUEST_LEAVE, {});
     render();
   });
 
-  // Сервер мог ещё не успеть прислать `guest_status` к моменту первого
-  // события — слот приглашения уже известен из `guestShare`.
-  function joinedSlot(slot) {
-    if (state.guestOutgoing && state.guestOutgoing.slot === slot) return true;
-    return !!(state.guestShare && state.guestShare.slot === slot);
+  /*
+    Связь, которой касается событие. Сервер помечает кадры исходящей сессии
+    (`outgoing`) и присылает `link`; старый снимок без идентификатора
+    сопоставляем по слоту, пока связь одна.
+  */
+  function eventLink(payload) {
+    if (!payload) return "";
+    if (typeof payload.link === "string" && payload.link) return payload.link;
+    const matches = outgoingList().filter((item) => item.slot === payload.slot);
+    return matches.length === 1 ? matches[0].link : "";
   }
 
-  // Событие касается нашего исходящего подключения (мы гость у другого
-  // стримера), а не гостя, которого принимаем сами. Слоты могут совпадать
-  // (cam2 с обеих сторон), поэтому смотрим ещё и на метку источника.
-  function joinedOutgoing(slot, payload) {
-    if (!joinedSlot(slot)) return false;
-    return payload.outgoing === true || payload.local === true;
+  function isOutgoingEvent(payload) {
+    return !!payload && (payload.outgoing === true || payload.local === true);
+  }
+
+  function forgetLink(link) {
+    if (!link) return;
+    share.stop(link);
+    delete state.guestShares[link];
+    state.guestOutgoing = outgoingList().filter((item) => item.link !== link);
   }
 
   function handleMessage(message) {
     const type = message && message.type;
     const payload = (message && message.payload) || {};
     switch (type) {
-      case EVENT_TYPES.GUEST_STATUS:
+      case EVENT_TYPES.GUEST_STATUS: {
+        const previous = outgoingList().length;
         state.guestSlots = Array.isArray(payload.slots) ? payload.slots : [];
-        state.guestOutgoing = payload.outgoing || null;
+        state.guestOutgoing = Array.isArray(payload.outgoing) ? payload.outgoing : [];
+        if (Number(payload.outgoingLimit) > 0) state.guestOutgoingLimit = Number(payload.outgoingLimit);
         if (typeof payload.signalUrl === "string") state.guestSignalUrl = payload.signalUrl;
         if (payload.ice && typeof payload.ice === "object") {
           state.guestIce = { ...state.guestIce, ...payload.ice };
+        }
+        // Состояния закрытых связей больше не нужны: список — источник истины.
+        const known = new Set(outgoingList().map((item) => item.link));
+        for (const link of Object.keys(state.guestShares)) {
+          if (!known.has(link)) {
+            share.stop(link);
+            delete state.guestShares[link];
+          }
+        }
+        if (outgoingList().length !== previous && state.guestShare.status === "joining") {
+          state.guestShare = { slot: "", status: "idle", detail: "" };
         }
         // Освободившийся слот больше не должен показывать старую ссылку:
         // сервер уже аннулировал её токен.
@@ -344,6 +423,7 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
         }
         render();
         break;
+      }
       case EVENT_TYPES.GUEST_INVITE: {
         const protocol = typeof window !== "undefined" ? window.GuestProtocol : null;
         const text = protocol
@@ -363,49 +443,53 @@ export function initGuestPanel({ state, t, send, EVENT_TYPES, copyText }) {
         if (payload.slot) state.guestPending[payload.slot] = payload.name || "";
         render();
         break;
-      case EVENT_TYPES.GUEST_ACCEPTED:
-        // Настройки ICE хоста — для соединения, а не для полей ввода: свои
-        // значения гость не теряет.
-        if (payload.ice && typeof payload.ice === "object") state.guestRemoteIce = payload.ice;
-        if (joinedOutgoing(payload.slot, payload)) share.markAccepted(payload.slot);
+      case EVENT_TYPES.GUEST_ACCEPTED: {
+        if (!isOutgoingEvent(payload)) break;
+        const link = eventLink(payload);
+        if (link) share.markAccepted(link, payload.slot);
         render();
         break;
-      case EVENT_TYPES.GUEST_RECEIVER_READY:
-        if (joinedOutgoing(payload.slot, payload)) {
-          share.start(payload.slot, payload.ice || state.guestRemoteIce || state.guestIce);
-        }
+      }
+      case EVENT_TYPES.GUEST_RECEIVER_READY: {
+        if (!isOutgoingEvent(payload)) break;
+        const link = eventLink(payload);
+        if (link) share.start(link, payload.slot, payload.ice || state.guestIce);
         break;
-      case EVENT_TYPES.GUEST_SIGNAL:
-        if (joinedOutgoing(payload.slot, payload)) share.handleSignal(payload.payload);
+      }
+      case EVENT_TYPES.GUEST_SIGNAL: {
+        if (!isOutgoingEvent(payload)) break;
+        const link = eventLink(payload);
+        if (link) share.handleSignal(link, payload.payload);
         break;
-      case EVENT_TYPES.GUEST_DECLINED:
-        if (joinedOutgoing(payload.slot, payload)) {
-          share.stop();
-          state.guestOutgoing = null;
-          // Причина есть у сетевой ошибки (сервер недоступен), у отказа хоста
-          // её нет — это разные сообщения для пользователя.
-          const reason = payload.reason || "";
-          state.guestRemoteIce = null;
-          state.guestShare = {
-            slot: payload.slot,
-            status: reason ? "error" : "declined",
-            detail: reason,
-          };
-          // Закрываем и исходящее соединение, иначе слот останется занятым.
-          send(EVENT_TYPES.CMD_GUEST_LEAVE, {});
+      }
+      case EVENT_TYPES.GUEST_DECLINED: {
+        if (!isOutgoingEvent(payload)) break;
+        const link = eventLink(payload);
+        const reason = payload.reason || "";
+        if (!link) {
+          // Связь не началась: приглашение битое или исчерпан предел.
+          state.guestShare = { slot: payload.slot || "", status: "error", detail: reason };
           render();
+          break;
         }
+        forgetLink(link);
+        // Отказ показываем в строке статуса: самой связи в списке уже нет.
+        state.guestShare = {
+          slot: payload.slot || "",
+          status: reason ? "error" : "declined",
+          detail: reason,
+        };
+        render();
         break;
-      case EVENT_TYPES.GUEST_LEFT:
-        if (joinedOutgoing(payload.slot, payload)) {
-          share.stop();
-          state.guestOutgoing = null;
-          state.guestRemoteIce = null;
-          state.guestShare = { slot: payload.slot, status: "left", detail: "" };
-          send(EVENT_TYPES.CMD_GUEST_LEAVE, {});
-          render();
-        }
+      }
+      case EVENT_TYPES.GUEST_LEFT: {
+        if (!isOutgoingEvent(payload)) break;
+        const link = eventLink(payload);
+        if (!link) break;
+        forgetLink(link);
+        render();
         break;
+      }
       default:
         break;
     }
