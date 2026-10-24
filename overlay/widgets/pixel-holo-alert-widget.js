@@ -218,6 +218,7 @@
 
       let nameHtml = escapeHtml(alert.user || "");
       let messageHtml = "";
+      let musicHtml = "";
 
       if (alert.kind === "wheel_start") {
         nameHtml = escapeHtml(t("alert.wheelStartMessage", { command: alert.command || "" }));
@@ -229,6 +230,9 @@
         else nameHtml = t("alert.winner", { name });
       } else if (alert.kind === "donation" || alert.kind === "cheer") {
         if (alert.message) messageHtml = `<div style="color:${this.mutedColor};font-size:13px;font-family:${FONT};">«${escapeHtml(alert.message)}»</div>`;
+        if (alert.musicTitle) {
+          musicHtml = `<div style="color:${this.mutedColor};font-size:12px;font-family:${FONT};font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">♪ ${escapeHtml(alert.musicTitle)}</div>`;
+        }
       }
 
       const card = document.createElement("div");
@@ -251,6 +255,7 @@
           <div style="color:${this.mutedColor};font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">${escapeHtml(this.kindLabel(alert))}</div>
           <div style="color:${this.textColor};font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${nameHtml}</div>
           ${showAmount ? `<div style="color:${this.gold};font-size:14px;font-weight:700;font-family:${FONT_DATA};">${escapeHtml(this.formatAmount(alert))}</div>` : ""}
+          ${musicHtml}
           ${messageHtml}
         </div>`;
 

@@ -267,6 +267,10 @@
         (alert.kind === "donation" || alert.kind === "cheer") && alert.message
           ? escapeHtml(alert.message)
           : "";
+      const music =
+        (alert.kind === "donation" || alert.kind === "cheer") && alert.musicTitle
+          ? escapeHtml(alert.musicTitle)
+          : "";
 
       // Keep the terminal text in lock-step with AlertsWidget: wheel events
       // carry no plain username, so they render a dedicated status line.
@@ -292,6 +296,7 @@
         </div>` +
         `<span style="font-family:${FONT_MONO};font-size:20px;font-weight:700;color:${TEXT};line-height:1.15;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${nameHtml}</span>` +
         (amount ? `<span style="font-family:${FONT_MONO};font-size:14px;font-weight:700;color:${color};margin-top:4px;">${amount}</span>` : "") +
+        (music ? `<span style="font-family:${FONT_MONO};font-size:12px;color:${MUTED};line-height:1.35;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">♪ ${music}</span>` : "") +
         (message ? `<span style="font-family:${FONT_MONO};font-size:12px;color:${MUTED};line-height:1.35;margin-top:4px;overflow-wrap:anywhere;word-break:break-word;">«${message}»</span>` : "");
     }
 

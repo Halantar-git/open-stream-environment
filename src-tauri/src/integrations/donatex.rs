@@ -10,6 +10,7 @@
 //! [`goal_update_from_payload`] и [`ai_response_from_payload`] — чистые функции,
 //! их проверяют тесты без сети. Сокет живёт в [`DonatexControl`].
 
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -31,6 +32,10 @@ pub const MUSIC_CURRENT_URL: &str = "https://donatex.gg/api/v1/music/current";
 pub const MUSIC_WIDGETS_URL: &str = "https://donatex.gg/api/music-widgets";
 
 const RECONNECT_MS: u64 = 5_000;
+/// Сколько названий треков держать в памяти. Одно и то же имя спрашивают
+/// алерт и опрос музыки, а за длинный стрим треков бывает много.
+const TITLE_CACHE_LIMIT: usize = 128;
+
 // Сервер шлёт пинг примерно раз в 15 секунд. Если трафика нет дольше этого
 // срока, соединение считается полуоткрытым и пересоздаётся.
 const WATCHDOG_MS: u64 = 45_000;
@@ -250,6 +255,65 @@ pub async fn fetch_youtube_title(link: &str) -> Option<String> {
         .map(str::to_string)
 }
 
+/// Название ролика с кэшем: его спрашивают и алерт доната, и опрос
+/// музыки, а YouTube отвечает не мгновенно.
+pub async fn youtube_title_cached(link: &str) -> Option<String> {
+    if let Some(title) = title_cache()
+        .lock()
+        .unwrap_or_else(|error| error.into_inner())
+        .get(link)
+        .cloned()
+    {
+        return Some(title);
+    }
+    let title = fetch_youtube_title(link).await?;
+    {
+        let mut cache = title_cache()
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        if cache.len() >= TITLE_CACHE_LIMIT {
+            cache.clear();
+        }
+        cache.insert(link.to_string(), title.clone());
+    }
+    Some(title)
+}
+
+fn title_cache() -> &'static Mutex<HashMap<String, String>> {
+    static CACHE: std::sync::OnceLock<Mutex<HashMap<String, String>>> = std::sync::OnceLock::new();
+    CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Дописать в алерт название заказанного трека.
+///
+/// В объекте доната DonateX названия нет — только ссылка, поэтому спрашиваем
+/// YouTube. Ждём не дольше секунды с небольшим: алерт важнее полного названия,
+/// а карточка музыки всё равно покажет его следом.
+async fn enrich_music_title(alert: &mut Value) {
+    let has_title = alert
+        .get("musicTitle")
+        .and_then(Value::as_str)
+        .is_some_and(|title| !title.trim().is_empty());
+    if has_title {
+        return;
+    }
+    let Some(link) = alert
+        .get("musicLink")
+        .and_then(Value::as_str)
+        .map(str::to_string)
+    else {
+        return;
+    };
+    let Ok(Some(title)) =
+        tokio::time::timeout(Duration::from_millis(1_200), youtube_title_cached(&link)).await
+    else {
+        return;
+    };
+    if let Some(map) = alert.as_object_mut() {
+        map.insert("musicTitle".to_string(), Value::from(title));
+    }
+}
+
 /// Обновление цели из payload `GoalUpdated`.
 ///
 /// Читает новые поля (`currentAmount`/`goalAmount`) и старые
@@ -445,7 +509,7 @@ impl DonatexControl {
                                 .and_then(|args| args.get(0))
                                 .cloned()
                                 .unwrap_or(Value::Null);
-                            handle_invocation(target, &payload, &emit);
+                            handle_invocation(target, &payload, &emit).await;
                         }
                     }
                 }
@@ -475,7 +539,7 @@ impl DonatexControl {
 }
 
 /// Разобрать invocation SignalR и отправить событие шины.
-fn handle_invocation(target: &str, payload: &Value, emit: &EmitFn) {
+async fn handle_invocation(target: &str, payload: &Value, emit: &EmitFn) {
     // Часть установок DonateX шлёт ответ ИИ отдельными целями.
     if [
         "AiAssistantGenerated",
@@ -492,7 +556,8 @@ fn handle_invocation(target: &str, payload: &Value, emit: &EmitFn) {
     }
 
     if target == "DonationCreated" || target == "DonationRerun" {
-        let alert = donation_alert_from_payload(payload);
+        let mut alert = donation_alert_from_payload(payload);
+        enrich_music_title(&mut alert).await;
         emit(bus_event("alert", alert.clone()));
 
         if let Some(ai) = ai_response_from_payload(payload) {

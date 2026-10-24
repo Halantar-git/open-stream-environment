@@ -969,7 +969,7 @@ impl Diagnostics {
                         // Название тянем только при смене трека: DonateX его
                         // не отдаёт, а в карточке нужен не голый адрес.
                         if let Some(title) =
-                            crate::integrations::donatex::fetch_youtube_title(&link).await
+                            crate::integrations::donatex::youtube_title_cached(&link).await
                         {
                             if let Some(map) = track.as_object_mut() {
                                 map.insert("musicTitle".to_string(), Value::from(title));

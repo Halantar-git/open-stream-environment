@@ -146,6 +146,7 @@
 
       let nameHtml = escapeHtml(alert.user || "");
       let messageHtml = "";
+      let musicHtml = "";
 
       if (alert.kind === "wheel_start") {
         nameHtml = escapeHtml(t("alert.wheelStartMessage", { command: alert.command || "" }));
@@ -160,6 +161,11 @@
         if (alert.message) messageHtml = `<div class="widget-alert__message">«${escapeHtml(alert.message)}»</div>`;
       } else if (alert.kind === "donation" || alert.kind === "cheer") {
         if (alert.message) messageHtml = `<div class="widget-alert__message">«${escapeHtml(alert.message)}»</div>`;
+        // Заказанный трек показываем рядом с суммой: зритель видит, за что
+        // заплатили, не дожидаясь карточки музыки.
+        if (alert.musicTitle) {
+          musicHtml = `<div class="widget-alert__music"><span>♪</span>${escapeHtml(alert.musicTitle)}</div>`;
+        }
       }
 
       card.innerHTML = `
@@ -169,6 +175,7 @@
           <div class="widget-alert__status"><span class="widget-alert__dot"></span><span class="widget-alert__kicker">${this.kindLabel(alert)}</span></div>
           <div class="widget-alert__name">${nameHtml}</div>
           ${showAmount ? `<div class="widget-alert__amount">${this.formatAmount(alert)}</div>` : ""}
+          ${musicHtml}
           ${messageHtml}
         </div>
         <div class="widget-alert__lockbar"><div class="widget-alert__lockbar-fill"></div></div>`;

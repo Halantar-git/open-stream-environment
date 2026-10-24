@@ -291,6 +291,34 @@ describe("overlay widgets", () => {
     w.unmount();
   });
 
+  test("AlertsWidget показывает название заказанного трека", () => {
+    const ctx = makeContext();
+    const { w } = mountWidget(AlertsWidget, ctx, { type: "alerts" });
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, {
+      kind: "donation",
+      user: "bob",
+      amount: 500,
+      currency: "RUB",
+      musicTitle: "Night Drive",
+    });
+
+    const card = w.host.children[0];
+    expect(card.innerHTML).toContain("widget-alert__music");
+    expect(card.innerHTML).toContain("Night Drive");
+    w.unmount();
+  });
+
+  test("AlertsWidget без заказанного трека строку музыки не рисует", () => {
+    const ctx = makeContext();
+    const { w } = mountWidget(AlertsWidget, ctx, { type: "alerts" });
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "donation", user: "bob", amount: 500, currency: "RUB" });
+
+    expect(w.host.children[0].innerHTML).not.toContain("widget-alert__music");
+    w.unmount();
+  });
+
   // Общий снимок Longshot для тестов таймера (updateMessage включён нарочно:
   // виджет обязан его игнорировать).
   const longshotAt = (anchorMs, extra = {}) => ({

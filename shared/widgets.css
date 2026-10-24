@@ -146,6 +146,24 @@
   padding: 5px 10px;
   border-radius: 0 var(--shape-xs) var(--shape-xs) 0;
 }
+/* Заказанный трек: название одной строкой рядом с суммой доната. */
+.widget-alert__music {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-family: var(--font-body);
+  font-size: clamp(11px, 3.4cqw, 14px);
+  font-weight: 600;
+  color: var(--md-on-surface-variant);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.widget-alert__music span {
+  color: var(--accent);
+  flex-shrink: 0;
+}
 .widget-alert__lockbar { display: none; }
 [data-decoration="brackets2"] .widget-alert__lockbar,
 [data-decoration="brackets4"] .widget-alert__lockbar {

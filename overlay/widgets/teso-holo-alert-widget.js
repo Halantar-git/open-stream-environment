@@ -269,6 +269,10 @@
         (alert.kind === "donation" || alert.kind === "cheer") && alert.message
           ? escapeHtml(alert.message)
           : "";
+      const music =
+        (alert.kind === "donation" || alert.kind === "cheer") && alert.musicTitle
+          ? escapeHtml(alert.musicTitle)
+          : "";
 
       let icon = ICONS[alert.kind] || "";
       let nameHtml = escapeHtml(alert.user || "");
@@ -295,6 +299,7 @@
           <span style="font-family:${FONT_DISPLAY};font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:${MUTED};">TESO // ${escapeHtml(this.kindLabel(alert))}</span>
           <span style="font-family:${FONT_DISPLAY};font-size:20px;font-weight:700;color:${TEXT};line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:1px 1px 2px rgba(0,0,0,0.9);">${nameHtml}</span>
           ${amount ? `<span style="font-family:${FONT_DISPLAY};font-size:14px;font-weight:700;color:${color};">${amount}</span>` : ""}
+          ${music ? `<span style="font-family:${FONT_BODY};font-size:12px;color:${MUTED};line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">♪ ${music}</span>` : ""}
           ${message ? `<span style="font-family:${FONT_BODY};font-size:12px;color:${MUTED};line-height:1.35;overflow-wrap:anywhere;word-break:break-word;">«${message}»</span>` : ""}
         </div>` +
         `</div>`;
