@@ -50,6 +50,7 @@ export function createStateManager() {
     notificationSound: true,
     notificationVolume: 0.8,
     notificationRepeats: 1,
+    obsScenes: [],
     obs: { enabled: false, host: "127.0.0.1", port: 4455, password: "", sceneMap: { main: "", start: "", brb: "", talk: "", guests: "", end: "", wheel: "", video: "", poll: "" } },
     soundboard: { enabled: true, volume: 0.8, queueMode: false, sounds: [] },
     donationMedia: { enabled: true, volume: 0.8, rules: [] },

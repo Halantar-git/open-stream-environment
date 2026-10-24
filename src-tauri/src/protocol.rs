@@ -55,6 +55,7 @@ event_types! {
     GOAL_UPDATE => "goal_update",
     DONATEX_AI_EVENT => "donatex_ai_event",
     OBS_SCENES_SETUP => "obs_scenes_setup",
+    OBS_SCENES => "obs_scenes",
     CONNECTION_STATUS => "connection_status",
     THEME_UPDATE => "theme_update",
     THEME_DRAFT_PREVIEW => "theme_draft_preview",

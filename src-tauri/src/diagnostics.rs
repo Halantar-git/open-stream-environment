@@ -1797,6 +1797,11 @@ impl Diagnostics {
             // Счёт стрима с итогом в базовой валюте: суммы по валютам сами по
             // себе панели недостаточно — ей нужен один итог.
             map.insert("sessionDonations".to_string(), self.session_stats());
+            // Имена сцен подключённой OBS — подсказки в полях маппинга. Без
+            // них имена вписывают руками и промахиваются регистром.
+            if let Some(Value::Object(obs)) = map.get_mut("obs") {
+                obs.insert("scenes".to_string(), json!(self.obs.scenes()));
+            }
         }
         snapshot
     }

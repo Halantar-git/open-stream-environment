@@ -890,16 +890,17 @@
             <input type="text" id="obsMicSource" placeholder="Mic/Aux" />
           </div>
           <p class="settings__desc" data-i18n="settings.obsSceneMapping">Маппинг сцен: логическое имя пульта → имя сцены в OBS.</p>
-          <div class="md-field"><label>Main</label><input type="text" id="obsSceneMain" placeholder="Основной" /></div>
-          <div class="md-field"><label>Start</label><input type="text" id="obsSceneStart" placeholder="Старт" /></div>
-          <div class="md-field"><label>BRB</label><input type="text" id="obsSceneBrb" placeholder="Перерыв" /></div>
-          <div class="md-field"><label>Talk</label><input type="text" id="obsSceneTalk" placeholder="Разговор" /></div>
-          <div class="md-field"><label>Guests</label><input type="text" id="obsSceneGuests" placeholder="Гости" /></div>
-          <div class="md-field"><label>End</label><input type="text" id="obsSceneEnd" placeholder="Конец" /></div>
-          <div class="md-field"><label>Wheel</label><input type="text" id="obsSceneWheel" placeholder="Колесо" /></div>
-          <div class="md-field"><label>Opening</label><input type="text" id="obsSceneVideo" placeholder="Заставка" /></div>
-          <div class="md-field"><label>Poll</label><input type="text" id="obsScenePoll" placeholder="Голосование" /></div>
-          <div class="md-field"><label>Pause</label><input type="text" id="obsScenePause" placeholder="Пауза" /></div>
+          <datalist id="obsScenesList"></datalist>
+          <div class="md-field"><label>Main</label><input type="text" id="obsSceneMain" list="obsScenesList" placeholder="Основной" /></div>
+          <div class="md-field"><label>Start</label><input type="text" id="obsSceneStart" list="obsScenesList" placeholder="Старт" /></div>
+          <div class="md-field"><label>BRB</label><input type="text" id="obsSceneBrb" list="obsScenesList" placeholder="Перерыв" /></div>
+          <div class="md-field"><label>Talk</label><input type="text" id="obsSceneTalk" list="obsScenesList" placeholder="Разговор" /></div>
+          <div class="md-field"><label>Guests</label><input type="text" id="obsSceneGuests" list="obsScenesList" placeholder="Гости" /></div>
+          <div class="md-field"><label>End</label><input type="text" id="obsSceneEnd" list="obsScenesList" placeholder="Конец" /></div>
+          <div class="md-field"><label>Wheel</label><input type="text" id="obsSceneWheel" list="obsScenesList" placeholder="Колесо" /></div>
+          <div class="md-field"><label>Opening</label><input type="text" id="obsSceneVideo" list="obsScenesList" placeholder="Заставка" /></div>
+          <div class="md-field"><label>Poll</label><input type="text" id="obsScenePoll" list="obsScenesList" placeholder="Голосование" /></div>
+          <div class="md-field"><label>Pause</label><input type="text" id="obsScenePause" list="obsScenesList" placeholder="Пауза" /></div>
           <p class="settings__desc" data-i18n="settings.obsSetupScenesHint">Кнопка создаёт недостающие сцены и добавляет в каждую источник оверлея нужного размера; у источников включено «Завершать работу источника, когда он не отображается», кроме заставки. Существующие сцены остаются как есть.</p>
           <div class="settings__actions">
             <button class="md-button md-button--filled" id="setupObsScenesBtn" data-i18n="settings.obsSetupScenes">Настроить сцены в OBS</button>

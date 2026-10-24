@@ -228,6 +228,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const obsScenePollInput = document.getElementById("obsScenePoll");
   const obsScenePauseInput = document.getElementById("obsScenePause");
   const setupObsScenesBtn = document.getElementById("setupObsScenesBtn");
+  const obsScenesList = document.getElementById("obsScenesList");
   const splashSettingsFormEl = document.getElementById("splashSettingsForm");
   const obsCommandsList = document.getElementById("obsCommandsList");
   const addObsCommandBtn = document.getElementById("addObsCommandBtn");
@@ -604,6 +605,7 @@ const { EVENT_TYPES } = window.SharedEvents;
       obsScenePauseInput.value = sm.pause || "";
     }
     updateObsSetupButton();
+    renderObsSceneOptions();
     renderObsCommands();
     renderCameraAngles();
     renderCameraFilters();
@@ -927,6 +929,18 @@ const { EVENT_TYPES } = window.SharedEvents;
     const connected = (state.connectionStatus || {}).obs === "connected";
     setupObsScenesBtn.disabled = !connected;
     setupObsScenesBtn.title = connected ? "" : t("settings.obsSetupScenesNotConnected");
+  }
+
+  // Подсказки в маппинге — реальные имена из подключённой OBS: вписывать их
+  // руками не нужно, и регистр перестаёт быть поводом для ошибки.
+  function renderObsSceneOptions() {
+    if (!obsScenesList) return;
+    const names = state.obsScenes && state.obsScenes.length
+      ? state.obsScenes
+      : (state.obs && state.obs.scenes) || [];
+    obsScenesList.innerHTML = names
+      .map((name) => `<option value="${escapeAttr(name)}"></option>`)
+      .join("");
   }
 
   if (setupObsScenesBtn) {
@@ -4308,6 +4322,12 @@ const { EVENT_TYPES } = window.SharedEvents;
       case EVENT_TYPES.CAMERA_DECODE_FAILED:
         // Один из оверлеев не смог разобрать H.264 — переходим на JPEG для всех.
         cameraBridge._fallbackToJpeg("overlay-decode");
+        break;
+      case EVENT_TYPES.OBS_SCENES:
+        // Список сцен подключённой OBS: подсказки в полях маппинга.
+        state.obsScenes = (msg.payload && msg.payload.scenes) || [];
+        if (state.obs) state.obs.scenes = state.obsScenes;
+        renderObsSceneOptions();
         break;
       case EVENT_TYPES.OBS_SCENES_SETUP: {
         const payload = msg.payload || {};

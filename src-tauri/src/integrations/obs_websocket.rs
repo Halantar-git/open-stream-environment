@@ -136,6 +136,26 @@ pub fn default_scene_name(role: &str) -> &'static str {
     }
 }
 
+/// Совпадают ли имена сцен без учёта регистра.
+///
+/// OBS различает «Main» и «main», а люди пишут как удобно: имена сцен в
+/// настройках и в OBS не должны расходиться только из-за буквы.
+pub fn scene_name_eq(a: &str, b: &str) -> bool {
+    a.to_lowercase() == b.to_lowercase()
+}
+
+/// Найти сцену в списке OBS по имени без учёта регистра.
+///
+/// Точное совпадение побеждает: если в OBS есть и «BRB», и «brb», берём то,
+/// что записано в настройках точь-в-точь.
+pub fn resolve_scene_name<'a>(name: &str, existing: &'a [String]) -> Option<&'a str> {
+    existing
+        .iter()
+        .find(|scene| scene.as_str() == name)
+        .or_else(|| existing.iter().find(|scene| scene_name_eq(scene, name)))
+        .map(String::as_str)
+}
+
 /// План настройки сцен OBS.
 ///
 /// `scene_map` из настроек важнее `defaults`: пользователь мог переименовать
@@ -158,10 +178,18 @@ pub fn build_setup_plan(
     SETUP_SOURCES
         .iter()
         .filter_map(|(role, source_name, path)| {
-            let name = scene_name(scene_map, role)
+            let wanted = scene_name(scene_map, role)
                 .or_else(|| scene_name(defaults, role))
                 .unwrap_or_else(|| default_scene_name(role).to_string());
-            if name.is_empty() || !used.insert(name.clone()) {
+            if wanted.is_empty() {
+                return None;
+            }
+            // В OBS сцена могла уже быть с другим регистром: берём её имя как
+            // есть, иначе рядом появится двойник, а пульт будет ходить в пустой.
+            let existing = resolve_scene_name(&wanted, existing_scenes);
+            let name = existing.unwrap_or(&wanted).to_string();
+            // Дедуп тоже без учёта регистра: «Main» и «main» — одна сцена OBS.
+            if !used.insert(name.to_lowercase()) {
                 return None;
             }
             Some(json!({
@@ -169,7 +197,7 @@ pub fn build_setup_plan(
                 "sceneName": name,
                 "sourceName": source_name,
                 "url": format!("http://localhost:{port}{path}"),
-                "createScene": !existing_scenes.iter().any(|scene| scene == &name),
+                "createScene": existing.is_none(),
                 "createSource": !existing_inputs.iter().any(|input| input == source_name),
                 "shutdown": *role != "video",
             }))
@@ -347,6 +375,32 @@ mod tests {
             let expected = step["role"] != json!("video");
             assert_eq!(step["shutdown"], json!(expected), "{}", step["role"]);
         }
+    }
+
+    #[test]
+    fn an_exact_name_wins_over_another_case() {
+        let existing = vec!["BRB".to_string(), "brb".to_string()];
+        assert_eq!(resolve_scene_name("brb", &existing), Some("brb"));
+        // Точного нет — берём первое совпадение без учёта регистра.
+        assert_eq!(resolve_scene_name("Brb", &existing), Some("BRB"));
+        assert_eq!(resolve_scene_name("Main", &existing), None);
+    }
+
+    #[test]
+    fn a_scene_with_another_case_is_reused_instead_of_duplicated() {
+        let plan = build_setup_plan(
+            &json!({}),
+            &json!({ "main": "Main", "brb": "BRB" }),
+            8710,
+            &["main".to_string(), "brb".to_string()],
+            &[],
+        );
+        // В плане — настоящее имя из OBS: иначе рядом появился бы двойник, а
+        // пульт переключал бы несуществующую сцену.
+        assert_eq!(plan[0]["sceneName"], json!("main"));
+        assert_eq!(plan[0]["createScene"], json!(false));
+        assert_eq!(plan[2]["sceneName"], json!("brb"));
+        assert_eq!(plan[2]["createScene"], json!(false));
     }
 
     #[test]

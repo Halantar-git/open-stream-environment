@@ -1768,11 +1768,11 @@
     "obs": {
       "title": "OBS WebSocket",
       "p1": "Requires OBS 28+ with the WebSocket server enabled (Tools → WebSocket Server Settings).",
-      "p2": "Scene mapping translates logical remote names into your actual OBS scene names.",
+      "p2": "Scene mapping translates logical remote names into your actual OBS scene names. The fields suggest names from the connected OBS, and letter case does not matter: “brb” finds the “BRB” scene.",
       "p3": "You can also define custom RAW commands, camera angles (multicam) and camera filters, triggered by Twitch points or manually.",
       "p4": "The Camera and Microphone fields set the sources for the webcam and microphone toggle buttons in the remote.",
       "p5": "The “Set up scenes in OBS” button creates the missing scenes and browser sources for you; it is enabled only while the WebSocket is connected.",
-      "p6": "What the button sets up: a source sized to the canvas in the top-left corner, locked against accidental dragging, with “Shutdown source when not visible” on every source except the splash. Existing scenes and sources are never deleted or renamed, and pressing the button again refreshes the URLs after a port change. The button does not create gameplay capture: add it to the main scene yourself.",
+      "p6": "What the button sets up: a source sized to the canvas in the top-left corner, locked against accidental dragging, with “Shutdown source when not visible” on every source except the splash. Existing scenes and sources are never deleted or renamed (names are compared case-insensitively), and pressing the button again refreshes the URLs after a port change. The button does not create gameplay capture: add it to the main scene yourself.",
       "s1": "Enable the WebSocket server in OBS: Tools → WebSocket Server Settings.",
       "s2": "Enter the port and password here, turn the integration on and wait for the Connected status.",
       "s3": "Press “Set up scenes in OBS” and confirm — the scenes and sources appear in OBS.",

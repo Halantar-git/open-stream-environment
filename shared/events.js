@@ -40,6 +40,7 @@
     GOAL_UPDATE: "goal_update", // { current, target, title, currency }
     DONATEX_AI_EVENT: "donatex_ai_event", // { characterName, aiText, aiAudio, user?, amount?, currency?, message? } — ответ ИИ-персонажа DonateX
     OBS_SCENES_SETUP: "obs_scenes_setup", // { ok, sceneMap, createdScenes, createdSources, updatedSources, errors } — итог кнопки «Настроить сцены в OBS»
+    OBS_SCENES: "obs_scenes", // { scenes } — имена сцен в подключённой OBS для подсказок в маппинге
     CONNECTION_STATUS: "connection_status", // { service, status }
     THEME_UPDATE: "theme_update", // { activeThemeId, enable3d, activeThemeId3d, tokens, themes }
     THEME_DRAFT_PREVIEW: "theme_draft_preview", // { tokens, customCss, themeId, name, clear? } — live draft for the theme preview window

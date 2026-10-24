@@ -25,7 +25,7 @@ use tokio::sync::{mpsc, oneshot};
 
 use crate::integrations::obs_websocket::{
     build_camera_switch_plan, build_setup_plan, identify_frame, request_frame,
-    resolve_filter_duration,
+    resolve_filter_duration, scene_name_eq,
 };
 use crate::integrations::twitch_chat_control::{ConnectFn, EmitFn, SpawnFn};
 use crate::protocol::event_types;
@@ -139,9 +139,9 @@ impl ObsClient {
 
     /// Есть ли сцена с таким именем в подключённой OBS.
     ///
-    /// Список кэшируется: `scene_set` — синхронная функция, а ждать ответа OBS
-    /// в ней нельзя. Пока список не пришёл, честно отвечаем `false`: лучше
-    /// переключить сцену напрямую, чем отложить переход и зависнуть.
+    /// Сравнение без учёта регистра: в настройках пишут «brb», а сцена в OBS
+    /// может называться «BRB». Список кэшируется: `scene_set` — синхронная
+    /// функция, а ждать ответа OBS в ней нельзя.
     pub fn has_scene(&self, scene_name: &str) -> bool {
         let scenes = self
             .lock(&self.session)
@@ -149,8 +149,28 @@ impl ObsClient {
             .filter(|session| session.connected.load(Ordering::SeqCst))
             .map(|session| Arc::clone(&session.scenes));
         scenes
-            .map(|scenes| self.lock(&scenes).contains(scene_name))
+            .map(|scenes| {
+                let scenes = self.lock(&scenes);
+                scenes.iter().any(|scene| scene_name_eq(scene, scene_name))
+            })
             .unwrap_or(false)
+    }
+
+    /// Имена сцен в подключённой OBS, по алфавиту; пусто — не подключено.
+    ///
+    /// Нужны панели: она предлагает их в маппинге, чтобы имена не
+    /// перепечатывали руками.
+    pub fn scenes(&self) -> Vec<String> {
+        let scenes = self
+            .lock(&self.session)
+            .as_ref()
+            .map(|session| Arc::clone(&session.scenes));
+        let Some(scenes) = scenes else {
+            return Vec::new();
+        };
+        let mut names: Vec<String> = self.lock(&scenes).iter().cloned().collect();
+        names.sort();
+        names
     }
 
     /// Отправить запрос и дождаться ответа (или таймаута).
@@ -200,6 +220,17 @@ impl ObsClient {
             .filter(|session| session.connected.load(Ordering::SeqCst))
         else {
             return false;
+        };
+        // OBS различает регистр: если в настройках «brb», а сцена — «BRB»,
+        // переключаемся по настоящему имени из кэша.
+        let scene_name = {
+            let scenes = self.lock(&session.scenes);
+            scenes
+                .iter()
+                .find(|scene| scene.as_str() == scene_name)
+                .or_else(|| scenes.iter().find(|scene| scene_name_eq(scene, scene_name)))
+                .cloned()
+                .unwrap_or_else(|| scene_name.to_string())
         };
         let id = session.next_id.fetch_add(1, Ordering::SeqCst);
         let frame = request_frame(
@@ -702,6 +733,8 @@ async fn run(
             .lock()
             .unwrap_or_else(|error| error.into_inner())
             .clear();
+        // Подсказки в маппинге тоже относятся к отключённой OBS.
+        emit(scenes_event(&HashSet::new()));
         if clean {
             emit(connection_status("disconnected"));
         }
@@ -747,6 +780,7 @@ async fn handle_message(
             };
             if d.get("eventType").and_then(Value::as_str) == Some("SceneListChanged") {
                 let names = scene_names(d.get("eventData"));
+                emit(scenes_event(&names));
                 *session
                     .scenes
                     .lock()
@@ -765,6 +799,7 @@ async fn handle_message(
             // ожидающего — его нет.
             if request_id == SCENE_LIST_REQUEST_ID {
                 let names = scene_names(d.get("responseData"));
+                emit(scenes_event(&names));
                 *session
                     .scenes
                     .lock()
@@ -865,6 +900,19 @@ fn connection_status(status: &str) -> Value {
     serde_json::json!({
         "type": event_types::CONNECTION_STATUS,
         "payload": { "service": "obs", "status": status },
+    })
+}
+
+/// Событие со списком сцен OBS: панель заполняет подсказки в маппинге.
+///
+/// Имена идут по алфавиту: от порядка в OBS подсказки прыгали бы при каждой
+/// правке сцен, а глазу список нужен стабильный.
+fn scenes_event(names: &HashSet<String>) -> Value {
+    let mut scenes: Vec<&String> = names.iter().collect();
+    scenes.sort();
+    serde_json::json!({
+        "type": event_types::OBS_SCENES,
+        "payload": { "scenes": scenes },
     })
 }
 
@@ -1156,6 +1204,61 @@ mod tests {
             .iter()
             .any(|event| event["type"] == json!("camera_angle_changed")
                 && event["payload"]["activeCameraAngle"] == json!("cam_side")));
+        client.stop();
+    }
+
+    #[tokio::test]
+    async fn a_scene_is_found_and_switched_without_the_letter_case() {
+        let sent = Arc::new(Mutex::new(Vec::new()));
+        let client = Arc::new(ObsClient::new(
+            fake_connect(Arc::clone(&sent)),
+            real_spawn(),
+            obs_config(),
+        ));
+        let (emit, events) = collector();
+        client.restart(true, emit);
+        assert!(wait_connected(&client).await, "OBS должен подключиться");
+
+        // Список сцен приходит ответом на служебный запрос — дождёмся кэша.
+        let mut cached = false;
+        for _ in 0..200 {
+            if client.has_scene("Main") {
+                cached = true;
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+        assert!(cached, "список сцен должен прийти");
+        // В настройках могли вписать «main», а сцена в OBS — «Main».
+        assert!(client.has_scene("main"));
+        assert_eq!(
+            client.scenes(),
+            vec!["Main".to_string(), "Opening".to_string()]
+        );
+
+        // Список ушёл в панель для подсказок в маппинге.
+        {
+            let events = events.lock().unwrap();
+            assert!(events
+                .iter()
+                .any(|event| event["type"] == json!("obs_scenes")
+                    && event["payload"]["scenes"] == json!(["Main", "Opening"])));
+        }
+
+        assert!(client.switch_scene("main"));
+        // Кадр уходит в сокет отдельной задачей: дождёмся, пока его отправят.
+        let mut switched = None;
+        for _ in 0..200 {
+            if let Some(frame) = requests(&sent, "SetCurrentProgramScene").last() {
+                switched = Some(frame.clone());
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+        assert_eq!(
+            switched.expect("переключение сцены")["d"]["requestData"]["sceneName"],
+            json!("Main")
+        );
         client.stop();
     }
 
