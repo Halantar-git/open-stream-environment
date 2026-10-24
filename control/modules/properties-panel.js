@@ -807,6 +807,10 @@ export function initPropertiesPanel({
         </div>`;
     } else if (inst.type === "music") {
       extraHtml = `
+        <div class="md-field"><label>${t("properties.musicDonatexWidget")}</label>
+          <input type="url" id="pMusicDonatexWidget" value="${escapeAttr(config.donatexWidgetUrl || "")}" placeholder="https://donatex.gg/widgets/music/…">
+          <p class="properties__hint">${t("properties.musicDonatexHint")}</p>
+        </div>
         <div class="md-field"><label>${t("properties.musicTestLink")}</label>
           <div class="properties__row">
             <input type="url" id="pMusicTestLink" value="${escapeAttr(config.testLink || "")}" placeholder="${escapeAttr(t("properties.musicTestLinkPlaceholder"))}" style="flex:1;min-width:0;">
@@ -1309,6 +1313,9 @@ export function initPropertiesPanel({
       wireSwitch(propertiesEl.querySelector("#pMusicAutoplay"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { autoplay: on } } }));
       wireSwitch(propertiesEl.querySelector("#pMusicQueue"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { queue: on } } }));
       wireSwitch(propertiesEl.querySelector("#pMusicShowAmount"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showAmount: on } } }));
+      propertiesEl.querySelector("#pMusicDonatexWidget").addEventListener("change", (e) => {
+        send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { donatexWidgetUrl: e.target.value.trim() } } });
+      });
       propertiesEl.querySelector("#pMusicVolume").addEventListener("input", (e) => {
         const value = Number(e.target.value);
         const label = propertiesEl.querySelector("#pMusicVolumeValue");

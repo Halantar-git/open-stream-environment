@@ -109,11 +109,16 @@
       this._audio = null;
       this._simTimer = null;
       this._simTick = null;
+      this._donatexFrame = null;
+      this._donatexUrl = "";
       this.current = null;
       this.queue = [];
       this.el = {};
 
       this.buildDom();
+      // Страница DonateX должна быть открыта всё время, а не только когда
+      // играет трек: по ней сервис и считает виджет подключённым.
+      this.syncDonatexWidget();
 
       this.subscribe(this.context.EVENT_TYPES.ALERT, (alert) => this.onAlert(alert));
       if (this.context.EVENT_TYPES.MUSIC_PLAY) {
@@ -133,6 +138,7 @@
 
     onUnmount() {
       this.stopPlayback();
+      this.removeDonatexWidget();
       this.current = null;
       this.queue.length = 0;
     }
@@ -142,6 +148,13 @@
       if (this.config.queue === false && this.queue.length) {
         this.queue.length = 0;
         this.renderQueue();
+      }
+      this.syncDonatexWidget();
+      // Со ссылкой на виджет DonateX трек играет их страница; наш звук
+      // выключаем, чтобы не было двух дорожек.
+      if (this.donatexWidgetUrl() && this._audio) {
+        this.stopAudio();
+        if (this.current) this.scheduleSimulatedStop();
       }
       if (this._audio) this._audio.volume = clamp01(this.config.volume, 1);
       if (this.current) this.renderMeta(this.current);
@@ -264,6 +277,52 @@
       };
     }
 
+    // ---- страница музыкального виджета DonateX ----
+
+    /// Адрес их виджета из кабинета: только он делает виджет «подключённым».
+    /// Проверяем жёстко — в iframe попадает только страница DonateX, а не
+    /// произвольный адрес из настроек.
+    donatexWidgetUrl() {
+      const raw = String(this.config.donatexWidgetUrl || "").trim();
+      if (!raw) return "";
+      try {
+        const url = new URL(raw);
+        if (url.protocol !== "https:") return "";
+        if (!/(^|\.)donatex\.gg$/i.test(url.hostname)) return "";
+        if (!/^\/widgets\/music\/[0-9a-z-]+\/?$/i.test(url.pathname)) return "";
+        return `${url.origin}${url.pathname}`;
+      } catch (_) {
+        return "";
+      }
+    }
+
+    /// Держать скрытую страницу в соответствии с настройкой. 1×1 в углу:
+    /// DonateX видит открытый виджет и играет трек сам, а оверлей не получает
+    /// второй интерфейс поверх нашего.
+    syncDonatexWidget() {
+      const url = this.donatexWidgetUrl();
+      if (url === this._donatexUrl) return;
+      this._donatexUrl = url;
+      this.removeDonatexWidget();
+      if (!url || !this.host) return;
+
+      const frame = document.createElement("iframe");
+      frame.className = "widget-music__donatex";
+      frame.src = url;
+      frame.title = "DonateX music";
+      frame.allow = "autoplay";
+      frame.tabIndex = -1;
+      frame.setAttribute("aria-hidden", "true");
+      this.host.appendChild(frame);
+      this._donatexFrame = frame;
+    }
+
+    removeDonatexWidget() {
+      if (!this._donatexFrame) return;
+      this._donatexFrame.remove();
+      this._donatexFrame = null;
+    }
+
     // ---- playback ----
 
     play(info) {
@@ -272,7 +331,10 @@
       this.host.classList.add("is-playing");
       this.applyPlaying(info);
 
-      if (this.config.autoplay !== false) this.startAudio(info.musicLink);
+      // С подключённым виджетом DonateX звук идёт с их страницы: пробуем
+      // играть только без него. Иначе трек звучал бы дважды.
+      if (this.donatexWidgetUrl()) this.scheduleSimulatedStop();
+      else if (this.config.autoplay !== false) this.startAudio(info.musicLink);
       else this.scheduleSimulatedStop();
     }
 

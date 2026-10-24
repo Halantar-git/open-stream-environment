@@ -268,4 +268,68 @@ describe("music widget", () => {
     expect(w._audio.volume).toBe(1);
     w.unmount();
   });
+
+  test("ссылка на виджет DonateX открывает скрытую страницу", () => {
+    const { w } = mountWidget({
+      donatexWidgetUrl: "https://donatex.gg/widgets/music/2905e5d9-9e5e-4ded-aaec-038e797c1348?utm=1",
+    });
+    const frame = w.host.children.find((child) => child.tagName === "IFRAME");
+
+    expect(frame).toBeTruthy();
+    expect(frame.src).toBe("https://donatex.gg/widgets/music/2905e5d9-9e5e-4ded-aaec-038e797c1348");
+    expect(frame.className).toBe("widget-music__donatex");
+    expect(frame.allow).toBe("autoplay");
+    expect(frame.tabIndex).toBe(-1);
+    w.unmount();
+    expect(w.host.children.some((child) => child.tagName === "IFRAME")).toBe(false);
+  });
+
+  test("чужая или неверная ссылка в iframe не попадает", () => {
+    [
+      "https://evil.example/widgets/music/2905e5d9",
+      "http://donatex.gg/widgets/music/2905e5d9",
+      "https://donatex.gg/streamer/settings",
+      "javascript:alert(1)",
+    ].forEach((donatexWidgetUrl) => {
+      const { w } = mountWidget({ donatexWidgetUrl });
+      expect(w.host.children.some((child) => child.tagName === "IFRAME")).toBe(false);
+      w.unmount();
+    });
+  });
+
+  test("ссылку на виджет DonateX можно убрать и вернуть", () => {
+    const { w } = mountWidget({ donatexWidgetUrl: "" });
+    expect(w.host.children.some((child) => child.tagName === "IFRAME")).toBe(false);
+
+    w.update({ config: { donatexWidgetUrl: "https://donatex.gg/widgets/music/abc" } });
+    expect(w.host.children.some((child) => child.tagName === "IFRAME")).toBe(true);
+
+    w.update({ config: { donatexWidgetUrl: "" } });
+    expect(w.host.children.some((child) => child.tagName === "IFRAME")).toBe(false);
+    w.unmount();
+  });
+
+  test("с виджетом DonateX свой звук не играет — трек не дублируется", () => {
+    const played = [];
+    global.Audio = class {
+      constructor(src) {
+        played.push(src);
+      }
+      addEventListener() {}
+      play() {
+        return { catch() {} };
+      }
+      pause() {}
+    };
+
+    const { w } = mountWidget({
+      autoplay: true,
+      donatexWidgetUrl: "https://donatex.gg/widgets/music/abc",
+    });
+    w.context.bus.emit(EVENT_TYPES.ALERT, donation({ musicLink: "https://cdn.example/track.mp3" }));
+
+    expect(played).toEqual([]);
+    expect(w.current.musicLink).toBe("https://cdn.example/track.mp3");
+    w.unmount();
+  });
 });

@@ -2583,6 +2583,18 @@
   color: var(--md-on-surface, #e8e5dd);
   font-family: var(--font-body, "Segoe UI", sans-serif);
 }
+/* Страница музыкального виджета DonateX: нужна только чтобы сервис видел
+   подключённый виджет и играл трек. В кадре её не видно. */
+.widget-music__donatex {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
 .orbital {
   display: flex;
   align-items: center;
