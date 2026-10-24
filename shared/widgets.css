@@ -2616,6 +2616,19 @@
 .widget-music.is-empty .orbital {
   display: none;
 }
+/* С наклоном (и в 3D-теме) строка появляется и исчезает плавно: резкая
+   подмена display на повёрнутой плашке выглядит рывком. Плоская остаётся
+   мгновенной, как у остальных 2D-виджетов. */
+.widget-music.is-motion .orbital {
+  transition: opacity 260ms ease, transform 260ms ease, visibility 0s linear 0s;
+}
+.widget-music.is-empty.is-motion .orbital {
+  display: flex;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: opacity 260ms ease, transform 260ms ease, visibility 0s linear 260ms;
+}
 /* Строка одна: название трека. Обложку, заказчика и прогресс убрали —
    звук и очередь всё равно у страницы DonateX. */
 .orbital {

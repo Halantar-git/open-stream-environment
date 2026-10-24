@@ -177,6 +177,32 @@ describe("music widget", () => {
     w.unmount();
   });
 
+  test("с наклоном появление и исчезновение плавные", () => {
+    const { w } = mountWidget({ perspective: 50 });
+    expect(w.host.classList.contains("is-motion")).toBe(true);
+
+    w.update({ config: { perspective: 0 } });
+    expect(w.host.classList.contains("is-motion")).toBe(false);
+
+    w.context.bus.emit(EVENT_TYPES.ALERT, donation());
+    expect(w.host.classList.contains("is-empty")).toBe(false);
+    w.unmount();
+  });
+
+  test("3D-тема включает плавность и без наклона", () => {
+    const parent = makeEl("div");
+    const context = makeContext();
+    context.threeDWidgets = ["grimhex"];
+    const w = new MusicWidget(
+      { id: "w1", type: "music", x: 0, y: 0, w: 10, h: 10, z: 0, visible: true, config: {} },
+      context,
+    );
+    w.mount(parent);
+
+    expect(w.host.classList.contains("is-motion")).toBe(true);
+    w.unmount();
+  });
+
   test("показывает название трека и не прячет строку", () => {
     const { w } = mountWidget({ autoplay: false });
     expect(w.host.classList.contains("is-empty")).toBe(true);

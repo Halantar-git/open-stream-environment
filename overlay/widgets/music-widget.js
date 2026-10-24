@@ -110,6 +110,8 @@
       ) {
         this._applyPerspective();
       }
+      // Смена темы меняет набор 3D-виджетов, а с ним и плавность.
+      this._syncMotion();
       // Со ссылкой на виджет DonateX трек играет их страница: свой звук и
       // таймер выключаем, а строку дальше ведёт опрос текущего трека.
       if (this.donatexWidgetUrl() && this.current) this.showTrack(this.current);
@@ -120,6 +122,7 @@
     // Наклон как у остальных виджетов: `perspective` 0–100 и направление,
     // в какую сторону уходит дальний край.
     _applyPerspective() {
+      this._syncMotion();
       const value = Math.max(0, Math.min(100, Number(this.config.perspective) || 0));
       if (!value) {
         this._setTilt("");
@@ -139,6 +142,16 @@
         rx = -magnitude;
       }
       this._setTilt(`perspective(1200px) rotateY(${ry}deg) rotateX(${rx}deg)`);
+    }
+
+    /// Плавные появление и исчезновение — только когда у виджета есть объём:
+    /// включён наклон или тема работает с 3D-виджетами. Резкий display:none
+    /// на повёрнутой плашке выглядит рывком, а плоская строка, как и
+    /// остальные 2D-виджеты, появляется мгновенно.
+    _syncMotion() {
+      const value = Math.max(0, Math.min(100, Number(this.config.perspective) || 0));
+      const threeD = Array.isArray(this.context.threeDWidgets) && this.context.threeDWidgets.length > 0;
+      this.host.classList.toggle("is-motion", value > 0 || threeD);
     }
 
     onAlert(alert) {
