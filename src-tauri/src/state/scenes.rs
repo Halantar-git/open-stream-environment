@@ -43,7 +43,15 @@ fn guest_cam(slot: &str, x: i64, y: i64, z: i64) -> Value {
         "h": 36,
         "z": z,
         "visible": true,
-        "config": { "source": "remote", "guestSlot": slot, "label": "LIVE", "showLabel": true, "showGuestName": true },
+        "config": {
+            "source": "remote",
+            "guestSlot": slot,
+            "label": "LIVE",
+            "showLabel": true,
+            "showGuestName": true,
+            // Гости обычно в Discord: в эфир идёт только видео.
+            "videoOnly": true,
+        },
     })
 }
 
@@ -232,7 +240,35 @@ pub fn normalize_scenes(config: &mut ConfigFile) {
     }
 
     upgrade_guest_badges(&mut scenes);
+    mute_guest_audio(&mut scenes);
     config.set("scenes", Value::Object(scenes));
+}
+
+/// Гостевой звук по умолчанию выключен — во всех сценах.
+///
+/// Гости обычно сидят в Discord, и их микрофон в эфире не нужен: виджет не
+/// выводит аудио и даже не просит дорожку у гостя. Флаг ставим только там,
+/// где его ещё нет: явный выбор «звук нужен» не трогаем.
+fn mute_guest_audio(scenes: &mut Map<String, Value>) {
+    for scene in scenes.values_mut() {
+        let Some(widgets) = scene.get_mut("widgets").and_then(Value::as_array_mut) else {
+            continue;
+        };
+        for widget in widgets {
+            if widget.get("type").and_then(Value::as_str) != Some("webcam") {
+                continue;
+            }
+            let Some(config) = widget.get_mut("config").and_then(Value::as_object_mut) else {
+                continue;
+            };
+            if config.get("source").and_then(Value::as_str) != Some("remote") {
+                continue;
+            }
+            if !config.contains_key("videoOnly") {
+                config.insert("videoOnly".to_string(), Value::Bool(true));
+            }
+        }
+    }
 }
 
 /// Вернуть бейдж рамкам сцены «Гости» из первых сборок.
@@ -518,6 +554,8 @@ mod tests {
         assert_eq!(guests[0]["config"]["label"], json!("LIVE"));
         assert_eq!(guests[0]["config"]["showLabel"], json!(true));
         assert_eq!(guests[0]["config"]["showGuestName"], json!(true));
+        // Гость обычно в Discord: в эфир идёт только видео.
+        assert_eq!(guests[0]["config"]["videoOnly"], json!(true));
     }
 
     #[test]
@@ -566,11 +604,40 @@ mod tests {
         assert_eq!(widgets[0]["config"]["showLabel"], json!(true));
         // Новая настройка бейджа — тоже из умолчаний, в старом конфиге её нет.
         assert_eq!(widgets[0]["config"]["showGuestName"], json!(true));
+        assert_eq!(widgets[0]["config"]["videoOnly"], json!(true));
         assert_eq!(widgets[1]["config"]["label"], json!("Гость"));
         assert_eq!(widgets[1]["config"]["showGuestName"], json!(true));
         // Добавленный вручную виджет не трогаем.
         assert!(widgets[2]["config"].get("showGuestName").is_none());
         assert_eq!(widgets[2]["config"]["label"], json!(""));
+    }
+
+    #[test]
+    fn guest_audio_is_off_by_default_in_every_scene() {
+        let fixture = Fixture::new("guest-audio");
+        let mut config = fixture.config();
+        config.set(
+            "scenes",
+            json!({
+                "talk": {
+                    "widgets": [
+                        // Гостевая камера из старой раскладки: флага звука ещё нет.
+                        { "id": "a", "type": "webcam", "config": { "source": "remote", "guestSlot": "cam2" } },
+                        // Явно включённый звук трогать не должны.
+                        { "id": "b", "type": "webcam", "config": { "source": "remote", "guestSlot": "cam3", "videoOnly": false } },
+                        // Локальная камера к гостевому звуку отношения не имеет.
+                        { "id": "c", "type": "webcam", "config": { "source": "camera" } }
+                    ]
+                }
+            }),
+        );
+
+        normalize_scenes(&mut config);
+        let scenes = config.get("scenes").unwrap();
+        let widgets = scenes["talk"]["widgets"].as_array().unwrap();
+        assert_eq!(widgets[0]["config"]["videoOnly"], json!(true));
+        assert_eq!(widgets[1]["config"]["videoOnly"], json!(false));
+        assert!(widgets[2]["config"].get("videoOnly").is_none());
     }
 
     #[test]

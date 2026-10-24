@@ -52,7 +52,15 @@
       h: 36,
       z,
       visible: true,
-      config: { source: "remote", guestSlot: slot, label: "LIVE", showLabel: true, showGuestName: true },
+      config: {
+        source: "remote",
+        guestSlot: slot,
+        label: "LIVE",
+        showLabel: true,
+        showGuestName: true,
+        // Гости обычно в Discord: в эфир идёт только видео.
+        videoOnly: true,
+      },
     };
   }
 

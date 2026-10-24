@@ -244,7 +244,9 @@
       minH: 8,
       defaultConfig: {
         source: "frame",
-        videoOnly: false,
+        // Гость обычно сидит в Discord, и его микрофон в эфире не нужен:
+        // по умолчанию звук не выводим и даже не просим у него аудиодорожку.
+        videoOnly: true,
         label: "LIVE",
         showLabel: true,
         labelPosition: "top-left",

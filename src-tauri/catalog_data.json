@@ -1,5 +1,5 @@
 {
-  "sourceHash": "bbd7bddd3e285395",
+  "sourceHash": "869f767b801a9999",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -262,7 +262,7 @@
       "minH": 8,
       "defaultConfig": {
         "source": "frame",
-        "videoOnly": false,
+        "videoOnly": true,
         "label": "LIVE",
         "showLabel": true,
         "labelPosition": "top-left",
