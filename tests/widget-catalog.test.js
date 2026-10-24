@@ -15,7 +15,7 @@
  * along with this program.  If not, see <https://gnu.org>.
  */
 
-const { WIDGET_TYPES, widgetsForTheme, themeAllowsWidget, replacedBy3d, widgetRole, resolveTypeForTheme, isAnimatedWidget } = require("../shared/widget-catalog");
+const { WIDGET_TYPES, widgetsForTheme, themeAllowsWidget, replacedBy3d, widgetRole, resolveTypeForTheme, typeForAdd, isAnimatedWidget } = require("../shared/widget-catalog");
 const { THREE_D_STYLES } = require("../shared/themes");
 
 describe("widget-catalog helpers", () => {
@@ -225,6 +225,27 @@ describe("widget-catalog helpers", () => {
     expect(themeAllowsWidget(WIDGET_TYPES.chat, { activeThemeId: "nebula", themes })).toBe(true);
     expect(themeAllowsWidget(WIDGET_TYPES.chat, null)).toBe(true);
     expect(themeAllowsWidget(null, { activeThemeId: "orbital", themes })).toBe(true);
+  });
+
+  test("typeForAdd не добавляет 2D-виджет, который сразу скроется 3D-двойником", () => {
+    const layout = [{ type: "webcam" }, { type: "grimhex-chat" }];
+
+    // Явный 3D-чат в раскладке: добавляем 3D-вариант, иначе виджет будет скрыт.
+    expect(typeForAdd("chat", layout, ["grimhex-chat"])).toBe("grimhex-chat");
+    expect(typeForAdd("goal", layout, ["grimhex-chat"])).toBe("goal");
+
+    // Без явного двойника тип остаётся прежним.
+    expect(typeForAdd("chat", [{ type: "webcam" }], ["grimhex-chat"])).toBe("chat");
+
+    // 3D-виджет добавляется как есть, даже если рядом стоит его 2D-роль.
+    expect(typeForAdd("grimhex-chat", [{ type: "chat" }], ["grimhex-chat"])).toBe("grimhex-chat");
+
+    // Несколько кандидатов на роль — подменять нечем.
+    expect(typeForAdd("chat", layout, ["grimhex-chat", "teso-chat"])).toBe("chat");
+
+    // Нет роли или нет каталога — тот же тип.
+    expect(typeForAdd("webcam", layout, ["grimhex-chat"])).toBe("webcam");
+    expect(typeForAdd(undefined, layout, [])).toBeUndefined();
   });
 
   test("THREE_D_STYLES покрывает ровно все 3D-наборы виджетов", () => {

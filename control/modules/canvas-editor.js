@@ -51,6 +51,7 @@ export function initCanvasEditor({
   replacedBy3d,
   widgetRole,
   resolveTypeForTheme,
+  typeForAdd,
   EVENT_TYPES,
   send,
   clamp,
@@ -1440,8 +1441,13 @@ export function initCanvasEditor({
 
   function addWidget(type, dropXY) {
     if (state.layoutLocked) return;
+    // В раскладке с явным 3D-виджетом той же роли 2D-двойник будет скрыт:
+    // ставим тот тип, который реально отрисуется.
+    const nextType = typeForAdd
+      ? typeForAdd(type, state.layout, state.appearance.active3dWidgets || [])
+      : type;
     state.pendingAdd = { knownIds: new Set(state.layout.map((w) => w.id)), dropXY };
-    send(EVENT_TYPES.CMD_ADD_WIDGET, { type });
+    send(EVENT_TYPES.CMD_ADD_WIDGET, { type: nextType });
   }
 
   // ---- theme + grid (canvas preview only — app chrome stays fixed Nebula) ----

@@ -1860,6 +1860,36 @@ mod tests {
     }
 
     #[test]
+    fn the_guests_scene_is_in_the_snapshot_with_its_chat() {
+        let fixture = Fixture::new("guests-scene");
+        let snapshot = fixture.diagnostics.state_snapshot();
+        let widgets = snapshot["scenes"]["guests"]["widgets"]
+            .as_array()
+            .expect("у сцены гостей есть раскладка");
+        assert!(widgets.iter().any(|widget| widget["type"] == json!("chat")));
+
+        // Виджет добавляется именно в сцену, а не в основной оверлей.
+        let mut receiver = fixture.listen();
+        handle(
+            &fixture.diagnostics,
+            None,
+            &json!({
+                "type": event_types::CMD_ADD_WIDGET,
+                "payload": { "type": "goal", "target": "guests" },
+            }),
+        );
+
+        let message = frame(&mut receiver);
+        assert_eq!(message["type"], json!(event_types::SCENE_LAYOUT_UPDATE));
+        assert_eq!(message["payload"]["scene"], json!("guests"));
+        assert!(message["payload"]["layout"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|widget| widget["type"] == json!("goal")));
+    }
+
+    #[test]
     fn an_unknown_command_changes_nothing() {
         let fixture = Fixture::new("unknown");
         let mut receiver = fixture.listen();

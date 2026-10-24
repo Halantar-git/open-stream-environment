@@ -1121,6 +1121,25 @@
     return counterpart.type;
   }
 
+  // Какой тип реально добавить в раскладку.
+  //
+  // Если в ней уже стоит явный 3D-виджет той же роли, 2D-двойник скроется
+  // правилом замены: в редиторе он серый, в эфире его нет. В этом случае
+  // добавляем 3D-вариант — иначе пользователь ставит виджет, а он «исчезает».
+  function typeForAdd(widgetType, layout, active3d) {
+    const def = WIDGET_TYPES[widgetType];
+    if (!def || def.theme) return widgetType;
+    const role = widgetRole(widgetType);
+    if (!role) return widgetType;
+    const items = Array.isArray(layout) ? layout : [];
+    const explicit = items.some((other) => {
+      const otherDef = other && WIDGET_TYPES[other.type];
+      return !!otherDef && !!otherDef.theme && widgetRole(other.type) === role;
+    });
+    if (!explicit) return widgetType;
+    return resolveTypeForTheme(widgetType, Array.isArray(active3d) ? active3d : []);
+  }
+
   // Типы, которые держат собственный canvas-цикл (`requestAnimationFrame`,
   // 20–30 FPS) и потому реально грузят GPU/CPU. Источник истины — виджеты,
   // вызывающие `startRenderLoop()` или переопределяющие `_isAnimated()`,
@@ -1166,7 +1185,7 @@
     return ANIMATED_TYPES.has(type);
   }
 
-  const api = { WIDGET_TYPES, CANVAS, widgetsForTheme, themeAllowsWidget, replacedBy3d, widgetRole, counterpartTypeForRole, resolveTypeForTheme, isAnimatedWidget };
+  const api = { WIDGET_TYPES, CANVAS, widgetsForTheme, themeAllowsWidget, replacedBy3d, widgetRole, counterpartTypeForRole, resolveTypeForTheme, typeForAdd, isAnimatedWidget };
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;

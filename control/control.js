@@ -41,7 +41,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const { safeCssColor, createCaptureGeneration, pickCaptureDevice, isExplicitDevice } = window.ControlGuards;
   const { micRotationPatch } = window.ControlMicRotation;
   const { cameraOutputSize } = window.ControlCamera;
-  const { WIDGET_TYPES, widgetsForTheme, themeAllowsWidget, replacedBy3d, widgetRole, resolveTypeForTheme, isAnimatedWidget } = window.WidgetCatalog;
+  const { WIDGET_TYPES, widgetsForTheme, themeAllowsWidget, replacedBy3d, widgetRole, resolveTypeForTheme, typeForAdd, isAnimatedWidget } = window.WidgetCatalog;
   const t = (key, params) => (window.I18n ? window.I18n.t(key, params) : key);
 
   const params = new URLSearchParams(location.search);
@@ -2805,6 +2805,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     replacedBy3d,
     widgetRole,
     resolveTypeForTheme,
+    typeForAdd,
     EVENT_TYPES,
     send,
     clamp,
