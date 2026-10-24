@@ -31,8 +31,8 @@ fn default_socials() -> Value {
 /// Гостевая плитка раскладки сцены «Гости»: слот мультикама в сетке 2×2.
 ///
 /// Ширина и высота в процентах равны: холст 16:9, поэтому одинаковые
-/// проценты по осям дают кадр 16:9. Подпись выключена — имя гостя до
-/// подключения неизвестно, его вписывают в инспекторе.
+/// проценты по осям дают кадр 16:9. Бейдж «LIVE» — как у остальных рамок,
+/// имя гостя вписывают в инспекторе, если нужно.
 fn guest_cam(slot: &str, x: i64, y: i64, z: i64) -> Value {
     json!({
         "id": format!("guests-{slot}"),
@@ -43,7 +43,7 @@ fn guest_cam(slot: &str, x: i64, y: i64, z: i64) -> Value {
         "h": 36,
         "z": z,
         "visible": true,
-        "config": { "source": "remote", "guestSlot": slot, "label": "", "showLabel": false },
+        "config": { "source": "remote", "guestSlot": slot, "label": "LIVE", "showLabel": true },
     })
 }
 
@@ -231,7 +231,48 @@ pub fn normalize_scenes(config: &mut ConfigFile) {
         }
     }
 
+    upgrade_guest_badges(&mut scenes);
     config.set("scenes", Value::Object(scenes));
+}
+
+/// Вернуть бейдж рамкам сцены «Гости» из первых сборок.
+///
+/// Та раскладка рождалась с пустой подписью и выключенным бейджем: имена гостей
+/// до подключения неизвестны. На эфире рамка без бейджа выглядела “голой” на
+/// фоне остальных, и владельцу пришлось бы включать подпись у четырёх
+/// виджетов вручную. Трогаем только нетронутые рамки (`guests-cam*` с пустой
+/// подписью): переименованные и добавленные вручную остаются как есть.
+fn upgrade_guest_badges(scenes: &mut Map<String, Value>) {
+    let Some(widgets) = scenes
+        .get_mut("guests")
+        .and_then(Value::as_object_mut)
+        .and_then(|scene| scene.get_mut("widgets"))
+        .and_then(Value::as_array_mut)
+    else {
+        return;
+    };
+    for widget in widgets {
+        let id = widget.get("id").and_then(Value::as_str).unwrap_or_default();
+        if !id.starts_with("guests-cam") {
+            continue;
+        }
+        let Some(config) = widget.get_mut("config").and_then(Value::as_object_mut) else {
+            continue;
+        };
+        let empty = config
+            .get("label")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .unwrap_or("")
+            .is_empty();
+        if !empty {
+            continue;
+        }
+        config.insert("label".to_string(), Value::from("LIVE"));
+        if config.get("showLabel").and_then(Value::as_bool) == Some(false) {
+            config.insert("showLabel".to_string(), Value::Bool(true));
+        }
+    }
 }
 
 /// Изменить сцену; `None` — такой сцены нет.
@@ -468,6 +509,9 @@ mod tests {
             .collect();
         assert_eq!(slots, ["cam2", "cam3", "cam4", "cam5"]);
         assert!(guests.iter().any(|widget| widget["type"] == json!("chat")));
+        // Бейдж на рамках такой же, как у остальных камер темы.
+        assert_eq!(guests[0]["config"]["label"], json!("LIVE"));
+        assert_eq!(guests[0]["config"]["showLabel"], json!(true));
     }
 
     #[test]
@@ -488,6 +532,34 @@ mod tests {
         // Посторонняя сцена не трогается, остальные создаются.
         assert_eq!(scenes["custom"], json!({ "x": 1 }));
         assert!(scenes.get("brb").is_some());
+    }
+
+    #[test]
+    fn guest_frames_from_the_first_layout_get_a_badge() {
+        let fixture = Fixture::new("guests-badge");
+        let mut config = fixture.config();
+        // Раскладка из первой сборки: подпись пустая, бейдж выключен.
+        config.set(
+            "scenes",
+            json!({
+                "guests": {
+                    "widgets": [
+                        { "id": "guests-cam2", "type": "webcam", "config": { "source": "remote", "guestSlot": "cam2", "label": "", "showLabel": false } },
+                        // Переименованная рамка и виджет, добавленный вручную, остаются как есть.
+                        { "id": "guests-cam3", "type": "webcam", "config": { "label": "Гость", "showLabel": true } },
+                        { "id": "abc", "type": "webcam", "config": { "label": "", "showLabel": false } }
+                    ]
+                }
+            }),
+        );
+
+        normalize_scenes(&mut config);
+        let scenes = config.get("scenes").unwrap();
+        let widgets = scenes["guests"]["widgets"].as_array().unwrap();
+        assert_eq!(widgets[0]["config"]["label"], json!("LIVE"));
+        assert_eq!(widgets[0]["config"]["showLabel"], json!(true));
+        assert_eq!(widgets[1]["config"]["label"], json!("Гость"));
+        assert_eq!(widgets[2]["config"]["label"], json!(""));
     }
 
     #[test]
