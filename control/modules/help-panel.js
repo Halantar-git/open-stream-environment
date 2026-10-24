@@ -148,6 +148,15 @@ const SECTIONS = [
     ],
   },
   {
+    id: "packages",
+    title: "help.packages.title",
+    blocks: [
+      { type: "p", key: "help.packages.p1" },
+      { type: "p", key: "help.packages.p2" },
+      { type: "p", key: "help.packages.p3" },
+    ],
+  },
+  {
     id: "scenes",
     title: "help.scenes.title",
     blocks: [

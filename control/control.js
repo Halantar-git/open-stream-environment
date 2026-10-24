@@ -524,9 +524,13 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   function showWidgetTooltip(card, def) {
     if (!widgetTooltip) return;
+    // У пакетного виджета имени и описания нет в словарях: они приходят из
+    // манифеста и уже на языке автора пакета.
+    const label = (def.plugin && def.label) || t("widgets." + def.type);
+    const description = (def.plugin && def.description) || t("widgets." + def.type + "Desc");
     widgetTooltip.innerHTML = `
-      <span class="widget-tooltip__label">${escapeHtml(t("widgets." + def.type))}</span>
-      <span class="widget-tooltip__desc">${escapeHtml(t("widgets." + def.type + "Desc"))}</span>`;
+      <span class="widget-tooltip__label">${escapeHtml(label)}</span>
+      <span class="widget-tooltip__desc">${escapeHtml(description)}</span>`;
     widgetTooltip.hidden = false;
     const rect = card.getBoundingClientRect();
     const gap = 10;
@@ -553,10 +557,10 @@ const { EVENT_TYPES } = window.SharedEvents;
       card.className = "library-card";
       card.draggable = true;
       card.innerHTML = `
-        <span class="library-card__icon">${ICONS[def.icon] || ""}</span>
+        <span class="library-card__icon">${ICONS[def.icon] || ICONS.widgetCustom || ""}</span>
         <span class="library-card__text">
-          <span class="library-card__label">${t("widgets." + def.type)}</span>
-          <span class="library-card__desc">${t("widgets." + def.type + "Desc")}</span>
+          <span class="library-card__label">${escapeHtml((def.plugin && def.label) || t("widgets." + def.type))}</span>
+          <span class="library-card__desc">${escapeHtml((def.plugin && def.description) || t("widgets." + def.type + "Desc"))}</span>
         </span>`;
       card.addEventListener("click", () => canvasEditor.addWidget(def.type, null));
       card.addEventListener("mouseenter", () => showWidgetTooltip(card, def));
@@ -2833,10 +2837,12 @@ const { EVENT_TYPES } = window.SharedEvents;
     const card = document.createElement("div");
     card.className = "theme-swatch" + (isActive ? " is-active" : "");
     const dotColors = theme.builtin
-      ? BuiltinThemes.BUILTIN_THEMES[theme.id].tokens
+      ? (BuiltinThemes.BUILTIN_THEMES[theme.id] || {}).tokens || null
       : null;
-    const dots = theme.builtin
+    const dots = dotColors
       ? [dotColors["--md-primary"], dotColors["--md-secondary"], dotColors["--md-tertiary"]]
+      : theme.colors
+      ? theme.colors
       : theme.seeds
       ? [theme.seeds.primary, theme.seeds.secondary, theme.seeds.tertiary]
       : ["#888", "#888", "#888"];
@@ -5340,3 +5346,16 @@ const { EVENT_TYPES } = window.SharedEvents;
     });
     renderUpdateCheckButton();
   }
+
+/*
+  Пакеты приезжают отдельным HTTP-запросом параллельно с шиной: к первому
+  снимку состояния их может ещё не быть. Когда список готов, дополняем колонку
+  виджетов и сетку тем — состояние уже пришло, повторный рендер безопасен.
+  Код пакетов панель не исполняет: ей нужны только карточки и токены.
+*/
+if (window.OSE) {
+  window.OSE.load({ widgets: false }).then(() => {
+    renderLibrary();
+    renderThemeGrid();
+  });
+}

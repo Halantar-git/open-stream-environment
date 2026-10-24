@@ -1,0 +1,11 @@
+/*
+  Правила темы пишутся под её же id. Без селектора [data-theme=...] они
+  протекли бы в другие темы: CSS-файл грузится в ту же страницу.
+*/
+[data-theme="plugin:plain-theme"] .widget-instance {
+  border-radius: 8px;
+}
+
+[data-theme="plugin:plain-theme"] .widget-instance--alerts {
+  letter-spacing: 0.01em;
+}

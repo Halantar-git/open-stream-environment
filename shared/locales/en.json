@@ -1710,6 +1710,12 @@
       "p1": "In the left column of the Poll panel you can save the current configuration (command, chart type and options) as a named preset.",
       "p2": "Selecting a preset in the list loads its options, command and chart type. Save overwrites the selected preset or creates a new one from the entered name; Delete removes it. Presets live in local-db.json."
     },
+    "packages": {
+      "title": "Widget and theme packages",
+      "p1": "A widget or theme can be installed as a folder in the packages directory: %APPDATA%\\com.openstreamenvironment.app\\plugins\\<id>\\ (in development — config/plugins/<id>/). Restart the app after installing: manifests are read at startup.",
+      "p2": "A widget is described by widget.json — name, code file, styles, default size and a settings schema. It appears as its own card in the library, and the inspector renders fields from the schema. A theme is described by theme.json — a token set and optional CSS; it appears in the theme list as plugin:<id>.",
+      "p3": "Package code runs in the overlay page with full permissions, so install only trusted packages. See docs/plugin-api.md and docs/examples/plugins/ for the manifest format and examples."
+    },
     "themes": {
       "title": "Themes",
       "p1": "In Settings → Appearance each theme is a \"family\" with a base 2D palette and, for some, a 3D variant: Material You, Orbital (a Star Citizen HUD), Pixel Perfect (a minimal pixel-style UI), Elite (an orange Elite Dangerous HUD), Nuclear (a CRT terminal), TESO (dark gold/bronze, Cinzel/Montserrat fonts) and Wardogs (a tactical shooter HUD with an amber accent).",

@@ -465,6 +465,22 @@
   manager.register("donatex-ai", OW.DonatexAiWidget);
   manager.register("music", OW.MusicWidget);
 
+  // Пакеты подключаются до сокета: иначе первый снимок раскладки пришёл бы
+  // раньше классов, и менеджер создал бы пустые заглушки BaseWidget вместо
+  // виджетов из пакета. `onWidget` отдаёт и уже определённые классы, и те, что
+  // появятся позже — если пакет догрузится с задержкой.
+  function connectWithPlugins() {
+    const plugins = window.OSE;
+    if (!plugins) {
+      connect();
+      return;
+    }
+    plugins.onWidget((type, WidgetClass) => {
+      if (typeof WidgetClass === "function") manager.register(type, WidgetClass);
+    });
+    plugins.load().then(connect, connect);
+  }
+
   // ---- socket ----
   function handleMessage(msg) {
     switch (msg.type) {
@@ -700,5 +716,5 @@
     OW.HudEditor.init({ canvas, manager, send, EVENT_TYPES, getLayout: () => currentLayout, shouldGhost });
   }
 
-  connect();
+  connectWithPlugins();
 })();

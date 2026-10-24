@@ -15,6 +15,7 @@ pub mod diagnostics;
 pub mod hud;
 pub mod instance;
 pub mod integrations;
+pub mod plugins;
 pub mod protocol;
 pub mod server;
 pub mod state;
@@ -189,6 +190,9 @@ pub fn run() {
             storage
                 .ensure_config_dir()
                 .map_err(|error| format!("каталог данных {:?}: {error}", storage.config_dir()))?;
+            // Пакеты виджетов и тем читаются до сервера: каталог и список тем
+            // должны быть уже полными в первом снимке состояния.
+            crate::plugins::install(&storage.config_dir().join(crate::plugins::DIRECTORY));
             // Суточный файл журнала (`logs/ose-YYYY-MM-DD.log`) — его же
             // читает отчёт для поддержки.
             crate::storage::logger::enable_file_logging(&storage.logs_dir());

@@ -1,0 +1,29 @@
+{
+  "apiVersion": 1,
+  "kind": "widget",
+  "id": "hello",
+  "name": "Привет",
+  "description": "Карточка с текстом — пример пакета виджета",
+  "version": "1.0.0",
+  "author": "Open Stream Environment",
+  "entry": "widget.js",
+  "styles": ["widget.css"],
+  "icon": "widgetCustom",
+  "defaultGeometry": { "x": 40, "y": 42, "w": 20, "h": 10 },
+  "minW": 8,
+  "minH": 4,
+  "settings": {
+    "text": { "type": "string", "label": "Текст", "default": "Привет, эфир!" },
+    "size": { "type": "range", "label": "Размер", "min": 8, "max": 72, "step": 1, "default": 24 },
+    "color": { "type": "color", "label": "Цвет", "default": "#ffffff" },
+    "align": {
+      "type": "select",
+      "label": "Выравнивание",
+      "default": "center",
+      "options": [
+        { "value": "left", "label": "Слева" },
+        { "value": "center", "label": "По центру" }
+      ]
+    }
+  }
+}

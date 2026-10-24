@@ -297,6 +297,13 @@
       },
     });
     registerAll(manager);
+    // Виджеты из пакетов: `onWidget` отдаёт и уже загруженные классы, и те,
+    // что догрузятся после первого снимка раскладки.
+    if (window.OSE && typeof window.OSE.onWidget === "function") {
+      window.OSE.onWidget((type, WidgetClass) => {
+        if (manager && typeof WidgetClass === "function") manager.register(type, WidgetClass);
+      });
+    }
     return manager;
   }
 

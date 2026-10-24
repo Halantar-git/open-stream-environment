@@ -62,6 +62,76 @@ export function initPropertiesPanel({
   const propertiesTitle = el("propertiesTitle");
   const propertiesEl = el("properties");
 
+  /*
+    Поля пакетного виджета по схеме из манифеста. Инспектор не знает, что
+    виджет делает, — он рисует только типы из `settings`, поэтому новый виджет
+    не требует правок в панели.
+  */
+  function pluginSettingHtml(index, key, field, value) {
+    const label = escapeHtml(field.label || key);
+    const id = `pPlugin${index}`;
+    const type = field.type || "string";
+    const current = value == null ? "" : value;
+    if (type === "boolean") {
+      return `<div class="properties__toggle-row"><label>${label}</label>${switchHtml(id, value === true)}</div>`;
+    }
+    if (type === "color") {
+      return `<div class="md-field"><label>${label}</label><input type="color" id="${id}" value="${escapeAttr(current || "#ffffff")}"></div>`;
+    }
+    if (type === "select") {
+      const options = (Array.isArray(field.options) ? field.options : [])
+        .map((option) => {
+          const optionValue = typeof option === "string" ? option : option && option.value;
+          const optionLabel = typeof option === "string" ? option : (option && option.label) || optionValue;
+          const selected = String(optionValue) === String(current) ? "selected" : "";
+          return `<option value="${escapeAttr(optionValue)}" ${selected}>${escapeHtml(optionLabel)}</option>`;
+        })
+        .join("");
+      return `<div class="md-field"><label>${label}</label><select id="${id}">${options}</select></div>`;
+    }
+    if (type === "text") {
+      return `<div class="md-field"><label>${label}</label><textarea id="${id}" rows="4">${escapeHtml(current)}</textarea></div>`;
+    }
+    const limit = (name) =>
+      Number.isFinite(Number(field[name])) ? `${name}="${Number(field[name])}"` : "";
+    if (type === "range") {
+      return `<div class="md-field"><label>${label}: <span id="${id}Value">${escapeHtml(current)}</span></label><input type="range" id="${id}" ${limit("min")} ${limit("max")} ${limit("step")} value="${escapeAttr(current)}"></div>`;
+    }
+    if (type === "number") {
+      return `<div class="md-field"><label>${label}</label><input type="number" id="${id}" ${limit("min")} ${limit("max")} ${limit("step")} value="${escapeAttr(current)}"></div>`;
+    }
+    return `<div class="md-field"><label>${label}</label><input type="text" id="${id}" value="${escapeAttr(current)}"></div>`;
+  }
+
+  /* Правки уходят тем же `CMD_UPDATE_WIDGET`, что и у встроенных виджетов. */
+  function wirePluginSettings(inst, def) {
+    Object.entries(def.settings || {}).forEach(([key, field], index) => {
+      const input = document.getElementById(`pPlugin${index}`);
+      if (!input) return;
+      const kind = (field && field.type) || "string";
+      const commit = (value) =>
+        send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { [key]: value } } });
+      if (kind === "boolean") {
+        wireSwitch(input, (on) => commit(on));
+        return;
+      }
+      if (kind === "range") {
+        input.addEventListener("input", (event) => {
+          const value = Number(event.target.value);
+          const label = document.getElementById(`pPlugin${index}Value`);
+          if (label) label.textContent = String(value);
+          commit(value);
+        });
+        return;
+      }
+      if (kind === "number") {
+        input.addEventListener("change", (event) => commit(Number(event.target.value)));
+        return;
+      }
+      input.addEventListener("change", (event) => commit(event.target.value));
+    });
+  }
+
   function wireWidgetSocialsList(inst, socials) {
     const host = document.getElementById("pSocialsList");
     host.innerHTML = socials
@@ -274,7 +344,7 @@ export function initPropertiesPanel({
     if (!force && sig === lastSig && propertiesEl.contains(document.activeElement)) return;
     lastSig = sig;
     const def = WIDGET_TYPES[type] || {};
-    propertiesTitle.textContent = t("widgets." + (def.type || type));
+    propertiesTitle.textContent = (def.plugin && def.label) || t("widgets." + (def.type || type));
     const config = inst.config || {};
 
     let extraHtml = "";
@@ -807,6 +877,13 @@ export function initPropertiesPanel({
         </div>
         <div class="md-field"><label>${t("properties.snowColor")}</label><input type="text" id="pSnowColor" value="${escapeAttr(config.color || "#ffffff")}" placeholder="#ffffff"></div>
         <div class="properties__toggle-row"><label>${t("properties.snowReact")}</label>${switchHtml("pSnowReact", config.reactToAlerts !== false)}</div>`;
+    } else if (def.settings && Object.keys(def.settings).length) {
+      // Пакетный виджет: набор полей и умолчания описаны в манифесте.
+      extraHtml = Object.entries(def.settings)
+        .map(([key, field], index) =>
+          pluginSettingHtml(index, key, field || {}, config[key] ?? (field || {}).default),
+        )
+        .join("");
     }
 
     // Поворот в плоскости кадра — всем 3D-виджетам. Угол складывается с
@@ -1300,10 +1377,15 @@ export function initPropertiesPanel({
       );
       propertiesEl.querySelector("#pSnowColor").addEventListener("change", (e) => patchSnow({ color: e.target.value.trim() }));
       wireSwitch(propertiesEl.querySelector("#pSnowReact"), (on) => patchSnow({ reactToAlerts: on }));
+    } else if (def.settings && Object.keys(def.settings).length) {
+      wirePluginSettings(inst, def);
     }
 
     document.getElementById("pDeleteBtn").addEventListener("click", () => {
-      const label = inst.type === "custom" && config.name ? config.name : t("widgets." + (def.type || inst.type));
+      const label =
+        inst.type === "custom" && config.name
+          ? config.name
+          : (def.plugin && def.label) || t("widgets." + (def.type || inst.type));
       if (!confirm(t("common.deleteWidgetConfirm", { name: label }))) return;
       send(EVENT_TYPES.CMD_REMOVE_WIDGET, { id: inst.id });
       state.selectedId = null;

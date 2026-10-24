@@ -260,5 +260,8 @@
   }
 
   if (window.SceneCanvas) window.SceneCanvas.init(sceneType, send);
-  connect();
+  // Пакеты виджетов должны быть загружены до первого снимка раскладки:
+  // иначе сцена получит тип, класса которого ещё нет.
+  if (window.OSE) window.OSE.load().then(connect, connect);
+  else connect();
 })();

@@ -1381,7 +1381,10 @@ export function initCanvasEditor({
   // multiple "Свой виджет" entries stay distinguishable.
   function widgetLabel(inst) {
     if (inst.type === "custom" && inst.config && inst.config.name) return inst.config.name;
-    return t("widgets." + effectiveType(inst));
+    const type = effectiveType(inst);
+    const def = WIDGET_TYPES[type] || {};
+    // Пакетный виджет называет себя сам; у встроенных имя берётся из словарей.
+    return (def.plugin && def.label) || t("widgets." + type);
   }
 
   function renderCanvas() {
@@ -1715,7 +1718,7 @@ export function initCanvasEditor({
         const row = document.createElement("div");
         row.className = "layer-row" + (inst.id === state.selectedId ? " is-selected" : "") + (replaced ? " is-replaced" : "") + (inactive ? " is-theme-gated" : "") + (serviceOff ? " is-service-off" : "");
         row.innerHTML = `
-          <span class="layer-row__icon">${ICONS[def.icon] || ""}</span>
+          <span class="layer-row__icon">${ICONS[def.icon] || ICONS.widgetCustom || ""}</span>
           <span class="layer-row__label">${escapeHtml(widgetLabel(inst))}</span>
           ${replaced ? `<span class="layer-row__3d-tag" title="${escapeAttr(t("editor.replacedBy3d"))}">3D</span>` : ""}
           ${inactive ? `<span class="layer-row__3d-tag layer-row__off-tag" title="${escapeAttr(t("editor.themeInactive"))}">${escapeHtml(t("editor.themeInactiveTag"))}</span>` : ""}

@@ -92,8 +92,15 @@ pub fn catalog() -> &'static Catalog {
 }
 
 /// Всё, что известно о виде виджета.
+///
+/// Сначала встроенный каталог, затем пакеты из данных пользователя: тип
+/// `plugin:<id>` живёт только в реестре пакетов, но проходит через те же
+/// правила (геометрия, минимальные размеры, настройки по умолчанию).
 pub fn def(kind: &str) -> Option<&'static Value> {
-    catalog().widget_types().get(kind)
+    catalog()
+        .widget_types()
+        .get(kind)
+        .or_else(|| crate::plugins::widget_def(kind))
 }
 
 /// Виды виджетов в порядке каталога — как `Object.keys(WIDGET_TYPES)`.

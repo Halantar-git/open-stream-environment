@@ -153,10 +153,15 @@ fn migrated_appearance(raw: Option<&Value>) -> Map<String, Value> {
     appearance
 }
 
-/// Тема по идентификатору: встроенная как есть, своя — собранная в форму панели.
+/// Тема по идентификатору: встроенная как есть, пакетная или своя — собранная в форму панели.
 pub fn resolve_theme(config: &ConfigFile, id: &str) -> Option<Value> {
     let id = alias_theme_id(id);
     if let Some(theme) = themes::builtin_theme(id) {
+        return Some(theme.clone());
+    }
+    // Тема из пакета уже лежит готовым набором токенов: семена для неё не
+    // нужны, название и цвета берутся из манифеста.
+    if let Some(theme) = crate::plugins::theme(id) {
         return Some(theme.clone());
     }
     let custom = find_custom_theme(config, id)?;
@@ -342,6 +347,27 @@ pub fn list_themes(config: &ConfigFile) -> Vec<Value> {
                 "colors": [seed("primary"), seed("secondary"), seed("tertiary")],
             }));
         }
+    }
+
+    // Темы пакетов идут как встроенные: панель не предлагает их править или
+    // удалять, а токены уже готовы.
+    for theme in crate::plugins::themes() {
+        let color = |key: &str| {
+            theme
+                .get("tokens")
+                .and_then(|tokens| tokens.get(key))
+                .cloned()
+                .unwrap_or(Value::Null)
+        };
+        out.push(json!({
+            "id": theme.get("id").cloned().unwrap_or(Value::Null),
+            "name": theme.get("name").cloned().unwrap_or(Value::Null),
+            "builtin": true,
+            "category": "plugin",
+            "dimension": "2d",
+            "has3d": false,
+            "colors": [color("--md-primary"), color("--md-secondary"), color("--md-tertiary")],
+        }));
     }
 
     out

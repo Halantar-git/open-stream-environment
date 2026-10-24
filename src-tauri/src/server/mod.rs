@@ -264,9 +264,14 @@ pub fn router(root: &Path, diagnostics: Arc<Diagnostics>) -> Router {
         locales: Locales::load(root).map(Arc::new),
     };
     let media_dir = diagnostics.storage().media_dir();
+    let plugins_dir = diagnostics
+        .storage()
+        .config_dir()
+        .join(crate::plugins::DIRECTORY);
     static_routes(root)
         .merge(ws_routes(bus))
         .merge(diagnostics_routes(diagnostics.clone()))
+        .merge(plugins_routes(plugins_dir))
         .merge(oauth_routes(diagnostics))
         .merge(media_routes(media_dir))
 }
@@ -757,6 +762,26 @@ fn diagnostics_routes(diagnostics: Arc<Diagnostics>) -> Router {
         .route("/healthz", get(healthz))
         .route("/support-bundle", get(support_bundle))
         .with_state(Routes { diagnostics })
+}
+
+/// Пакеты виджетов и тем: список и файлы.
+///
+/// `/api/plugins` читают панель, оверлей и сцены при загрузке страницы: по нему
+/// они узнают, какие виджеты добавить в библиотеку, а какие темы подключить.
+/// `/plugins/<id>/...` отдаёт манифесты, код, стили и картинки пакета. Секретов
+/// там нет, поэтому маршрут открыт, как и `/media`: иначе OBS-источник в
+/// другом браузере не смог бы загрузить код виджета.
+fn plugins_routes(plugins_dir: PathBuf) -> Router {
+    Router::new()
+        .route("/api/plugins", get(plugins_api))
+        .nest_service("/plugins", ServeDir::new(plugins_dir))
+        .layer(middleware::from_fn(no_cache))
+}
+
+async fn plugins_api() -> Response {
+    let mut response = Json(crate::plugins::api_payload()).into_response();
+    no_store(&mut response);
+    response
 }
 
 /// Короткий JSON о том, что происходит. Путей и секретов в нём нет, поэтому
@@ -1461,6 +1486,21 @@ mod tests {
         let fixture = Fixture::new();
         let (status, _) = get(&fixture, "/nope/nope.js").await;
         assert_eq!(status, StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn plugins_api_answers_with_the_registry_shape() {
+        let fixture = Fixture::new();
+        let response = request(&fixture, "/api/plugins").await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let report: serde_json::Value =
+            serde_json::from_slice(&body).expect("ответ должен быть JSON");
+        assert_eq!(report["apiVersion"], json!(crate::plugins::API_VERSION));
+        assert!(report["plugins"].is_array());
+        assert!(report["errors"].is_array());
     }
 
     #[tokio::test]
