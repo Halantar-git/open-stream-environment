@@ -90,7 +90,7 @@
     widgetRetrowaveHoloAlert: `<svg viewBox="0 0 24 24" ${stroke}><path d="M8 7a4 4 0 0 1 8 0"/><path d="M4 7h16"/><path d="M5 11h14M6 14h12M8 17h8M10 20h4"/></svg>`,
     widgetRetrowaveSymbol: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="12" r="8"/><ellipse cx="12" cy="12" rx="3.4" ry="8"/><path d="M4.5 9h15M4.5 15h15M3 12h18"/></svg>`,
     widgetDonatexAi: `<svg viewBox="0 0 24 24" ${stroke}><path d="M4 5h16v11H8l-4 4V5z"/><circle cx="10" cy="10" r="1.4" fill="currentColor" stroke="none"/><path d="M15 7.5l.8 1.7 1.7.8-1.7.8-.8 1.7-.8-1.7-1.7-.8 1.7-.8.8-1.7z" fill="currentColor" stroke="none"/></svg>`,
-    widgetMusic: `<svg viewBox="0 0 24 24" ${stroke}><path d="M9 18V6l9-2v11"/><circle cx="7" cy="18" r="2.4"/><circle cx="16" cy="15" r="2.4"/></svg>`,
+    widgetMusic: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="12" r="9"/><path d="M12 9.4c.6-1 2-1.3 2.9-.4.9.9.6 2.3-.2 3.1-.6.6-1.4 1.2-2.7 2.2-1.3-1-2.1-1.6-2.7-2.2-.8-.8-1.1-2.2-.2-3.1.9-.9 2.3-.6 2.9.4z" fill="currentColor" stroke="none"/></svg>`,
     palette: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.9 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.7-1.6 1.6-1.6H16a4 4 0 0 0 4-4c0-4.4-3.6-8.2-8-8.2z"/><circle cx="7.5" cy="10.5" r="1.2" fill="currentColor"/><circle cx="11" cy="7" r="1.2" fill="currentColor"/><circle cx="15.5" cy="8" r="1.2" fill="currentColor"/></svg>`,
     download: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 4v11m0 0-4-4m4 4 4-4M5 18h14"/></svg>`,
     upload: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 20V9m0 0-4 4m4-4 4 4M5 4h14"/></svg>`,
