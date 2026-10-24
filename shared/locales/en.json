@@ -112,7 +112,8 @@
     "terminal": "Terminal",
     "replacedBy3d": "Replaced by a 3D widget",
     "themeInactive": "Inactive in the current theme",
-    "themeInactiveTag": "off",
+    "themeInactiveTag": "theme",
+    "serviceInactiveTag": "service",
     "serviceInactive": "The widget's service is off — it will not appear on air. Enable the integration in settings."
   },
   "boosty": {

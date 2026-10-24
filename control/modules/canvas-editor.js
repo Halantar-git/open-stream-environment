@@ -1719,7 +1719,7 @@ export function initCanvasEditor({
           <span class="layer-row__label">${escapeHtml(widgetLabel(inst))}</span>
           ${replaced ? `<span class="layer-row__3d-tag" title="${escapeAttr(t("editor.replacedBy3d"))}">3D</span>` : ""}
           ${inactive ? `<span class="layer-row__3d-tag layer-row__off-tag" title="${escapeAttr(t("editor.themeInactive"))}">${escapeHtml(t("editor.themeInactiveTag"))}</span>` : ""}
-          ${serviceOff ? `<span class="layer-row__3d-tag layer-row__off-tag" title="${escapeAttr(t("editor.serviceInactive"))}">${escapeHtml(t("editor.themeInactiveTag"))}</span>` : ""}
+          ${serviceOff ? `<span class="layer-row__3d-tag layer-row__off-tag" title="${escapeAttr(t("editor.serviceInactive"))}">${escapeHtml(t("editor.serviceInactiveTag"))}</span>` : ""}
           <span class="layer-row__btns">
             <button class="layer-row__btn" data-action="forward" title="${t("common.forward")}"${state.layoutLocked ? " disabled" : ""}>▲</button>
             <button class="layer-row__btn" data-action="backward" title="${t("common.backward")}"${state.layoutLocked ? " disabled" : ""}>▼</button>
