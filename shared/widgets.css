@@ -613,10 +613,10 @@
     linear-gradient(90deg, rgba(45, 226, 230, 0.95), rgba(255, 45, 149, 0.85) 62%, transparent),
     linear-gradient(270deg, rgba(255, 45, 149, 0.95), rgba(45, 226, 230, 0.8) 62%, transparent);
   background-repeat: no-repeat;
-  background-size: 46% 1px, 46% 1px;
+  background-size: 38% 1px, 38% 1px;
   background-position: top 0 left 0, bottom 0 right 0;
-  filter: drop-shadow(0 0 4px rgba(255, 45, 149, 0.6));
-  opacity: 0.85;
+  filter: drop-shadow(0 0 4px rgba(255, 45, 149, 0.45));
+  opacity: 0.55;
 }
 
 /* ---------- Positioned instance wrapper (shared by overlay + editor) ---------- */
@@ -999,12 +999,11 @@
   background-image:
     repeating-linear-gradient(90deg, rgba(45, 226, 230, 0.055) 0 1px, transparent 1px 34px),
     repeating-linear-gradient(0deg, rgba(255, 45, 149, 0.045) 0 1px, transparent 1px 34px);
-  /* Неоновое свечение темы + внутренний кант: раньше правило перекрывало
-     box-shadow целиком и панели оставались без внешнего ореола. */
+  /* Неоновый ореол темы + внутренний кант: раньше правило перекрывало
+     box-shadow целиком и панели оставались без внешнего свечения. */
   box-shadow:
     var(--panel-glow),
-    inset 0 0 0 1px rgba(45, 226, 230, 0.26),
-    inset 0 0 34px rgba(255, 45, 149, 0.14);
+    inset 0 0 0 1px rgba(45, 226, 230, 0.16);
 }
 [data-decoration="retrowave"] .widget-alert::before,
 [data-decoration="retrowave"] .widget-goal::before,
@@ -1018,10 +1017,10 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  clip-path: polygon(26px 0, 28px 0, 2px 100%, 0 100%);
+  clip-path: polygon(26px 0, 27px 0, 1px 100%, 0 100%);
   background: var(--md-primary);
-  filter: drop-shadow(0 0 3px rgba(45, 226, 230, 0.7)) drop-shadow(0 0 9px rgba(255, 45, 149, 0.3));
-  opacity: 0.9;
+  filter: drop-shadow(0 0 3px rgba(45, 226, 230, 0.55)) drop-shadow(0 0 7px rgba(255, 45, 149, 0.28));
+  opacity: 0.85;
 }
 
 /* Неоновые канты по верхней и нижней кромке: короткие градиентные штрихи
@@ -1043,10 +1042,10 @@
     linear-gradient(90deg, rgba(45, 226, 230, 0.95), rgba(255, 45, 149, 0.85) 62%, transparent),
     linear-gradient(270deg, rgba(255, 45, 149, 0.95), rgba(45, 226, 230, 0.8) 62%, transparent);
   background-repeat: no-repeat;
-  background-size: 46% 1px, 46% 1px;
+  background-size: 38% 1px, 38% 1px;
   background-position: top 0 left 0, bottom 0 right 0;
-  filter: drop-shadow(0 0 4px rgba(255, 45, 149, 0.6));
-  opacity: 0.85;
+  filter: drop-shadow(0 0 4px rgba(255, 45, 149, 0.45));
+  opacity: 0.55;
 }
 
 /* Ключевые цифры и имена светятся, как неоновая вывеска. */
@@ -1111,15 +1110,15 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  clip-path: polygon(26px 0, 28px 0, 2px 100%, 0 100%);
+  clip-path: polygon(26px 0, 27px 0, 1px 100%, 0 100%);
   background: var(--md-primary);
-  filter: drop-shadow(0 0 3px rgba(45, 226, 230, 0.7)) drop-shadow(0 0 9px rgba(255, 45, 149, 0.3));
-  opacity: 0.9;
+  filter: drop-shadow(0 0 3px rgba(45, 226, 230, 0.55)) drop-shadow(0 0 7px rgba(255, 45, 149, 0.28));
+  opacity: 0.85;
 }
 
 /* Высокая панель чата: кромка мягче, иначе она подходит к первым строкам. */
 .retrowave-chat-surface::before {
-  clip-path: polygon(18px 0, 20px 0, 2px 100%, 0 100%);
+  clip-path: polygon(18px 0, 19px 0, 1px 100%, 0 100%);
 }
 
 /* UEC-перевод в Retrowave: та же скошенная неоновая кромка, что у панелей
@@ -1150,15 +1149,15 @@
   inset: 0;
   pointer-events: none;
   background: var(--md-primary);
-  filter: drop-shadow(0 0 3px rgba(45, 226, 230, 0.7)) drop-shadow(0 0 9px rgba(255, 45, 149, 0.3));
-  opacity: 0.9;
+  filter: drop-shadow(0 0 3px rgba(45, 226, 230, 0.55)) drop-shadow(0 0 7px rgba(255, 45, 149, 0.28));
+  opacity: 0.85;
 }
 [data-decoration="retrowave"] .uec-transfer__frame::before {
-  clip-path: polygon(18px 0, 20px 0, 2px 100%, 0 100%);
+  clip-path: polygon(18px 0, 19px 0, 1px 100%, 0 100%);
 }
 [data-decoration="retrowave"] .uec-transfer-preview::before,
 [data-decoration="retrowave"] .uec-transfer__compact::before {
-  clip-path: polygon(14px 0, 16px 0, 2px 100%, 0 100%);
+  clip-path: polygon(14px 0, 15px 0, 1px 100%, 0 100%);
 }
 [data-decoration="retrowave"] .uec-transfer__panel { padding-left: 34px; }
 [data-decoration="retrowave"] .uec-transfer__compact { padding-left: 26px; }
