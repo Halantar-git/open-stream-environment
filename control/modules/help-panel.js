@@ -217,6 +217,8 @@ const SECTIONS = [
       { type: "p", key: "help.obs.p3" },
       { type: "p", key: "help.obs.p4" },
       { type: "p", key: "help.obs.p5" },
+      { type: "p", key: "help.obs.p6" },
+      { type: "steps", items: ["help.obs.s1", "help.obs.s2", "help.obs.s3", "help.obs.s4"] },
     ],
   },
   {

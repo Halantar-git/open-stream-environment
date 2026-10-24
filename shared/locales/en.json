@@ -240,7 +240,7 @@
     "sceneBackgroundsHint": "Video or image behind the card and widgets. Empty — theme background.",
     "splashDurationHint": "auto — video plays to the end, image/GIF uses the default. 1–30 — fixed duration.",
     "splashSourceUrl": "OBS link (splash scene)",
-    "splashSourceHint": "Add it as a 1920×1080 browser source to the OBS scene named in Settings → OBS WebSocket → Opening. Turn off “Shutdown source when not visible” in the source properties, otherwise the splash may not connect in time."
+    "splashSourceHint": "Add it as a 1920×1080 browser source to the OBS scene named in Settings → OBS WebSocket → Opening, or press “Set up scenes in OBS” and the source is created for you. “Shutdown source when not visible” must stay off, otherwise the splash may not connect in time."
   },
   "settings": {
     "twitch": "Twitch",
@@ -1703,7 +1703,7 @@
       "p1": "Each scene is a separate OBS source that replaces the gameplay view entirely (not drawn on top of it).",
       "p2": "Available scenes: Start, BRB, Main, Just Chatting, End and Fortune Wheel.",
       "p3": "Just Chatting shows a large chat feed and alerts, leaving room for your webcam on the left.",
-      "p4": "Copy each scene's URL into its own OBS Browser Source and switch scenes from the remote or Stream Deck. Each scene can show a banner (title, subtitle, socials, recent events) and a countdown timer.",
+      "p4": "The “Set up scenes in OBS” button in the OBS WebSocket settings creates the sources for the scenes — it puts the right URL into each one. You can still copy a scene's URL manually in the “OBS Browser Source” panel on the right of the editor. Switch scenes from the remote or Stream Deck. Each scene can show a banner (title, subtitle, socials, recent events) and a countdown timer.",
       "p5": "Scenes have a countdown timer: enable Timer, set the duration in seconds and the text shown when it ends. It starts when the scene is activated, survives an OBS browser-source reload and is not reset by settings changes; when entering through a splash it starts after the splash finishes."
     },
     "splashes": {
@@ -1712,7 +1712,7 @@
       "p2": "Configured on the Splashes tab: one file for all scenes plus a file and duration per scene. Priority: the scene's file → the global file → the standard brand splash (when no file is set). The standard splash follows the active theme.",
       "p3": "Duration is auto or 1–30 seconds: video always plays to the end, while an image/GIF with auto holds the default time. The switch to the target scene happens automatically — on the video's end or on the timer.",
       "p4": "Every scene has a toggle: a disabled scene skips its splash and switches immediately. It affects both entering the scene and returning from it to gameplay.",
-      "p5": "Playback needs an OBS scene \"Opening\" with the http://localhost:8710/overlay/video-splash.html browser source (copy the link on the Splashes tab); the scene name is set in Settings → OBS WebSocket → Opening. Turn off “Shutdown source when not visible” in the source properties, otherwise the splash may not connect in time; if the source loads mid-splash, it is replayed so nothing is missed. If the Opening scene is missing, the transition goes straight to the target scene.",
+      "p5": "Playback needs an OBS scene \"Opening\" with the http://localhost:8710/overlay/video-splash.html browser source (copy the link on the Splashes tab); the scene name is set in Settings → OBS WebSocket → Opening. The “Set up scenes in OBS” button creates this scene and source itself and leaves “Shutdown source when not visible” off; if you added the source manually, turn that checkbox off — otherwise the splash may not connect in time, and loading mid-splash replays it. If the Opening scene is missing, the transition goes straight to the target scene.",
       "p6": "Below you can set a background for each scene — video or image behind the card and widgets. Empty — the blurred theme background. For pause this is the only place to set it."
     },
     "hotkeys": {
@@ -1762,7 +1762,12 @@
       "p2": "Scene mapping translates logical remote names into your actual OBS scene names.",
       "p3": "You can also define custom RAW commands, camera angles (multicam) and camera filters, triggered by Twitch points or manually.",
       "p4": "The Camera and Microphone fields set the sources for the webcam and microphone toggle buttons in the remote.",
-      "p5": "The “Set up scenes in OBS” button (with the WebSocket connected) creates the missing scenes and adds a browser source with the right URL and canvas size to each. The source is pinned to the top-left corner and locked against accidental dragging; “Shutdown source when not visible” is enabled on every source except the splash, which stays loaded so the page has time to connect. Existing scenes stay as they are; running it again refreshes the source URL if the port changed."
+      "p5": "The “Set up scenes in OBS” button creates the missing scenes and browser sources for you; it is enabled only while the WebSocket is connected.",
+      "p6": "What the button sets up: a source sized to the canvas in the top-left corner, locked against accidental dragging, with “Shutdown source when not visible” on every source except the splash. Existing scenes and sources are never deleted or renamed, and pressing the button again refreshes the URLs after a port change. The button does not create gameplay capture: add it to the main scene yourself.",
+      "s1": "Enable the WebSocket server in OBS: Tools → WebSocket Server Settings.",
+      "s2": "Enter the port and password here, turn the integration on and wait for the Connected status.",
+      "s3": "Press “Set up scenes in OBS” and confirm — the scenes and sources appear in OBS.",
+      "s4": "Add your gameplay capture source to the main scene (Main in the mapping) and move it below “OSE Overlay”: OBS puts new sources on top, and the capture would cover the overlay."
     },
     "soundboard": {
       "title": "Soundboard",
@@ -1836,8 +1841,8 @@
     "performance": {
       "title": "Performance",
       "p1": "Set the overlay Browser Source FPS to 30 in OBS: widgets never animate faster anyway (3D at 20–30, the mic visualizer at 30), while 60 only doubles the work.",
-      "shutdown": "Enable “Shutdown source when not visible”: without this checkbox Chromium inside OBS may not set document.hidden for an inactive scene, so the rAF pause of 3D widgets won't kick in and the hidden scene keeps rendering.",
-      "p2": "Keep “Refresh browser when scene becomes active” off — a reload resets animations.",
+      "shutdown": "The “Set up scenes in OBS” button enables it for you. For a source added by hand, enable “Shutdown source when not visible”: without this checkbox Chromium inside OBS may not set document.hidden for an inactive scene, so the rAF pause of 3D widgets won't kick in and the hidden scene keeps rendering.",
+      "p2": "Keep “Refresh browser when scene becomes active” off — a reload resets animations and delays the picture. The scene setup button leaves it off.",
       "p3": "Only animated 3D widgets are heavy: radar, hologram, sign/billboard, shield, orb/cube. Each runs its own canvas loop; 2–3 at a time is comfortable, and don't stretch them across the whole screen.",
       "p4": "2D widgets (chat, goal, recent events, counter, social banner, participants) are cheap — you can have many. During a hype, shrink the chat box: 3D-theme HUD chats keep up to 50 rows.",
       "p5": "Keep a single mic visualizer: the 30 Hz mic capture runs only while that widget is on a scene and stops when it is removed.",
