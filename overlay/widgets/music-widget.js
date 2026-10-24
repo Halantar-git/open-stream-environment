@@ -283,7 +283,10 @@
     /// Проверяем жёстко — в iframe попадает только страница DonateX, а не
     /// произвольный адрес из настроек.
     donatexWidgetUrl() {
-      const raw = String(this.config.donatexWidgetUrl || "").trim();
+      const widgets =
+        (this.context.state && this.context.state.donatex && this.context.state.donatex.widgets) || {};
+      // Настройка важнее старого поля в раскладке: ссылка переехала туда.
+      const raw = String(widgets.music || this.config.donatexWidgetUrl || "").trim();
       if (!raw) return "";
       try {
         const url = new URL(raw);

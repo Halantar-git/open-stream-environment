@@ -94,6 +94,7 @@ function makeContext() {
     formatMoney: (value) => String(value),
     currencySymbol: (code) => (String(code || "").toUpperCase() === "RUB" ? "₽" : String(code || "")),
     resolveMediaUrl: (p) => (String(p || "").startsWith("media/") ? `http://127.0.0.1/media/${p.slice(6)}` : p || ""),
+    state: { donatex: { widgets: { donation: "", ai: "", music: "" } } },
   };
 }
 
@@ -124,11 +125,16 @@ afterEach(() => {
   global.Audio = originalGlobals.Audio;
 });
 
-function mountWidget(config = {}) {
+function mountWidget(config = {}, donatexWidgets = {}) {
   const parent = makeEl("div");
+  const context = makeContext();
+  context.state.donatex.widgets = {
+    ...context.state.donatex.widgets,
+    ...donatexWidgets,
+  };
   const w = new MusicWidget(
     { id: "w1", type: "music", x: 0, y: 0, w: 10, h: 10, z: 0, visible: true, config },
-    makeContext()
+    context,
   );
   w.mount(parent);
   return { w, parent };
@@ -330,6 +336,27 @@ describe("music widget", () => {
 
     expect(played).toEqual([]);
     expect(w.current.musicLink).toBe("https://cdn.example/track.mp3");
+    w.unmount();
+  });
+
+  test("ссылка из настроек DonateX открывает страницу без поля в раскладке", () => {
+    const { w } = mountWidget(
+      {},
+      { music: "https://donatex.gg/widgets/music/from-settings" },
+    );
+    const frame = w.host.children.find((child) => child.tagName === "IFRAME");
+    expect(frame).toBeTruthy();
+    expect(frame.src).toBe("https://donatex.gg/widgets/music/from-settings");
+    w.unmount();
+  });
+
+  test("настройка важнее старого поля виджета", () => {
+    const { w } = mountWidget(
+      { donatexWidgetUrl: "https://donatex.gg/widgets/music/old" },
+      { music: "https://donatex.gg/widgets/music/new" },
+    );
+    const frame = w.host.children.find((child) => child.tagName === "IFRAME");
+    expect(frame.src).toBe("https://donatex.gg/widgets/music/new");
     w.unmount();
   });
 });

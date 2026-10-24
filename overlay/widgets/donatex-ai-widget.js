@@ -51,6 +51,13 @@
     return Math.max(0, Math.min(1, n));
   };
 
+  /// Адрес страницы, который можно открыть в iframe. Настройки уже отсеивают
+  /// чужие домены; здесь остаётся защита от старого поля в раскладке.
+  function httpsUrl(value) {
+    const link = String(value || "").trim();
+    return /^https:\/\//i.test(link) ? link : "";
+  }
+
   class DonatexAiWidget extends BaseWidget {
     onMount() {
       this.host = document.createElement("div");
@@ -159,8 +166,11 @@
     }
 
     applyBridge() {
-      const donation = String(this.config.donationUrl || "").trim();
-      const ai = String(this.config.url || "").trim();
+      const widgets =
+        (this.context.state && this.context.state.donatex && this.context.state.donatex.widgets) || {};
+      // Настройки важнее старых полей в раскладке: ссылки переехали туда.
+      const donation = httpsUrl(widgets.donation) || httpsUrl(this.config.donationUrl);
+      const ai = httpsUrl(widgets.ai) || httpsUrl(this.config.url);
       if (!donation && !ai) {
         this.clearFrames();
         this.iframeHost.style.display = "none";

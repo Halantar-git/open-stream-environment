@@ -249,7 +249,7 @@ ws://localhost:8710/ws?role=remote&token=<код>
 
 | `type` | Payload |
 |---|---|
-| `state` | полный снимок: `layout`, `appearance`, `goal`, `recentEvents`, `stats`, `connectionStatus`, `scenes`, `port`, `remoteUrl` и др. |
+| `state` | полный снимок: `layout`, `appearance`, `goal`, `recentEvents`, `stats`, `connectionStatus`, `scenes`, `donatex` (флаг и ссылки на виджеты), `port`, `remoteUrl` и др. |
 | `layout_update` | `{ layout }` — раскладка основного оверлея |
 | `scene_layout_update` | `{ scene, layout }` — раскладка конкретной сцены |
 | `layout_presets_update` | `{ presets }` |

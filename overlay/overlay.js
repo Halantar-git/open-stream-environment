@@ -70,6 +70,9 @@
     longshot: null,
     // Участники розыгрыша «Колесо Фортуны» — источник виджета участников.
     giveaway: { count: 0, participants: [] },
+    // Ссылки на виджеты DonateX из Настроек → DonateX: по ним виджеты
+    // открывают скрытые страницы, чтобы сервис играл звук сам.
+    donatex: { enabled: false, widgets: { donation: "", ai: "", music: "" } },
   };
 
   let ws;
@@ -501,6 +504,7 @@
         connectionStatus = p.connectionStatus || connectionStatus;
         state.longshot = p.longshot || state.longshot;
         state.giveaway = p.giveaway || state.giveaway;
+        state.donatex = p.donatex || state.donatex;
         currentLayout = p.layout || [];
         lastAppearance = p.appearance || lastAppearance;
         applyTheme(p.appearance);

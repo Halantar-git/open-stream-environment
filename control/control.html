@@ -817,6 +817,21 @@
             <input type="password" id="donatexToken" data-i18n-placeholder="settings.donatexTokenPlaceholder" placeholder="из DonateX → Настройки → API" autocomplete="off" />
             <span class="md-field__hint" data-i18n="settings.donatexTokenHint">Оставьте пустым, чтобы не менять сохранённый токен — поле никогда не заполняется им само.</span>
           </div>
+          <div class="settings__subhead"><h3 data-i18n="settings.donatexWidgetsTitle">Ссылки на виджеты</h3></div>
+          <p class="settings__desc" data-i18n="settings.donatexWidgetsDesc">Вставьте адреса из кабинета DonateX. С ними сервис считает виджеты подключёнными и играет звук сам, а OSE показывает картинку.</p>
+          <div class="md-field">
+            <label data-i18n="settings.donatexWidgetDonation">Виджет донатов</label>
+            <input type="url" id="donatexWidgetDonation" placeholder="https://donatex.gg/widgets/..." autocomplete="off" />
+          </div>
+          <div class="md-field">
+            <label data-i18n="settings.donatexWidgetAi">Виджет ИИ-персонажа</label>
+            <input type="url" id="donatexWidgetAi" placeholder="https://donatex.gg/widgets/..." autocomplete="off" />
+          </div>
+          <div class="md-field">
+            <label data-i18n="settings.donatexWidgetMusic">Виджет музыки</label>
+            <input type="url" id="donatexWidgetMusic" placeholder="https://donatex.gg/widgets/..." autocomplete="off" />
+            <span class="md-field__hint" data-i18n="settings.donatexWidgetsHint">Ссылки необязательны. Без них ИИ-персонаж работает встроенным, а музыку пытается играть наш плеер.</span>
+          </div>
           <div class="settings__links">
             <a class="settings__link" href="#" data-external="https://donatex.gg/streamer/settings" data-i18n="settings.donatexTokenLink">Где взять токен</a>
             <a class="settings__link" href="#" data-external="https://donatex.gg/api-docs/authentication" data-i18n="settings.donatexApiDocs">Документация API</a>

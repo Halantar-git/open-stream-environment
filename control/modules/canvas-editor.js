@@ -536,8 +536,12 @@ export function initCanvasEditor({
         return buildExecTimerPreview(config);
       case "donatex-ai": {
         // Аудио-мост ничего не рисует в эфире, но на канвасе должен быть виден:
-        // иначе пустой прямоугольник легко потерять среди виджетов.
-        const bridge = String(config.donationUrl || config.url || "").trim() !== "";
+        // иначе пустой прямоугольник легко потерять среди виджетов. Ссылки
+        // живут в настройках DonateX, старые поля раскладки — запасной путь.
+        const donatexWidgets = (state.donatex && state.donatex.widgets) || {};
+        const bridge = [donatexWidgets.donation, donatexWidgets.ai, config.donationUrl, config.url].some(
+          (value) => String(value || "").trim() !== "",
+        );
         const icon = bridge ? ICONS.widgetSoundboard : ICONS.widgetDonatexAi;
         const label = bridge ? t("preview.donatexAudio") : t("widgets.donatex-ai");
         return `<div class="canvas-widget__placeholder">${icon}<span>${escapeHtml(label)}</span></div>`;

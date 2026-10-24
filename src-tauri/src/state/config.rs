@@ -280,9 +280,57 @@ pub fn set_app_config(config: &mut ConfigFile, patch: &Value) {
                 service.insert("externalToken".to_string(), Value::from(text.trim()));
             }
         }
+        // Ссылки на виджеты DonateX: их открывает оверлей, чтобы сервис
+        // считал виджеты подключёнными. Некорректная ссылка не затирает
+        // сохранённую — панель просто покажет прежнее значение.
+        if let Some(widgets) = donatex.get("widgets").and_then(Value::as_object) {
+            let mut saved = service
+                .get("widgets")
+                .and_then(Value::as_object)
+                .cloned()
+                .unwrap_or_default();
+            for key in ["donation", "ai", "music"] {
+                if let Some(raw) = widgets.get(key) {
+                    if let Some(url) = donatex_widget_url(raw) {
+                        saved.insert(key.to_string(), Value::from(url));
+                    }
+                }
+            }
+            service.insert("widgets".to_string(), Value::Object(saved));
+        }
         config.set("donatex", Value::Object(service));
     }
     config.save();
+}
+
+/// Ссылка на виджет DonateX из настроек.
+///
+/// В iframe оверлея попадает только страница DonateX: произвольный адрес
+/// вернул бы чужой интерфейс и звук поверх эфира. Пустая строка — это
+/// осознанная очистка поля, `None` — неверная ссылка (её не сохраняем).
+fn donatex_widget_url(value: &Value) -> Option<String> {
+    let text = js_string(value).trim().to_string();
+    if text.is_empty() {
+        return Some(String::new());
+    }
+    let lower = text.to_ascii_lowercase();
+    let prefix = if lower.starts_with("https://donatex.gg/widgets/") {
+        "https://donatex.gg/widgets/"
+    } else if lower.starts_with("https://www.donatex.gg/widgets/") {
+        "https://www.donatex.gg/widgets/"
+    } else {
+        return None;
+    };
+    if text.len() <= prefix.len() || text.contains("..") {
+        return None;
+    }
+    if text
+        .chars()
+        .any(|c| c.is_whitespace() || matches!(c, '"' | '\'' | '<' | '>' | '\\'))
+    {
+        return None;
+    }
+    Some(text)
 }
 
 // ---- OBS ----
@@ -1944,6 +1992,55 @@ mod tests {
 
         set_app_config(&mut config, &json!({ "tickerPaused": false }));
         assert_eq!(config.get("ticker_paused"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn donatex_widget_links_are_saved_only_from_donatex() {
+        let fixture = Fixture::new("donatex-widgets");
+        let mut config = fixture.config();
+
+        set_app_config(
+            &mut config,
+            &json!({
+                "donatex": { "widgets": {
+                    "donation": "https://donatex.gg/widgets/donation/abc",
+                    "ai": "https://evil.example/widgets/ai",
+                    "music": "https://www.donatex.gg/widgets/music/def"
+                }}
+            }),
+        );
+        let saved = config.get("donatex").unwrap()["widgets"].clone();
+        assert_eq!(
+            saved["donation"],
+            json!("https://donatex.gg/widgets/donation/abc")
+        );
+        assert_eq!(
+            saved["music"],
+            json!("https://www.donatex.gg/widgets/music/def")
+        );
+        // Чужой адрес не сохраняется и не затирает уже сохранённый.
+        assert!(saved.get("ai").is_none());
+
+        set_app_config(
+            &mut config,
+            &json!({ "donatex": { "widgets": { "ai": "https://donatex.gg/widgets/ai/xyz" } } }),
+        );
+        let saved = config.get("donatex").unwrap()["widgets"].clone();
+        assert_eq!(
+            saved["donation"],
+            json!("https://donatex.gg/widgets/donation/abc")
+        );
+        assert_eq!(saved["ai"], json!("https://donatex.gg/widgets/ai/xyz"));
+
+        // Пустая строка — осознанная очистка поля.
+        set_app_config(
+            &mut config,
+            &json!({ "donatex": { "widgets": { "music": "" } } }),
+        );
+        assert_eq!(
+            config.get("donatex").unwrap()["widgets"]["music"],
+            json!("")
+        );
     }
 
     #[test]

@@ -67,6 +67,7 @@
     remoteMicData: null,
     longshot: null,
     giveaway: { count: 0, participants: [] },
+    donatex: { enabled: false, widgets: { donation: "", ai: "", music: "" } },
   };
 
   // ---- pure utils ----
@@ -344,6 +345,7 @@
         state.donationVoice = payload.donationVoice || state.donationVoice;
         state.longshot = payload.longshot || state.longshot;
         state.giveaway = payload.giveaway || state.giveaway;
+        state.donatex = payload.donatex || state.donatex;
         connectionStatus = payload.connectionStatus || connectionStatus;
         if (payload.appearance) applyTheme(payload.appearance);
         const scene = payload.scenes && payload.scenes[sceneType];

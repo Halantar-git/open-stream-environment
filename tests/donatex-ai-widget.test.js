@@ -91,6 +91,7 @@ function makeContext() {
     formatMoney: (value) => String(value),
     currencySymbol: (code) => (String(code || "").toUpperCase() === "RUB" ? "₽" : String(code || "")),
     resolveMediaUrl: (p) => p || "",
+    state: { donatex: { widgets: { donation: "", ai: "", music: "" } } },
   };
 }
 
@@ -119,11 +120,16 @@ afterEach(() => {
   global.performance = originalGlobals.performance;
 });
 
-function mountWidget(config = {}) {
+function mountWidget(config = {}, donatexWidgets = {}) {
   const parent = makeEl("div");
+  const context = makeContext();
+  context.state.donatex.widgets = {
+    ...context.state.donatex.widgets,
+    ...donatexWidgets,
+  };
   const w = new DonatexAiWidget(
     { id: "w1", type: "donatex-ai", x: 0, y: 0, w: 10, h: 10, z: 0, visible: true, config },
-    makeContext()
+    context,
   );
   w.mount(parent);
   return { w, parent };
@@ -148,6 +154,31 @@ describe("donatex-ai widget", () => {
     expect(w.iframeHost.children.length).toBe(2);
     expect(w.iframeHost.children[0].src).toBe("https://example.com/donation");
     expect(w.iframeHost.children[1].src).toBe("https://example.com/ai");
+    w.unmount();
+  });
+
+  test("ссылки из настроек DonateX включают мост без полей в раскладке", () => {
+    const { w } = mountWidget(
+      {},
+      {
+        donation: "https://donatex.gg/widgets/donation/abc",
+        ai: "https://donatex.gg/widgets/ai/def",
+      },
+    );
+    expect(w.iframeHost.children.length).toBe(2);
+    expect(w.iframeHost.children[0].src).toBe("https://donatex.gg/widgets/donation/abc");
+    expect(w.iframeHost.children[1].src).toBe("https://donatex.gg/widgets/ai/def");
+    expect(w.eventHost.style.display).toBe("none");
+    w.unmount();
+  });
+
+  test("настройки важнее старых полей в раскладке", () => {
+    const { w } = mountWidget(
+      { url: "https://example.com/old-ai" },
+      { ai: "https://donatex.gg/widgets/ai/new" },
+    );
+    expect(w.iframeHost.children.length).toBe(1);
+    expect(w.iframeHost.children[0].src).toBe("https://donatex.gg/widgets/ai/new");
     w.unmount();
   });
 

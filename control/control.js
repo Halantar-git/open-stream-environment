@@ -209,6 +209,9 @@ const { EVENT_TYPES } = window.SharedEvents;
   const donatexEnabledSwitch = document.getElementById("donatexEnabledSwitch");
   const donatexTokenInput = document.getElementById("donatexToken");
   const donatexTokenStatusEl = document.getElementById("donatexTokenStatus");
+  const donatexWidgetDonationInput = document.getElementById("donatexWidgetDonation");
+  const donatexWidgetAiInput = document.getElementById("donatexWidgetAi");
+  const donatexWidgetMusicInput = document.getElementById("donatexWidgetMusic");
   const youtubeEnabledSwitch = document.getElementById("youtubeEnabledSwitch");
   const obsEnabledSwitch = document.getElementById("obsEnabledSwitch");
   const obsHostInput = document.getElementById("obsHost");
@@ -673,6 +676,14 @@ const { EVENT_TYPES } = window.SharedEvents;
           ? t("settings.donatexTokenSaved")
           : t("settings.donatexTokenMissing");
     }
+    // Ссылки на виджеты: не затираем поле, пока в нём печатают.
+    const donatexWidgets = (state.donatex && state.donatex.widgets) || {};
+    const fillWidget = (input, value) => {
+      if (input && document.activeElement !== input) input.value = value || "";
+    };
+    fillWidget(donatexWidgetDonationInput, donatexWidgets.donation);
+    fillWidget(donatexWidgetAiInput, donatexWidgets.ai);
+    fillWidget(donatexWidgetMusicInput, donatexWidgets.music);
     twitchRedirectUriEl.textContent = `http://localhost:${port}/oauth/twitch/callback`;
     daRedirectUriEl.textContent = `http://localhost:${port}/oauth/donationalerts/callback`;
     youtubeRedirectUriEl.textContent = `http://localhost:${port}/oauth/youtube/callback`;
@@ -713,6 +724,18 @@ const { EVENT_TYPES } = window.SharedEvents;
       donatexTokenInput.value = "";
     });
   }
+
+  // Ссылки на виджеты DonateX: сервер сохраняет только адреса donatex.gg.
+  [
+    [donatexWidgetDonationInput, "donation"],
+    [donatexWidgetAiInput, "ai"],
+    [donatexWidgetMusicInput, "music"],
+  ].forEach(([input, key]) => {
+    if (!input) return;
+    input.addEventListener("change", () => {
+      send(EVENT_TYPES.CMD_SET_APP_CONFIG, { donatex: { widgets: { [key]: input.value.trim() } } });
+    });
+  });
 
   // Ссылки ведут в браузер: webview панели не должен уходить со страницы.
   document.querySelectorAll("#settingsCardDonatex [data-external]").forEach((el) => {

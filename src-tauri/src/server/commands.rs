@@ -298,8 +298,12 @@ pub fn handle_message(
                     diagnostics.restart_twitch_chat();
                     diagnostics.restart_chat_bot();
                 }
-                // Новый external token DonateX — новое подключение.
-                if payload.get("donatex").is_some() {
+                // Новый external token DonateX — новое подключение. Ссылки на
+                // виджеты живут только на странице: из-за них связь не рвём.
+                let donatex_connection = payload.get("donatex").is_some_and(|donatex| {
+                    donatex.get("externalToken").is_some() || donatex.get("enabled").is_some()
+                });
+                if donatex_connection {
                     diagnostics.restart_donatex();
                 }
             }

@@ -179,6 +179,19 @@ pub fn snapshot(config: &ConfigFile, db: &Database, runtime: &Runtime) -> Value 
         nested(config, "donatex", "enabled"),
     );
     // Сам токен наверх не отдаём: панели достаточно знать, что он сохранён.
+    // Ссылки на виджеты — не секрет: по ним оверлей открывает страницы DonateX.
+    let donatex_widgets = config
+        .get("donatex")
+        .and_then(|service| service.get("widgets"))
+        .cloned()
+        .unwrap_or_else(|| json!({}));
+    let widget_url = |key: &str| {
+        donatex_widgets
+            .get(key)
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string()
+    };
     out.insert(
         "donatex".to_string(),
         json!({
@@ -190,6 +203,11 @@ pub fn snapshot(config: &ConfigFile, db: &Database, runtime: &Runtime) -> Value 
                     .unwrap_or(&Value::Null)
             )
             .is_empty(),
+            "widgets": {
+                "donation": widget_url("donation"),
+                "ai": widget_url("ai"),
+                "music": widget_url("music"),
+            },
         }),
     );
     out.insert(
@@ -327,7 +345,9 @@ fn object(value: Option<&Value>) -> serde_json::Map<String, Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::config::{normalize_config, save_donation_alerts_app, set_obs_config};
+    use crate::state::config::{
+        normalize_config, save_donation_alerts_app, set_app_config, set_obs_config,
+    };
     use crate::state::layout::add_widget;
     use crate::storage::paths::Storage;
     use std::fs;
@@ -401,6 +421,32 @@ mod tests {
         config.set("donationAlerts", Value::Object(donation_alerts));
         let snap = snapshot(&config, &db, &Runtime::new(0, &serde_json::Map::new()));
         assert_eq!(snap["donationAlertsAuth"]["hasClientSecret"], json!(false));
+    }
+
+    #[test]
+    fn the_snapshot_carries_donatex_widget_links() {
+        let fixture = Fixture::new("donatex-widgets");
+        let mut config = fixture.config();
+        let db = fixture.db();
+        normalize_config(&mut config);
+        set_app_config(
+            &mut config,
+            &json!({"donatex": {"widgets": {
+                "donation": "https://donatex.gg/widgets/donation/abc",
+                "music": "https://donatex.gg/widgets/music/def"
+            }}}),
+        );
+
+        let snap = snapshot(&config, &db, &Runtime::new(0, &serde_json::Map::new()));
+        assert_eq!(
+            snap["donatex"]["widgets"]["donation"],
+            json!("https://donatex.gg/widgets/donation/abc")
+        );
+        assert_eq!(
+            snap["donatex"]["widgets"]["music"],
+            json!("https://donatex.gg/widgets/music/def")
+        );
+        assert_eq!(snap["donatex"]["widgets"]["ai"], json!(""));
     }
 
     #[test]

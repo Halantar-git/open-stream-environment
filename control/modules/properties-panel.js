@@ -791,10 +791,11 @@ export function initPropertiesPanel({
         </div>
         <div id="pCustomFields"></div>`;
     } else if (inst.type === "donatex-ai") {
-      const bridge = String(config.donationUrl || config.url || "").trim() !== "";
+      const donatexWidgets = (state.donatex && state.donatex.widgets) || {};
+      const bridge = [donatexWidgets.donation, donatexWidgets.ai, config.donationUrl, config.url].some(
+        (value) => String(value || "").trim() !== "",
+      );
       extraHtml = `
-        <div class="md-field"><label>${t("properties.donatexDonationLink")}</label><input type="text" id="pDonatexDonationUrl" value="${escapeAttr(config.donationUrl || "")}" placeholder="https://..."></div>
-        <div class="md-field"><label>${t("properties.donatexAiLink")}</label><input type="text" id="pDonatexUrl" value="${escapeAttr(config.url || "")}" placeholder="https://..."></div>
         <p class="properties__hint">${t("properties.donatexBridgeHint")}</p>
         <div ${bridge ? "style=\"display:none\"" : ""}>
           <div class="md-field"><label>${t("properties.donatexAiName")}</label><input type="text" id="pDonatexName" value="${escapeAttr(config.characterName || "")}" placeholder="${escapeAttr(t("donatexAi.defaultName"))}"></div>
@@ -807,10 +808,7 @@ export function initPropertiesPanel({
         </div>`;
     } else if (inst.type === "music") {
       extraHtml = `
-        <div class="md-field"><label>${t("properties.musicDonatexWidget")}</label>
-          <input type="url" id="pMusicDonatexWidget" value="${escapeAttr(config.donatexWidgetUrl || "")}" placeholder="https://donatex.gg/widgets/music/…">
-          <p class="properties__hint">${t("properties.musicDonatexHint")}</p>
-        </div>
+        <p class="properties__hint">${t("properties.musicDonatexHint")}</p>
         <div class="md-field"><label>${t("properties.musicTestLink")}</label>
           <div class="properties__row">
             <input type="url" id="pMusicTestLink" value="${escapeAttr(config.testLink || "")}" placeholder="${escapeAttr(t("properties.musicTestLinkPlaceholder"))}" style="flex:1;min-width:0;">
@@ -1295,8 +1293,6 @@ export function initPropertiesPanel({
         send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { mode: e.target.value } } });
       });
     } else if (inst.type === "donatex-ai") {
-      propertiesEl.querySelector("#pDonatexDonationUrl").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { donationUrl: e.target.value.trim() } } }));
-      propertiesEl.querySelector("#pDonatexUrl").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { url: e.target.value.trim() } } }));
       propertiesEl.querySelector("#pDonatexName").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { characterName: e.target.value.trim() } } }));
       propertiesEl.querySelector("#pDonatexAvatar").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { avatarUrl: e.target.value.trim() } } }));
       wireSwitch(propertiesEl.querySelector("#pDonatexShowName"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showName: on } } }));
@@ -1313,9 +1309,6 @@ export function initPropertiesPanel({
       wireSwitch(propertiesEl.querySelector("#pMusicAutoplay"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { autoplay: on } } }));
       wireSwitch(propertiesEl.querySelector("#pMusicQueue"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { queue: on } } }));
       wireSwitch(propertiesEl.querySelector("#pMusicShowAmount"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showAmount: on } } }));
-      propertiesEl.querySelector("#pMusicDonatexWidget").addEventListener("change", (e) => {
-        send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { donatexWidgetUrl: e.target.value.trim() } } });
-      });
       propertiesEl.querySelector("#pMusicVolume").addEventListener("input", (e) => {
         const value = Number(e.target.value);
         const label = propertiesEl.querySelector("#pMusicVolumeValue");
