@@ -31,7 +31,7 @@ const PRESET_NAME_LIMIT: usize = 60;
 /// Полноэкранные сцены, у которых может быть своя раскладка виджетов.
 /// Остальные сцены (начало, BRB, окончание, пауза) — только собственное
 /// оформление и камера.
-pub const WIDGET_SCENE_IDS: [&str; 3] = ["talk", "wheel", "poll"];
+pub const WIDGET_SCENE_IDS: [&str; 4] = ["talk", "guests", "wheel", "poll"];
 
 /// Цель раскладки: `main` — оверлей, иначе id сцены.
 pub fn is_scene_target(target: &str) -> bool {

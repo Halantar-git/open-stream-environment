@@ -117,8 +117,8 @@ fn scene_set(diagnostics: &Diagnostics, payload: &Value) {
     // Заставка играется на переходах: возврат служебных сцен → main (интро) и
     // вход в служебную сцену. Приоритет файла: сцена → общий → стандартный.
     let current = diagnostics.runtime().active_scene();
-    let return_splash = ["start", "brb", "talk", "end", "wheel", "poll"];
-    let enter_splash = ["brb", "talk", "end", "wheel", "poll"];
+    let return_splash = ["start", "brb", "talk", "guests", "end", "wheel", "poll"];
+    let enter_splash = ["brb", "talk", "guests", "end", "wheel", "poll"];
     let mut splash_scene = String::new();
     if scene == "main" && return_splash.contains(&current.as_str()) {
         splash_scene = current.clone();

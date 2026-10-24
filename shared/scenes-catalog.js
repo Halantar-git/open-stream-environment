@@ -25,6 +25,7 @@
     start: { id: "start", label: "Начало стрима", icon: "scenePlay" },
     brb: { id: "brb", label: "Отошёл (BRB)", icon: "sceneBrb" },
     talk: { id: "talk", label: "Разговор", icon: "sceneTalk" },
+    guests: { id: "guests", label: "Гости", icon: "sceneGuests" },
     end: { id: "end", label: "Окончание стрима", icon: "sceneEnd" },
     wheel: { id: "wheel", label: "Колесо Фортуны", icon: "sceneWheel" },
     poll: { id: "poll", label: "Голосование", icon: "scenePoll" },
@@ -36,6 +37,24 @@
     { platform: "DC", text: "discord.gg/your_server" },
     { platform: "YT", text: "youtube.com/@channel" },
   ];
+
+  // Гостевая плитка раскладки сцены «Гости»: слот мультикама в сетке 2×2.
+  // Ширина и высота в процентах равны, потому что холст 16:9 — одинаковые
+  // проценты по осям дают кадр 16:9. Подпись выключена: имя гостя до
+  // подключения неизвестно, его вписывают в инспекторе.
+  function guestCam(slot, x, y, z) {
+    return {
+      id: `guests-${slot}`,
+      type: "webcam",
+      x,
+      y,
+      w: 36,
+      h: 36,
+      z,
+      visible: true,
+      config: { source: "remote", guestSlot: slot, label: "", showLabel: false },
+    };
+  }
 
   function defaultScenes() {
     return {
@@ -83,6 +102,38 @@
         showEvents: true,
         showSocials: true,
         socials: DEFAULT_SOCIALS.map((s) => ({ ...s })),
+      },
+      guests: {
+        statusLabel: "В ЭФИРЕ С ГОСТЯМИ",
+        title: "Гости",
+        subtitle: "",
+        splashFile: "",
+        splashDuration: 0,
+        splashEnabled: true,
+        backgroundFile: "",
+        showTimer: false,
+        timerDuration: 0,
+        timerDoneText: "",
+        showEvents: false,
+        showSocials: false,
+        socials: [],
+        widgets: [
+          guestCam("cam2", 2, 3, 1),
+          guestCam("cam3", 40, 3, 2),
+          guestCam("cam4", 2, 41, 3),
+          guestCam("cam5", 40, 41, 4),
+          {
+            id: "guests-chat",
+            type: "chat",
+            x: 78,
+            y: 3,
+            w: 20,
+            h: 74,
+            z: 5,
+            visible: true,
+            config: { maxMessages: 12 },
+          },
+        ],
       },
       end: {
         statusLabel: "СТРИМ ЗАВЕРШЁН",

@@ -39,8 +39,9 @@
 
   if (!EVENT_TYPES || !WidgetManager || !bus) return;
 
-  // Канвас виджетов есть только у трёх сцен: разговор, голосование, колесо.
-  const WIDGET_SCENE_IDS = ["talk", "wheel", "poll"];
+  // Канвас виджетов есть только у четырёх сцен: разговор, гости,
+  // голосование и колесо.
+  const WIDGET_SCENE_IDS = ["talk", "guests", "wheel", "poll"];
 
   let sceneType = "";
   let enabled = false;

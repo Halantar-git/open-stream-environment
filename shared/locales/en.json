@@ -369,6 +369,7 @@
       "start": "Starting soon",
       "brb": "BRB",
       "talk": "Just Chatting",
+      "guests": "Guests",
       "pause": "Paused",
       "end": "Ending",
       "wheel": "Wheel",
@@ -1534,6 +1535,7 @@
     "pollLabel": "Poll",
     "mainLabel": "Main",
     "talkLabel": "Just Chatting",
+    "guestsLabel": "Guests",
     "pauseLabel": "Pause"
   },
   "sceneContent": {
@@ -1559,6 +1561,12 @@
       "statusLabel": "JUST CHATTING",
       "title": "Chatting with viewers",
       "subtitle": "Ask your questions in chat!",
+      "timerDoneText": ""
+    },
+    "guests": {
+      "statusLabel": "CHATTING WITH GUESTS",
+      "title": "Guests",
+      "subtitle": "",
       "timerDoneText": ""
     },
     "pause": {
@@ -1701,10 +1709,11 @@
     "scenes": {
       "title": "Scenes",
       "p1": "Each scene is a separate OBS source that replaces the gameplay view entirely (not drawn on top of it).",
-      "p2": "Available scenes: Start, BRB, Main, Just Chatting, End and Fortune Wheel.",
+      "p2": "Available scenes: Start, BRB, Main, Just Chatting, Guests, End, Fortune Wheel, Poll and Pause.",
       "p3": "Just Chatting shows a large chat feed and alerts, leaving room for your webcam on the left.",
       "p4": "The “Set up scenes in OBS” button in the OBS WebSocket settings creates the sources for the scenes — it puts the right URL into each one. You can still copy a scene's URL manually in the “OBS Browser Source” panel on the right of the editor. Switch scenes from the remote or Stream Deck. Each scene can show a banner (title, subtitle, socials, recent events) and a countdown timer.",
-      "p5": "Scenes have a countdown timer: enable Timer, set the duration in seconds and the text shown when it ends. It starts when the scene is activated, survives an OBS browser-source reload and is not reset by settings changes; when entering through a splash it starts after the splash finishes."
+      "p5": "Scenes have a countdown timer: enable Timer, set the duration in seconds and the text shown when it ends. It starts when the scene is activated, survives an OBS browser-source reload and is not reset by settings changes; when entering through a splash it starts after the splash finishes.",
+      "p6": "The Guests scene is for talking with guests: four guest frames in a two-by-two grid with chat on the right. The frames are bound to multicam slots, so a participant invited in Settings → Guest cameras appears in their own tile without editing the layout; the name and frame are set in the widget inspector."
     },
     "splashes": {
       "title": "Splashes",

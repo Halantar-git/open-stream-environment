@@ -23,6 +23,9 @@
   const params = new URLSearchParams(location.search);
   const sceneType = params.get("type") || "brb";
   const isTalk = sceneType === "talk";
+  // «Разговор» и «Гости» — чистый холст: карточку с заголовком не показываем,
+  // всё оформление ставят виджеты на канвасе сцены.
+  const isCanvasOnly = isTalk || sceneType === "guests";
   const isPause = sceneType === "pause";
 
   let recentEvents = [];
@@ -106,9 +109,7 @@
       return;
     }
 
-    if (isTalk) {
-      // «Разговор» — чистый холст: чат и прочее оформление ставятся
-      // виджетами на канвасе сцены.
+    if (isCanvasOnly) {
       els.sceneCard.hidden = true;
       sceneTimer.stop();
       return;

@@ -77,7 +77,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     EVENT_TYPES.CMD_SAVE_LAYOUT,
   ]);
   // Раскладка виджетов есть только у этих сцен.
-  const WIDGET_SCENE_IDS = new Set(["talk", "wheel", "poll"]);
+  const WIDGET_SCENE_IDS = new Set(["talk", "guests", "wheel", "poll"]);
   const send = (type, payload) => {
     const next = LAYOUT_COMMANDS.has(type)
       ? { ...(payload || {}), target: state.layoutTarget || "main" }
@@ -221,6 +221,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const obsSceneStartInput = document.getElementById("obsSceneStart");
   const obsSceneBrbInput = document.getElementById("obsSceneBrb");
   const obsSceneTalkInput = document.getElementById("obsSceneTalk");
+  const obsSceneGuestsInput = document.getElementById("obsSceneGuests");
   const obsSceneEndInput = document.getElementById("obsSceneEnd");
   const obsSceneWheelInput = document.getElementById("obsSceneWheel");
   const obsSceneVideoInput = document.getElementById("obsSceneVideo");
@@ -595,6 +596,7 @@ const { EVENT_TYPES } = window.SharedEvents;
       obsSceneStartInput.value = sm.start || "";
       obsSceneBrbInput.value = sm.brb || "";
       obsSceneTalkInput.value = sm.talk || "";
+      obsSceneGuestsInput.value = sm.guests || "";
       obsSceneEndInput.value = sm.end || "";
       obsSceneWheelInput.value = sm.wheel || "";
       obsSceneVideoInput.value = sm.video || "";
@@ -911,6 +913,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   obsSceneStartInput.addEventListener("change", () => sendObsConfig({ sceneMap: { start: obsSceneStartInput.value.trim() } }));
   obsSceneBrbInput.addEventListener("change", () => sendObsConfig({ sceneMap: { brb: obsSceneBrbInput.value.trim() } }));
   obsSceneTalkInput.addEventListener("change", () => sendObsConfig({ sceneMap: { talk: obsSceneTalkInput.value.trim() } }));
+  obsSceneGuestsInput.addEventListener("change", () => sendObsConfig({ sceneMap: { guests: obsSceneGuestsInput.value.trim() } }));
   obsSceneEndInput.addEventListener("change", () => sendObsConfig({ sceneMap: { end: obsSceneEndInput.value.trim() } }));
   obsSceneWheelInput.addEventListener("change", () => sendObsConfig({ sceneMap: { wheel: obsSceneWheelInput.value.trim() } }));
   obsSceneVideoInput.addEventListener("change", () => sendObsConfig({ sceneMap: { video: obsSceneVideoInput.value.trim() } }));
@@ -1429,7 +1432,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   function renderSplashSettings() {
     if (!splashSettingsFormEl) return;
     const splash = state.splash || { file: "", duration: 0 };
-    const sceneIds = ["start", "brb", "talk", "end", "wheel", "poll"];
+    const sceneIds = ["start", "brb", "talk", "guests", "end", "wheel", "poll"];
     const backgroundIds = [...sceneIds, "pause"];
 
     let html = `
@@ -1744,7 +1747,7 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   function rewardSceneSelect(value) {
     const select = document.createElement("select");
-    const scenes = ["", "main", "start", "brb", "talk", "end", "wheel", "poll", "pause"];
+    const scenes = ["", "main", "start", "brb", "talk", "guests", "end", "wheel", "poll", "pause"];
     scenes.forEach((id) => {
       const opt = document.createElement("option");
       opt.value = id;

@@ -28,6 +28,25 @@ fn default_socials() -> Value {
     ])
 }
 
+/// Гостевая плитка раскладки сцены «Гости»: слот мультикама в сетке 2×2.
+///
+/// Ширина и высота в процентах равны: холст 16:9, поэтому одинаковые
+/// проценты по осям дают кадр 16:9. Подпись выключена — имя гостя до
+/// подключения неизвестно, его вписывают в инспекторе.
+fn guest_cam(slot: &str, x: i64, y: i64, z: i64) -> Value {
+    json!({
+        "id": format!("guests-{slot}"),
+        "type": "webcam",
+        "x": x,
+        "y": y,
+        "w": 36,
+        "h": 36,
+        "z": z,
+        "visible": true,
+        "config": { "source": "remote", "guestSlot": slot, "label": "", "showLabel": false },
+    })
+}
+
 /// Сцены по умолчанию — порт `defaultScenes()`.
 ///
 /// Порядок сцен и полей повторён по JS. У `pause` нет `splashEnabled` — так в
@@ -83,6 +102,38 @@ pub fn default_scenes() -> Value {
             "showSocials": true,
             "socials": socials.clone(),
             "widgets": [],
+        },
+        "guests": {
+            "statusLabel": "В ЭФИРЕ С ГОСТЯМИ",
+            "title": "Гости",
+            "subtitle": "",
+            "splashFile": "",
+            "splashDuration": 0,
+            "splashEnabled": true,
+            "backgroundFile": "",
+            "showTimer": false,
+            "timerDuration": 0,
+            "timerDoneText": "",
+            "showEvents": false,
+            "showSocials": false,
+            "socials": [],
+            "widgets": [
+                guest_cam("cam2", 2, 3, 1),
+                guest_cam("cam3", 40, 3, 2),
+                guest_cam("cam4", 2, 41, 3),
+                guest_cam("cam5", 40, 41, 4),
+                {
+                    "id": "guests-chat",
+                    "type": "chat",
+                    "x": 78,
+                    "y": 3,
+                    "w": 20,
+                    "h": 74,
+                    "z": 5,
+                    "visible": true,
+                    "config": { "maxMessages": 12 },
+                },
+            ],
         },
         "end": {
             "statusLabel": "СТРИМ ЗАВЕРШЁН",
@@ -403,11 +454,20 @@ mod tests {
             .collect();
         assert_eq!(
             ids,
-            ["start", "brb", "talk", "end", "wheel", "poll", "pause"]
+            ["start", "brb", "talk", "guests", "end", "wheel", "poll", "pause"]
         );
         assert_eq!(scenes["start"]["timerDuration"], json!(600));
         assert_eq!(scenes["start"]["socials"].as_array().unwrap().len(), 3);
         assert_eq!(scenes["wheel"]["socials"], json!([]));
+
+        // У сцены гостей уже готовая раскладка: четыре слота мультикама и чат.
+        let guests = scenes["guests"]["widgets"].as_array().unwrap();
+        let slots: Vec<&str> = guests
+            .iter()
+            .filter_map(|widget| widget["config"]["guestSlot"].as_str())
+            .collect();
+        assert_eq!(slots, ["cam2", "cam3", "cam4", "cam5"]);
+        assert!(guests.iter().any(|widget| widget["type"] == json!("chat")));
     }
 
     #[test]

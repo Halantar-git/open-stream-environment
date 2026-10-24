@@ -208,6 +208,7 @@
       [t("scene.pauseLabel"), "pause"],
       [t("scene.brbLabel"), "brb"],
       [t("scene.talkLabel"), "talk"],
+      [t("scene.guestsLabel"), "guests"],
       [t("scene.endLabel"), "end"],
       [t("scene.wheelLabel"), "wheel"],
       [t("scene.pollLabel"), "poll"],

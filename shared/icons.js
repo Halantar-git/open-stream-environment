@@ -102,6 +102,7 @@
     sceneTalk: `<svg viewBox="0 0 24 24" ${stroke}><path d="M4 5h16v11H8l-4 4V5z"/><path d="M8 9h8M8 12h5"/></svg>`,
     scenePoll: `<svg viewBox="0 0 24 24" ${stroke}><path d="M4 19h16M8 19V9M13 19V5M18 19v-7"/></svg>`,
     scenePause: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/></svg>`,
+    sceneGuests: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="9" cy="8" r="3"/><path d="M3 19c0-3 2.7-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.2"/><path d="M15.5 14.6c2.9.3 5 2.2 5 4.4"/></svg>`,
     // editor chrome icons
     trash: `<svg viewBox="0 0 24 24" ${stroke}><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>`,
     eye: `<svg viewBox="0 0 24 24" ${stroke}><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>`,

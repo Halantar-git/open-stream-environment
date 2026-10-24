@@ -41,8 +41,8 @@ const LEGACY_GUEST_SIGNAL_URL: &str = "wss://signal.ose-overlay.ru";
 const BOT_LEVELS: [&str; 4] = ["everyone", "subscriber", "moderator", "broadcaster"];
 
 /// Сцены, к которым можно привязать товар Twitch — как `REWARD_SCENES`.
-const REWARD_SCENES: [&str; 9] = [
-    "", "main", "start", "brb", "talk", "end", "wheel", "poll", "pause",
+const REWARD_SCENES: [&str; 10] = [
+    "", "main", "start", "brb", "talk", "guests", "end", "wheel", "poll", "pause",
 ];
 
 /// Сколько команд и таймеров бота принимаем.

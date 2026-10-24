@@ -106,11 +106,12 @@ pub fn build_camera_switch_plan(
 ///
 /// Имена источников постоянные и на латинице: по ним повторный запуск узнаёт
 /// уже созданный источник и не плодит дубликаты.
-pub const SETUP_SOURCES: [(&str, &str, &str); 9] = [
+pub const SETUP_SOURCES: [(&str, &str, &str); 10] = [
     ("main", "OSE Overlay", "/overlay/overlay.html"),
     ("start", "OSE Start", "/overlay/scene.html?type=start"),
     ("brb", "OSE BRB", "/overlay/scene.html?type=brb"),
     ("talk", "OSE Talk", "/overlay/scene.html?type=talk"),
+    ("guests", "OSE Guests", "/overlay/scene.html?type=guests"),
     ("pause", "OSE Pause", "/overlay/scene.html?type=pause"),
     ("end", "OSE End", "/overlay/scene.html?type=end"),
     ("wheel", "OSE Wheel", "/overlay/wheel-scene.html"),
@@ -125,6 +126,7 @@ pub fn default_scene_name(role: &str) -> &'static str {
         "start" => "Старт",
         "brb" => "Перерыв",
         "talk" => "Разговор",
+        "guests" => "Гости",
         "pause" => "Пауза",
         "end" => "Конец",
         "wheel" => "Колесо",
