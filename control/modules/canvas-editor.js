@@ -426,7 +426,7 @@ export function initCanvasEditor({
         const max = Math.min(3, config.maxMessages || 8);
         const rows = sampleChat().slice(0, max)
           .map((m) => {
-            const badges = config.showBadges === false ? "" : (m.badges || []).map((b) => `<span class="widget-chat__badge">${b.slice(0, 1).toUpperCase()}</span>`).join("");
+            const badges = (m.badges || []).map((b) => `<span class="widget-chat__badge">${b.slice(0, 1).toUpperCase()}</span>`).join("");
             return `<div class="widget-chat__msg">${badges}<span class="widget-chat__user" style="color:${m.color}">${m.user}</span><span class="widget-chat__colon">:</span><span class="widget-chat__text">${escapeHtml(m.message)}</span></div>`;
           })
           .join("");

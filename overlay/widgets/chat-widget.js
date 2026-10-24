@@ -48,18 +48,15 @@
       const row = document.createElement("div");
       row.className = "widget-chat__msg";
 
-      const badges =
-        this.config.showBadges === false
-          ? ""
-          : (msg.badges || [])
-              .slice(0, 3)
-              .map((b, i) => {
-                const url = msg.badgeImages && msg.badgeImages[i];
-                return url
-                  ? `<img class="widget-chat__badge" src="${escapeAttr(url)}" alt="" title="${escapeAttr(String(b))}" style="object-fit:contain;background:none" />`
-                  : `<span class="widget-chat__badge" data-role="${escapeAttr(String(b))}">${escapeHtml(String(b).slice(0, 1).toUpperCase())}</span>`;
-              })
-              .join("");
+      const badges = (msg.badges || [])
+        .slice(0, 3)
+        .map((b, i) => {
+          const url = msg.badgeImages && msg.badgeImages[i];
+          return url
+            ? `<img class="widget-chat__badge" src="${escapeAttr(url)}" alt="" title="${escapeAttr(String(b))}" style="object-fit:contain;background:none" />`
+            : `<span class="widget-chat__badge" data-role="${escapeAttr(String(b))}">${escapeHtml(String(b).slice(0, 1).toUpperCase())}</span>`;
+        })
+        .join("");
 
       row.innerHTML = `${badges}<span class="widget-chat__user" style="color:${escapeAttr(msg.color || "#c9c1d6")}">${escapeHtml(msg.user)}</span><span class="widget-chat__colon">:</span><span class="widget-chat__text">${renderEmotes(msg.message, msg.emotes)}</span>`;
       this.host.appendChild(row);

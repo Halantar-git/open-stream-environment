@@ -129,7 +129,7 @@
       defaultGeometry: { x: 68, y: 6, w: 29, h: 46 },
       minW: 16,
       minH: 16,
-      defaultConfig: { maxMessages: 8, showBadges: true },
+      defaultConfig: { maxMessages: 8 },
     },
     recent: {
       type: "recent",

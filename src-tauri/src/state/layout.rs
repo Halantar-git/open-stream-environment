@@ -830,10 +830,7 @@ mod tests {
         assert_eq!(widget["w"], json!(29));
         assert_eq!(widget["z"], json!(1));
         assert_eq!(widget["visible"], json!(true));
-        assert_eq!(
-            widget["config"],
-            json!({ "maxMessages": 8, "showBadges": true })
-        );
+        assert_eq!(widget["config"], json!({ "maxMessages": 8 }));
 
         let second = add_widget(&db, "goal").expect("виджет цели");
         assert_eq!(second["z"], json!(2));
@@ -930,7 +927,6 @@ mod tests {
         let patched =
             update_widget(&db, &id, &json!({ "config": { "maxMessages": 3 } })).expect("настройки");
         assert_eq!(patched["config"]["maxMessages"], json!(3));
-        assert_eq!(patched["config"]["showBadges"], json!(true));
         // Геометрия пережила правку настроек.
         assert_eq!(patched["w"], json!(16));
 

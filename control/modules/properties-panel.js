@@ -299,8 +299,7 @@ export function initPropertiesPanel({
         </div>`}`;
     } else if (inst.type === "chat") {
       extraHtml = `
-        <div class="md-field"><label>${t("properties.maxMessages")}</label><input type="number" id="pMaxMessages" min="1" max="20" value="${config.maxMessages || 8}"></div>
-        <div class="properties__toggle-row"><label>${t("properties.showBadges")}</label>${switchHtml("pShowBadges", config.showBadges !== false)}</div>`;
+        <div class="md-field"><label>${t("properties.maxMessages")}</label><input type="number" id="pMaxMessages" min="1" max="20" value="${config.maxMessages || 8}"></div>`;
     } else if (inst.type === "grimhex-chat" || inst.type === "nuclear-chat" || inst.type === "cobra-chat" || inst.type === "md3-chat" || inst.type === "pixel-chat" || inst.type === "teso-chat" || inst.type === "wardogs-chat" || inst.type === "retrowave-chat") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.maxMessages")}</label><input type="number" id="pMaxMessages" min="1" max="100" value="${config.maxMessages || 50}"></div>
@@ -863,7 +862,6 @@ export function initPropertiesPanel({
       }
     } else if (inst.type === "chat") {
       propertiesEl.querySelector("#pMaxMessages").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { maxMessages: Number(e.target.value) } } }));
-      wireSwitch(propertiesEl.querySelector("#pShowBadges"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showBadges: on } } }));
     } else if (inst.type === "grimhex-chat" || inst.type === "nuclear-chat" || inst.type === "cobra-chat" || inst.type === "md3-chat" || inst.type === "pixel-chat" || inst.type === "teso-chat" || inst.type === "wardogs-chat" || inst.type === "retrowave-chat") {
       propertiesEl.querySelector("#pMaxMessages").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { maxMessages: Number(e.target.value) } } }));
       wireSwitch(propertiesEl.querySelector("#pChatShowTime"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showTime: on } } }));

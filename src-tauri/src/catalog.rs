@@ -345,10 +345,7 @@ mod tests {
             default_geometry("chat").expect("геометрия чата")["w"],
             json!(29)
         );
-        assert_eq!(
-            default_config("chat"),
-            json!({ "maxMessages": 8, "showBadges": true })
-        );
+        assert_eq!(default_config("chat"), json!({ "maxMessages": 8 }));
         // У незнакомого вида настроек нет — пустой объект, а не паника.
         assert_eq!(default_config("нет-такого"), json!({}));
         assert!(def("нет-такого").is_none());

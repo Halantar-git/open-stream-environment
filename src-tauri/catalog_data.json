@@ -1,5 +1,5 @@
 {
-  "sourceHash": "2be803f64760015b",
+  "sourceHash": "6901a4eaa1c5436a",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -60,8 +60,7 @@
       "minW": 16,
       "minH": 16,
       "defaultConfig": {
-        "maxMessages": 8,
-        "showBadges": true
+        "maxMessages": 8
       }
     },
     "recent": {
