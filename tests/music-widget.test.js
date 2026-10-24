@@ -156,6 +156,25 @@ describe("music widget", () => {
     w.unmount();
   });
 
+  test("ссылка из инспектора играет трек без доната и суммы", () => {
+    const { w } = mountWidget({ autoplay: false });
+    w.context.bus.emit(EVENT_TYPES.MUSIC_PLAY, { musicLink: "https://cdn.example/Test.mp3" });
+    expect(w.current.musicLink).toBe("https://cdn.example/Test.mp3");
+    expect(w.current.amount).toBeNull();
+    expect(w.el.requester.textContent).toBe("music.requester:user=music.anonymous");
+    w.unmount();
+  });
+
+  test("ссылка не http(s) в источник звука не попадает", () => {
+    const { w } = mountWidget({ autoplay: false });
+    w.context.bus.emit(EVENT_TYPES.MUSIC_PLAY, { musicLink: "javascript:alert(1)" });
+    expect(w.current).toBeNull();
+
+    w.context.bus.emit(EVENT_TYPES.ALERT, donation({ musicLink: "file:///etc/passwd" }));
+    expect(w.current).toBeNull();
+    w.unmount();
+  });
+
   test("musicTitle важнее имени файла", () => {
     const { w } = mountWidget({ autoplay: false });
     w.context.bus.emit(EVENT_TYPES.ALERT, donation({ musicTitle: "Night Drive" }));

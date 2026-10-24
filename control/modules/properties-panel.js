@@ -737,6 +737,13 @@ export function initPropertiesPanel({
         </div>`;
     } else if (inst.type === "music") {
       extraHtml = `
+        <div class="md-field"><label>${t("properties.musicTestLink")}</label>
+          <div class="properties__row">
+            <input type="url" id="pMusicTestLink" value="${escapeAttr(config.testLink || "")}" placeholder="${escapeAttr(t("properties.musicTestLinkPlaceholder"))}" style="flex:1;min-width:0;">
+            <button class="md-button md-button--tonal" id="pMusicTestPlay">${t("properties.musicTest")}</button>
+          </div>
+          <p class="properties__hint">${t("properties.musicTestHint")}</p>
+        </div>
         <div class="properties__toggle-row"><label>${t("properties.musicAutoplay")}</label>${switchHtml("pMusicAutoplay", config.autoplay !== false)}</div>
         <div class="properties__toggle-row"><label>${t("properties.queue")}</label>${switchHtml("pMusicQueue", config.queue !== false)}</div>
         <div class="properties__toggle-row"><label>${t("properties.musicShowAmount")}</label>${switchHtml("pMusicShowAmount", config.showAmount !== false)}</div>
@@ -1226,6 +1233,19 @@ export function initPropertiesPanel({
         const label = propertiesEl.querySelector("#pMusicVolumeValue");
         if (label) label.textContent = `${value}%`;
         send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { volume: value / 100 } } });
+      });
+      const musicTestLink = propertiesEl.querySelector("#pMusicTestLink");
+      musicTestLink.addEventListener("change", () => {
+        send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { testLink: musicTestLink.value.trim() } } });
+      });
+      propertiesEl.querySelector("#pMusicTestPlay").addEventListener("click", () => {
+        const url = musicTestLink.value.trim();
+        // В источник звука отдаём только http/https: остальное там не нужно.
+        if (!/^https?:\/\//i.test(url)) {
+          musicTestLink.focus();
+          return;
+        }
+        send(EVENT_TYPES.CMD_TEST_MUSIC, { url });
       });
     } else if (inst.type === "uec-transfer") {
       propertiesEl.querySelector("#pUecChannel").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { channel: e.target.value.trim() } } }));

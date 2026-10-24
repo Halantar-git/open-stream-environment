@@ -1134,6 +1134,22 @@ pub fn handle_message(
                 .unwrap_or_default();
             diagnostics.test_donation_media(&rule_id);
         }
+        event_types::CMD_TEST_MUSIC => {
+            // Проверка виджета музыки: ссылка из инспектора звучит сразу и
+            // только в нём — донат, алерт и цель при этом не поднимаются.
+            let url = payload
+                .get("url")
+                .map(crate::state::js_string)
+                .unwrap_or_default();
+            let url = url.trim();
+            if is_web_url(url) {
+                broadcast(
+                    diagnostics,
+                    event_types::MUSIC_PLAY,
+                    json!({ "musicLink": url, "musicTitle": "" }),
+                );
+            }
+        }
         event_types::CMD_SET_CHAT_BOT_CONFIG => {
             {
                 let mut config = diagnostics.config();
@@ -1503,6 +1519,14 @@ fn obs_scene_defaults(locales: Option<&Locales>, lang: &str) -> Value {
         defaults.insert(role.to_string(), Value::String(name));
     }
     Value::Object(defaults)
+}
+
+/// Ссылка, которую можно отдать в `Audio`: только http/https. Ссылку вводит
+/// человек, и оверлей подставит её в источник звука — другие схемы
+/// (`javascript:`, `file:`) там не нужны.
+fn is_web_url(url: &str) -> bool {
+    let lower = url.to_ascii_lowercase();
+    lower.starts_with("http://") || lower.starts_with("https://")
 }
 
 fn broadcast_state(diagnostics: &Diagnostics) {
@@ -1887,6 +1911,39 @@ mod tests {
             .unwrap()
             .iter()
             .any(|widget| widget["type"] == json!("goal")));
+    }
+
+    #[test]
+    fn a_music_test_link_plays_only_in_the_widget() {
+        let fixture = Fixture::new("music-test");
+        let mut receiver = fixture.listen();
+
+        handle(
+            &fixture.diagnostics,
+            None,
+            &json!({
+                "type": event_types::CMD_TEST_MUSIC,
+                "payload": { "url": " https://cdn.example/Track.mp3 " },
+            }),
+        );
+
+        let message = frame(&mut receiver);
+        assert_eq!(message["type"], json!(event_types::MUSIC_PLAY));
+        assert_eq!(
+            message["payload"]["musicLink"],
+            json!("https://cdn.example/Track.mp3")
+        );
+
+        // Другие схемы в источник звука не отдаём.
+        handle(
+            &fixture.diagnostics,
+            None,
+            &json!({
+                "type": event_types::CMD_TEST_MUSIC,
+                "payload": { "url": "javascript:alert(1)" },
+            }),
+        );
+        assert!(receiver.try_recv().is_err());
     }
 
     #[test]

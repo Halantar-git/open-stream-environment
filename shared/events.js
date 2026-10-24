@@ -39,6 +39,7 @@
     TICKER_CONTROL: "ticker_control", // { action: "remove"|"clear", text? } — убрать отправленное сообщение из ленты
     GOAL_UPDATE: "goal_update", // { current, target, title, currency }
     DONATEX_AI_EVENT: "donatex_ai_event", // { characterName, aiText, aiAudio, user?, amount?, currency?, message? } — ответ ИИ-персонажа DonateX
+    MUSIC_PLAY: "music_play", // { musicLink, musicTitle?, user? } — трек для виджета музыки (донат или проверка)
     OBS_SCENES_SETUP: "obs_scenes_setup", // { ok, sceneMap, createdScenes, createdSources, updatedSources, errors } — итог кнопки «Настроить сцены в OBS»
     OBS_SCENES: "obs_scenes", // { scenes } — имена сцен в подключённой OBS для подсказок в маппинге
     CONNECTION_STATUS: "connection_status", // { service, status }
@@ -183,6 +184,7 @@
     CMD_SET_SOUNDBOARD_CONFIG: "cmd_set_soundboard_config",
     CMD_SET_DONATION_MEDIA_CONFIG: "cmd_set_donation_media_config", // { config: { enabled?, volume?, rules? } }
     CMD_TEST_DONATION_MEDIA: "cmd_test_donation_media", // { ruleId } // { config }
+    CMD_TEST_MUSIC: "cmd_test_music", // { url } — проиграть ссылку из инспектора виджета музыки
     CMD_SET_CHAT_BOT_CONFIG: "cmd_set_chat_bot_config", // { config }
     CMD_SET_TTS_CONFIG: "cmd_set_tts_config", // { config: { enabled?, volume?, rate?, lang? } }
     CMD_SET_DONATION_VOICE: "cmd_set_donation_voice", // { config: { donationAlerts?, volume? } }

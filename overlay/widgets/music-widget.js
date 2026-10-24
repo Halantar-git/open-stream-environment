@@ -80,6 +80,16 @@
     return Math.max(0, Math.min(1, number));
   }
 
+  /// Ссылка, которую можно отдать в `Audio`: http/https или файл из медиатеки
+  /// (`media/…`, его раскрывает `resolveMediaUrl`). Прочие схемы
+  /// (`javascript:`, `file:`) в источник звука не отдаём.
+  function webUrl(value) {
+    const link = String(value || "").trim();
+    if (/^https?:\/\//i.test(link)) return link;
+    if (/^media\/[\w./-]+$/i.test(link)) return link;
+    return "";
+  }
+
   /// «250 ₽» в локали интерфейса — тем же форматером, что и алерты.
   function sumText(context, amount, currency) {
     if (amount == null || amount === "") return "";
@@ -106,6 +116,9 @@
       this.buildDom();
 
       this.subscribe(this.context.EVENT_TYPES.ALERT, (alert) => this.onAlert(alert));
+      if (this.context.EVENT_TYPES.MUSIC_PLAY) {
+        this.subscribe(this.context.EVENT_TYPES.MUSIC_PLAY, (payload) => this.onMusicPlay(payload));
+      }
       this.subscribe(this.context.EVENT_TYPES.LOCALES, () => {
         if (this.current) this.renderMeta(this.current);
         else this.renderIdle();
@@ -132,10 +145,12 @@
     }
 
     onAlert(alert) {
-      if (!alert || alert.kind !== "donation" || !alert.musicLink) return;
+      if (!alert || alert.kind !== "donation") return;
+      const musicLink = webUrl(alert.musicLink);
+      if (!musicLink) return;
       const track = {
         user: alert.user,
-        musicLink: alert.musicLink,
+        musicLink,
         musicTitle: alert.musicTitle,
         amount: alert.amount,
         currency: alert.currency,
@@ -146,6 +161,20 @@
         return;
       }
       this.play(track);
+    }
+
+    // Ссылка из инспектора: проверка виджета, а не событие стрима — суммы и
+    // имени нет, звучит сразу и не встаёт в очередь.
+    onMusicPlay(payload) {
+      const musicLink = webUrl(payload && payload.musicLink);
+      if (!musicLink) return;
+      this.play({
+        user: "",
+        musicLink,
+        musicTitle: (payload && payload.musicTitle) || "",
+        amount: null,
+        currency: "",
+      });
     }
 
     queueEnabled() {
