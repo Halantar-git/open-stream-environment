@@ -243,6 +243,9 @@ pub fn run() {
             // раскладке (как `syncLongshotActivity` в `startIntegrations`).
             diagnostics.start_longshot_poll();
             diagnostics.sync_longshot_activity();
+            // Музыка DonateX: звучит их страница, а карточку трека ведёт
+            // сервер — очередь у сервиса своя, событий доната для этого мало.
+            diagnostics.start_donatex_music_poll();
             *setup_slot.lock().unwrap_or_else(|error| error.into_inner()) =
                 Some(Arc::clone(&diagnostics));
 

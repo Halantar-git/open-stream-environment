@@ -359,4 +359,69 @@ describe("music widget", () => {
     expect(frame.src).toBe("https://donatex.gg/widgets/music/new");
     w.unmount();
   });
+
+  test("трек от опроса DonateX только показывается: без звука и без таймера", () => {
+    const played = [];
+    global.Audio = class {
+      constructor(src) {
+        played.push(src);
+      }
+      addEventListener() {}
+      play() {
+        return { catch() {} };
+      }
+      pause() {}
+    };
+
+    const { w } = mountWidget({
+      autoplay: true,
+      donatexWidgetUrl: "https://donatex.gg/widgets/music/abc",
+    });
+    w.context.bus.emit(EVENT_TYPES.MUSIC_PLAY, {
+      musicLink: "https://www.youtube.com/watch?v=abc123",
+      musicTitle: "Night Drive",
+      silent: true,
+    });
+
+    expect(played).toEqual([]);
+    expect(w.current.musicLink).toBe("https://www.youtube.com/watch?v=abc123");
+    expect(w.el.trackTexts[0].textContent).toBe("Night Drive");
+    expect(w.el.art.src).toBe("https://img.youtube.com/vi/abc123/hqdefault.jpg");
+    expect(w.host.classList.contains("is-playing")).toBe(true);
+    // Таймера нет: карточка живёт, пока опрос не пришлёт stop.
+    expect(w._timers.size).toBe(0);
+
+    w.context.bus.emit(EVENT_TYPES.MUSIC_CONTROL, { action: "stop" });
+    expect(w.current).toBeNull();
+    expect(w.host.classList.contains("is-playing")).toBe(false);
+    w.unmount();
+  });
+
+  test("опрос не стирает заказчика того же трека из алерта", () => {
+    const { w } = mountWidget(
+      { autoplay: true },
+      { music: "https://donatex.gg/widgets/music/abc" },
+    );
+    w.context.bus.emit(EVENT_TYPES.ALERT, donation({ musicLink: "https://cdn.example/track.mp3" }));
+    w.context.bus.emit(EVENT_TYPES.MUSIC_PLAY, {
+      musicLink: "https://cdn.example/track.mp3",
+      silent: true,
+    });
+
+    expect(w.el.requester.textContent).toBe("music.requester:user=fan · 250 ₽");
+    w.unmount();
+  });
+
+  test("с виджетом DonateX донаты не занимают нашу очередь", () => {
+    const { w } = mountWidget(
+      { autoplay: true },
+      { music: "https://donatex.gg/widgets/music/abc" },
+    );
+    w.context.bus.emit(EVENT_TYPES.ALERT, donation({ musicLink: "https://cdn.example/first.mp3" }));
+    w.context.bus.emit(EVENT_TYPES.ALERT, donation({ musicLink: "https://cdn.example/second.mp3" }));
+
+    expect(w.queue.length).toBe(0);
+    expect(w.current.musicLink).toBe("https://cdn.example/second.mp3");
+    w.unmount();
+  });
 });

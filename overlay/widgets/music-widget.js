@@ -150,12 +150,9 @@
         this.renderQueue();
       }
       this.syncDonatexWidget();
-      // Со ссылкой на виджет DonateX трек играет их страница; наш звук
-      // выключаем, чтобы не было двух дорожек.
-      if (this.donatexWidgetUrl() && this._audio) {
-        this.stopAudio();
-        if (this.current) this.scheduleSimulatedStop();
-      }
+      // Со ссылкой на виджет DonateX трек играет их страница: свой звук и
+      // таймер выключаем, а карточку дальше ведёт опрос текущего трека.
+      if (this.donatexWidgetUrl() && this.current) this.showTrack(this.current);
       if (this._audio) this._audio.volume = clamp01(this.config.volume, 1);
       if (this.current) this.renderMeta(this.current);
     }
@@ -171,6 +168,13 @@
         amount: alert.amount,
         currency: alert.currency,
       };
+      // С подключённым виджетом DonateX очередь у сервиса: свой плеер не
+      // запускаем и в очередь не ставим, но карточку показываем сразу, чтобы
+      // не ждать опроса. Дальше её удержит или погасит опрос текущего трека.
+      if (this.donatexWidgetUrl()) {
+        this.showTrack(track);
+        return;
+      }
       if (this.current && this.queueEnabled()) {
         this.queue.push(track);
         this.renderQueue();
@@ -184,13 +188,18 @@
     onMusicPlay(payload) {
       const musicLink = webUrl(payload && payload.musicLink);
       if (!musicLink) return;
-      this.play({
-        user: "",
+      const track = {
+        user: (payload && payload.user) || "",
         musicLink,
         musicTitle: (payload && payload.musicTitle) || "",
         amount: null,
         currency: "",
-      });
+      };
+      // `silent` — трек уже звучит на странице DonateX, и опрос сообщает только
+      // о смене. Свой плеер трогать нельзя: иначе трек зазвучал бы дважды, а
+      // таймер симуляции погасил бы карточку посреди трека.
+      if (payload && payload.silent) this.showTrack(track);
+      else this.play(track);
     }
 
     // Управление плеером из инспектора: «Пропустить» заканчивает текущий
@@ -339,6 +348,24 @@
       if (this.donatexWidgetUrl()) this.scheduleSimulatedStop();
       else if (this.config.autoplay !== false) this.startAudio(info.musicLink);
       else this.scheduleSimulatedStop();
+    }
+
+    // Показать трек, который уже играет чужая страница: без звука и без
+    // таймера. Громкость и очередь у DonateX, поэтому карточка живёт до
+    // `music_control: stop` от опроса.
+    showTrack(info) {
+      const previous = this.current;
+      // Опрос не знает, кто заказал трек: если это тот же трек, что пришёл
+      // алертом, сохраняем имя и сумму из алерта.
+      const merged =
+        previous && previous.musicLink === info.musicLink && !info.user
+          ? { ...info, user: previous.user, amount: previous.amount, currency: previous.currency }
+          : info;
+      this.stopAudio();
+      this.clearSimTimer();
+      this.current = merged;
+      this.host.classList.add("is-playing");
+      this.applyPlaying(merged);
     }
 
     applyPlaying(info) {

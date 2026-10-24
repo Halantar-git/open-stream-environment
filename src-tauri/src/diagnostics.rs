@@ -161,6 +161,11 @@ pub struct Diagnostics {
     alert_queue: Arc<AlertQueue>,
     /// Целевая сцена, куда вернуться после заставки (пока играет видео).
     pending_video: Mutex<Option<Value>>,
+    /// Трек, который сейчас играет страница музыкального виджета DonateX.
+    /// Нужен, чтобы после перезагрузки источника в OBS карточка сразу
+    /// показала трек, а не ждала следующего изменения: очередь у сервиса,
+    /// и событие доната к нам может больше не прийти.
+    donatex_music_now: Mutex<Option<Value>>,
     /// Цикл «Колеса Фортуны»: спин, автоспин и автоскрытие (порт таймеров
     /// `createServer` из `index.js`).
     wheel: Arc<WheelCycle>,
@@ -382,6 +387,7 @@ impl Diagnostics {
             obs,
             alert_queue,
             pending_video: Mutex::new(None),
+            donatex_music_now: Mutex::new(None),
             wheel,
             longshot,
             rates: crate::integrations::exchange_rates::shared(),
@@ -903,6 +909,139 @@ impl Diagnostics {
                 }
             }
         }));
+    }
+
+    /// Следить за текущим треком DonateX, когда звук играет их виджет.
+    ///
+    /// Наш виджет узнаёт о музыке из события доната, но очередь DonateX
+    /// может играть трек, который пришёл раньше, был запущен в кабинете
+    /// или уже сменился после доната. Пока в раскладке есть видимый виджет
+    /// музыки и в настройках задана ссылка на музыкальный виджет, сервер
+    /// спрашивает `/v1/music/current` и присылает оверлею смену трека.
+    ///
+    /// Карточку ведёт именно опрос: пока трек есть в ответе, он висит на
+    /// экране, а гаснет по `music_control: stop`, когда сервис говорит, что
+    /// музыки больше нет. Поэтому у алерта с `musicLink` при подключённом
+    /// виджете DonateX таймера на 20 секунд нет — иначе карточка пропадала бы
+    /// посреди трека, а опрос о том же треке уже молчит.
+    pub fn start_donatex_music_poll(self: &Arc<Self>) {
+        let diagnostics = Arc::clone(self);
+        std::mem::drop(tauri::async_runtime::spawn(async move {
+            let mut ticker = tokio::time::interval(std::time::Duration::from_secs(5));
+            let mut last: Option<String> = None;
+            // Опрос выключили — гасим карточку один раз, а не каждые пять секунд.
+            let mut idle_sent = false;
+            let mut was_active = false;
+            loop {
+                ticker.tick().await;
+                if !diagnostics.donatex_music_poll_active() {
+                    if was_active {
+                        was_active = false;
+                        last = None;
+                        idle_sent = true;
+                        diagnostics.clear_donatex_music_now();
+                        diagnostics.broadcast_music_control("stop");
+                    }
+                    continue;
+                }
+                if !was_active {
+                    // Только включили: если музыки нет, надо снять карточку,
+                    // оставшуюся от прошлого трека или алерта.
+                    was_active = true;
+                    idle_sent = false;
+                }
+                let token = diagnostics.donatex_external_token();
+                if token.is_empty() {
+                    continue;
+                }
+                match crate::integrations::donatex::fetch_music_current(&token).await {
+                    Ok(Some(mut track)) => {
+                        idle_sent = false;
+                        let link = track
+                            .get("musicLink")
+                            .and_then(Value::as_str)
+                            .unwrap_or_default()
+                            .to_string();
+                        if link.is_empty() || last.as_deref() == Some(link.as_str()) {
+                            continue;
+                        }
+                        last = Some(link.clone());
+                        // Название тянем только при смене трека: DonateX его
+                        // не отдаёт, а в карточке нужен не голый адрес.
+                        if let Some(title) =
+                            crate::integrations::donatex::fetch_youtube_title(&link).await
+                        {
+                            if let Some(map) = track.as_object_mut() {
+                                map.insert("musicTitle".to_string(), Value::from(title));
+                            }
+                        }
+                        // `silent` — карточка только показывает трек: звук и
+                        // очередь остаются у страницы DonateX.
+                        if let Some(map) = track.as_object_mut() {
+                            map.insert("silent".to_string(), Value::Bool(true));
+                        }
+                        let frame = json!({
+                            "type": event_types::MUSIC_PLAY,
+                            "payload": track,
+                        })
+                        .to_string();
+                        // Запомнить трек: перезагрузка источника в OBS не должна
+                        // оставлять карточку пустой до следующей смены трека.
+                        *diagnostics
+                            .donatex_music_now
+                            .lock()
+                            .unwrap_or_else(|error| error.into_inner()) = Some(track.clone());
+                        diagnostics.clients().broadcast_text(&frame);
+                    }
+                    Ok(None) => {
+                        last = None;
+                        if !idle_sent {
+                            idle_sent = true;
+                            diagnostics.clear_donatex_music_now();
+                            diagnostics.broadcast_music_control("stop");
+                        }
+                    }
+                    // Сеть моргнула — не гасим уже показанный трек.
+                    Err(_) => {}
+                }
+            }
+        }));
+    }
+
+    /// Нужен ли опрос музыки: DonateX включён, ссылка на их виджет задана
+    /// и в раскладке есть что обновлять.
+    fn donatex_music_poll_active(&self) -> bool {
+        let config = self.config();
+        let donatex = config.get("donatex");
+        if !donatex
+            .map(|service| js_truthy(service.get("enabled")))
+            .unwrap_or(false)
+        {
+            return false;
+        }
+        let has_link = donatex
+            .and_then(|service| service.get("widgets"))
+            .and_then(|widgets| widgets.get("music"))
+            .map(crate::state::js_string)
+            .is_some_and(|link| !link.trim().is_empty());
+        has_link && crate::state::layout::has_music_widget(&self.database, &config)
+    }
+
+    fn donatex_external_token(&self) -> String {
+        self.config()
+            .get("donatex")
+            .and_then(|service| service.get("externalToken"))
+            .map(crate::state::js_string)
+            .unwrap_or_default()
+    }
+
+    fn broadcast_music_control(&self, action: &str) {
+        let frame = json!({
+            "type": event_types::MUSIC_CONTROL,
+            "payload": { "action": action },
+        })
+        .to_string();
+        self.clients().broadcast_text(&frame);
     }
 
     /// Загрузить курсы валют при старте и обновлять их в фоне. Без курсов
@@ -1676,6 +1815,22 @@ impl Diagnostics {
             .lock()
             .unwrap_or_else(|error| error.into_inner())
             .take()
+    }
+
+    /// Текущий трек страницы DonateX: его отдаём оверлею, который подключился
+    /// заново (перезагрузка источника в OBS), чтобы карточка не пустовала.
+    pub fn donatex_music_now(&self) -> Option<Value> {
+        self.donatex_music_now
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .clone()
+    }
+
+    fn clear_donatex_music_now(&self) {
+        *self
+            .donatex_music_now
+            .lock()
+            .unwrap_or_else(|error| error.into_inner()) = None;
     }
 
     /// Провести событие по шине, как `bus.emit(...)` в JS: алерт, звук, камера,

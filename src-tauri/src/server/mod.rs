@@ -429,6 +429,14 @@ async fn handle_socket(
                 send_frame(&mut socket, event_types::ALERT, current).await;
             }
         }
+        // Музыка — и для сцен: виджет может стоять в раскладке сцены. Трек
+        // играет страница DonateX, а событие о нём уже прошло — после
+        // перезагрузки источника карточка ждала бы следующего трека.
+        if role == "overlay" || role == "scene" {
+            if let Some(track) = bus.diagnostics.donatex_music_now() {
+                send_frame(&mut socket, event_types::MUSIC_PLAY, track).await;
+            }
+        }
     }
 
     loop {

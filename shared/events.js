@@ -39,8 +39,8 @@
     TICKER_CONTROL: "ticker_control", // { action: "remove"|"clear", text? } — убрать отправленное сообщение из ленты
     GOAL_UPDATE: "goal_update", // { current, target, title, currency }
     DONATEX_AI_EVENT: "donatex_ai_event", // { characterName, aiText, aiAudio, user?, amount?, currency?, message? } — ответ ИИ-персонажа DonateX
-    MUSIC_PLAY: "music_play", // { musicLink, musicTitle?, user? } — трек для виджета музыки (донат или проверка)
-    MUSIC_CONTROL: "music_control", // { action: "skip" | "stop" } — управление плеером из инспектора
+    MUSIC_PLAY: "music_play", // { musicLink, musicTitle?, user?, silent? } — трек для виджета музыки (донат, проверка или опрос DonateX)
+    MUSIC_CONTROL: "music_control", // { action: "skip" | "stop" } — управление плеером из инспектора и опроса DonateX
     OBS_SCENES_SETUP: "obs_scenes_setup", // { ok, sceneMap, createdScenes, createdSources, updatedSources, errors } — итог кнопки «Настроить сцены в OBS»
     OBS_SCENES: "obs_scenes", // { scenes } — имена сцен в подключённой OBS для подсказок в маппинге
     CONNECTION_STATUS: "connection_status", // { service, status }

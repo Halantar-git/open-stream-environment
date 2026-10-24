@@ -79,6 +79,21 @@ pub fn has_timer_widget(db: &Database, config: &ConfigFile) -> bool {
             .any(|scene| scene_widgets(config, scene).iter().any(is_timer))
 }
 
+/// Есть ли в раскладке видимый виджет музыки.
+///
+/// Пока его нет, сервер не опрашивает `/v1/music/current`: без виджета
+/// результат некому показать. Скрытый виджет тоже не считается — хозяин
+/// мог свернуть его на время.
+pub fn has_music_widget(db: &Database, config: &ConfigFile) -> bool {
+    let is_music = |widget: &Value| {
+        widget.get("visible") != Some(&Value::Bool(false)) && widget_type(widget) == "music"
+    };
+    widgets(db, config).iter().any(is_music)
+        || WIDGET_SCENE_IDS
+            .iter()
+            .any(|scene| scene_widgets(config, scene).iter().any(is_music))
+}
+
 /// Поставить виджет по умолчанию: геометрия, слой и настройки — из каталога.
 ///
 /// `None` — такого типа в каталоге нет (панель могла прислать старое имя).
@@ -1109,6 +1124,26 @@ mod tests {
         assert!(!has_timer_widget(&db, &config));
         add_scene_widget(&mut config, "talk", "timer").expect("таймер");
         assert!(has_timer_widget(&db, &config));
+    }
+
+    #[test]
+    fn music_polling_needs_a_visible_music_widget() {
+        let fixture = Fixture::new("music-widget");
+        let mut config = fixture.config();
+        let db = fixture.db();
+
+        assert!(!has_music_widget(&db, &config));
+
+        let music = add_widget(&db, "music").expect("музыка");
+        assert!(has_music_widget(&db, &config));
+
+        let id = music["id"].as_str().unwrap().to_string();
+        update_widget(&db, &id, &json!({ "visible": false }));
+        assert!(!has_music_widget(&db, &config));
+
+        // Виджет на сцене тоже требует опроса: трек видно и там.
+        add_scene_widget(&mut config, "talk", "music").expect("музыка на сцене");
+        assert!(has_music_widget(&db, &config));
     }
 
     #[test]

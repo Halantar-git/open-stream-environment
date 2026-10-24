@@ -23,6 +23,9 @@ use crate::storage::history::{js_number_or_zero, number_value};
 /// Публичный хаб донатов DonateX.
 pub const HUB_URL: &str = "wss://donatex.gg/api/public-donations-hub";
 
+/// Текущее состояние музыкального виджета DonateX.
+pub const MUSIC_CURRENT_URL: &str = "https://donatex.gg/api/v1/music/current";
+
 const RECONNECT_MS: u64 = 5_000;
 // Сервер шлёт пинг примерно раз в 15 секунд. Если трафика нет дольше этого
 // срока, соединение считается полуоткрытым и пересоздаётся.
@@ -104,9 +107,93 @@ pub fn donation_alert_from_payload(payload: &Value) -> Value {
     Value::Object(out)
 }
 
+fn http_client() -> &'static reqwest::Client {
+    static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
+    CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .user_agent("OpenStreamEnvironment")
+            .build()
+            .unwrap_or_default()
+    })
+}
+
+/// Текущий трек из ответа `/v1/music/current`.
+///
+/// `hasTrack: false` и пустая ссылка означают «музыки нет» — тогда виджет
+/// нужно погасить, а не показывать прошлый трек. Название и заказчика этот
+/// метод не знает: DonateX отдаёт только ссылку.
+pub fn music_track_from_current(payload: &Value) -> Option<Value> {
+    if payload.get("hasTrack").and_then(Value::as_bool) == Some(false) {
+        return None;
+    }
+    let link = string_trimmed(payload.get("musicLink"));
+    if link.is_empty() {
+        return None;
+    }
+    Some(json!({
+        "musicLink": link,
+        "source": "donatex",
+        "isPlaying": payload
+            .get("isPlaying")
+            .and_then(Value::as_bool)
+            .unwrap_or(false),
+    }))
+}
+
+/// Запросить текущий трек музыкального виджета DonateX.
+///
+/// `Ok(None)` — трека нет, `Err` — сеть или ответ сервиса. Вызывающий по этой
+/// разнице решает, гасить ли уже показанный трек: моргнувшая сеть не повод
+/// очищать экран.
+pub async fn fetch_music_current(token: &str) -> Result<Option<Value>, String> {
+    let response = http_client()
+        .get(MUSIC_CURRENT_URL)
+        .bearer_auth(token)
+        .timeout(Duration::from_secs(10))
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("status {}", response.status()));
+    }
+    let payload: Value = response.json().await.map_err(|error| error.to_string())?;
+    Ok(music_track_from_current(&payload))
+}
+
+/// Название ролика YouTube: DonateX отдаёт в музыке только ссылку, а в
+/// карточке нужно что-то понятнее адреса. Ошибка или не-YouTube ссылка
+/// просто оставляют название пустым.
+pub async fn fetch_youtube_title(link: &str) -> Option<String> {
+    let parsed = reqwest::Url::parse(link).ok()?;
+    let host = parsed.host_str()?.to_ascii_lowercase();
+    if !(host == "youtu.be" || host == "youtube.com" || host.ends_with(".youtube.com")) {
+        return None;
+    }
+    let mut url = reqwest::Url::parse("https://www.youtube.com/oembed").ok()?;
+    url.query_pairs_mut()
+        .append_pair("url", link)
+        .append_pair("format", "json");
+    let response = http_client()
+        .get(url)
+        .timeout(Duration::from_secs(8))
+        .send()
+        .await
+        .ok()?;
+    if !response.status().is_success() {
+        return None;
+    }
+    let payload: Value = response.json().await.ok()?;
+    payload
+        .get("title")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|title| !title.is_empty())
+        .map(str::to_string)
+}
+
 /// Обновление цели из payload `GoalUpdated`.
 ///
-/// Читает и новые поля (`currentAmount`/`goalAmount`), и старые
+/// Читает новые поля (`currentAmount`/`goalAmount`) и старые
 /// (`current`/`target`); если суммы нет вовсе — обновлять нечего.
 pub fn goal_update_from_payload(payload: &Value) -> Option<Value> {
     if !payload.is_object() {
@@ -719,5 +806,33 @@ mod tests {
     #[test]
     fn a_token_is_percent_encoded_for_the_query() {
         assert_eq!(encode_query("a b+c/d="), "a%20b%2Bc%2Fd%3D");
+    }
+
+    #[test]
+    fn the_current_music_track_keeps_only_what_the_widget_shows() {
+        assert_eq!(
+            music_track_from_current(&json!({
+                "hasTrack": true,
+                "isPlaying": true,
+                "musicLink": " https://www.youtube.com/watch?v=abc ",
+                "widgetId": "w",
+            })),
+            Some(json!({
+                "musicLink": "https://www.youtube.com/watch?v=abc",
+                "source": "donatex",
+                "isPlaying": true,
+            }))
+        );
+
+        // Трека нет — карточку надо гасить, а не показывать прошлый.
+        assert_eq!(
+            music_track_from_current(&json!({ "hasTrack": false, "musicLink": "" })),
+            None
+        );
+        // Пустая ссылка без флага тоже ничего не показывает.
+        assert_eq!(
+            music_track_from_current(&json!({ "hasTrack": true, "musicLink": "  " })),
+            None
+        );
     }
 }
