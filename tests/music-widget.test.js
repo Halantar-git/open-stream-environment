@@ -152,22 +152,34 @@ function donation(patch = {}) {
 }
 
 describe("music widget", () => {
-  test("показывает трек, заказчика и сумму", () => {
+  test("показывает название трека и не прячет строку", () => {
     const { w } = mountWidget({ autoplay: false });
+    expect(w.host.classList.contains("is-empty")).toBe(true);
+
     w.context.bus.emit(EVENT_TYPES.ALERT, donation({ musicLink: "https://cdn.example/Night%20Drive.mp3" }));
 
     expect(w.current.musicLink).toBe("https://cdn.example/Night%20Drive.mp3");
     expect(w.el.trackTexts[0].textContent).toBe("Night Drive.mp3");
-    expect(w.el.requester.textContent).toBe("music.requester:user=fan · 250 ₽");
+    expect(w.host.classList.contains("is-empty")).toBe(false);
     w.unmount();
   });
 
-  test("ссылка из инспектора играет трек без доната и суммы", () => {
+  test("стоп прячет строку: музыки больше нет", () => {
+    const { w } = mountWidget({ autoplay: false });
+    w.context.bus.emit(EVENT_TYPES.ALERT, donation());
+    expect(w.host.classList.contains("is-empty")).toBe(false);
+
+    w.context.bus.emit(EVENT_TYPES.MUSIC_CONTROL, { action: "stop" });
+    expect(w.host.classList.contains("is-empty")).toBe(true);
+    expect(w.el.trackTexts[0].textContent).toBe("");
+    w.unmount();
+  });
+
+  test("ссылка из инспектора показывает трек без доната", () => {
     const { w } = mountWidget({ autoplay: false });
     w.context.bus.emit(EVENT_TYPES.MUSIC_PLAY, { musicLink: "https://cdn.example/Test.mp3" });
     expect(w.current.musicLink).toBe("https://cdn.example/Test.mp3");
-    expect(w.current.amount).toBeNull();
-    expect(w.el.requester.textContent).toBe("music.requester:user=music.anonymous");
+    expect(w.el.trackTexts[0].textContent).toBe("Test.mp3");
     w.unmount();
   });
 
@@ -206,10 +218,11 @@ describe("music widget", () => {
     w.unmount();
   });
 
-  test("showAmount: false оставляет только заказчика", () => {
+  test("showAmount больше не влияет на вид: в строке только название", () => {
     const { w } = mountWidget({ autoplay: false, showAmount: false });
     w.context.bus.emit(EVENT_TYPES.ALERT, donation());
-    expect(w.el.requester.textContent).toBe("music.requester:user=fan");
+    expect(w.el.trackTexts).toHaveLength(1);
+    expect(w.el.trackTexts[0].textContent).toBe("Track.mp3");
     w.unmount();
   });
 
@@ -220,13 +233,10 @@ describe("music widget", () => {
 
     expect(w.current.musicLink).toBe("https://cdn.example/first.mp3");
     expect(w.queue.length).toBe(1);
-    expect(w.el.queue.textContent).toBe("music.queue:count=1");
-    expect(w.el.queue.style.display).toBe("");
 
     w.idle();
     expect(w.current.musicLink).toBe("https://cdn.example/second.mp3");
     expect(w.queue.length).toBe(0);
-    expect(w.el.queue.style.display).toBe("none");
     w.unmount();
   });
 
@@ -237,15 +247,13 @@ describe("music widget", () => {
 
     expect(w.current.musicLink).toBe("https://cdn.example/second.mp3");
     expect(w.queue.length).toBe(0);
-    expect(w.el.queue.style.display).toBe("none");
     w.unmount();
   });
 
-  test("ссылка на YouTube даёт обложку и общее название", () => {
+  test("ссылка на YouTube без названия даёт запасную подпись", () => {
     const { w } = mountWidget({ autoplay: false });
     w.context.bus.emit(EVENT_TYPES.ALERT, donation({ musicLink: "https://www.youtube.com/watch?v=abc123" }));
 
-    expect(w.el.art.src).toBe("https://img.youtube.com/vi/abc123/hqdefault.jpg");
     expect(w.el.trackTexts[0].textContent).toBe("music.track");
     w.unmount();
   });
@@ -386,29 +394,13 @@ describe("music widget", () => {
     expect(played).toEqual([]);
     expect(w.current.musicLink).toBe("https://www.youtube.com/watch?v=abc123");
     expect(w.el.trackTexts[0].textContent).toBe("Night Drive");
-    expect(w.el.art.src).toBe("https://img.youtube.com/vi/abc123/hqdefault.jpg");
     expect(w.host.classList.contains("is-playing")).toBe(true);
-    // Таймера нет: карточка живёт, пока опрос не пришлёт stop.
+    // Таймера нет: строка живёт, пока опрос не пришлёт stop.
     expect(w._timers.size).toBe(0);
 
     w.context.bus.emit(EVENT_TYPES.MUSIC_CONTROL, { action: "stop" });
     expect(w.current).toBeNull();
     expect(w.host.classList.contains("is-playing")).toBe(false);
-    w.unmount();
-  });
-
-  test("опрос не стирает заказчика того же трека из алерта", () => {
-    const { w } = mountWidget(
-      { autoplay: true },
-      { music: "https://donatex.gg/widgets/music/abc" },
-    );
-    w.context.bus.emit(EVENT_TYPES.ALERT, donation({ musicLink: "https://cdn.example/track.mp3" }));
-    w.context.bus.emit(EVENT_TYPES.MUSIC_PLAY, {
-      musicLink: "https://cdn.example/track.mp3",
-      silent: true,
-    });
-
-    expect(w.el.requester.textContent).toBe("music.requester:user=fan · 250 ₽");
     w.unmount();
   });
 

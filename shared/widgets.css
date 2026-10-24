@@ -2595,12 +2595,16 @@
   opacity: 0;
   pointer-events: none;
 }
+.widget-music.is-empty .orbital {
+  display: none;
+}
+/* Строка одна: название трека. Обложку, заказчика и прогресс убрали —
+   звук и очередь всё равно у страницы DonateX. */
 .orbital {
   display: flex;
   align-items: center;
-  gap: 12px;
   height: 100%;
-  padding: 10px 14px;
+  padding: 0 14px;
   box-sizing: border-box;
   overflow: hidden;
   border-radius: var(--panel-radius, 16px);
@@ -2608,104 +2612,15 @@
   background: var(--panel-bg, rgba(10, 10, 12, 0.9));
   box-shadow: var(--elev-1, 0 6px 20px rgba(0, 0, 0, 0.4));
 }
-.orbital__cover {
-  position: relative;
-  width: clamp(40px, 22%, 96px);
-  aspect-ratio: 1;
-  flex-shrink: 0;
-  overflow: hidden;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.1), transparent 70%);
-}
-.orbital__vinyl {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: repeating-radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.07) 0 2px, transparent 2px 5px);
-}
-.is-playing .orbital__vinyl {
-  animation: orbital-spin 6s linear infinite;
-}
-.orbital__note {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  color: var(--md-primary, #00f0ff);
-}
-.orbital__art {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.orbital__meta {
-  min-width: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
 .orbital__track {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   white-space: nowrap;
+  text-overflow: ellipsis;
   font-family: var(--font-display, "Segoe UI", sans-serif);
   font-size: 15px;
   font-weight: 700;
-}
-.orbital__track-inner {
-  display: inline-flex;
-  gap: 32px;
-}
-.orbital__track.is-marquee .orbital__track-inner {
-  animation: orbital-marquee 12s linear infinite;
-}
-.orbital__requester {
-  font-size: 12px;
-  color: var(--md-on-surface-variant, #b6b3a7);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.orbital__queue {
-  font-size: 11px;
-  color: var(--md-primary, #00f0ff);
-  opacity: 0.85;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.orbital__timer {
-  font-family: var(--font-mono, monospace);
-  font-size: 12px;
-  color: var(--md-primary, #00f0ff);
-  white-space: nowrap;
-}
-.orbital__progress {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.12);
-}
-.orbital__progress-fill {
-  display: block;
-  width: 0;
-  height: 100%;
-  background: var(--md-primary, #00f0ff);
-  transition: width 300ms linear;
-}
-@keyframes orbital-spin {
-  to { transform: rotate(360deg); }
-}
-@keyframes orbital-marquee {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
 }
 
 /* ==== UEC transfer — входящая передача (токены активной темы) ==== */

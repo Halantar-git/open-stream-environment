@@ -631,11 +631,7 @@
     "queue": "{{count}} more"
   },
   "music": {
-    "idle": "Donation music",
-    "track": "Donation track",
-    "anonymous": "Anonymous",
-    "requester": "Requested by {{user}}",
-    "queue": "queued: {{count}}"
+    "track": "Donation track"
   },
   "uec": {
     "incoming": "INCOMING MESSAGE",
@@ -756,7 +752,7 @@
     "donatex-ai": "DonateX AI character",
     "donatex-aiDesc": "Audio from the DonateX donation and AI widgets — no picture; the links are set in DonateX settings",
     "music": "Donation music",
-    "musicDesc": "Track attached to a donation: cover art, title, requester and progress",
+    "musicDesc": "The donation track title on a single line; the widget is hidden while there is no music",
     "uec-transfer": "UEC transfer",
     "uec-transferDesc": "Incoming transmission: channel, callsign and donation amount in Star Citizen style (Orbital theme)",
     "grimhex-ticker": "Grim HEX ticker",
@@ -1099,14 +1095,13 @@
     "donatexAiShowDonor": "Show donor and amount",
     "donatexAiHideDelay": "Hide after, ms",
     "musicAutoplay": "Play the track",
-    "musicShowAmount": "Show donation amount",
     "musicTestLink": "Track link",
     "musicTestLinkPlaceholder": "https://…/track.mp3 or a YouTube link",
     "musicTest": "▶ Test",
     "musicSkip": "Skip",
     "musicStop": "Stop",
-    "musicTestHint": "The test plays in the overlay right away, without a donation and without an alert. A direct audio link plays in full; a YouTube page only gives the cover and a twenty-second progress bar.",
-    "musicDonatexHint": "The DonateX music widget link is set in Settings → DonateX. With it DonateX treats the widget as connected and plays the track itself, while our widget shows the cover and title.",
+    "musicTestHint": "The test plays in the overlay right away, without a donation and without an alert. A direct audio link plays in full; a YouTube page only gives the title for twenty seconds.",
+    "musicDonatexHint": "The DonateX music widget link is set in Settings → DonateX. With it DonateX treats the widget as connected and plays the track itself, while our widget shows the title.",
     "queue": "Queue",
     "uecChannel": "Header channel",
     "uecDuration": "Show for, ms",
@@ -1691,9 +1686,9 @@
       "p6": "The webcam frame has two modes. Frame only is decoration: corners, a thin border and a LIVE badge in the current theme color; the camera is a separate OBS source. Live video from the panel makes the control panel capture the camera and send frames to the overlay; device, frame width, FPS (up to 60), codec, bitrate or JPEG quality are configurable, plus mirror and fit. H.264 through WebCodecs is used by default; if the browser or hardware cannot handle it, the panel falls back to JPEG. The OBS browser source itself has no camera access. The corner colour can be set separately from the frame (empty — taken from the theme), and the Neon toggle adds a glow around the frame and corners; the glow strength is 2–40 px.",
       "p7": "The news ticker is a scrolling line of stream events: donations, follows, subs, rewards, and optionally chat, the goal and the top donation. Speed is set in pixels per second and does not depend on message length; direction and sources are toggled in the inspector. There is a flat 2D variant and 3D tickers in the theme sets with a slight perspective. Ready-made phrases for it live in the Templates panel — send one into the ticker or the breaking bar in one click.",
       "p8": "3D chats have a Show time toggle: it affects new messages only — chat keeps no history, just the rows on screen, so messages already shown keep their time. The TESO chat has no time at all.",
-      "p9": "DonateX widgets — Donation music and the AI character — show what came with the donation: a track with cover art and progress, or a voiced reply. The inspector sets volume, the donor amount, the character name and the queue: when donations arrive back to back, the next track or reply waits its turn instead of cutting off the current one. If the track link points to a YouTube page, there is no audio to play — the widget shows the cover and a twenty-second progress bar, then takes the next one. You can check a link from the inspector: the “Track link” field and the “Test” button play it in the overlay as if a donation had arrived, but without an alert or a history record. The “Skip” and “Stop” buttons control the queue: the first cuts the current track and takes the next one, the second stops the player and clears the queue.",
-      "p10": "The DonateX widget links — donation, AI character and music — are set in Settings → DonateX. They open hidden in the overlay: the service sees the widgets as connected and plays the sound itself, while OSE draws the picture. Our music widget then shows the cover and title and does not duplicate the sound.",
-      "p11": "The music widget link makes DonateX the owner of the queue: our card shows whatever track its page is playing, even if the donation arrived earlier or the track was queued in the service dashboard. Titles for YouTube links come from the video itself, and the donor name and amount stay on the card when the track came with that donation. Such a track stays while the music plays and clears when the service stops the queue — it has no twenty-second timer."
+      "p9": "DonateX widgets — Donation music and the AI character — show what came with the donation: a single line with the track title, or a voiced reply. While there is no music, the line is not on screen at all. The inspector sets volume, the queue and the character name: when donations arrive back to back, the next track or reply waits its turn instead of cutting off the current one. If the track link points to a YouTube page, there is no audio to play — the track stays for twenty seconds and then the widget takes the next one. You can check a link from the inspector: the “Track link” field and the “Test” button play it in the overlay as if a donation had arrived, but without an alert or a history record. The “Skip” and “Stop” buttons control the queue: the first cuts the current track and takes the next one, the second stops the player and clears the queue.",
+      "p10": "The DonateX widget links — donation, AI character and music — are set in Settings → DonateX. They open hidden in the overlay: the service sees the widgets as connected and plays the sound itself, while OSE draws the picture. Our music widget then shows the title and does not duplicate the sound.",
+      "p11": "The music widget link makes DonateX the owner of the queue: our line shows whatever track its page is playing, even if the donation arrived earlier or the track was queued in the service dashboard. Titles for YouTube links come from the video itself. The line stays while the music plays and disappears when the service stops the queue — it has no twenty-second timer."
     },
     "guests": {
       "title": "Guest cameras",

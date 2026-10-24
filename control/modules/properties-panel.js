@@ -822,7 +822,6 @@ export function initPropertiesPanel({
         </div>
         <div class="properties__toggle-row"><label>${t("properties.musicAutoplay")}</label>${switchHtml("pMusicAutoplay", config.autoplay !== false)}</div>
         <div class="properties__toggle-row"><label>${t("properties.queue")}</label>${switchHtml("pMusicQueue", config.queue !== false)}</div>
-        <div class="properties__toggle-row"><label>${t("properties.musicShowAmount")}</label>${switchHtml("pMusicShowAmount", config.showAmount !== false)}</div>
         <div class="md-field"><label>${t("properties.volume")}: <span id="pMusicVolumeValue">${Math.round((config.volume ?? 1) * 100)}%</span></label><input type="range" id="pMusicVolume" min="0" max="100" step="1" value="${Math.round((config.volume ?? 1) * 100)}"></div>`;
     } else if (inst.type === "uec-transfer") {
       extraHtml = `
@@ -1308,7 +1307,6 @@ export function initPropertiesPanel({
     } else if (inst.type === "music") {
       wireSwitch(propertiesEl.querySelector("#pMusicAutoplay"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { autoplay: on } } }));
       wireSwitch(propertiesEl.querySelector("#pMusicQueue"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { queue: on } } }));
-      wireSwitch(propertiesEl.querySelector("#pMusicShowAmount"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showAmount: on } } }));
       propertiesEl.querySelector("#pMusicVolume").addEventListener("input", (e) => {
         const value = Number(e.target.value);
         const label = propertiesEl.querySelector("#pMusicVolumeValue");

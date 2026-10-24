@@ -546,27 +546,10 @@ export function initCanvasEditor({
         const label = bridge ? t("preview.donatexAudio") : t("widgets.donatex-ai");
         return `<div class="canvas-widget__placeholder">${icon}<span>${escapeHtml(label)}</span></div>`;
       }
-      case "music": {
-        // Карточка трека как в эфире: пустой прямоугольник на канвасе не
-        // отличить от сломанной раскладки, а пластинка и полоса прогресса
-        // сразу говорят, что это «Музыка донатов».
-        const sum =
-          config.showAmount === false
-            ? ""
-            : ` · ${formatMoney(250)} ${currencySymbol(state.baseCurrency || "RUB")}`;
-        const requester = t("music.requester", { user: t("music.anonymous") });
-        return `<div class="widget-music">
-          <div class="orbital">
-            <div class="orbital__cover"><span class="orbital__vinyl"></span><span class="orbital__note">♪</span></div>
-            <div class="orbital__meta">
-              <div class="orbital__track"><span class="orbital__track-inner"><span class="orbital__track-text">${escapeHtml(t("music.track"))}</span></span></div>
-              <div class="orbital__requester">${escapeHtml(requester + sum)}</div>
-            </div>
-            <div class="orbital__timer">00:00 / --:--</div>
-          </div>
-          <div class="orbital__progress"><span class="orbital__progress-fill" style="width:34%"></span></div>
-        </div>`;
-      }
+      case "music":
+        // Та же строка, что в эфире: без неё виджет на канвасе — пустой
+        // прямоугольник, который легко потерять среди других.
+        return `<div class="widget-music"><div class="orbital"><div class="orbital__track"><span class="orbital__track-text">${escapeHtml(t("music.track"))}</span></div></div></div>`;
       case "mic": {
         const themePrimary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#0060A8";
         const color = config.color || state.micConfig.color || themePrimary;

@@ -16,15 +16,14 @@
  */
 
 /*
-  DonateX music widget — "Orbital Deck": a neon Sci-Fi player for the track
-  attached to a donation. Shows cover art (YouTube thumbnail or a rotating
-  vinyl placeholder), a marquee track title, the requester, a countdown timer
-  and a progress bar. Accent colors follow the active overlay theme.
+  DonateX music widget: one line with the title of the track attached to a
+  donation. There is no cover, requester or progress — the DonateX music page
+  owns the sound and the queue, and the strip only names the song. While there
+  is no music the strip is hidden entirely.
 
   Donations can arrive back to back, so tracks wait in a queue instead of
   cutting each other off. If the link is not a direct audio file, the widget
-  moves the progress bar itself for the same simulated duration and only then
-  takes the next track.
+  keeps the title for a simulated duration and only then takes the next track.
 */
 (function (root, factory) {
   const BaseWidget =
@@ -43,36 +42,6 @@
   "use strict";
 
   const SIMULATED_PLAY_MS = 20000;
-  const SIM_TICK_MS = 250;
-
-  function youtubeVideoId(link) {
-    if (!link) return "";
-    try {
-      const u = new URL(link);
-      if (u.hostname === "youtu.be") return u.pathname.slice(1).split("/")[0];
-      if (/youtube\.com$|\.youtube\.com$|music\.youtube\.com$/.test(u.hostname)) {
-        const v = u.searchParams.get("v");
-        if (v) return v;
-        const m = u.pathname.match(/\/(shorts|embed|v)\/([^/?]+)/);
-        if (m) return m[2];
-      }
-    } catch (_) {
-      /* ignore */
-    }
-    return "";
-  }
-
-  function resolveCoverArt(link) {
-    const id = youtubeVideoId(link);
-    return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : "";
-  }
-
-  function fmtTime(sec) {
-    if (!isFinite(sec) || sec < 0) return "--:--";
-    const m = Math.floor(sec / 60);
-    const s = Math.floor(sec % 60);
-    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  }
 
   function clamp01(value, fallback) {
     const number = Number(value);
@@ -90,16 +59,6 @@
     return "";
   }
 
-  /// «250 ₽» в локали интерфейса — тем же форматером, что и алерты.
-  function sumText(context, amount, currency) {
-    if (amount == null || amount === "") return "";
-    const money = context.formatMoney ? context.formatMoney(amount) : String(amount);
-    const symbol = context.currencySymbol
-      ? context.currencySymbol(currency)
-      : String(currency || "");
-    return `${money} ${symbol}`.trim();
-  }
-
   class MusicWidget extends BaseWidget {
     onMount() {
       this.host = document.createElement("div");
@@ -108,7 +67,6 @@
 
       this._audio = null;
       this._simTimer = null;
-      this._simTick = null;
       this._donatexFrame = null;
       this._donatexUrl = "";
       this.current = null;
@@ -130,10 +88,8 @@
       this.subscribe(this.context.EVENT_TYPES.LOCALES, () => {
         if (this.current) this.renderMeta(this.current);
         else this.renderIdle();
-        this.renderQueue();
       });
       this.renderIdle();
-      this.renderQueue();
     }
 
     onUnmount() {
@@ -145,13 +101,10 @@
 
     onUpdate() {
       // Очередь выключили — ждущие треки больше не нужны.
-      if (this.config.queue === false && this.queue.length) {
-        this.queue.length = 0;
-        this.renderQueue();
-      }
+      if (this.config.queue === false && this.queue.length) this.queue.length = 0;
       this.syncDonatexWidget();
       // Со ссылкой на виджет DonateX трек играет их страница: свой звук и
-      // таймер выключаем, а карточку дальше ведёт опрос текущего трека.
+      // таймер выключаем, а строку дальше ведёт опрос текущего трека.
       if (this.donatexWidgetUrl() && this.current) this.showTrack(this.current);
       if (this._audio) this._audio.volume = clamp01(this.config.volume, 1);
       if (this.current) this.renderMeta(this.current);
@@ -161,15 +114,9 @@
       if (!alert || alert.kind !== "donation") return;
       const musicLink = webUrl(alert.musicLink);
       if (!musicLink) return;
-      const track = {
-        user: alert.user,
-        musicLink,
-        musicTitle: alert.musicTitle,
-        amount: alert.amount,
-        currency: alert.currency,
-      };
+      const track = { musicLink, musicTitle: alert.musicTitle };
       // С подключённым виджетом DonateX очередь у сервиса: свой плеер не
-      // запускаем и в очередь не ставим, но карточку показываем сразу, чтобы
+      // запускаем и в очередь не ставим, но строку показываем сразу, чтобы
       // не ждать опроса. Дальше её удержит или погасит опрос текущего трека.
       if (this.donatexWidgetUrl()) {
         this.showTrack(track);
@@ -177,7 +124,6 @@
       }
       if (this.current && this.queueEnabled()) {
         this.queue.push(track);
-        this.renderQueue();
         return;
       }
       this.play(track);
@@ -189,11 +135,8 @@
       const musicLink = webUrl(payload && payload.musicLink);
       if (!musicLink) return;
       const track = {
-        user: (payload && payload.user) || "",
         musicLink,
         musicTitle: (payload && payload.musicTitle) || "",
-        amount: null,
-        currency: "",
       };
       // `silent` — трек уже звучит на странице DonateX, и опрос сообщает только
       // о смене. Свой плеер трогать нельзя: иначе трек зазвучал бы дважды, а
@@ -220,7 +163,6 @@
       this.queue = [];
       this.stopPlayback();
       this.current = null;
-      this.renderQueue();
       this.renderIdle();
     }
 
@@ -235,55 +177,17 @@
         return node;
       };
 
+      // В кадре — одна строка с названием трека: обложка, заказчик и
+      // прогресс только отвлекали от игры, а очередь и звук всё равно
+      // остаются у страницы DonateX.
       const orbital = el("div", "orbital");
-      const cover = el("div", "orbital__cover");
-      const vinyl = el("span", "orbital__vinyl");
-      const note = el("span", "orbital__note");
-      note.textContent = "♪";
-      const art = el("img", "orbital__art");
-      art.alt = "";
-      cover.appendChild(vinyl);
-      cover.appendChild(note);
-      cover.appendChild(art);
-
-      const meta = el("div", "orbital__meta");
       const track = el("div", "orbital__track");
-      const trackInner = el("span", "orbital__track-inner");
-      const text1 = el("span", "orbital__track-text");
-      const text2 = el("span", "orbital__track-text");
-      trackInner.appendChild(text1);
-      trackInner.appendChild(text2);
-      track.appendChild(trackInner);
-
-      const requester = el("div", "orbital__requester");
-      const queue = el("div", "orbital__queue");
-      queue.style.display = "none";
-      meta.appendChild(track);
-      meta.appendChild(requester);
-      meta.appendChild(queue);
-
-      const timer = el("div", "orbital__timer");
-      orbital.appendChild(cover);
-      orbital.appendChild(meta);
-      orbital.appendChild(timer);
-
-      const progress = el("div", "orbital__progress");
-      const progressFill = el("span", "orbital__progress-fill");
-      progress.appendChild(progressFill);
-
+      const text = el("span", "orbital__track-text");
+      track.appendChild(text);
+      orbital.appendChild(track);
       this.host.appendChild(orbital);
-      this.host.appendChild(progress);
 
-      this.el = {
-        track,
-        trackTexts: [text1, text2],
-        requester,
-        queue,
-        timer,
-        progressFill,
-        art,
-        note,
-      };
+      this.el = { trackTexts: [text] };
     }
 
     // ---- страница музыкального виджета DonateX ----
@@ -351,61 +255,39 @@
     }
 
     // Показать трек, который уже играет чужая страница: без звука и без
-    // таймера. Громкость и очередь у DonateX, поэтому карточка живёт до
+    // таймера. Громкость и очередь у DonateX, поэтому строка живёт до
     // `music_control: stop` от опроса.
     showTrack(info) {
-      const previous = this.current;
-      // Опрос не знает, кто заказал трек: если это тот же трек, что пришёл
-      // алертом, сохраняем имя и сумму из алерта.
-      const merged =
-        previous && previous.musicLink === info.musicLink && !info.user
-          ? { ...info, user: previous.user, amount: previous.amount, currency: previous.currency }
-          : info;
       this.stopAudio();
       this.clearSimTimer();
-      this.current = merged;
+      this.current = info;
       this.host.classList.add("is-playing");
-      this.applyPlaying(merged);
+      this.renderMeta(info);
     }
 
     applyPlaying(info) {
-      this.resetProgress();
       this.renderMeta(info);
     }
 
     renderMeta(info) {
-      const title = this.trackTitle(info);
-      this.el.trackTexts.forEach((span) => (span.textContent = title));
-
-      const user = info.user || this.context.t("music.anonymous");
-      const requester = this.context.t("music.requester", { user });
-      const sum =
-        this.config.showAmount === false ? "" : sumText(this.context, info.amount, info.currency);
-      this.el.requester.textContent = sum ? `${requester} · ${sum}` : requester;
-
-      this.setCoverArt(info.musicLink);
-      this.syncOrbitalMarquee();
+      this.el.trackTexts.forEach((span) => (span.textContent = this.trackTitle(info)));
+      this.show();
     }
 
     renderIdle() {
-      this.resetProgress();
-      const idle = this.context.t("music.idle");
-      this.el.trackTexts.forEach((span) => (span.textContent = idle));
-      this.el.requester.textContent = "";
-      this.setCoverArt("");
-      this.syncOrbitalMarquee();
+      this.el.trackTexts.forEach((span) => (span.textContent = ""));
+      this.hide();
     }
 
-    renderQueue() {
-      if (!this.el.queue) return;
-      const count = this.queue.length;
-      if (!count) {
-        this.el.queue.textContent = "";
-        this.el.queue.style.display = "none";
-        return;
-      }
-      this.el.queue.textContent = this.context.t("music.queue", { count });
-      this.el.queue.style.display = "";
+    /// Музыки нет — строки в кадре тоже нет. Прячем только плашку: скрытая
+    /// страница DonateX должна остаться в документе, иначе сервис сочтёт
+    /// виджет отключённым и перестанет играть.
+    hide() {
+      this.host.classList.add("is-empty");
+    }
+
+    show() {
+      this.host.classList.remove("is-empty");
     }
 
     startAudio(link) {
@@ -426,9 +308,6 @@
       audio.addEventListener("error", () => {
         if (this._audio === audio) this.idle();
       });
-      audio.addEventListener("timeupdate", () => {
-        if (this._audio === audio) this.updateProgress(audio.currentTime, audio.duration);
-      });
 
       const started = audio.play();
       if (started && typeof started.catch === "function") {
@@ -438,44 +317,21 @@
       }
     }
 
-    updateProgress(cur, dur) {
-      if (this.el.timer) this.el.timer.textContent = `${fmtTime(cur)} / ${fmtTime(dur)}`;
-      const pct = isFinite(dur) && dur > 0 ? Math.min(1, cur / dur) : 0;
-      if (this.el.progressFill) this.el.progressFill.style.width = (pct * 100).toFixed(2) + "%";
-    }
-
-    resetProgress() {
-      if (this.el.timer) this.el.timer.textContent = "00:00 / --:--";
-      if (this.el.progressFill) this.el.progressFill.style.width = "0%";
-    }
-
     /// Ссылка может быть страницей YouTube: звука из неё не будет, поэтому
-    /// показываем тот же отрезок времени полосой прогресса и идём дальше.
+    /// показываем трек тот же отрезок времени и идём дальше.
     scheduleSimulatedStop() {
       this.clearSimTimer();
-      const total = SIMULATED_PLAY_MS;
-      const startedAt = Date.now();
-      this.updateProgress(0, total / 1000);
-      this._simTick = this.every(() => {
-        const elapsed = Math.min(total, Date.now() - startedAt);
-        this.updateProgress(elapsed / 1000, total / 1000);
-      }, SIM_TICK_MS);
       this._simTimer = this.later(() => {
         this._simTimer = null;
         if (!this.host.classList.contains("is-playing")) return;
         this.idle();
-      }, total);
+      }, SIMULATED_PLAY_MS);
     }
 
     clearSimTimer() {
-      if (this._simTimer) {
-        this.clearTimer(this._simTimer);
-        this._simTimer = null;
-      }
-      if (this._simTick) {
-        this.clearTimer(this._simTick);
-        this._simTick = null;
-      }
+      if (!this._simTimer) return;
+      this.clearTimer(this._simTimer);
+      this._simTimer = null;
     }
 
     idle() {
@@ -484,12 +340,9 @@
       this.host.classList.remove("is-playing");
       this.current = null;
       if (this.queue.length) {
-        const next = this.queue.shift();
-        this.renderQueue();
-        this.play(next);
+        this.play(this.queue.shift());
         return;
       }
-      this.renderQueue();
       this.renderIdle();
     }
 
@@ -528,34 +381,6 @@
         }
       }
       return this.context.t("music.track");
-    }
-
-    setCoverArt(link) {
-      if (!this.el.art) return;
-      const url = resolveCoverArt(link);
-      const showNote = () => {
-        if (this.el.note) this.el.note.style.display = "";
-        this.el.art.style.display = "none";
-      };
-      this.el.art.onerror = showNote;
-      if (url) {
-        this.el.art.src = url;
-        this.el.art.style.display = "";
-        if (this.el.note) this.el.note.style.display = "none";
-      } else {
-        this.el.art.removeAttribute("src");
-        showNote();
-      }
-    }
-
-    syncOrbitalMarquee() {
-      const track = this.el.track;
-      const first = this.el.trackTexts && this.el.trackTexts[0];
-      if (!track || !first) return;
-      requestAnimationFrame(() => {
-        if (!this.el || !this.el.track) return;
-        this.el.track.classList.toggle("is-marquee", first.getBoundingClientRect().width > track.clientWidth);
-      });
     }
 
     render() {}

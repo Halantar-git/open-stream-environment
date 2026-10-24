@@ -1028,13 +1028,13 @@
     music: {
       type: "music",
       label: "Музыка донатов",
-      description: "Трек, приложенный к донату: обложка, название, автор, сумма и очередь",
+      description: "Название трека из доната одной строкой; пока музыки нет, строка скрыта",
       icon: "widgetMusic",
       services: ["donatex"],
-      defaultGeometry: { x: 30, y: 84, w: 40, h: 12 },
-      minW: 20,
-      minH: 6,
-      defaultConfig: { autoplay: true, queue: true, showAmount: true, volume: 1 },
+      defaultGeometry: { x: 34, y: 90, w: 32, h: 5 },
+      minW: 16,
+      minH: 4,
+      defaultConfig: { autoplay: true, queue: true, volume: 1 },
     },
 
   };
