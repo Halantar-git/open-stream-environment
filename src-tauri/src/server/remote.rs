@@ -50,6 +50,9 @@ pub fn handle(diagnostics: &Diagnostics, message: &Value) {
         }
         "TEST_ALERT" => test_alert(diagnostics, &payload),
         "TICKER_MESSAGE" => ticker_message(diagnostics, &payload),
+        // Музыка донатов: те же действия, что кнопки в инспекторе виджета.
+        "MUSIC_SKIP" => music_control(diagnostics, "skip"),
+        "MUSIC_STOP" => music_control(diagnostics, "stop"),
         "THEME_SET" => theme_set(diagnostics, &payload),
         "OBS_RAW_COMMAND" => {
             diagnostics.run_obs_command(payload.get("id").cloned().unwrap_or(Value::Null));
@@ -467,6 +470,17 @@ fn broadcast(diagnostics: &Diagnostics, kind: &str, payload: Value) {
     diagnostics.clients().broadcast_text(&text);
 }
 
+/// Управление плеером музыки: `skip` берёт следующий трек из очереди, `stop`
+/// гасит его и очищает очередь. Слушает виджет, поэтому донат-алерты
+/// и цель не трогаются.
+fn music_control(diagnostics: &Diagnostics, action: &str) {
+    broadcast(
+        diagnostics,
+        event_types::MUSIC_CONTROL,
+        json!({ "action": action }),
+    );
+}
+
 fn broadcast_giveaway(diagnostics: &Diagnostics, giveaway: &Value) {
     broadcast(
         diagnostics,
@@ -576,6 +590,22 @@ mod tests {
         match receiver.try_recv().expect("кадр должен быть") {
             Message::Text(text) => serde_json::from_str(text.as_str()).expect("кадр — JSON"),
             other => panic!("ожидался текст, пришло {other:?}"),
+        }
+    }
+
+    #[test]
+    fn the_remote_can_skip_and_stop_music() {
+        let fixture = Fixture::new("music-control");
+        let mut receiver = fixture.listen();
+
+        for (command, action) in [("MUSIC_SKIP", "skip"), ("MUSIC_STOP", "stop")] {
+            handle(
+                &fixture.diagnostics,
+                &json!({ "action": command, "payload": {} }),
+            );
+            let frame = frame(&mut receiver);
+            assert_eq!(frame["type"], json!(event_types::MUSIC_CONTROL));
+            assert_eq!(frame["payload"]["action"], json!(action));
         }
     }
 

@@ -1601,6 +1601,9 @@
     "tickerBreaking": "Breaking",
     "tickerSent": "Message sent to the ticker",
     "tickerBreakingSent": "Breaking message is live",
+    "music": "Donation music",
+    "musicSkip": "Skip track",
+    "musicStop": "Stop",
     "obsCommands": "OBS commands",
     "theme": "Overlay theme",
     "webcam": "Webcam",
@@ -1810,7 +1813,7 @@
     "remote": {
       "title": "Web Remote",
       "p1": "Open from a phone or tablet on the same Wi-Fi network using the address shown in the header.",
-      "p2": "From the remote you can switch scenes, control the wheel and death counter, send test alerts, run OBS commands, change the theme, switch cameras, trigger effects and send chat messages.",
+      "p2": "From the remote you can switch scenes, control the wheel and death counter, send test alerts, skip and stop Donation music tracks, run OBS commands, change the theme, switch cameras, trigger effects and send chat messages.",
       "p3": "The Wheel tab holds the wheel settings (command, participants, list position, volume, speed) and the participant list: add and remove viewers right from the remote.",
       "p4": "Next to the webcam there is a microphone mute button — set the audio input name in Settings → OBS.",
       "p5": "The Chat tab has an input at the bottom — you can not only follow the message feed but also send your own messages to Twitch chat.",
