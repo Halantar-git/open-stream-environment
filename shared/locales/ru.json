@@ -112,7 +112,8 @@
     "terminal": "Терминал",
     "replacedBy3d": "Заменён 3D-виджетом",
     "themeInactive": "Неактивен в текущей теме",
-    "themeInactiveTag": "выкл"
+    "themeInactiveTag": "выкл",
+    "serviceInactive": "Сервис виджета выключен — в эфире он не появится. Включите интеграцию в настройках."
   },
   "boosty": {
     "support": "Поддержать автора"

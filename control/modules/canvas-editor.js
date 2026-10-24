@@ -1390,19 +1390,23 @@ export function initCanvasEditor({
     [...state.layout]
       .sort((a, b) => (a.z || 0) - (b.z || 0))
       .forEach((inst) => {
-        if (isServiceDisabled(inst)) return;
+        // Виджет с выключенным сервисом показываем приглушённым: иначе
+        // добавление выглядит как «ничего не произошло», хотя виджет уже в
+        // раскладке и просто не пойдёт в эфир, пока сервис не включат.
+        const serviceOff = isServiceDisabled(inst);
         // Виджеты, не относящиеся к активной теме, на канвасе не показываем.
         if (isThemeGated(inst)) return;
         const replaced = isReplaced(inst);
         const box = document.createElement("div");
-        box.className = "canvas-widget" + (inst.id === state.selectedId ? " is-selected" : "") + (replaced ? " is-replaced" : "");
+        box.className = "canvas-widget" + (inst.id === state.selectedId ? " is-selected" : "") + (replaced ? " is-replaced" : "") + (serviceOff ? " is-service-off" : "");
         box.dataset.id = inst.id;
         box.style.left = inst.x + "%";
         box.style.top = inst.y + "%";
         box.style.width = inst.w + "%";
         box.style.height = inst.h + "%";
         box.style.zIndex = inst.z || 0;
-        box.style.opacity = !inst.visible ? "0.35" : replaced ? "0.3" : "1";
+        box.style.opacity = !inst.visible ? "0.35" : replaced ? "0.3" : serviceOff ? "0.45" : "1";
+        if (serviceOff) box.title = t("editor.serviceInactive");
 
         const def = WIDGET_TYPES[effectiveType(inst)] || {};
         // Угол поворота 3D-виджета: поворачиваем всю рамку, а не только
@@ -1694,25 +1698,28 @@ export function initCanvasEditor({
 
   // ---- layers panel ----
   function renderLayers() {
-    const visible = state.layout.filter((inst) => !isServiceDisabled(inst));
-    if (!visible.length) {
+    // Виджеты с выключенным сервисом остаются в списке (приглушёнными):
+    // иначе добавленный чат исчезает из обоих мест и выглядит как неудача.
+    if (!state.layout.length) {
       layersEl.innerHTML = `<div class="layers__empty">${t("editor.layersEmpty")}</div>`;
       return;
     }
     layersEl.innerHTML = "";
-    [...visible]
+    [...state.layout]
       .sort((a, b) => (b.z || 0) - (a.z || 0))
       .forEach((inst) => {
         const def = WIDGET_TYPES[effectiveType(inst)] || {};
         const replaced = isReplaced(inst);
         const inactive = isThemeGated(inst);
+        const serviceOff = isServiceDisabled(inst);
         const row = document.createElement("div");
-        row.className = "layer-row" + (inst.id === state.selectedId ? " is-selected" : "") + (replaced ? " is-replaced" : "") + (inactive ? " is-theme-gated" : "");
+        row.className = "layer-row" + (inst.id === state.selectedId ? " is-selected" : "") + (replaced ? " is-replaced" : "") + (inactive ? " is-theme-gated" : "") + (serviceOff ? " is-service-off" : "");
         row.innerHTML = `
           <span class="layer-row__icon">${ICONS[def.icon] || ""}</span>
           <span class="layer-row__label">${escapeHtml(widgetLabel(inst))}</span>
           ${replaced ? `<span class="layer-row__3d-tag" title="${escapeAttr(t("editor.replacedBy3d"))}">3D</span>` : ""}
           ${inactive ? `<span class="layer-row__3d-tag layer-row__off-tag" title="${escapeAttr(t("editor.themeInactive"))}">${escapeHtml(t("editor.themeInactiveTag"))}</span>` : ""}
+          ${serviceOff ? `<span class="layer-row__3d-tag layer-row__off-tag" title="${escapeAttr(t("editor.serviceInactive"))}">${escapeHtml(t("editor.themeInactiveTag"))}</span>` : ""}
           <span class="layer-row__btns">
             <button class="layer-row__btn" data-action="forward" title="${t("common.forward")}"${state.layoutLocked ? " disabled" : ""}>▲</button>
             <button class="layer-row__btn" data-action="backward" title="${t("common.backward")}"${state.layoutLocked ? " disabled" : ""}>▼</button>
