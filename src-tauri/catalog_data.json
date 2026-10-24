@@ -1,5 +1,5 @@
 {
-  "sourceHash": "4b6e9afb712ac575",
+  "sourceHash": "f0f418c7a3c4ecdb",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -1867,7 +1867,9 @@
       "defaultConfig": {
         "autoplay": true,
         "queue": true,
-        "volume": 1
+        "volume": 1,
+        "perspective": 0,
+        "perspectiveDirection": "left"
       }
     }
   },

@@ -552,10 +552,15 @@ export function initCanvasEditor({
           ? `<div style="width:100%;height:100%;transform:${transform};transform-style:preserve-3d;">${html}</div>`
           : html;
       }
-      case "music":
-        // Та же строка, что в эфире: без неё виджет на канвасе — пустой
-        // прямоугольник, который легко потерять среди других.
-        return `<div class="widget-music"><div class="orbital"><div class="orbital__track"><span class="orbital__track-text">${escapeHtml(t("music.track"))}</span></div></div></div>`;
+      case "music": {
+        // Та же строка, что в эфире, и с тем же наклоном: без неё виджет
+        // на канвасе — пустой прямоугольник, который легко потерять.
+        const html = `<div class="widget-music"><div class="orbital"><div class="orbital__track"><span class="orbital__track-text">${escapeHtml(t("music.track"))}</span></div></div></div>`;
+        const transform = perspectiveStyle(config);
+        return transform
+          ? `<div style="width:100%;height:100%;transform:${transform};transform-style:preserve-3d;">${html}</div>`
+          : html;
+      }
       case "mic": {
         const themePrimary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#0060A8";
         const color = config.color || state.micConfig.color || themePrimary;

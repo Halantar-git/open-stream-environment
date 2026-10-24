@@ -1034,7 +1034,7 @@
       defaultGeometry: { x: 34, y: 90, w: 32, h: 5 },
       minW: 16,
       minH: 4,
-      defaultConfig: { autoplay: true, queue: true, volume: 1 },
+      defaultConfig: { autoplay: true, queue: true, volume: 1, perspective: 0, perspectiveDirection: "left" },
     },
 
   };

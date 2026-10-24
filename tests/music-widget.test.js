@@ -152,6 +152,31 @@ function donation(patch = {}) {
 }
 
 describe("music widget", () => {
+  test("наклоняется по настройке perspective и сбрасывается в ноль", () => {
+    const { w } = mountWidget({ perspective: 50 });
+
+    expect(w.element.style.transform).toContain("perspective(1200px)");
+    expect(w.element.style.transform).toContain("rotateY(-7.5deg)");
+    expect(w.element.style.transformStyle).toBe("preserve-3d");
+
+    // Направление переворачивает наклон, не меняя силу.
+    w.update({ config: { perspectiveDirection: "right" } });
+    expect(w.element.style.transform).toContain("rotateY(7.5deg)");
+
+    w.update({ config: { perspectiveDirection: "up" } });
+    expect(w.element.style.transform).toContain("rotateY(0deg)");
+    expect(w.element.style.transform).toContain("rotateX(7.5deg)");
+
+    w.update({ config: { perspectiveDirection: "down" } });
+    expect(w.element.style.transform).toContain("rotateX(-7.5deg)");
+
+    w.update({ config: { perspective: 0 } });
+    expect(w.element.style.transform).toBe("");
+    expect(w.element.style.transformStyle).toBe("");
+
+    w.unmount();
+  });
+
   test("показывает название трека и не прячет строку", () => {
     const { w } = mountWidget({ autoplay: false });
     expect(w.host.classList.contains("is-empty")).toBe(true);

@@ -74,6 +74,7 @@
       this.el = {};
 
       this.buildDom();
+      this._applyPerspective();
       // Страница DonateX должна быть открыта всё время, а не только когда
       // играет трек: по ней сервис и считает виджет подключённым.
       this.syncDonatexWidget();
@@ -99,15 +100,45 @@
       this.queue.length = 0;
     }
 
-    onUpdate() {
+    onUpdate(prev, next) {
       // Очередь выключили — ждущие треки больше не нужны.
       if (this.config.queue === false && this.queue.length) this.queue.length = 0;
       this.syncDonatexWidget();
+      if (
+        prev.perspective !== next.perspective ||
+        prev.perspectiveDirection !== next.perspectiveDirection
+      ) {
+        this._applyPerspective();
+      }
       // Со ссылкой на виджет DonateX трек играет их страница: свой звук и
       // таймер выключаем, а строку дальше ведёт опрос текущего трека.
       if (this.donatexWidgetUrl() && this.current) this.showTrack(this.current);
       if (this._audio) this._audio.volume = clamp01(this.config.volume, 1);
       if (this.current) this.renderMeta(this.current);
+    }
+
+    // Наклон как у остальных виджетов: `perspective` 0–100 и направление,
+    // в какую сторону уходит дальний край.
+    _applyPerspective() {
+      const value = Math.max(0, Math.min(100, Number(this.config.perspective) || 0));
+      if (!value) {
+        this._setTilt("");
+        return;
+      }
+      const magnitude = value * 0.15;
+      const direction = this.config.perspectiveDirection || "left";
+      let ry = -magnitude;
+      let rx = magnitude * 0.2;
+      if (direction === "right") {
+        ry = magnitude;
+      } else if (direction === "up") {
+        ry = 0;
+        rx = magnitude;
+      } else if (direction === "down") {
+        ry = 0;
+        rx = -magnitude;
+      }
+      this._setTilt(`perspective(1200px) rotateY(${ry}deg) rotateX(${rx}deg)`);
     }
 
     onAlert(alert) {
