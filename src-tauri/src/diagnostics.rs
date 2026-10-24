@@ -1044,6 +1044,52 @@ impl Diagnostics {
         self.clients().broadcast_text(&frame);
     }
 
+    /// Передать громкость музыкального виджета DonateX.
+    ///
+    /// Звук играет их страница, поэтому наш `config.volume` до неё не
+    /// достаёт: значение уходит в сервис. Ссылка на виджет и токен берутся
+    /// из настроек — метод работает и для панели, и для веб-пульта.
+    pub fn sync_donatex_music_volume(&self, volume: f64) {
+        let (token, link) = {
+            let config = self.config();
+            let Some(donatex) = config
+                .get("donatex")
+                .filter(|service| js_truthy(service.get("enabled")))
+            else {
+                return;
+            };
+            let token = donatex
+                .get("externalToken")
+                .map(crate::state::js_string)
+                .unwrap_or_default();
+            let link = donatex
+                .get("widgets")
+                .and_then(|widgets| widgets.get("music"))
+                .map(crate::state::js_string)
+                .unwrap_or_default();
+            (token, link)
+        };
+        if token.trim().is_empty() {
+            return;
+        }
+        let Some(widget_id) = crate::integrations::donatex::music_widget_id(&link) else {
+            return;
+        };
+        let level = (volume.clamp(0.0, 1.0) * 100.0).round() as u8;
+        let logger = self.logger("donatex");
+        std::mem::drop(tauri::async_runtime::spawn(async move {
+            if let Err(error) =
+                crate::integrations::donatex::update_music_widget_volume(&token, &widget_id, level)
+                    .await
+            {
+                logger.warn(
+                    "Громкость музыкального виджета не применена.",
+                    Some(&json!({ "error": error })),
+                );
+            }
+        }));
+    }
+
     /// Загрузить курсы валют при старте и обновлять их в фоне. Без курсов
     /// донат в чужой валюте цель не двигает, поэтому первая загрузка идёт
     /// сразу, а после неудачи повторяется заметно быстрее суточного цикла.

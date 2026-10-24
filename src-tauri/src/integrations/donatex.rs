@@ -26,6 +26,10 @@ pub const HUB_URL: &str = "wss://donatex.gg/api/public-donations-hub";
 /// Текущее состояние музыкального виджета DonateX.
 pub const MUSIC_CURRENT_URL: &str = "https://donatex.gg/api/v1/music/current";
 
+/// Кабинет музыкального виджета: его настройки меняются не нашим конфигом,
+/// а API — звук играет страница DonateX.
+pub const MUSIC_WIDGETS_URL: &str = "https://donatex.gg/api/music-widgets";
+
 const RECONNECT_MS: u64 = 5_000;
 // Сервер шлёт пинг примерно раз в 15 секунд. Если трафика нет дольше этого
 // срока, соединение считается полуоткрытым и пересоздаётся.
@@ -158,6 +162,61 @@ pub async fn fetch_music_current(token: &str) -> Result<Option<Value>, String> {
     }
     let payload: Value = response.json().await.map_err(|error| error.to_string())?;
     Ok(music_track_from_current(&payload))
+}
+
+/// ID музыкального виджета из адреса кабинета
+/// (`https://donatex.gg/widgets/music/<id>`).
+///
+/// Строго: только https и только путь виджета. Ссылка может прийти из старой
+/// раскладки или быть вставлена руками, а в API уйдёт запрос с её хвостом.
+pub fn music_widget_id(link: &str) -> Option<String> {
+    let url = reqwest::Url::parse(link.trim()).ok()?;
+    if url.scheme() != "https" || url.host_str()? != "donatex.gg" {
+        return None;
+    }
+    let mut segments = url.path_segments()?.filter(|part| !part.is_empty());
+    if segments.next()? != "widgets" || segments.next()? != "music" {
+        return None;
+    }
+    let id = segments.next()?;
+    if segments.next().is_some() {
+        return None;
+    }
+    if id.len() > 64 || !id.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '-') {
+        return None;
+    }
+    Some(id.to_string())
+}
+
+/// Громкость музыкального виджета DonateX (`volume` — 0–100).
+///
+/// С подключённой страницей звук играет их плеер, поэтому наш `config.volume`
+/// до него не достаёт: значение надо отдать сервису. Токен — external token
+/// канала, тот же, что у хаба донатов.
+pub async fn update_music_widget_volume(
+    token: &str,
+    widget_id: &str,
+    volume: u8,
+) -> Result<(), String> {
+    let volume = volume.to_string();
+    // `RequestBuilder::query` в этой сборке reqwest недоступен (выключена
+    // фича), поэтому строку запроса собираем сами.
+    let mut url = reqwest::Url::parse(&format!("{MUSIC_WIDGETS_URL}/update-volume"))
+        .map_err(|error| error.to_string())?;
+    url.query_pairs_mut()
+        .append_pair("widgetId", widget_id)
+        .append_pair("volume", &volume);
+    let response = http_client()
+        .post(url)
+        .header("X-External-Token", token)
+        .timeout(Duration::from_secs(10))
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("status {}", response.status()));
+    }
+    Ok(())
 }
 
 /// Название ролика YouTube: DonateX отдаёт в музыке только ссылку, а в
@@ -703,6 +762,32 @@ mod tests {
                 "aiAudio": "",
             }))
         );
+    }
+
+    #[test]
+    fn a_music_widget_id_comes_only_from_its_own_link() {
+        assert_eq!(
+            music_widget_id(
+                "https://donatex.gg/widgets/music/2905e5d9-9e5e-4ded-aaec-038e797c1348"
+            ),
+            Some("2905e5d9-9e5e-4ded-aaec-038e797c1348".to_string())
+        );
+        // Лишний сегмент, чужая страница и другая схема — не наш виджет.
+        assert_eq!(
+            music_widget_id("https://donatex.gg/widgets/music/abc/extra"),
+            None
+        );
+        assert_eq!(
+            music_widget_id("https://donatex.gg/widgets/donations/abc"),
+            None
+        );
+        assert_eq!(
+            music_widget_id("https://evil.example/widgets/music/abc"),
+            None
+        );
+        assert_eq!(music_widget_id("http://donatex.gg/widgets/music/abc"), None);
+        assert_eq!(music_widget_id("https://donatex.gg/widgets/music/"), None);
+        assert_eq!(music_widget_id(""), None);
     }
 
     #[tokio::test]

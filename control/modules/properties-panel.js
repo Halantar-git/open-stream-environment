@@ -821,6 +821,7 @@ export function initPropertiesPanel({
         <div class="properties__toggle-row"><label>${t("properties.musicAutoplay")}</label>${switchHtml("pMusicAutoplay", config.autoplay !== false)}</div>
         <div class="properties__toggle-row"><label>${t("properties.queue")}</label>${switchHtml("pMusicQueue", config.queue !== false)}</div>
         <div class="md-field"><label>${t("properties.volume")}: <span id="pMusicVolumeValue">${Math.round((config.volume ?? 1) * 100)}%</span></label><input type="range" id="pMusicVolume" min="0" max="100" step="1" value="${Math.round((config.volume ?? 1) * 100)}"></div>
+        <p class="properties__hint">${t("properties.musicVolumeHint")}</p>
         <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>
         <div class="md-field"><label>${t("properties.perspectiveDirection")}</label>
           <select id="pPerspectiveDirection">
