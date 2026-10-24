@@ -26,6 +26,7 @@ const TimerWidget = require("../overlay/widgets/timer-widget");
 const GrimHexTimerWidget = require("../overlay/widgets/grimhex-timer-widget");
 const AlertsWidget = require("../overlay/widgets/alerts-widget");
 const SoundboardWidget = require("../overlay/widgets/soundboard-widget");
+const CustomWidget = require("../overlay/widgets/custom-widget");
 
 // ---- minimal DOM mock ----
 
@@ -470,6 +471,52 @@ describe("SoundboardWidget: уборка проигрываемых звуков
 
     expect(w.activeAudios).toHaveLength(0);
     expect(onEnded).toHaveBeenCalledTimes(1);
+    w.unmount();
+  });
+});
+
+describe("CustomWidget: режим видео", () => {
+  test("рисует видео с повтором и без звука по умолчанию", () => {
+    const ctx = makeContext();
+    const { w } = mountWidget(CustomWidget, ctx, {
+      type: "custom",
+      config: { mode: "video", videoUrl: "media/loop.webm" },
+    });
+
+    expect(w.host.innerHTML).toContain("<video");
+    expect(w.host.innerHTML).toContain('src="media/loop.webm"');
+    expect(w.host.innerHTML).toContain("autoplay");
+    expect(w.host.innerHTML).toContain("loop");
+    expect(w.host.innerHTML).toContain("muted");
+    expect(w.host.innerHTML).toContain("object-fit:contain");
+    // Подложки нет: прозрачный ролик должен ложиться прямо на игру.
+    expect(w.host.className).toBe("widget-custom");
+    w.unmount();
+  });
+
+  test("настройки повтора, звука и вписывания доходят до тега", () => {
+    const ctx = makeContext();
+    const { w } = mountWidget(CustomWidget, ctx, {
+      type: "custom",
+      config: {
+        mode: "video",
+        videoUrl: "media/once.webm",
+        videoFit: "cover",
+        videoLoop: false,
+        videoMuted: false,
+      },
+    });
+
+    expect(w.host.innerHTML).toContain("object-fit:cover");
+    expect(w.host.innerHTML).not.toContain(" loop");
+    expect(w.host.innerHTML).not.toContain(" muted");
+    w.unmount();
+  });
+
+  test("пустой URL оставляет виджет пустым", () => {
+    const ctx = makeContext();
+    const { w } = mountWidget(CustomWidget, ctx, { type: "custom", config: { mode: "video" } });
+    expect(w.host.innerHTML).toBe("");
     w.unmount();
   });
 });

@@ -1179,6 +1179,7 @@
     "customMode": "Content type",
     "modeText": "Text",
     "modeImage": "Image",
+    "modeVideo": "Video",
     "modeHtml": "Custom HTML",
     "modeEmbed": "Embed (iframe)",
     "visibility": "Visibility",
@@ -1359,6 +1360,12 @@
     "imageFit": "Fit",
     "fitContain": "Contain",
     "fitCover": "Cover",
+    "videoUrl": "Video URL",
+    "videoFromDisk": "Choose video from disk",
+    "videoFit": "Fit",
+    "videoLoop": "Loop",
+    "videoMuted": "Muted",
+    "videoHint": "WebM with an alpha channel (VP8/VP9) renders transparently over the game — there is no card behind the video.",
     "htmlHint": "HTML, CSS and JS are edited in a separate window with tabs and a live preview. JS actually runs (via iframe) — you can use timers, animations, etc.",
     "editCode": "Edit code",
     "textTitle": "Title (optional)",
@@ -1628,8 +1635,9 @@
     "widget": {
       "title": "Custom widget",
       "p1": "The widget library includes a Custom widget with several modes, switched in the properties panel on the right.",
-      "p2": "Text shows a title and text; Image shows an image URL; Custom HTML opens a separate HTML/CSS/JS editor with a live preview.",
-      "p3": "Embed (iframe) inserts a link to an external browser source (for example, a widget from DonationAlerts) as-is."
+      "p2": "Text shows a title and text; Image shows an image URL; Video plays a file or link with fit, loop and sound; Custom HTML opens a separate HTML/CSS/JS editor with a live preview.",
+      "p3": "Embed (iframe) inserts a link to an external browser source (for example, a widget from DonationAlerts) as-is.",
+      "p4": "The video has no backdrop: WebM with an alpha channel (VP8/VP9) renders transparently right over the game. Loop repeats the clip, and Muted disables the audio track — muted video is always allowed to autoplay."
     },
     "widgets": {
       "title": "Widgets on the scene",

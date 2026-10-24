@@ -467,11 +467,20 @@ export function initCanvasEditor({
         </div></div>`;
       case "custom": {
         const mode = config.mode || "text";
-        const withCard = mode !== "image" && config.showBackground !== false;
+        const withCard = mode !== "image" && mode !== "video" && config.showBackground !== false;
         if (mode === "image") {
           const src = resolveMediaUrl ? resolveMediaUrl(config.imageUrl) : config.imageUrl;
           return src
             ? `<div class="widget-custom"><img class="widget-custom__image" src="${escapeAttr(src)}" style="object-fit:${escapeAttr(config.imageFit || "contain")}" alt=""></div>`
+            : `<div class="widget-custom"></div>`;
+        }
+        if (mode === "video") {
+          // В превью всегда без звука и с повтором: звук панели не нужен,
+          // а короткий ролик иначе закончился бы пустым прямоугольником.
+          const src = resolveMediaUrl ? resolveMediaUrl(config.videoUrl) : config.videoUrl;
+          const fit = config.videoFit === "cover" ? "cover" : "contain";
+          return src
+            ? `<div class="widget-custom"><video class="widget-custom__video" src="${escapeAttr(src)}" style="object-fit:${fit}" autoplay loop muted playsinline preload="metadata"></video></div>`
             : `<div class="widget-custom"></div>`;
         }
         if (mode === "html") {

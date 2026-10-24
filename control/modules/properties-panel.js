@@ -116,6 +116,33 @@ export function initPropertiesPanel({
         }
       });
       host.querySelector("#pImageFit").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { imageFit: e.target.value } } }));
+    } else if (mode === "video") {
+      host.innerHTML = `
+        <div class="md-field"><label>${t("custom.videoUrl")}</label>
+          <div class="sb-file"><input type="text" id="pVideoUrl" value="${escapeAttr(config.videoUrl || "")}" placeholder="media/...webm"><button class="md-button md-button--text" type="button" id="pVideoBrowse" title="${t("custom.videoFromDisk")}">📁</button></div>
+        </div>
+        <div class="md-field"><label>${t("custom.videoFit")}</label>
+          <select id="pVideoFit">
+            <option value="contain" ${config.videoFit !== "cover" ? "selected" : ""}>${t("custom.fitContain")}</option>
+            <option value="cover" ${config.videoFit === "cover" ? "selected" : ""}>${t("custom.fitCover")}</option>
+          </select>
+        </div>
+        <div class="properties__toggle-row"><label>${t("custom.videoLoop")}</label>${switchHtml("pVideoLoop", config.videoLoop !== false)}</div>
+        <div class="properties__toggle-row"><label>${t("custom.videoMuted")}</label>${switchHtml("pVideoMuted", config.videoMuted !== false)}</div>
+        <div class="properties__hint">${t("custom.videoHint")}</div>`;
+      const videoUrlInput = host.querySelector("#pVideoUrl");
+      videoUrlInput.addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { videoUrl: e.target.value.trim() } } }));
+      host.querySelector("#pVideoBrowse").addEventListener("click", async () => {
+        if (!window.desktop || !window.desktop.pickSoundFile) return;
+        const res = await window.desktop.pickSoundFile("video");
+        if (res && res.ok && res.relativePath) {
+          videoUrlInput.value = res.relativePath;
+          send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { videoUrl: res.relativePath } } });
+        }
+      });
+      host.querySelector("#pVideoFit").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { videoFit: e.target.value } } }));
+      wireSwitch(host.querySelector("#pVideoLoop"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { videoLoop: on } } }));
+      wireSwitch(host.querySelector("#pVideoMuted"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { videoMuted: on } } }));
     } else if (mode === "html") {
       host.innerHTML = `
         <div class="properties__hint">${t("custom.htmlHint")}</div>
@@ -687,6 +714,7 @@ export function initPropertiesPanel({
           <select id="pCustomMode">
             <option value="text" ${mode === "text" ? "selected" : ""}>${t("properties.modeText")}</option>
             <option value="image" ${mode === "image" ? "selected" : ""}>${t("properties.modeImage")}</option>
+            <option value="video" ${mode === "video" ? "selected" : ""}>${t("properties.modeVideo")}</option>
             <option value="html" ${mode === "html" ? "selected" : ""}>${t("properties.modeHtml")}</option>
             <option value="embed" ${mode === "embed" ? "selected" : ""}>${t("properties.modeEmbed")}</option>
           </select>

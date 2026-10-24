@@ -52,7 +52,9 @@
       const { escapeHtml, escapeAttr } = this.context;
       const cfg = this.config;
       const mode = cfg.mode || "text";
-      const withCard = mode !== "image" && mode !== "embed" && cfg.showBackground !== false;
+      // Видео и картинка живут без карточки: под ними должна быть видна игра
+      // (у прозрачного WebM — альфа-канал), а не фон панели.
+      const withCard = mode !== "image" && mode !== "video" && mode !== "embed" && cfg.showBackground !== false;
       this.host.className = "widget-custom" + (withCard ? " has-card" : "");
 
       if (mode === "image") {
@@ -63,6 +65,25 @@
         this.host.innerHTML = src
           ? `<img class="widget-custom__image" src="${escapeAttr(src)}" style="object-fit:${escapeAttr(cfg.imageFit || "contain")}" alt="">`
           : "";
+      } else if (mode === "video") {
+        this._codeKey = null;
+        const src = this.context.resolveMediaUrl
+          ? this.context.resolveMediaUrl(cfg.videoUrl)
+          : cfg.videoUrl;
+        const fit = cfg.videoFit === "cover" ? "cover" : "contain";
+        // `muted` ставим и атрибутом, и свойством: с ним автозапуск разрешён
+        // всегда. Без звука альфа-WebM и задумывается — дорожка ему не нужна.
+        const muted = cfg.videoMuted !== false;
+        const loop = cfg.videoLoop !== false;
+        this.host.innerHTML = src
+          ? `<video class="widget-custom__video" src="${escapeAttr(src)}" style="object-fit:${fit}" autoplay playsinline preload="auto"${loop ? " loop" : ""}${muted ? " muted" : ""}></video>`
+          : "";
+        const video = this.host.querySelector("video");
+        if (video) {
+          video.muted = muted;
+          const attempt = video.play();
+          if (attempt && typeof attempt.catch === "function") attempt.catch(() => {});
+        }
       } else if (mode === "html") {
         const key = `${cfg.html || ""}\u0000${cfg.css || ""}\u0000${cfg.js || ""}`;
         if (this._codeKey !== key) {

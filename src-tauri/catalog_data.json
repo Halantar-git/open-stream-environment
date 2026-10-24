@@ -1,5 +1,5 @@
 {
-  "sourceHash": "7a358c37fc3ccb0f",
+  "sourceHash": "2be803f64760015b",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -126,7 +126,7 @@
     "custom": {
       "type": "custom",
       "label": "Свой виджет",
-      "description": "Текст, картинка, свой HTML или встраивание",
+      "description": "Текст, картинка, видео, свой HTML или встраивание",
       "icon": "widgetCustom",
       "defaultGeometry": {
         "x": 35,
@@ -145,6 +145,10 @@
         "textSize": "medium",
         "imageUrl": "",
         "imageFit": "contain",
+        "videoUrl": "",
+        "videoFit": "contain",
+        "videoLoop": true,
+        "videoMuted": true,
         "html": "",
         "css": "",
         "js": "",

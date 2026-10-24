@@ -159,7 +159,7 @@
     custom: {
       type: "custom",
       label: "Свой виджет",
-      description: "Текст, картинка, свой HTML или встраивание",
+      description: "Текст, картинка, видео, свой HTML или встраивание",
       icon: "widgetCustom",
       defaultGeometry: { x: 35, y: 40, w: 30, h: 16 },
       minW: 8,
@@ -173,6 +173,13 @@
         textSize: "medium",
         imageUrl: "",
         imageFit: "contain",
+        // Видео: свой файл или ссылка. `videoMuted` по умолчанию включён —
+        // без звука браузер разрешает автозапуск всегда, а прозрачный WebM
+        // обычно и не несёт дорожки.
+        videoUrl: "",
+        videoFit: "contain",
+        videoLoop: true,
+        videoMuted: true,
         html: "",
         css: "",
         js: "",
