@@ -475,13 +475,19 @@ impl ObsClient {
                 }
             } else {
                 // Источник уже есть: адрес мог устареть после смены порта, а
-                // галочка выгрузки — появиться только в этой версии.
+                // галочки — появиться только в этой версии. Перезагрузку по
+                // активации сцены гасим: с выгрузкой она даёт вторую
+                // перезагрузку подряд и сбрасывает анимации.
                 match self
                     .request(
                         "SetInputSettings",
                         &serde_json::json!({
                             "inputName": source,
-                            "inputSettings": { "url": url, "shutdown": shutdown },
+                            "inputSettings": {
+                                "url": url,
+                                "shutdown": shutdown,
+                                "restart_when_active": false,
+                            },
                             // `overlay` сохраняет остальные настройки источника.
                             "overlay": true,
                         }),
