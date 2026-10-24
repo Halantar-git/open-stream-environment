@@ -1636,17 +1636,17 @@
     },
     "quickstart": {
       "title": "Quick start",
-      "s1": "In OBS add a Browser Source (Sources → + → Browser Source) and paste the overlay address http://localhost:8710/overlay/overlay.html. Resolution — 1920×1080, source FPS — 30.",
-      "s2": "Add a separate Browser Source for each screen (Start, BRB, Just Chatting, End, Wheel) — copy its URL with the button below the preview on the Scenes tab.",
-      "s3": "In Settings → Twitch set at least your channel name (chat connects anonymously); optionally connect DonationAlerts and YouTube.",
-      "s4": "To switch scenes and control the camera from the app, enable OBS WebSocket (see the “OBS WebSocket” section).",
-      "s5": "Add and arrange widgets in the Editor — changes apply to the overlay live."
+      "s1": "Enable the WebSocket server in OBS (Tools → WebSocket Server Settings), then set the port and password in Settings → OBS WebSocket and turn the integration on — wait for the Connected status.",
+      "s2": "Press “Set up scenes in OBS”: the app creates the missing scenes and adds a browser source with the right URL and canvas size to each. Existing scenes and sources stay as they are, and pressing it again refreshes the URLs.",
+      "s3": "Add your gameplay capture to the main scene and move it below “OSE Overlay”: OBS puts new sources on top. Without the WebSocket, add the overlay source by hand — its address is in the “OBS Browser Source” panel of the editor.",
+      "s4": "In Settings → Twitch set at least your channel name (chat connects anonymously); optionally connect DonationAlerts and YouTube.",
+      "s5": "Arrange widgets in the editor: the Talk, Guests, Wheel and Poll scenes have their own layouts. Changes show up live."
     },
     "editor": {
       "title": "Editor",
       "p1": "Drag widgets from the left library onto the canvas, or click one to add it.",
       "p2": "Select a widget to edit its properties on the right. Drag to move it, use the corner handle to resize.",
-      "p3": "The Layers panel controls z-order; the Grid toggle helps with alignment. Copy this URL into an OBS Browser Source:",
+      "p3": "The Layers panel controls z-order; the Grid toggle helps with alignment. The “Set up scenes in OBS” button creates the sources for you; this URL is for adding a Browser Source by hand:",
       "p4": "Widget icons appear on the canvas next to the label on hover or selection, so widgets are easier to tell apart.",
       "p5": "The Lock button in the toolbar below the canvas prevents dragging, resizing, deleting, adding and reordering widgets. Selection and property editing stay available — handy for avoiding an accidental layout shift during a live stream.",
       "p6": "For a 3D widget with an Angle slider the whole tile rotates on the canvas — frame, label and resize handles. Drag a handle along the widget's axes: width and height are measured in its rotated coordinate system, not on screen."
