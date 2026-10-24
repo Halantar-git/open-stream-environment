@@ -649,7 +649,8 @@ export function initPropertiesPanel({
                </div>
                ${guestSlot ? "" : `<p class="properties__hint properties__hint--warn">${t("properties.webcamGuestSlotRequired")}</p>`}
                <div class="md-field"><label>${t("properties.webcamGuestVolume")}: <span id="pWebcamGuestVolumeValue">${guestVolume}%</span></label><input type="range" id="pWebcamGuestVolume" min="0" max="100" step="1" value="${guestVolume}"></div>
-               <div class="properties__toggle-row"><label>${t("properties.webcamGuestVideoOnly")}</label>${switchHtml("pWebcamVideoOnly", config.videoOnly === true)}</div>`
+               <div class="properties__toggle-row"><label>${t("properties.webcamGuestVideoOnly")}</label>${switchHtml("pWebcamVideoOnly", config.videoOnly === true)}</div>
+               <div class="properties__toggle-row"><label>${t("properties.webcamShowGuestName")}</label>${switchHtml("pWebcamShowGuestName", config.showGuestName === true)}</div>`
             : ""}
         <div class="md-field"><label>${t("properties.webcamLabel")}</label><input type="text" id="pWebcamLabel" value="${escapeAttr(label)}" placeholder="LIVE"></div>
         <div class="properties__toggle-row"><label>${t("properties.webcamShowLabel")}</label>${switchHtml("pWebcamShowLabel", config.showLabel !== false)}</div>
@@ -1137,6 +1138,7 @@ export function initPropertiesPanel({
         });
       }
       wireSwitch(propertiesEl.querySelector("#pWebcamVideoOnly"), (on) => patchWebcam({ videoOnly: on }));
+      wireSwitch(propertiesEl.querySelector("#pWebcamShowGuestName"), (on) => patchWebcam({ showGuestName: on }));
       wireSwitch(propertiesEl.querySelector("#pCameraEnabled"), (on) => sendCameraCaptureConfig({ enabled: on }));
       const cameraDevice = propertiesEl.querySelector("#pCameraDevice");
       if (cameraDevice) {

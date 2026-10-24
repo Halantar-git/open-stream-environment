@@ -146,6 +146,35 @@ describe("WebcamWidget", () => {
     expect(w.host.innerHTML).not.toContain("widget-webcam__vignette");
   });
 
+  test("бейдж показывает имя подключённого гостя", () => {
+    const w = mount({ source: "remote", guestSlot: "cam2", label: "LIVE", showLabel: true, showGuestName: true });
+    expect(w.host.innerHTML).toContain("LIVE");
+
+    w._onGuestStatus({ slots: [{ slot: "cam2", guest: "Аня" }] });
+    expect(w.host.innerHTML).toContain("Аня");
+    expect(w.host.innerHTML).not.toContain("LIVE");
+
+    // Гость отключился — бейдж возвращается к обычной подписи.
+    w._onGuestStatus({ slots: [{ slot: "cam2", guest: "" }] });
+    expect(w.host.innerHTML).toContain("LIVE");
+    w.unmount();
+  });
+
+  test("без переключателя имя гостя не подменяет подпись", () => {
+    const w = mount({ source: "remote", guestSlot: "cam2", label: "LIVE", showGuestName: false });
+    w._onGuestStatus({ slots: [{ slot: "cam2", guest: "Аня" }] });
+    expect(w.host.innerHTML).toContain("LIVE");
+    expect(w.host.innerHTML).not.toContain("Аня");
+    w.unmount();
+  });
+
+  test("если гость не ввёл имя, берётся подпись приглашения", () => {
+    const w = mount({ source: "remote", guestSlot: "cam3", label: "LIVE", showGuestName: true });
+    w._onGuestStatus({ slots: [{ slot: "cam3", guest: "", name: "Слот 3" }] });
+    expect(w.host.innerHTML).toContain("Слот 3");
+    w.unmount();
+  });
+
   test("толщина, скругление и цвет уходят в CSS-переменные", () => {
     const w = mount({ color: "#ff5500", thickness: 8, radius: 24 });
 

@@ -52,7 +52,7 @@
       h: 36,
       z,
       visible: true,
-      config: { source: "remote", guestSlot: slot, label: "LIVE", showLabel: true },
+      config: { source: "remote", guestSlot: slot, label: "LIVE", showLabel: true, showGuestName: true },
     };
   }
 

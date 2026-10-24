@@ -43,7 +43,7 @@ fn guest_cam(slot: &str, x: i64, y: i64, z: i64) -> Value {
         "h": 36,
         "z": z,
         "visible": true,
-        "config": { "source": "remote", "guestSlot": slot, "label": "LIVE", "showLabel": true },
+        "config": { "source": "remote", "guestSlot": slot, "label": "LIVE", "showLabel": true, "showGuestName": true },
     })
 }
 
@@ -259,6 +259,11 @@ fn upgrade_guest_badges(scenes: &mut Map<String, Value>) {
         let Some(config) = widget.get_mut("config").and_then(Value::as_object_mut) else {
             continue;
         };
+        // Имя подключённого гостя вместо общей подписи — новая настройка: в
+        // старой раскладке её нет, и без неё бейдж так и остался бы «LIVE».
+        if !config.contains_key("showGuestName") {
+            config.insert("showGuestName".to_string(), Value::Bool(true));
+        }
         let empty = config
             .get("label")
             .and_then(Value::as_str)
@@ -512,6 +517,7 @@ mod tests {
         // Бейдж на рамках такой же, как у остальных камер темы.
         assert_eq!(guests[0]["config"]["label"], json!("LIVE"));
         assert_eq!(guests[0]["config"]["showLabel"], json!(true));
+        assert_eq!(guests[0]["config"]["showGuestName"], json!(true));
     }
 
     #[test]
@@ -558,7 +564,12 @@ mod tests {
         let widgets = scenes["guests"]["widgets"].as_array().unwrap();
         assert_eq!(widgets[0]["config"]["label"], json!("LIVE"));
         assert_eq!(widgets[0]["config"]["showLabel"], json!(true));
+        // Новая настройка бейджа — тоже из умолчаний, в старом конфиге её нет.
+        assert_eq!(widgets[0]["config"]["showGuestName"], json!(true));
         assert_eq!(widgets[1]["config"]["label"], json!("Гость"));
+        assert_eq!(widgets[1]["config"]["showGuestName"], json!(true));
+        // Добавленный вручную виджет не трогаем.
+        assert!(widgets[2]["config"].get("showGuestName").is_none());
         assert_eq!(widgets[2]["config"]["label"], json!(""));
     }
 

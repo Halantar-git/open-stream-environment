@@ -92,6 +92,8 @@
       this._guestAudioSent = null;
       // STUN/TURN, присланные хостом: без них через интернет не собрать путь.
       this._guestIce = null;
+      // Имя подключённого гостя для бейджа (пусто — показываем настройку).
+      this._guestName = "";
 
       const { EVENT_TYPES } = this.context;
       if (EVENT_TYPES && EVENT_TYPES.CAMERA_VIDEO_FRAME) {
@@ -196,7 +198,11 @@
       const radius = clamp(Math.round(radiusAuto ? this._themeRadius() : num(cfg.radius, this._themeRadius())), 0, 64);
       const position = LABEL_POSITIONS.includes(cfg.labelPosition) ? cfg.labelPosition : "top-left";
       const label = String(cfg.label == null ? "LIVE" : cfg.label).trim();
-      const showLabel = cfg.showLabel !== false && label.length > 0;
+      // Бейдж: имя подключённого гостя важнее общей подписи. Пока гость не
+      // подключён (или имя ему не задано), остаётся настроенная подпись —
+      // обычно LIVE.
+      const badge = remote && cfg.showGuestName === true && this._guestName ? this._guestName : label;
+      const showLabel = cfg.showLabel !== false && badge.length > 0;
 
       this.host.style.setProperty("--webcam-accent", accent);
       this.host.style.setProperty("--webcam-thickness", `${thickness}px`);
@@ -245,7 +251,7 @@
         parts.push(
           `<div class="widget-webcam__label" data-pos="${escapeAttr(position)}">` +
             `<span class="widget-webcam__dot"></span>` +
-            `<span class="widget-webcam__label-text">${escapeHtml(label)}</span>` +
+            `<span class="widget-webcam__label-text">${escapeHtml(badge)}</span>` +
             `</div>`
         );
       }
@@ -292,6 +298,25 @@
     // прийти до монтирования виджета, а пересборка peer'а все равно нужна.
     _onGuestStatus(payload) {
       if (payload && payload.ice) this._guestIce = payload.ice;
+      // Имя для бейджа: сначала то, что ввёл сам гость, потом подпись
+      // приглашения. Перерисовываем только если бейдж вообще зависит от имени.
+      const slot = this._guestSlot || this._normalizedSlot();
+      const entry =
+        payload && Array.isArray(payload.slots)
+          ? payload.slots.find((item) => item && item.slot === slot)
+          : null;
+      const name = entry ? String(entry.guest || entry.name || "").trim() : "";
+      if (name === this._guestName) return;
+      this._guestName = name;
+      if (!this.host) return;
+      if (this.config.source === "remote" && this.config.showGuestName === true) this.render();
+    }
+
+    _normalizedSlot() {
+      const protocol = typeof window !== "undefined" ? window.GuestProtocol : null;
+      return protocol
+        ? protocol.normalizeSlot(this.config.guestSlot)
+        : String(this.config.guestSlot || "");
     }
 
     _onGuestSignal(payload) {
