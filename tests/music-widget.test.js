@@ -175,6 +175,24 @@ describe("music widget", () => {
     w.unmount();
   });
 
+  test("пропуск берёт следующий трек, стоп очищает очередь", () => {
+    const { w } = mountWidget({ autoplay: false });
+    w.context.bus.emit(EVENT_TYPES.ALERT, donation({ musicLink: "https://cdn.example/first.mp3" }));
+    w.context.bus.emit(EVENT_TYPES.ALERT, donation({ musicLink: "https://cdn.example/second.mp3" }));
+    expect(w.current.musicLink).toBe("https://cdn.example/first.mp3");
+    expect(w.queue.length).toBe(1);
+
+    w.context.bus.emit(EVENT_TYPES.MUSIC_CONTROL, { action: "skip" });
+    expect(w.current.musicLink).toBe("https://cdn.example/second.mp3");
+    expect(w.queue.length).toBe(0);
+
+    w.context.bus.emit(EVENT_TYPES.MUSIC_CONTROL, { action: "stop" });
+    expect(w.current).toBeNull();
+    expect(w.queue.length).toBe(0);
+    expect(w.host.classList.contains("is-playing")).toBe(false);
+    w.unmount();
+  });
+
   test("musicTitle важнее имени файла", () => {
     const { w } = mountWidget({ autoplay: false });
     w.context.bus.emit(EVENT_TYPES.ALERT, donation({ musicTitle: "Night Drive" }));

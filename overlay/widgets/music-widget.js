@@ -119,6 +119,9 @@
       if (this.context.EVENT_TYPES.MUSIC_PLAY) {
         this.subscribe(this.context.EVENT_TYPES.MUSIC_PLAY, (payload) => this.onMusicPlay(payload));
       }
+      if (this.context.EVENT_TYPES.MUSIC_CONTROL) {
+        this.subscribe(this.context.EVENT_TYPES.MUSIC_CONTROL, (payload) => this.onControl(payload));
+      }
       this.subscribe(this.context.EVENT_TYPES.LOCALES, () => {
         if (this.current) this.renderMeta(this.current);
         else this.renderIdle();
@@ -175,6 +178,28 @@
         amount: null,
         currency: "",
       });
+    }
+
+    // Управление плеером из инспектора: «Пропустить» заканчивает текущий
+    // трек и берёт следующий, «Стоп» гасит плеер и чистит очередь.
+    onControl(payload) {
+      const action = payload && payload.action;
+      if (action === "skip") this.skip();
+      else if (action === "stop") this.stopAll();
+    }
+
+    skip() {
+      // `idle()` останавливает звук, снимает «играет» и берёт следующий трек
+      // из очереди; пустая очередь просто возвращает плеер в покой.
+      this.idle();
+    }
+
+    stopAll() {
+      this.queue = [];
+      this.stopPlayback();
+      this.current = null;
+      this.renderQueue();
+      this.renderIdle();
     }
 
     queueEnabled() {

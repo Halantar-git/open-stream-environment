@@ -742,6 +742,10 @@ export function initPropertiesPanel({
             <input type="url" id="pMusicTestLink" value="${escapeAttr(config.testLink || "")}" placeholder="${escapeAttr(t("properties.musicTestLinkPlaceholder"))}" style="flex:1;min-width:0;">
             <button class="md-button md-button--tonal" id="pMusicTestPlay">${t("properties.musicTest")}</button>
           </div>
+          <div class="properties__row">
+            <button class="md-button md-button--tonal" id="pMusicSkip">${t("properties.musicSkip")}</button>
+            <button class="md-button md-button--text" id="pMusicStop">${t("properties.musicStop")}</button>
+          </div>
           <p class="properties__hint">${t("properties.musicTestHint")}</p>
         </div>
         <div class="properties__toggle-row"><label>${t("properties.musicAutoplay")}</label>${switchHtml("pMusicAutoplay", config.autoplay !== false)}</div>
@@ -1247,6 +1251,8 @@ export function initPropertiesPanel({
         }
         send(EVENT_TYPES.CMD_TEST_MUSIC, { url });
       });
+      propertiesEl.querySelector("#pMusicSkip").addEventListener("click", () => send(EVENT_TYPES.CMD_MUSIC_CONTROL, { action: "skip" }));
+      propertiesEl.querySelector("#pMusicStop").addEventListener("click", () => send(EVENT_TYPES.CMD_MUSIC_CONTROL, { action: "stop" }));
     } else if (inst.type === "uec-transfer") {
       propertiesEl.querySelector("#pUecChannel").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { channel: e.target.value.trim() } } }));
       propertiesEl.querySelector("#pUecDuration").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { durationMs: Math.max(1500, Math.min(60000, Number(e.target.value) || 9000)) } } }));

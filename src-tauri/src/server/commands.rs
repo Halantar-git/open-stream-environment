@@ -1150,6 +1150,18 @@ pub fn handle_message(
                 );
             }
         }
+        event_types::CMD_MUSIC_CONTROL => {
+            // Плеером управляют из инспектора: «Пропустить» берёт следующий
+            // трек из очереди, «Стоп» обрывает текущий и чистит очередь.
+            let action = payload.get("action").and_then(Value::as_str).unwrap_or("");
+            if action == "skip" || action == "stop" {
+                broadcast(
+                    diagnostics,
+                    event_types::MUSIC_CONTROL,
+                    json!({ "action": action }),
+                );
+            }
+        }
         event_types::CMD_SET_CHAT_BOT_CONFIG => {
             {
                 let mut config = diagnostics.config();
@@ -1941,6 +1953,37 @@ mod tests {
             &json!({
                 "type": event_types::CMD_TEST_MUSIC,
                 "payload": { "url": "javascript:alert(1)" },
+            }),
+        );
+        assert!(receiver.try_recv().is_err());
+    }
+
+    #[test]
+    fn music_control_actions_reach_the_widget() {
+        let fixture = Fixture::new("music-control");
+        let mut receiver = fixture.listen();
+
+        for action in ["skip", "stop"] {
+            handle(
+                &fixture.diagnostics,
+                None,
+                &json!({
+                    "type": event_types::CMD_MUSIC_CONTROL,
+                    "payload": { "action": action },
+                }),
+            );
+            let message = frame(&mut receiver);
+            assert_eq!(message["type"], json!(event_types::MUSIC_CONTROL));
+            assert_eq!(message["payload"]["action"], json!(action));
+        }
+
+        // Неизвестное действие в оверлей не уходит.
+        handle(
+            &fixture.diagnostics,
+            None,
+            &json!({
+                "type": event_types::CMD_MUSIC_CONTROL,
+                "payload": { "action": "rewind" },
             }),
         );
         assert!(receiver.try_recv().is_err());
