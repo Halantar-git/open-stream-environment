@@ -2141,6 +2141,16 @@ fn build_eventsub_subscribe(
 /// База Helix — как `https://api.twitch.tv/helix` в JS.
 const HELIX_API: &str = "https://api.twitch.tv/helix";
 
+/// Адреса наборов значков: глобальные — `/chat/badges/global`, канальные —
+/// `/chat/badges` с `broadcaster_id`. Без параметра канальный адрес отвечает
+/// 400, поэтому перепутать их — значит остаться без картинок значков вовсе.
+fn badge_urls(broadcaster_id: &str) -> (String, Option<String>) {
+    let global = format!("{HELIX_API}/chat/badges/global");
+    let channel = (!broadcaster_id.is_empty())
+        .then(|| format!("{HELIX_API}/chat/badges?broadcaster_id={broadcaster_id}"));
+    (global, channel)
+}
+
 /// Наборы значков Twitch через Helix: сначала глобальные, затем канальные.
 ///
 /// `None` — забирать нечего (нет клиента или токена) либо сеть подвела: кэш
@@ -2164,15 +2174,15 @@ async fn fetch_twitch_badges(config: Arc<Mutex<ConfigFile>>, tokens: Tokens) -> 
         return None;
     };
 
-    let global_url = format!("{HELIX_API}/chat/badges");
+    let (global_url, channel_url) = badge_urls(&broadcaster_id);
+
     let (status, body) = http::helix_get(global_url, client_id.clone(), token.clone()).await;
     if !(200..300).contains(&status) {
         return None;
     }
     let mut map = twitch_badges::parse_badge_sets(&body);
 
-    if !broadcaster_id.is_empty() {
-        let channel_url = format!("{HELIX_API}/chat/badges?broadcaster_id={broadcaster_id}");
+    if let Some(channel_url) = channel_url {
         let (status, body) = http::helix_get(channel_url, client_id, token).await;
         if (200..300).contains(&status) {
             twitch_badges::merge_badges(&mut map, twitch_badges::parse_badge_sets(&body));
@@ -3328,6 +3338,21 @@ mod tests {
     use std::fs;
     use std::path::PathBuf;
     use std::sync::atomic::{AtomicUsize, Ordering};
+
+    #[test]
+    fn badge_endpoints_use_the_global_and_channel_paths() {
+        let (global, channel) = badge_urls("12345");
+        // Глобальные наборы — отдельный путь `/global`. Без него Twitch
+        // отвечает 400 на канальный адрес без `broadcaster_id`, и картинки
+        // значков не загружаются вовсе.
+        assert_eq!(global, "https://api.twitch.tv/helix/chat/badges/global");
+        assert_eq!(
+            channel.as_deref(),
+            Some("https://api.twitch.tv/helix/chat/badges?broadcaster_id=12345")
+        );
+        // Без канала спрашиваем только глобальные наборы.
+        assert!(badge_urls("").1.is_none());
+    }
 
     /// Временный каталог с шаблоном настроек: так `Diagnostics::open` проходит
     /// тот же путь, что и при первом запуске приложения.

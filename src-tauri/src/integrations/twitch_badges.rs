@@ -1,4 +1,5 @@
-//! Значки Twitch для чата: наборы из Helix `/chat/badges` и адреса картинок.
+//! Значки Twitch для чата: наборы из Helix (`/chat/badges/global` и
+//! `/chat/badges?broadcaster_id=…`) и адреса картинок.
 //!
 //! IRC отдаёт значок только парой «имя набора/версия» (`subscriber/12`) — без
 //! картинки: файл на CDN адресуется UUID версии, а не именем. Поэтому наборы
@@ -14,7 +15,7 @@ use serde_json::Value;
 /// «имя набора значков → версия → адрес картинки».
 pub type BadgeMap = HashMap<String, HashMap<String, String>>;
 
-/// Разобрать ответ Helix `/chat/badges`:
+/// Разобрать ответ Helix `/chat/badges*`:
 /// `{ "data": [ { "set_id": "subscriber", "versions": [ { "id": "12", "image_url_2x": "…" } ] } ] }`.
 ///
 /// Из адресов берём 2x (значок показывается мелким, 1x мылит), при его
