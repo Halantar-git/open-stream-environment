@@ -358,7 +358,7 @@
     "obsMicSource": "Microphone",
     "obsSceneMapping": "Scene mapping: remote logical name → OBS scene name.",
     "obsSetupScenes": "Set up scenes in OBS",
-    "obsSetupScenesHint": "Creates the missing scenes and adds a browser source with the overlay URL and canvas size to each. Existing scenes and sources are never deleted or renamed.",
+    "obsSetupScenesHint": "Creates the missing scenes and adds a browser source with the overlay URL and canvas size to each. “Shutdown source when not visible” is enabled on every source except the splash — it must already be loaded. Existing scenes and sources are never deleted or renamed.",
     "obsSetupScenesConfirm": "Create the missing scenes and sources in OBS? Existing scenes stay as they are.",
     "obsSetupScenesNotConnected": "OBS is not connected: enable the integration and wait for the Connected status.",
     "obsSetupScenesDone": "OBS: {{scenes}} scenes created, {{sources}} sources added, {{updated}} updated.",
@@ -1762,7 +1762,7 @@
       "p2": "Scene mapping translates logical remote names into your actual OBS scene names.",
       "p3": "You can also define custom RAW commands, camera angles (multicam) and camera filters, triggered by Twitch points or manually.",
       "p4": "The Camera and Microphone fields set the sources for the webcam and microphone toggle buttons in the remote.",
-      "p5": "The “Set up scenes in OBS” button (with the WebSocket connected) creates the missing scenes and adds a browser source with the right URL and canvas size to each. Existing scenes stay as they are; running it again refreshes the source URL if the port changed."
+      "p5": "The “Set up scenes in OBS” button (with the WebSocket connected) creates the missing scenes and adds a browser source with the right URL and canvas size to each; “Shutdown source when not visible” is enabled on them, except the splash source, which stays loaded so the page has time to connect. Existing scenes stay as they are; running it again refreshes the source URL if the port changed."
     },
     "soundboard": {
       "title": "Soundboard",

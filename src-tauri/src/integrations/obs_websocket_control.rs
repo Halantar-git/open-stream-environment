@@ -439,6 +439,7 @@ impl ObsClient {
             }
 
             let mut item_id = None;
+            let shutdown = js_truthy(step.get("shutdown"));
             if js_truthy(step.get("createSource")) {
                 match self
                     .request(
@@ -451,10 +452,10 @@ impl ObsClient {
                                 "url": url,
                                 "width": width,
                                 "height": height,
-                                // Источник не выгружается при уходе со сцены:
-                                // иначе страница перезагружается на каждом
-                                // переходе и теряет состояние виджетов.
-                                "shutdown": false,
+                                // Скрытый источник выгружается: иначе невидимая
+                                // сцена продолжает рендериться. Заставка —
+                                // исключение, она грузится заранее (см. план).
+                                "shutdown": shutdown,
                                 "restart_when_active": false,
                             },
                             "sceneItemEnabled": true,
@@ -473,12 +474,14 @@ impl ObsClient {
                     })),
                 }
             } else {
+                // Источник уже есть: адрес мог устареть после смены порта, а
+                // галочка выгрузки — появиться только в этой версии.
                 match self
                     .request(
                         "SetInputSettings",
                         &serde_json::json!({
                             "inputName": source,
-                            "inputSettings": { "url": url },
+                            "inputSettings": { "url": url, "shutdown": shutdown },
                             // `overlay` сохраняет остальные настройки источника.
                             "overlay": true,
                         }),
@@ -1170,9 +1173,21 @@ mod tests {
             inputs[0]["d"]["requestData"]["inputSettings"]["url"],
             json!("http://localhost:8710/overlay/overlay.html")
         );
-        // Оверлей не должен выгружаться при уходе со сцены.
+        // Скрытый источник выгружается, иначе невидимая сцена рендерится зря.
         assert_eq!(
             inputs[0]["d"]["requestData"]["inputSettings"]["shutdown"],
+            json!(true)
+        );
+        // Заставка — исключение: её источник остаётся загруженным.
+        let splash = inputs
+            .iter()
+            .find(|input| {
+                input["d"]["requestData"]["inputSettings"]["url"]
+                    == json!("http://localhost:8710/overlay/video-splash.html")
+            })
+            .expect("источник заставки");
+        assert_eq!(
+            splash["d"]["requestData"]["inputSettings"]["shutdown"],
             json!(false)
         );
         // Размер — холст OBS; фейковый сервер его не отдал, значит 1920×1080.

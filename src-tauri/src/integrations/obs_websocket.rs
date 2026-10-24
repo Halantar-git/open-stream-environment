@@ -140,6 +140,11 @@ pub fn default_scene_name(role: &str) -> &'static str {
 /// сцены у себя. Ничего не удаляем и не переименовываем — только создаём
 /// недостающее. Одна сцена на две роли (ошибка в маппинге) попадает в план
 /// один раз: OBS не хранит две сцены с одним именем.
+///
+/// `shutdown` — выгружать ли источник, когда его сцена не видна. Скрытая
+/// страница иначе продолжает рендериться: Chromium в OBS не считает её
+/// скрытой без этой галочки. Исключение — заставка: она должна быть уже
+/// загружена к переходу, иначе не успевает подключиться и играет повторно.
 pub fn build_setup_plan(
     scene_map: &Value,
     defaults: &Value,
@@ -164,6 +169,7 @@ pub fn build_setup_plan(
                 "url": format!("http://localhost:{port}{path}"),
                 "createScene": !existing_scenes.iter().any(|scene| scene == &name),
                 "createSource": !existing_inputs.iter().any(|input| input == source_name),
+                "shutdown": *role != "video",
             }))
         })
         .collect()
@@ -328,6 +334,17 @@ mod tests {
             url("video"),
             "http://localhost:8710/overlay/video-splash.html"
         );
+    }
+
+    #[test]
+    fn the_setup_plan_unloads_every_source_except_the_splash() {
+        // Скрытая сцена без выгрузки продолжает рендериться; заставка же обязана
+        // быть загружена заранее, иначе не успевает подключиться к переходу.
+        let plan = build_setup_plan(&json!({}), &json!({}), 8710, &[], &[]);
+        for step in &plan {
+            let expected = step["role"] != json!("video");
+            assert_eq!(step["shutdown"], json!(expected), "{}", step["role"]);
+        }
     }
 
     #[test]
