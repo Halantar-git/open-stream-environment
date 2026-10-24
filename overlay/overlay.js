@@ -213,6 +213,7 @@
     send,
     theme: "nebula",
     threeDWidgets: [],
+    enable3d: false,
   };
 
   // Current layout, kept so a theme change can re-run syncLayout (and thus
@@ -251,6 +252,9 @@
     // a custom theme's own selection). The manager hands each widget its own
     // family via `widgetTheme`, so widgets from several families can coexist.
     context.threeDWidgets = Array.isArray(appearance.active3dWidgets) ? appearance.active3dWidgets : [];
+    // Флаг, а не набор: 3D может быть включён у темы без готового набора
+    // виджетов (своя тема), а плавность музыки завязана именно на режим.
+    context.enable3d = !!appearance.enable3d;
     context.activeThemeId = appearance.activeThemeId || "";
   }
 

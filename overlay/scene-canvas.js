@@ -127,6 +127,7 @@
     },
     theme: "nebula",
     threeDWidgets: [],
+    enable3d: false,
     activeThemeId: "",
   };
 
@@ -322,6 +323,7 @@
     document.body.dataset.theme = appearance.activeThemeId || "";
     lastAppearance = appearance;
     context.threeDWidgets = Array.isArray(appearance.active3dWidgets) ? appearance.active3dWidgets : [];
+    context.enable3d = !!appearance.enable3d;
     context.activeThemeId = appearance.activeThemeId || "";
     // Тема могла сменить 2D/3D-набор — пересобираем раскладку.
     syncWidgets(currentWidgets);

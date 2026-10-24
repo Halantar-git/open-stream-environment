@@ -192,7 +192,7 @@ describe("music widget", () => {
   test("3D-тема включает плавность и без наклона", () => {
     const parent = makeEl("div");
     const context = makeContext();
-    context.threeDWidgets = ["grimhex"];
+    context.enable3d = true;
     const w = new MusicWidget(
       { id: "w1", type: "music", x: 0, y: 0, w: 10, h: 10, z: 0, visible: true, config: {} },
       context,
@@ -200,6 +200,8 @@ describe("music widget", () => {
     w.mount(parent);
 
     expect(w.host.classList.contains("is-motion")).toBe(true);
+    // Виджет скрывается целиком, а не только плашка внутри.
+    expect(w.host.classList.contains("is-empty")).toBe(true);
     w.unmount();
   });
 

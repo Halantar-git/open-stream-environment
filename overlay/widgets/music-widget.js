@@ -144,14 +144,12 @@
       this._setTilt(`perspective(1200px) rotateY(${ry}deg) rotateX(${rx}deg)`);
     }
 
-    /// Плавные появление и исчезновение — только когда у виджета есть объём:
-    /// включён наклон или тема работает с 3D-виджетами. Резкий display:none
-    /// на повёрнутой плашке выглядит рывком, а плоская строка, как и
-    /// остальные 2D-виджеты, появляется мгновенно.
+    /// Плавные появление и исчезновение — только в 3D-режиме темы или при
+    /// включённом наклоне: там виджет уже живёт в объёме, и рывок заметен.
+    /// Плоская строка, как и остальные 2D-виджеты, появляется мгновенно.
     _syncMotion() {
       const value = Math.max(0, Math.min(100, Number(this.config.perspective) || 0));
-      const threeD = Array.isArray(this.context.threeDWidgets) && this.context.threeDWidgets.length > 0;
-      this.host.classList.toggle("is-motion", value > 0 || threeD);
+      this.host.classList.toggle("is-motion", value > 0 || this.context.enable3d === true);
     }
 
     onAlert(alert) {
