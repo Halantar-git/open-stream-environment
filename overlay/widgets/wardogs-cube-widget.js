@@ -16,17 +16,15 @@
  */
 
 /*
-  WidgetWardogsCube — rotating isometric cube for the Wardogs theme, built
-  entirely from the emblem (assets/themes/wardogs/logo.png) decaled onto all six
-  faces in the emblem's own colours, on solid faces — no wireframe.
+  WidgetWardogsCube — rotating isometric wireframe cube for the Wardogs theme.
 
-  Each face is black before the emblem goes on, so the cube is dense: nearer
-  faces hide the farther ones. The fill is lit by the face normal, otherwise a
-  cube of identical panels would read as a flat blob.
+  Same drawing as the Pixel Perfect cube, in the theme's amber accent: a
+  transparent cube made of its edges only, with the active alert's icon decaled
+  onto every face. No third-party artwork is bundled — the icon comes from the
+  shared alert set, so the widget is safe to ship under the project's license.
 
-  Like the Pixel cube it is hidden while nothing is happening and appears on an
-  alert, one alert at a time; donations also make it pop. Between alerts it only
-  spins in place — no drift or breathing, so it stays put in the scene.
+  The cube is hidden while no alert is playing and appears on the first alert,
+  one alert at a time; donations also trigger a quick "pop".
 */
 (function (root, factory) {
   const BaseWidget =
@@ -46,76 +44,70 @@
 
   const clamp = (v, min, max) => (v < min ? min : v > max ? max : v);
 
-  const LOGO_PATH = "/assets/themes/wardogs/logo.png";
-  const DEFAULT_ALERT_MS = 5000;
+  // Янтарный акцент темы; в приложении берётся из `--md-primary`.
+  const DEFAULT_ACCENT = "#f0a92c";
 
-  // Подложка граней чёрная; свет лишь немного выделяет грани, иначе плотный куб
-  // читался бы плоским чёрным пятном.
-  const FACE_SHADOW = [0, 0, 0];
-  const FACE_LIT = [32, 32, 32];
+  // Cube vertices (half-size 1).
+  const VERTICES = [
+    [-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1],
+    [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1],
+  ];
 
-  // Свет сверху-слева: грань тем светлее, чем сильнее её нормаль смотрит на
-  // источник. Направление задано в экранных координатах (как у проекции).
-  const LIGHT = (() => {
-    const v = [-0.35, 0.7, 0.62];
-    const len = Math.hypot(v[0], v[1], v[2]) || 1;
-    return [v[0] / len, v[1] / len, v[2] / len];
-  })();
+  // The 12 cube edges as pairs of vertex indices (bottom, top, verticals).
+  const EDGES = [
+    [0, 1], [1, 2], [2, 3], [3, 0],
+    [4, 5], [5, 6], [6, 7], [7, 4],
+    [0, 4], [1, 5], [2, 6], [3, 7],
+  ];
 
-  // Цвет грани между тенью и светом.
-  function mixColor(from, to, t) {
-    const channel = (i) => Math.round(from[i] + (to[i] - from[i]) * t);
-    return `rgb(${channel(0)}, ${channel(1)}, ${channel(2)})`;
-  }
-
-  // The 6 cube faces for decaling the emblem: center + two in-plane tangent
-  // vectors (face-local x/y axes). Front/back/left/right/top/bottom. The emblem
-  // is drawn with a further 180° turn (see render), since these axes come from
-  // the symmetric Pixel icon and leave the emblem upside down.
-  const LOGO_FACES = [
-    { c: [0, 0, -1], u: [1, 0, 0],  v: [0, 1, 0] },  // front
+  // The 6 cube faces for decaling the alert icon: center + two in-plane
+  // tangent vectors (face-local x/y axes). Front/back/left/right/top/bottom.
+  const ICON_FACES = [
+    { c: [0, 0, -1], u: [1, 0, 0], v: [0, 1, 0] },   // front
     { c: [0, 0, 1],  u: [-1, 0, 0], v: [0, 1, 0] },  // back
     { c: [-1, 0, 0], u: [0, 0, 1],  v: [0, 1, 0] },  // left
     { c: [1, 0, 0],  u: [0, 0, -1], v: [0, 1, 0] },  // right
     { c: [0, 1, 0],  u: [1, 0, 0],  v: [0, 0, -1] }, // top
-    { c: [0, -1, 0], u: [1, 0, 0],  v: [0, 0, -1] }, // bottom
+    { c: [0, -1, 0], u: [1, 0, 0],  v: [0, 0, 1] },  // bottom
   ];
 
   class WidgetWardogsCube extends BaseWidget {
     constructor(config, context) {
       super(config, context);
       this.theme = (context && (context.theme || context.activeThemeId)) || "";
-      this._logo = null; // source <img>, loaded once
-      this._shadow = FACE_SHADOW; // цвет теневой грани (чёрный)
-      this._lit = FACE_LIT; // цвет освещённой грани
-      this._queue = []; // alerts waiting for their turn
-      this._visibleUntil = 0; // while > now the cube is shown
-      this._popUntil = 0; // active "pop" window (alert reaction)
-      this._popAmp = 0; // pop strength (donations hit harder)
+      this.accent = DEFAULT_ACCENT;
+      this._popUntil = 0;
+      this._iconQueue = [];
+      this._iconKind = null;
+      this._iconUntil = 0;
+      this._iconImages = {};
     }
 
     onMount() {
-      // HARD theme gate: no canvas, no loop, no events on a non-Wardogs theme.
+      // HARD theme gate: no canvas, no loop, no events on another theme.
       if (this.theme !== "wardogs") return;
-
-      this._ensureLogo();
+      this._readColors();
       this._applyPerspective();
-      this.subscribe(this.context.EVENT_TYPES.ALERT, (alert) => this._queueAlert(alert));
-      // Hidden until the first alert, like the Pixel cube.
+      this.bindEvents();
+      // Hidden until the first alert — like the alerts backdrop.
       this._setVisible(false);
       this.startRenderLoop(30);
     }
 
     onUnmount() {
-      this._logo = null;
-      this._queue = [];
-      this._visibleUntil = 0;
       this._popUntil = 0;
-      this._popAmp = 0;
+      this._iconQueue = [];
+      this._iconKind = null;
+      this._iconUntil = 0;
     }
 
     onUpdate(prev, next) {
       if (prev.perspective !== next.perspective) this._applyPerspective();
+    }
+
+    _readColors() {
+      const read = this.context.readCssVar;
+      this.accent = (read && read("--md-primary")) || DEFAULT_ACCENT;
     }
 
     _applyPerspective() {
@@ -129,26 +121,35 @@
       }
     }
 
-    // Alerts are shown one at a time, like the Pixel cube drains its icons, so
-    // they never overwrite each other. Only an alert brings the cube on screen.
-    _queueAlert(alert) {
-      if (!alert) return;
-      this._queue.push(alert);
-      if (performance.now() >= this._visibleUntil) this._drain();
+    bindEvents() {
+      const { EVENT_TYPES } = this.context;
+      this.subscribe(EVENT_TYPES.ALERT, (a) => this.queueAlert(a));
     }
 
-    _drain() {
-      const alert = this._queue.shift();
+    // Queue alerts so their icons are shown one at a time, like the alerts
+    // widget drains its cards. Icons never overwrite each other.
+    queueAlert(alert) {
+      if (!alert) return;
+      this._iconQueue.push(alert);
+      // Start draining only when no icon is currently displayed.
+      if (!this._iconKind || performance.now() >= this._iconUntil) this._drainIcon();
+    }
+
+    _drainIcon() {
+      const alert = this._iconQueue.shift();
       if (!alert) {
-        this._visibleUntil = 0;
+        this._iconKind = null;
+        this._iconUntil = 0;
         this._setVisible(false);
         return;
       }
-      const duration = alert.durationMs || DEFAULT_ALERT_MS;
-      this._visibleUntil = performance.now() + duration;
+      const duration = alert.durationMs || 5000;
+      this._iconKind = alert.kind || null;
+      this._iconUntil = performance.now() + duration;
       this._setVisible(true);
-      this._pop(alert.kind);
-      this.later(() => this._drain(), duration);
+      if (alert.kind === "donation") this.pop();
+      // Advance to the next queued icon once this one has finished.
+      this.later(() => this._drainIcon(), duration);
     }
 
     _setVisible(visible) {
@@ -156,24 +157,23 @@
       this.setIdle(!visible);
     }
 
-    // A short scale pop on every alert; a donation pops noticeably harder.
-    _pop(kind) {
+    pop() {
       this._popUntil = performance.now() + 450;
-      this._popAmp = kind === "donation" ? 0.16 : 0.08;
     }
 
-    _ensureLogo() {
-      if (this._logo || typeof Image === "undefined") return;
+    // Lazy-loads the alert icon (shared/icons.js) as an accent-coloured 24x24
+    // SVG raster so it can be drawn onto the cube canvas. Cached per kind+colour.
+    _iconImage(kind) {
+      const icons = this.context.ICONS || {};
+      const svg = icons[kind];
+      if (!svg || typeof Image === "undefined") return null;
+      const key = kind + "|" + this.accent;
+      if (this._iconImages[key]) return this._iconImages[key];
+      const colored = svg.split("currentColor").join(this.accent);
+      const sized = colored.replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" ');
       const img = new Image();
-      img.src = LOGO_PATH;
-      this._logo = img;
-    }
-
-    // The emblem is drawn in its own colours (black shield, white wolf) exactly
-    // as the game uses it, so it reads over whatever gameplay sits behind.
-    _logoImage() {
-      const img = this._logo;
-      if (!img || !img.complete || !img.naturalWidth) return null;
+      img.src = "data:image/svg+xml," + encodeURIComponent(sized);
+      this._iconImages[key] = img;
       return img;
     }
 
@@ -196,18 +196,17 @@
       const now = performance.now();
       const t = now / 1000;
 
-      let scale = 1;
+      let scale = 1 + 0.03 * Math.sin(t * 1.7);
       if (now < this._popUntil) {
-        const k = 1 - (this._popUntil - now) / 450; // 0..1 over the pop
-        scale += this._popAmp * Math.sin(Math.PI * k);
+        const k = 1 - (this._popUntil - now) / 450;
+        scale *= 1 + 0.16 * Math.sin(Math.PI * k);
       }
-      scale = clamp(scale, 0.8, 1.4);
+      scale = clamp(scale, 0.8, 1.25);
 
-      const cx = cw / 2;
-      const cy = ch / 2;
-      const size = Math.min(cw, ch) * 0.3 * scale;
+      const cx = cw / 2 + Math.sin(t * 0.6) * 4;
+      const cy = ch / 2 + Math.cos(t * 0.5) * 3 + Math.sin(t * 1.4) * 2;
+      const size = Math.min(cw, ch) * 0.28 * scale;
 
-      // Спин всегда включён — куб только вращается, а не плавает по холсту.
       const angle = t * 0.7;
       const cosA = Math.cos(angle);
       const sinA = Math.sin(angle);
@@ -222,41 +221,86 @@
         return { x, y: y * cosT - z * sinT, z: y * sinT + z * cosT };
       };
 
+      const pts = VERTICES.map(project);
+
+      const edges = EDGES.map(([a, b]) => {
+        const pa = pts[a];
+        const pb = pts[b];
+        return {
+          x1: cx + pa.x * size,
+          y1: cy - pa.y * size,
+          x2: cx + pb.x * size,
+          y2: cy - pb.y * size,
+          depth: (pa.z + pb.z) / 2,
+        };
+      });
+
+      let minDepth = Infinity;
+      let maxDepth = -Infinity;
+      for (const e of edges) {
+        if (e.depth < minDepth) minDepth = e.depth;
+        if (e.depth > maxDepth) maxDepth = e.depth;
+      }
+      const span = maxDepth - minDepth || 1;
+
+      // Draw back-to-front so nearer edges sit on top of farther ones.
+      edges.sort((a, b) => a.depth - b.depth);
+
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, cw, ch);
 
-      // Every face is a solid panel with the emblem on it, drawn back to front
-      // so nearer faces cover the farther ones.
-      const logo = this._logoImage();
-      const faces = LOGO_FACES.map((f) => {
-        const pc = project(f.c);
-        const pu = project(f.u);
-        const pv = project(f.v);
-        const light = clamp(pc.x * LIGHT[0] + pc.y * LIGHT[1] + pc.z * LIGHT[2], 0, 1);
-        return {
-          a: size * pu.x,
-          b: -size * pu.y,
-          c: size * pv.x,
-          d: -size * pv.y,
-          e: cx + size * pc.x,
-          f: cy - size * pc.y,
-          depth: pc.z,
-          fill: mixColor(this._shadow, this._lit, light),
-        };
-      }).sort((p, q) => p.depth - q.depth);
+      ctx.strokeStyle = this.accent;
+      ctx.lineCap = "square";
+      ctx.lineJoin = "miter";
 
-      for (const face of faces) {
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        ctx.transform(face.a, face.b, face.c, face.d, face.e, face.f);
-        // Face spans -1..1 in its own axes; the panel fills it, the emblem sits on top.
-        ctx.fillStyle = face.fill;
-        ctx.fillRect(-1, -1, 2, 2);
-        if (!logo) continue;
-        // Эмблему разворачиваем на 180°: оси граней рассчитаны на симметричный
-        // значок Pixel, и без разворота лого встаёт вверх ногами. Логотип при
-        // этом лежит в плоскости грани и крутится вместе с кубом.
-        ctx.rotate(Math.PI);
-        ctx.drawImage(logo, -1, -1, 2, 2);
+      for (const e of edges) {
+        const d = clamp((e.depth - minDepth) / span, 0, 1); // 0 = back, 1 = front
+        // Front edges are thicker and brighter; back edges fade to 1px.
+        ctx.lineWidth = d > 0.55 ? 2 : 1;
+        ctx.globalAlpha = 0.3 + d * 0.7;
+        ctx.beginPath();
+        ctx.moveTo(e.x1, e.y1);
+        ctx.lineTo(e.x2, e.y2);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+
+      // Alert icon decaled onto every cube face so it spins with the cube.
+      // Fades out over the last 400ms of the alert.
+      if (this._iconKind && now < this._iconUntil) {
+        const img = this._iconImage(this._iconKind);
+        if (img && img.complete && img.naturalWidth) {
+          const remaining = this._iconUntil - now;
+          const alpha = Math.max(0, Math.min(1, remaining / 400));
+          const h = 0.58; // icon half-size in face-local units (face spans -1..1)
+
+          // Project each face's center + tangents, then draw back-to-front
+          // (same depth order as the edges).
+          const faces = ICON_FACES.map((f) => {
+            const pc = project(f.c);
+            const pu = project(f.u);
+            const pv = project(f.v);
+            return {
+              a: size * pu.x,
+              b: -size * pu.y,
+              c: size * pv.x,
+              d: -size * pv.y,
+              e: cx + size * pc.x,
+              f: cy - size * pc.y,
+              depth: pc.z,
+            };
+          });
+          faces.sort((p, q) => p.depth - q.depth);
+
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          for (const face of faces) {
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.transform(face.a, face.b, face.c, face.d, face.e, face.f);
+            ctx.drawImage(img, -h, -h, 2 * h, 2 * h);
+          }
+          ctx.restore();
+        }
       }
     }
   }

@@ -1,5 +1,5 @@
 {
-  "sourceHash": "f0f418c7a3c4ecdb",
+  "sourceHash": "33e859a3acbf6602",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -1255,7 +1255,7 @@
     "wardogs-cube": {
       "type": "wardogs-cube",
       "label": "Куб Wardogs",
-      "description": "Вращающийся куб из логотипа WarDogs (только для темы Wardogs)",
+      "description": "Вращающийся каркасный куб с иконкой алерта (только для темы Wardogs)",
       "icon": "widgetWardogsCube",
       "dimension": "3d",
       "theme": "wardogs",

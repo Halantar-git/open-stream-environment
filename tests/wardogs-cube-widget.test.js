@@ -74,8 +74,8 @@ function createRaf() {
   };
 }
 
-function makeContext(theme) {
-  return { bus: new EventBus(), EVENT_TYPES, theme, readCssVar: () => "" };
+function makeContext(theme, icons) {
+  return { bus: new EventBus(), EVENT_TYPES, theme, readCssVar: () => "", ICONS: icons || {} };
 }
 
 function cubeItem(overrides = {}) {
@@ -125,37 +125,35 @@ describe("WidgetWardogsCube", () => {
 
     ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "follow" });
     expect(w.element.style.opacity).toBe("1");
-    expect(raf.pending()).toBe(1); // 20/30 FPS loop resumes
+    expect(raf.pending()).toBe(1); // 30 FPS loop resumes
 
     raf.flush(1000); // one frame
-    expect(w.element._ctx.clearRect).toHaveBeenCalled();
+    expect(w.element._ctx.stroke).toHaveBeenCalled();
 
     w.unmount();
     expect(raf.pending()).toBe(0);
   });
 
-  test("накладывает логотип на все шесть граней", () => {
+  test("рисует каркас и иконку алерта на гранях", () => {
     const originalImage = global.Image;
     global.Image = function () {
-      return { src: "", complete: true, naturalWidth: 256 };
+      return { src: "", complete: true, naturalWidth: 24 };
     };
     try {
-      const ctx = makeContext("wardogs");
+      const ctx = makeContext("wardogs", { follow: '<svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/></svg>' });
       const w = new WidgetWardogsCube(cubeItem(), ctx);
       w.mount(makeEl("div"));
 
       // Кадр при монтировании не считаем: интересует кадр алерта.
-      w.element._ctx.drawImage.mockClear();
+      w.element._ctx.stroke.mockClear();
       w.element._ctx.fillRect.mockClear();
-      w.element._ctx.rotate.mockClear();
+      w.element._ctx.drawImage.mockClear();
       ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "follow" });
       raf.flush(1000);
-      // Каркаса нет: куб плотный — у каждой из шести граней подложка и логотип.
-      expect(w.element._ctx.stroke).not.toHaveBeenCalled();
-      expect(w.element._ctx.fillRect).toHaveBeenCalledTimes(6);
+      // Каркас: двенадцать рёбер, заливки граней нет, иконка на шести гранях.
+      expect(w.element._ctx.stroke).toHaveBeenCalledTimes(12);
+      expect(w.element._ctx.fillRect).not.toHaveBeenCalled();
       expect(w.element._ctx.drawImage).toHaveBeenCalledTimes(6);
-      // Эмблема развёрнута на 180° на каждой из шести граней.
-      expect(w.element._ctx.rotate).toHaveBeenCalledTimes(6);
 
       w.unmount();
     } finally {
@@ -169,17 +167,17 @@ describe("WidgetWardogsCube", () => {
     w.mount(makeEl("div"));
     ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "follow" });
 
-    // Матрицы граней — это и есть поворот куба.
-    const faceTransforms = () => w.element._ctx.transform.mock.calls.map((call) => call[0]);
+    // Координаты рёбер — это и есть поворот куба.
+    const firstVertices = () => w.element._ctx.moveTo.mock.calls.map((call) => call.slice(0, 2));
 
     clock = 0;
     raf.flush(0);
-    const before = faceTransforms();
+    const before = firstVertices();
 
-    w.element._ctx.transform.mockClear();
+    w.element._ctx.moveTo.mockClear();
     clock = 500;
     raf.flush(500);
-    expect(faceTransforms()).not.toEqual(before);
+    expect(firstVertices()).not.toEqual(before);
 
     w.unmount();
   });
@@ -193,21 +191,18 @@ describe("WidgetWardogsCube", () => {
     w.unmount();
   });
 
-  test("реагирует на алерты «попом» (сильнее на донат)", () => {
+  test("pop активируется только по алерту-донату", () => {
     const ctx = makeContext("wardogs");
     const parent = makeEl("div");
     const w = new WidgetWardogsCube(cubeItem(), ctx);
     w.mount(parent);
 
     expect(w._popUntil).toBe(0);
-    ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "follow" });
-    expect(w._popUntil).toBeGreaterThan(0);
-    expect(w._popAmp).toBeCloseTo(0.08);
+    ctx.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "x", message: "hi" });
+    expect(w._popUntil).toBe(0); // чат не дёргает куб
 
-    // Алерты идут по очереди: донатный всплывает, когда прошёл предыдущий.
-    clock = w._visibleUntil + 1;
     ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "donation" });
-    expect(w._popAmp).toBeCloseTo(0.16);
+    expect(w._popUntil).toBeGreaterThan(0);
 
     w.unmount();
   });

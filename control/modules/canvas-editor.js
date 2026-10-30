@@ -1174,12 +1174,8 @@ export function initCanvasEditor({
           </div>
         </div>`;
       }
+      case "pixel-cube":
       case "wardogs-cube": {
-        return `<div class="wardogs-cube-preview" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
-          <img src="/assets/themes/wardogs/logo.png" alt="" style="width:52%;height:52%;object-fit:contain;opacity:0.95;" />
-        </div>`;
-      }
-      case "pixel-cube": {
         const gold = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#d6b675";
         return `<div class="pixel-cube-preview" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
           <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" style="width:76%;height:76%;">
