@@ -549,6 +549,7 @@
   "giveaway": {
     "command": "Команда для участия",
     "participants": "Участников",
+    "participantsTitle": "Участники",
     "start": "Начать сбор",
     "stop": "Остановить",
     "shuffle": "Перемешать",

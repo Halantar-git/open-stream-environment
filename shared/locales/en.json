@@ -549,6 +549,7 @@
   "giveaway": {
     "command": "Entry command",
     "participants": "Participants",
+    "participantsTitle": "Participants",
     "start": "Start collecting",
     "stop": "Stop",
     "shuffle": "Shuffle",
