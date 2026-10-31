@@ -267,13 +267,13 @@ describe("WidgetSfTachometer", () => {
     clock = 100;
     context.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "bob", message: "привет" });
 
-    expect(widget._gear).toBe("N");
     expect(widget._fps).toBe(20);
     expect(widget._chatActivity).toBeGreaterThan(0);
 
     raf.flush(100);
     const afterOne = widget._displayRpm;
     expect(afterOne).toBeGreaterThan(before);
+    expect(widget._gear).not.toBe("N");
 
     // Плотный чат поднимает уровень, а с ним и обороты.
     for (let i = 0; i < 3; i++) {
@@ -281,11 +281,13 @@ describe("WidgetSfTachometer", () => {
     }
     raf.flush(150);
     expect(widget._displayRpm).toBeGreaterThan(afterOne);
+    expect(widget._gear).not.toBe("N");
 
-    // Пауза гасит активность, стрелка возвращается к холостым.
+    // Пауза гасит активность, стрелка возвращается к холостым, передача — N.
     clock = 100000;
     raf.flush(100000);
     expect(widget._chatActivity).toBeLessThan(0.01);
+    expect(widget._gear).toBe("N");
 
     widget.unmount();
   });

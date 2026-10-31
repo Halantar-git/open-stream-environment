@@ -69,6 +69,11 @@
   const START_ANGLE = Math.PI * 0.75;
   const SWEEP = Math.PI * 1.5;
 
+  // Передачи от активности чата: один разговор — первая, плотный поток —
+  // шестая. Шаги совпадают с CHAT_GAIN (0.18 за сообщение), чтобы передача
+  // менялась примерно на каждой реплике подряд.
+  const CHAT_GEAR_STEPS = [0.1, 0.28, 0.46, 0.64, 0.82, 0.95];
+
   const ALERT_MS = 5000;
   const CALM_DELAY_MS = 900;
 
@@ -145,6 +150,7 @@
       this._chatActivity = 0;
       this._lastRenderAt = 0;
       this._gear = "N";
+      this._alertGear = null;
       this._revToken = 0;
       this._highFps = false;
     }
@@ -164,6 +170,7 @@
       this._highFps = false;
       this._revToken += 1;
       this._gear = "N";
+      this._alertGear = null;
       this._alertRpm = 0;
       this._revUntil = 0;
       this._chatActivity = 0;
@@ -224,7 +231,8 @@
       if (!alert) return;
       const duration = Number(alert.durationMs) || ALERT_MS;
       this._alertRpm = REV_BY_KIND[alert.kind] || 7.5;
-      this._gear = GEAR_BY_KIND[alert.kind] || "4";
+      this._alertGear = GEAR_BY_KIND[alert.kind] || "4";
+      this._gear = this._alertGear;
       this._revUntil = performance.now() + duration;
       this._switchFps(30);
 
@@ -255,10 +263,21 @@
     }
 
     _endRev() {
-      this._gear = "N";
+      this._alertGear = null;
+      this._gear = this._gearForActivity();
       this._alertRpm = 0;
       this._revUntil = 0;
       this._switchFps(BaseWidget.AMBIENT_FPS);
+    }
+
+    // Передача по уровню активности: N в тишине, 1–6 по растущему потоку.
+    _gearForActivity() {
+      if (this._chatActivity <= CHAT_FLOOR) return "N";
+      let gear = 1;
+      for (let i = 0; i < CHAT_GEAR_STEPS.length; i++) {
+        if (this._chatActivity >= CHAT_GEAR_STEPS[i]) gear = i + 1;
+      }
+      return String(gear);
     }
 
     render() {
@@ -291,6 +310,10 @@
       const alertRpm = now < this._revUntil ? this._alertRpm : 0;
       const chatRpm = this._chatRpm(now);
       const target = Math.max(idle, alertRpm, chatRpm);
+      // Окно передачи: на алерте — передача события, иначе — по активности
+      // чата. Оба значения могут меняться каждый кадр, поэтому считаем здесь,
+      // а не в момент прихода события.
+      this._gear = now < this._revUntil ? this._alertGear || this._gearForActivity() : this._gearForActivity();
       const rate = target > this._displayRpm ? 0.18 : 0.09;
       this._displayRpm += (target - this._displayRpm) * rate;
       if (Math.abs(target - this._displayRpm) < 0.01) this._displayRpm = target;
