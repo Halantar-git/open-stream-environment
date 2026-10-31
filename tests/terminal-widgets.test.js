@@ -363,6 +363,11 @@ describe("WidgetTerminalHoloAlert", () => {
     widget._autoSize(card);
     expect(parseInt(widget.element.style.height, 10)).toBeGreaterThanOrEqual(420);
 
+    // Каждый снимок состояния заново ставит процентную высоту — панель
+    // не должна из-за этого сжиматься обратно.
+    widget.update({});
+    expect(parseInt(widget.element.style.height, 10)).toBeGreaterThanOrEqual(420);
+
     widget.unmount();
   });
 

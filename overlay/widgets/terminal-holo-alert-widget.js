@@ -84,6 +84,7 @@
       this.queue = [];
       this.playing = false;
       this.typeTimer = null;
+      this.cardEl = null;
     }
 
     onMount() {
@@ -107,8 +108,16 @@
       this._stopTyping();
       this.queue = [];
       this.playing = false;
+      this.cardEl = null;
       if (this.element) this.element.innerHTML = "";
       this.host = null;
+    }
+
+    onUpdate() {
+      // `syncLayout` присылает новый снимок на каждое событие, и BaseWidget
+      // заново ставит процентную высоту. Без пересчёта растянутая под текст
+      // панель тут же сжимается и снова врёжет длинное сообщение.
+      if (this.playing && this.cardEl) this._autoSize(this.cardEl);
     }
 
     _readColors() {
@@ -145,6 +154,7 @@
       const alert = this.queue.shift();
       if (!alert) {
         this.playing = false;
+        this.cardEl = null;
         this.element.style.opacity = "0";
         this.element.style.height = this.geometry.h + "%";
         return;
@@ -154,6 +164,7 @@
       this.element.style.height = this.geometry.h + "%";
 
       const card = this.buildCard(alert);
+      this.cardEl = card;
       this.host.appendChild(card);
       this.element.style.opacity = "1";
       this._autoSize(card);
