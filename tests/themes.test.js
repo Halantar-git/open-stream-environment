@@ -136,5 +136,8 @@ describe("встроенные темы", () => {
     expect(tokens["--panel-bg"]).toBe("#c0c0c0");
     expect(tokens["--panel-decoration"]).toBe("win98");
     expect(tokens["--panel-radius"]).toBe("0px");
+    expect(tokens["--font-display"]).toContain("Pixelify Sans");
+    expect(tokens["--font-body"]).toContain("Pixelify Sans");
+    expect(tokens["--font-mono"]).toContain("VT323");
   });
 });

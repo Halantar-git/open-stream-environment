@@ -357,10 +357,12 @@
         "--md-outline": "#808080",
         "--md-outline-variant": "#dfdfdf",
 
-        // PT Sans Caption поддерживает кириллицу и ближе всего к системному UI 90-х.
-        "--font-display": '"PT Sans Caption", "Segoe UI", sans-serif',
-        "--font-body": '"PT Sans Caption", "Segoe UI", sans-serif',
-        "--font-mono": '"JetBrains Mono", "Consolas", monospace',
+        // Pixelify Sans — пиксельный UI-шрифт с кириллицей; VT323 — терминальные
+        // цифры и данные. Русский в VT323 уходит в JetBrains Mono: у него нет
+        // кириллицы в Google Fonts.
+        "--font-display": '"Pixelify Sans", "PT Sans Caption", "Segoe UI", sans-serif',
+        "--font-body": '"Pixelify Sans", "PT Sans Caption", "Segoe UI", sans-serif',
+        "--font-mono": '"VT323", "JetBrains Mono", "Consolas", monospace',
 
         // Дополнительные цвета палитры: их читает CSS объёмных рамок.
         "--win98-desktop": "#008080",
