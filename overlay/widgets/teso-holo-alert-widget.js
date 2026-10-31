@@ -33,7 +33,11 @@
     typeof module !== "undefined" && module.exports
       ? require("./base-widget")
       : root.OSEWidgets && root.OSEWidgets.BaseWidget;
-  const WidgetTesoHoloAlert = factory(BaseWidget);
+  const AlertTyping =
+    typeof module !== "undefined" && module.exports
+      ? require("./alert-typing")
+      : root.OSEWidgets && root.OSEWidgets.AlertTyping;
+  const WidgetTesoHoloAlert = factory(BaseWidget, AlertTyping);
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = WidgetTesoHoloAlert;
@@ -41,7 +45,7 @@
     root.OSEWidgets = root.OSEWidgets || {};
     root.OSEWidgets.WidgetTesoHoloAlert = WidgetTesoHoloAlert;
   }
-})(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
+})(typeof window !== "undefined" ? window : globalThis, function (BaseWidget, AlertTyping) {
   "use strict";
 
   const GOLD = "#c7a75c";
@@ -104,6 +108,10 @@
       this._hideId = null;
       this.queue = [];
       this.current = null;
+      if (this._typing) {
+        this._typing.stop();
+        this._typing = null;
+      }
       if (this.contentEl) this.contentEl.innerHTML = "";
       this.contentEl = null;
     }
@@ -203,6 +211,10 @@
       if (!alert) {
         this.current = null;
         this._cardHeight = 0;
+        if (this._typing) {
+          this._typing.stop();
+          this._typing = null;
+        }
         this.element.style.opacity = "0";
         this.element.style.height = this.geometry.h + "%"; // reset to layout height while hidden
         return;
@@ -215,6 +227,7 @@
       this.renderContent(alert);
       this._playEnter();
       this._autoSize();
+      this._typeText(this.contentEl);
 
       if (this._hideId != null) this.clearTimer(this._hideId);
       this._hideId = this.later(() => {
@@ -314,6 +327,13 @@
           ${message ? `<span style="font-family:${FONT_BODY};font-size:12px;color:${MUTED};line-height:1.35;overflow-wrap:anywhere;word-break:break-word;">«${message}»</span>` : ""}
         </div>` +
         `</div>`;
+    }
+
+    // Печать текста панели — как в теме Terminal: посимвольно, с кареткой.
+    // Вызывается после замера: панель уже знает полную высоту сообщения.
+    _typeText(root) {
+      if (this._typing) this._typing.stop();
+      this._typing = AlertTyping ? AlertTyping.typeAlertText(root) : null;
     }
 
     // Панель растёт под сообщение, но не бесконечно: длинный текст больше не

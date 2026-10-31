@@ -30,7 +30,11 @@
     typeof module !== "undefined" && module.exports
       ? require("./base-widget")
       : root.OSEWidgets && root.OSEWidgets.BaseWidget;
-  const AlertsWidget = factory(BaseWidget);
+  const AlertTyping =
+    typeof module !== "undefined" && module.exports
+      ? require("./alert-typing")
+      : root.OSEWidgets && root.OSEWidgets.AlertTyping;
+  const AlertsWidget = factory(BaseWidget, AlertTyping);
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = AlertsWidget;
@@ -38,7 +42,7 @@
     root.OSEWidgets = root.OSEWidgets || {};
     root.OSEWidgets.AlertsWidget = AlertsWidget;
   }
-})(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
+})(typeof window !== "undefined" ? window : globalThis, function (BaseWidget, AlertTyping) {
   "use strict";
 
   class AlertsWidget extends BaseWidget {
@@ -54,6 +58,10 @@
     onUnmount() {
       this.queue = [];
       this.playing = false;
+      if (this._typing) {
+        this._typing.stop();
+        this._typing = null;
+      }
     }
 
     onUpdate() {
@@ -81,6 +89,10 @@
       if (!alert) {
         this.playing = false;
         this._cardHeight = 0;
+        if (this._typing) {
+          this._typing.stop();
+          this._typing = null;
+        }
         this.element.style.height = this.geometry.h + "%"; // reset to layout height
         return;
       }
@@ -89,6 +101,7 @@
       const card = this.buildCard(alert);
       this.host.appendChild(card);
       this._autoSize(card);
+      this._typeText(card);
       requestAnimationFrame(() => card.classList.add("alert-enter-active"));
 
       const holdMs = alert.durationMs || 5000;
@@ -192,6 +205,13 @@
         </div>
         <div class="widget-alert__lockbar"><div class="widget-alert__lockbar-fill"></div></div>`;
       return card;
+    }
+
+    // Печать текста карточки — как в теме Terminal: посимвольно, с кареткой.
+    // Вызывается после замера: панель уже знает полную высоту сообщения.
+    _typeText(root) {
+      if (this._typing) this._typing.stop();
+      this._typing = AlertTyping ? AlertTyping.typeAlertText(root) : null;
     }
 
     // Панель растёт под сообщение, но не бесконечно: длинный текст больше не

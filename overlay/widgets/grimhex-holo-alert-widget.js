@@ -34,7 +34,11 @@
     typeof module !== "undefined" && module.exports
       ? require("./base-widget")
       : root.OSEWidgets && root.OSEWidgets.BaseWidget;
-  const WidgetGrimHexHoloAlert = factory(BaseWidget);
+  const AlertTyping =
+    typeof module !== "undefined" && module.exports
+      ? require("./alert-typing")
+      : root.OSEWidgets && root.OSEWidgets.AlertTyping;
+  const WidgetGrimHexHoloAlert = factory(BaseWidget, AlertTyping);
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = WidgetGrimHexHoloAlert;
@@ -42,7 +46,7 @@
     root.OSEWidgets = root.OSEWidgets || {};
     root.OSEWidgets.WidgetGrimHexHoloAlert = WidgetGrimHexHoloAlert;
   }
-})(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
+})(typeof window !== "undefined" ? window : globalThis, function (BaseWidget, AlertTyping) {
   "use strict";
 
   const CYAN = "#00f0ff";
@@ -122,6 +126,10 @@
       this._hideId = null;
       this.queue = [];
       this.current = null;
+      if (this._typing) {
+        this._typing.stop();
+        this._typing = null;
+      }
       if (this.contentEl) this.contentEl.innerHTML = "";
       this.contentEl = null;
       this.ctx = null;
@@ -181,6 +189,10 @@
       if (!alert) {
         this.current = null;
         this._cardHeight = 0;
+        if (this._typing) {
+          this._typing.stop();
+          this._typing = null;
+        }
         this.element.style.opacity = "0";
         this.element.style.height = this.geometry.h + "%"; // reset to layout height while hidden
         this.setIdle(true);
@@ -197,6 +209,7 @@
       this.setIdle(false);
       this.renderContent(alert);
       this._autoSize();
+      this._typeText(this.contentEl);
 
       if (this._hideId != null) this.clearTimer(this._hideId);
       this._hideId = this.later(() => {
@@ -308,6 +321,13 @@
         (amount ? `<span style="font-size:14px;font-weight:700;color:${color};margin-top:4px;">${amount}</span>` : "") +
         (music ? `<span style="font-size:12px;color:${MUTED};line-height:1.35;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">♪ ${music}</span>` : "") +
         (message ? `<span style="font-size:12px;color:${MUTED};line-height:1.35;margin-top:4px;overflow-wrap:anywhere;word-break:break-word;">«${message}»</span>` : "");
+    }
+
+    // Печать текста панели — как в теме Terminal: посимвольно, с кареткой.
+    // Вызывается после замера: панель уже знает полную высоту сообщения.
+    _typeText(root) {
+      if (this._typing) this._typing.stop();
+      this._typing = AlertTyping ? AlertTyping.typeAlertText(root) : null;
     }
 
     // Панель растёт под сообщение, но не бесконечно: длинный текст больше не

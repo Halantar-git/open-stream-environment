@@ -32,7 +32,11 @@
     typeof module !== "undefined" && module.exports
       ? require("./base-widget")
       : root.OSEWidgets && root.OSEWidgets.BaseWidget;
-  const WidgetWardogsHoloAlert = factory(BaseWidget);
+  const AlertTyping =
+    typeof module !== "undefined" && module.exports
+      ? require("./alert-typing")
+      : root.OSEWidgets && root.OSEWidgets.AlertTyping;
+  const WidgetWardogsHoloAlert = factory(BaseWidget, AlertTyping);
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = WidgetWardogsHoloAlert;
@@ -40,7 +44,7 @@
     root.OSEWidgets = root.OSEWidgets || {};
     root.OSEWidgets.WidgetWardogsHoloAlert = WidgetWardogsHoloAlert;
   }
-})(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
+})(typeof window !== "undefined" ? window : globalThis, function (BaseWidget, AlertTyping) {
   "use strict";
 
   const DEFAULT_ACCENT = "#f0a92c"; // --md-primary (wardogs)
@@ -92,6 +96,10 @@
     onUnmount() {
       this.queue = [];
       this.playing = false;
+      if (this._typing) {
+        this._typing.stop();
+        this._typing = null;
+      }
       if (this.element) this.element.innerHTML = "";
       this.host = null;
     }
@@ -151,6 +159,10 @@
       if (!alert) {
         this.playing = false;
         this._cardHeight = 0;
+        if (this._typing) {
+          this._typing.stop();
+          this._typing = null;
+        }
         this.element.style.opacity = "0";
         this.element.style.height = this.geometry.h + "%"; // reset to layout height while hidden
         return;
@@ -161,6 +173,7 @@
       this.host.appendChild(card);
       this.element.style.opacity = "1";
       this._autoSize(card);
+      this._typeText(card);
 
       const ring = card.querySelector(".wardogs-holo__ring");
       if (ring && ring.animate) {
@@ -289,6 +302,13 @@
         </div>`;
 
       return card;
+    }
+
+    // Печать текста карточки — как в теме Terminal: посимвольно, с кареткой.
+    // Вызывается после замера: панель уже знает полную высоту сообщения.
+    _typeText(root) {
+      if (this._typing) this._typing.stop();
+      this._typing = AlertTyping ? AlertTyping.typeAlertText(root) : null;
     }
 
     // Панель растёт под сообщение, но не бесконечно: длинный текст больше не
