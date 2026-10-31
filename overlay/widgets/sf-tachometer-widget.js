@@ -21,7 +21,8 @@
   Тема названа по Honda CB400SF, поэтому вывеска — не логотип, а сам прибор:
   круглый тахометр с оцифровкой до 14 тысяч, золотой зоной отсечки (цвет
   пружин Showa) и окном передачи. В покое стрелка «держит холостые» и еле
-  заметно дрожит, как живой двигатель; на алерте она уходит в свою зону —
+  заметно дрожит, как живой двигатель; на сообщение чата она коротко
+  подгазовывает (реакция на разговор), а на алерте уходит в свою зону —
   чем весомее событие, тем выше обороты, донат доходит до отсечки. Это делает
   виджет живым даже между событиями, в отличие от вывесок Retrowave/Pixel/
   Wardogs, которые появляются только на алерте.
@@ -70,6 +71,13 @@
 
   const ALERT_MS = 5000;
   const CALM_DELAY_MS = 900;
+
+  // Отклик на чат: короткий «подгаз», чтобы разговор в чате было видно на
+  // приборке, но он не спорил с алертами. Чем длиннее сообщение, тем выше
+  // стрелка — 2.1–3.5 тысячи, дальше уже начинается рабочая зона.
+  const CHAT_BLIP_MS = 650;
+  const CHAT_BLIP_RPM = 2.1;
+  const CHAT_BLIP_MAX = 1.4;
 
   // Обороты под событие: донат выкручивает стрелку до отсечки, фоллоу — только
   // до середины. Передача в окне растёт вместе с весом события.
@@ -130,6 +138,8 @@
       this._displayRpm = IDLE_RPM;
       this._alertRpm = 0;
       this._revUntil = 0;
+      this._chatBlipRpm = 0;
+      this._chatBlipUntil = 0;
       this._gear = "N";
       this._revToken = 0;
       this._highFps = false;
@@ -142,6 +152,7 @@
       this._readColors();
       this._applyPerspective();
       this.subscribe(this.context.EVENT_TYPES.ALERT, (alert) => this._rev(alert));
+      this.subscribe(this.context.EVENT_TYPES.CHAT_MESSAGE, (message) => this._blip(message));
       this.startRenderLoop(BaseWidget.AMBIENT_FPS);
     }
 
@@ -151,6 +162,8 @@
       this._gear = "N";
       this._alertRpm = 0;
       this._revUntil = 0;
+      this._chatBlipRpm = 0;
+      this._chatBlipUntil = 0;
     }
 
     onUpdate(prev, next) {
@@ -218,6 +231,16 @@
       }, duration + CALM_DELAY_MS);
     }
 
+    // Чат не переключает кадры и не трогает передачу: это именно «подгаз» на
+    // холостых. Несколько сообщений подряд просто держат стрелку в этой зоне,
+    // а не накапливают обороты до отсечки.
+    _blip(message) {
+      const text = message && typeof message.message === "string" ? message.message : "";
+      const length = Math.min(CHAT_BLIP_MAX, text.length / 45);
+      this._chatBlipRpm = CHAT_BLIP_RPM + length;
+      this._chatBlipUntil = performance.now() + CHAT_BLIP_MS;
+    }
+
     _endRev() {
       this._gear = "N";
       this._alertRpm = 0;
@@ -250,8 +273,12 @@
       // Холостые: медленная волна плюс быстрая дрожь — стрелка не замирает
       // в одном пикселе, но и не отвлекает от эфира.
       const idle = IDLE_RPM + Math.sin(seconds * 2.1) * 0.06 + Math.sin(seconds * 5.7) * 0.035;
-      const target = now < this._revUntil ? this._alertRpm : idle;
-      const rate = target > this._displayRpm ? 0.18 : 0.07;
+      // Алерт важнее чата: пока идёт событие, короткие подгазы не сбивают
+      // раскрутку. Между событиями чат поднимает стрелку на пару тысяч.
+      const alertRpm = now < this._revUntil ? this._alertRpm : 0;
+      const chatRpm = now < this._chatBlipUntil ? this._chatBlipRpm : 0;
+      const target = Math.max(idle, alertRpm, chatRpm);
+      const rate = target > this._displayRpm ? 0.18 : 0.09;
       this._displayRpm += (target - this._displayRpm) * rate;
       if (Math.abs(target - this._displayRpm) < 0.01) this._displayRpm = target;
       const rpm = clamp(this._displayRpm, 0, MAX_RPM);

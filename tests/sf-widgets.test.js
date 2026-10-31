@@ -257,6 +257,26 @@ describe("WidgetSfTachometer", () => {
     widget.unmount();
   });
 
+  test("вздрагивает на сообщении чата, не трогая передачу и частоту кадров", () => {
+    const context = makeContext("sf");
+    const widget = new WidgetSfTachometer(tachItem(), context);
+    widget.mount(makeEl("div"));
+
+    const before = widget._displayRpm;
+    clock = 100;
+    context.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "bob", message: "привет" });
+
+    expect(widget._gear).toBe("N");
+    expect(widget._fps).toBe(20);
+    expect(widget._chatBlipRpm).toBeGreaterThan(2.1);
+    expect(widget._chatBlipUntil).toBeGreaterThan(clock);
+
+    raf.flush(100);
+    expect(widget._displayRpm).toBeGreaterThan(before);
+
+    widget.unmount();
+  });
+
   test("не поднимает цикл на чужой теме", () => {
     const widget = new WidgetSfTachometer(tachItem(), makeContext("retrowave"));
     widget.mount(makeEl("div"));

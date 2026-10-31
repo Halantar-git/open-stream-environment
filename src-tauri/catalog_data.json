@@ -1,5 +1,5 @@
 {
-  "sourceHash": "214d5f119c2e549d",
+  "sourceHash": "0b429a5fa8e4df64",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -1822,7 +1822,7 @@
     "sf-tachometer": {
       "type": "sf-tachometer",
       "label": "Тахометр Super Four",
-      "description": "Аналоговый тахометр с отсечкой: стрелка оживляется на алерте (только для темы Super Four)",
+      "description": "Аналоговый тахометр с отсечкой: стрелка подгазовывает на сообщениях чата и раскручивается на алерте (только для темы Super Four)",
       "icon": "widgetSfTachometer",
       "dimension": "3d",
       "theme": "sf",
