@@ -104,6 +104,32 @@ describe("Stream Deck: иконки сцен", () => {
     expect(missing).toEqual([]);
   });
 
+  test("у каждой сцены своё действие с иконками", () => {
+    // Сцену можно перетащить из списка действий сразу: её ключ лежит в UUID,
+    // поэтому клавиша работает без выбора в настройках.
+    const manifest = JSON.parse(fs.readFileSync(path.join(PLUGIN_DIR, "manifest.json"), "utf8"));
+    const actions = new Map((manifest.Actions || []).map((action) => [action.UUID, action]));
+
+    const problems = [];
+    for (const id of scenes) {
+      const action = actions.get(`com.openstreamenvironment.streamdeck.scene.${id}`);
+      if (!action) {
+        problems.push(`${id}: нет действия`);
+        continue;
+      }
+      const images = (action.States || []).map((state) => state.Image);
+      if (!images.includes(`assets/scenes/${id}`)) problems.push(`${id}: нет обычной картинки`);
+      if (!images.includes(`assets/scenes/${id}-active`)) problems.push(`${id}: нет активной картинки`);
+    }
+    expect(problems).toEqual([]);
+  });
+
+  test("действие с выбором сцены осталось для старых кнопок", () => {
+    const manifest = JSON.parse(fs.readFileSync(path.join(PLUGIN_DIR, "manifest.json"), "utf8"));
+    const uuids = (manifest.Actions || []).map((action) => action.UUID);
+    expect(uuids).toContain("com.openstreamenvironment.streamdeck.scene");
+  });
+
   test("в настройках панели есть поле иконки для каждой сцены", () => {
     // Кастомную иконку плагин берёт по ключу сцены из `streamdeck.icons`.
     // Сцена без поля в панели навсегда осталась бы со стандартной картинкой,

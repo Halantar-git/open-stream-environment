@@ -35,6 +35,12 @@
     }
     input[type="text"] { margin-bottom: 12px; }
     .hint { margin-top: 10px; color: var(--muted); font-size: 11px; }
+    .fixed-scene {
+      padding: 8px 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
     .counter { margin-top: 4px; color: var(--muted); font-size: 11px; text-align: right; }
   </style>
 </head>
@@ -166,21 +172,38 @@
       root.appendChild(hint("Кнопка подсвечивается, когда сцена активна."));
     }
 
+    // Действия вида `scene.<id>` несут сцену в своём UUID: выбирать нечего,
+    // поэтому вместо списка показываем, какая сцена закреплена за кнопкой.
+    function renderFixedScene(root) {
+      root.appendChild(label("Сцена"));
+      const name = document.createElement("div");
+      name.className = "fixed-scene";
+      name.textContent = (options && (options.label || options.scene)) || "";
+      root.appendChild(name);
+      root.appendChild(
+        hint("Сцена закреплена за действием — кнопка сразу переключает её и подсвечивается, когда сцена активна. Нужна одна кнопка с выбором сцены — возьмите действие «Сцена (выбор в настройках)»."),
+      );
+    }
+
     function render() {
       const ticker = isTicker();
+      const fixed = !!options && options.kind === "scene-fixed";
       const scenes = (options && options.scenes) || [];
       // Панель перерисовывается на каждое изменение настроек; если структура
       // та же, не пересоздаём поля — иначе каретка прыгает в начало строки
       // посреди набора текста.
       const signature = ticker
         ? "ticker"
-        : "scene:" + scenes.map(function (s) { return s.id; }).join(",");
+        : fixed
+          ? "scene-fixed:" + ((options && options.scene) || "")
+          : "scene:" + scenes.map(function (s) { return s.id; }).join(",");
       if (signature === renderedSignature) return;
       renderedSignature = signature;
 
       const root = document.getElementById("root");
       root.innerHTML = "";
       if (ticker) renderTicker(root);
+      else if (fixed) renderFixedScene(root);
       else renderScene(root);
     }
   </script>

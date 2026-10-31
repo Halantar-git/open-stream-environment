@@ -20,9 +20,10 @@
 
   Scene-only remote: one key per OSE scene (main / start / brb / talk /
   guests / end / wheel / poll / pause) — the same set the web remote shows.
-  The active scene is highlighted via a second state: bundled per-scene
-  artwork from assets/scenes/, or custom icons from the OSE control panel
-  (streamdeck.icons.<scene>) applied over the defaults.
+  Each scene has its own action with its artwork in the Stream Deck action
+  list; the generic “scene” action stays for keys that pick the scene in the
+  inspector. The active scene is highlighted via a second state, and the OSE
+  control panel can override the artwork (streamdeck.icons.<scene>).
 
   Bridges two WebSockets:
     - the Stream Deck application on 127.0.0.1 (registration + key events);
@@ -65,6 +66,16 @@ const SCENES = [
   ["poll", "Poll"],
   ["pause", "Pause"],
 ];
+
+// Scene actions carry the scene in the UUID, so a key dragged from the action
+// list needs no setup in its inspector. The generic `...scene` action keeps the
+// scene in its settings instead.
+const SCENE_ACTION_PREFIX = "com.openstreamenvironment.streamdeck.scene.";
+const SCENE_ACTIONS = new Map(SCENES.map(([id]) => [`${SCENE_ACTION_PREFIX}${id}`, id]));
+
+function actionScene(action) {
+  return SCENE_ACTIONS.get(action) || null;
+}
 
 let sd = null; // Stream Deck app
 let ose = null; // OSE bus
@@ -349,7 +360,7 @@ function onKeyDown(settings, action) {
     });
     return;
   }
-  sendRemoteAction("SCENE_SET", { scene: settings.scene || "start" });
+  sendRemoteAction("SCENE_SET", { scene: actionScene(action) || settings.scene || "start" });
 }
 
 function sendOptions(context) {
@@ -357,6 +368,11 @@ function sendOptions(context) {
   if (!inst) return;
   if (isTickerAction(inst.action)) {
     sendToPI(context, inst.action, { kind: "ticker" });
+    return;
+  }
+  const fixed = actionScene(inst.action);
+  if (fixed) {
+    sendToPI(context, inst.action, { kind: "scene-fixed", scene: fixed, label: sceneLabel(fixed) });
     return;
   }
   sendToPI(context, inst.action, {
@@ -376,7 +392,7 @@ function syncInstance(context) {
     return;
   }
 
-  const scene = inst.settings.scene || "start";
+  const scene = actionScene(inst.action) || inst.settings.scene || "start";
   setTitle(context, sceneLabel(scene));
   setState(context, oseState.activeScene === scene ? 1 : 0);
 

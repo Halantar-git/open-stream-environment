@@ -4,18 +4,117 @@
   "Author": "Halantar",
   "Description": "Сцены OSE и сообщения в новостную ленту.",
   "Icon": "assets/plugin",
-  "Version": "1.1.0",
+  "Version": "1.2.0",
   "CodePath": "app.js",
   "SDKVersion": 2,
   "OS": [
     { "Platform": "windows", "MinimumVersion": "10" },
-    { "Platform": "mac", "MinimumVersion": "10.15" }
+    { "Platform": "macos", "MinimumVersion": "10.15" }
   ],
   "Software": { "MinimumVersion": "6.4" },
   "Actions": [
     {
+      "UUID": "com.openstreamenvironment.streamdeck.scene.main",
+      "Name": "Main",
+      "Icon": "assets/scenes/main",
+      "PropertyInspectorPath": "pi/settings.html",
+      "Controllers": ["Keypad"],
+      "States": [
+        { "Image": "assets/scenes/main", "TitleAlignment": "middle", "Title": "Main" },
+        { "Image": "assets/scenes/main-active", "TitleAlignment": "middle", "Title": "Main" }
+      ]
+    },
+    {
+      "UUID": "com.openstreamenvironment.streamdeck.scene.start",
+      "Name": "Начало",
+      "Icon": "assets/scenes/start",
+      "PropertyInspectorPath": "pi/settings.html",
+      "Controllers": ["Keypad"],
+      "States": [
+        { "Image": "assets/scenes/start", "TitleAlignment": "middle", "Title": "Начало" },
+        { "Image": "assets/scenes/start-active", "TitleAlignment": "middle", "Title": "Начало" }
+      ]
+    },
+    {
+      "UUID": "com.openstreamenvironment.streamdeck.scene.brb",
+      "Name": "BRB",
+      "Icon": "assets/scenes/brb",
+      "PropertyInspectorPath": "pi/settings.html",
+      "Controllers": ["Keypad"],
+      "States": [
+        { "Image": "assets/scenes/brb", "TitleAlignment": "middle", "Title": "BRB" },
+        { "Image": "assets/scenes/brb-active", "TitleAlignment": "middle", "Title": "BRB" }
+      ]
+    },
+    {
+      "UUID": "com.openstreamenvironment.streamdeck.scene.talk",
+      "Name": "Разговор",
+      "Icon": "assets/scenes/talk",
+      "PropertyInspectorPath": "pi/settings.html",
+      "Controllers": ["Keypad"],
+      "States": [
+        { "Image": "assets/scenes/talk", "TitleAlignment": "middle", "Title": "Разговор" },
+        { "Image": "assets/scenes/talk-active", "TitleAlignment": "middle", "Title": "Разговор" }
+      ]
+    },
+    {
+      "UUID": "com.openstreamenvironment.streamdeck.scene.guests",
+      "Name": "Гости",
+      "Icon": "assets/scenes/guests",
+      "PropertyInspectorPath": "pi/settings.html",
+      "Controllers": ["Keypad"],
+      "States": [
+        { "Image": "assets/scenes/guests", "TitleAlignment": "middle", "Title": "Гости" },
+        { "Image": "assets/scenes/guests-active", "TitleAlignment": "middle", "Title": "Гости" }
+      ]
+    },
+    {
+      "UUID": "com.openstreamenvironment.streamdeck.scene.end",
+      "Name": "Конец",
+      "Icon": "assets/scenes/end",
+      "PropertyInspectorPath": "pi/settings.html",
+      "Controllers": ["Keypad"],
+      "States": [
+        { "Image": "assets/scenes/end", "TitleAlignment": "middle", "Title": "Конец" },
+        { "Image": "assets/scenes/end-active", "TitleAlignment": "middle", "Title": "Конец" }
+      ]
+    },
+    {
+      "UUID": "com.openstreamenvironment.streamdeck.scene.wheel",
+      "Name": "Колесо",
+      "Icon": "assets/scenes/wheel",
+      "PropertyInspectorPath": "pi/settings.html",
+      "Controllers": ["Keypad"],
+      "States": [
+        { "Image": "assets/scenes/wheel", "TitleAlignment": "middle", "Title": "Колесо" },
+        { "Image": "assets/scenes/wheel-active", "TitleAlignment": "middle", "Title": "Колесо" }
+      ]
+    },
+    {
+      "UUID": "com.openstreamenvironment.streamdeck.scene.poll",
+      "Name": "Голосование",
+      "Icon": "assets/scenes/poll",
+      "PropertyInspectorPath": "pi/settings.html",
+      "Controllers": ["Keypad"],
+      "States": [
+        { "Image": "assets/scenes/poll", "TitleAlignment": "middle", "Title": "Голосование" },
+        { "Image": "assets/scenes/poll-active", "TitleAlignment": "middle", "Title": "Голосование" }
+      ]
+    },
+    {
+      "UUID": "com.openstreamenvironment.streamdeck.scene.pause",
+      "Name": "Пауза",
+      "Icon": "assets/scenes/pause",
+      "PropertyInspectorPath": "pi/settings.html",
+      "Controllers": ["Keypad"],
+      "States": [
+        { "Image": "assets/scenes/pause", "TitleAlignment": "middle", "Title": "Пауза" },
+        { "Image": "assets/scenes/pause-active", "TitleAlignment": "middle", "Title": "Пауза" }
+      ]
+    },
+    {
       "UUID": "com.openstreamenvironment.streamdeck.scene",
-      "Name": "Сцена",
+      "Name": "Сцена (выбор в настройках)",
       "Icon": "assets/scene",
       "PropertyInspectorPath": "pi/settings.html",
       "Controllers": ["Keypad"],
