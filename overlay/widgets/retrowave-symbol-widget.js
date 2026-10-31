@@ -20,8 +20,9 @@
 
   A sphere of meridians and parallels spins around its own axis with a slight
   axial tilt; front segments glow cyan, back segments fade to magenta, and a
-  primary-coloured ring circles the equator. There is no solid fill: the sign is
-  light on top of the stream, not a panel.
+  primary-coloured ring circles the equator. There is no solid fill and no
+  backdrop: the sign is light on top of the stream, not a panel, so the scene
+  stays transparent behind it.
 
   Like the Wardogs and Pixel decorative signs it is invisible while nothing is
   happening and appears on an alert, one at a time, popping harder on donations.
@@ -182,14 +183,9 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, cw, ch);
 
-      // Soft neon halo so the wireframe reads over bright gameplay.
-      const halo = ctx.createRadialGradient(cx, cy, radius * 0.2, cx, cy, radius * 2.1);
-      halo.addColorStop(0, this._rgba(this.primary, 0.22));
-      halo.addColorStop(0.55, this._rgba(this.secondary, 0.10));
-      halo.addColorStop(1, this._rgba(this.primary, 0));
-      ctx.fillStyle = halo;
-      ctx.fillRect(0, 0, cw, ch);
-
+      // Никакой подложки: знак — только неоновые линии поверх игры. Раньше
+      // здесь был радиальный градиент, и на светлой игре он читался как
+      // цветное пятно за сферой.
       const yaw = t * SPIN;
       const cosY = Math.cos(yaw);
       const sinY = Math.sin(yaw);
@@ -207,10 +203,16 @@
         return { x: cx + x1 * r * persp, y: cy - y2 * r * persp, z: z2 };
       };
 
-      const front = [];
+      // Три полосы глубины вместо двух: ближняя сетка светится ярче средней,
+      // а задняя почти гаснет — сфера читается объёмной и без подложки.
       const back = [];
+      const mid = [];
+      const near = [];
       const pushSegment = (a, b) => {
-        ((a.z + b.z) / 2 >= 0 ? front : back).push([a, b]);
+        const z = (a.z + b.z) / 2;
+        if (z < 0) back.push([a, b]);
+        else if (z < 0.55) mid.push([a, b]);
+        else near.push([a, b]);
       };
 
       // Parallels.
@@ -241,21 +243,37 @@
         }
       }
 
-      // Equatorial ring, tilted with the globe: the ring gives the sphere an
-      // unmistakable silhouette even when it is small in the layout.
-      let prevRing = null;
-      for (let i = 0; i <= 72; i++) {
-        const a = (i / 72) * Math.PI * 2;
-        const p = project(Math.cos(a) * 1.42, 0, Math.sin(a) * 1.42, radius);
-        if (prevRing) pushSegment(prevRing, p);
-        prevRing = p;
-      }
+      // Сетка тремя полосами глубины; большого кольца вокруг сферы больше
+      // нет — оно вылезало за силуэт и читалось как лишний фон.
+      this._strokeSegments(ctx, back, this._rgba(this.primary, 0.18), 0.8, 0);
+      this._strokeSegments(ctx, mid, this._rgba(this.secondary, 0.5), 0.9, 4);
+      this._strokeSegments(ctx, near, this._rgba(this.secondary, 0.9), 1, 9);
 
-      this._strokeSegments(ctx, back, this._rgba(this.primary, 0.22), 0.8, 0);
-      this._strokeSegments(ctx, front, this._rgba(this.secondary, 0.62), 0.9, 7);
+      this._drawLimb(ctx, cx, cy, radius);
+      this._drawEquator(ctx, project, radius, t);
+      this._drawPoles(ctx, project, radius);
+    }
 
-      // The equator is the bright seam of the sign: draw it on top, in the
-      // theme's main accent, with a stronger bloom.
+    // Силуэт сферы: тонкий градиентный обод. Он держит форму даже когда сетка
+    // на дальней стороне почти погасла.
+    _drawLimb(ctx, cx, cy, radius) {
+      const grad = ctx.createLinearGradient(cx, cy - radius, cx, cy + radius);
+      grad.addColorStop(0, this._rgba(this.secondary, 0.85));
+      grad.addColorStop(1, this._rgba(this.primary, 0.85));
+      ctx.save();
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 1.4;
+      ctx.shadowColor = this.secondary;
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius * 1.05, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Экватор — яркий шов знака; по нему бежит светящаяся точка, чтобы сфера
+    // «жила» даже когда сетка на дальней стороне погашена.
+    _drawEquator(ctx, project, radius, t) {
       ctx.save();
       ctx.strokeStyle = this.primary;
       ctx.lineWidth = 1.6;
@@ -270,6 +288,35 @@
       }
       ctx.stroke();
       ctx.restore();
+
+      const a = t * 1.1;
+      const p = project(Math.cos(a), 0, Math.sin(a), radius);
+      const behind = p.z < 0;
+      ctx.save();
+      ctx.globalAlpha = behind ? 0.35 : 1;
+      ctx.fillStyle = behind ? this.primary : this.secondary;
+      ctx.shadowColor = this.secondary;
+      ctx.shadowBlur = behind ? 6 : 16;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(1.4, radius * 0.045), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Полюса — две неоновые точки на оси: без них сетка выглядит обрезанной.
+    _drawPoles(ctx, project, radius) {
+      [1, -1].forEach((sign) => {
+        const p = project(0, sign, 0, radius);
+        ctx.save();
+        ctx.fillStyle = this.secondary;
+        ctx.shadowColor = this.secondary;
+        ctx.shadowBlur = 10;
+        ctx.globalAlpha = p.z < 0 ? 0.4 : 0.95;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(1.2, radius * 0.03), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
     }
 
     _strokeSegments(ctx, segments, color, width, blur) {

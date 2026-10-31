@@ -1333,17 +1333,22 @@ export function initCanvasEditor({
         const secondary = (state.appearance.tokens && state.appearance.tokens["--md-secondary"]) || "#2de2e6";
         return `<div class="retrowave-symbol-preview" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
           <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" style="width:78%;height:78%;">
-            <defs><radialGradient id="rwh" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="${escapeAttr(primary)}" stop-opacity="0.22"/><stop offset="100%" stop-color="${escapeAttr(primary)}" stop-opacity="0"/></radialGradient></defs>
-            <circle cx="50" cy="50" r="46" fill="url(#rwh)"/>
-            <g fill="none" stroke="${escapeAttr(secondary)}" stroke-width="0.9" opacity="0.75">
-              <circle cx="50" cy="50" r="30"/>
-              <ellipse cx="50" cy="50" rx="13" ry="30"/>
-              <ellipse cx="50" cy="50" rx="24" ry="30"/>
+            <defs><linearGradient id="rwl" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${escapeAttr(secondary)}"/><stop offset="100%" stop-color="${escapeAttr(primary)}"/></linearGradient></defs>
+            <g transform="rotate(-24 50 50)">
+              <g fill="none" stroke="${escapeAttr(secondary)}" stroke-width="0.9" opacity="0.8">
+                <ellipse cx="50" cy="50" rx="13" ry="40"/>
+                <ellipse cx="50" cy="50" rx="26" ry="40"/>
+              </g>
+              <g fill="none" stroke="${escapeAttr(secondary)}" stroke-width="0.7" opacity="0.5">
+                <ellipse cx="50" cy="36" rx="29" ry="6"/>
+                <ellipse cx="50" cy="64" rx="29" ry="6"/>
+              </g>
+              <ellipse cx="50" cy="50" rx="40" ry="9" fill="none" stroke="${escapeAttr(primary)}" stroke-width="1.6"/>
+              <circle cx="88" cy="50" r="2.1" fill="${escapeAttr(secondary)}"/>
             </g>
-            <g fill="none" stroke="${escapeAttr(secondary)}" stroke-width="0.7" opacity="0.45">
-              <path d="M21 39h58M21 61h58M20 50h60"/>
-            </g>
-            <ellipse cx="50" cy="50" rx="43" ry="10" fill="none" stroke="${escapeAttr(primary)}" stroke-width="1.6"/>
+            <circle cx="50" cy="50" r="40" fill="none" stroke="url(#rwl)" stroke-width="1.2"/>
+            <circle cx="33.7" cy="13.5" r="1.6" fill="${escapeAttr(secondary)}"/>
+            <circle cx="66.3" cy="86.5" r="1.6" fill="${escapeAttr(secondary)}"/>
           </svg>
         </div>`;
       }
