@@ -147,6 +147,15 @@
       this.host = null;
     }
 
+    onUpdate() {
+      // `syncLayout` присылает новый снимок на каждое событие, и BaseWidget
+      // заново ставит процентную высоту. Возвращаем замеренную под текст,
+      // иначе панель сжималась бы и снова резала длинное сообщение.
+      if (this.element && this._cardHeight > 0) {
+        this.element.style.height = this._cardHeight + "px";
+      }
+    }
+
     _readColors() {
       const read = this.context.readCssVar;
       this.primary = (read && read("--md-primary")) || DEFAULT_PRIMARY;
@@ -194,8 +203,9 @@
       const alert = this.queue.shift();
       if (!alert) {
         this.playing = false;
+        this._cardHeight = 0;
         this.element.style.opacity = "0";
-        this.element.style.height = this.geometry.h + "%";
+        this.element.style.height = this.geometry.h + "%"; // reset to layout height while hidden
         return;
       }
       this.playing = true;
@@ -344,13 +354,36 @@
 
     // Панель растягивается под длинный текст доната, но не выходит за
     // разумный предел — иначе карточка закрыла бы пол-экрана.
+    // Панель растёт под сообщение, но не бесконечно: длинный текст больше не
+    // обрезается краем панели, а высота ограничена низом экрана.
     _autoSize(card) {
-      if (!this.element) return;
+      if (!this.element || !card) return;
       this.element.style.height = this.geometry.h + "%";
       const base = this.element.clientHeight || 100;
-      const needed = (card ? card.offsetHeight : 0) + 20;
-      const cap = Math.max(360, base);
-      this.element.style.height = Math.min(Math.max(base, needed), cap) + "px";
+
+      const needed = card.offsetHeight + 20;
+      if (!needed) return;
+
+      const viewport =
+        typeof window !== "undefined" && Number(window.innerHeight) > 0
+          ? Number(window.innerHeight)
+          : 1080;
+      const top = (Number(this.geometry.y) / 100) * viewport;
+      const maxHeight = Math.max(base, viewport - top - 8);
+
+      this.element.style.height = Math.min(Math.max(base, needed), maxHeight) + "px";
+
+      // Замер недосчитывает пару пикселей (переносы, отступы): растим по факту.
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const overflow = this.element.scrollHeight - this.element.clientHeight;
+        if (!Number.isFinite(overflow) || overflow <= 0) break;
+        const current = Number.parseFloat(this.element.style.height) || 0;
+        const next = Math.min(current + overflow + 2, maxHeight);
+        if (next <= current) break;
+        this.element.style.height = next + "px";
+      }
+
+      this._cardHeight = Number.parseFloat(this.element.style.height) || 0;
     }
   }
 

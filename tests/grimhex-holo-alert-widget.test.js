@@ -167,6 +167,31 @@ describe("WidgetGrimHexHoloAlert", () => {
     w.unmount();
     expect(raf.pending()).toBe(0);
   });
+
+  test("растягивает панель под длинный текст и не сжимает при обновлении", () => {
+    const ctx = makeContext("grimhex");
+    const w = new WidgetGrimHexHoloAlert(item(), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, {
+      kind: "donation",
+      user: "bob",
+      amount: 500,
+      message: "Очень длинное сообщение, которое не влезает в одну строку",
+      durationMs: 5000,
+    });
+    // В моке нет раскладки: высоту контента задаём сами, как её отдал бы браузер.
+    w.contentEl.offsetHeight = 320;
+    w._autoSize();
+    expect(parseInt(w.element.style.height, 10)).toBe(320);
+
+    // Каждый снимок состояния заново ставит процентную высоту — панель
+    // не должна из-за этого сжиматься обратно.
+    w.update({});
+    expect(parseInt(w.element.style.height, 10)).toBe(320);
+
+    w.unmount();
+  });
 });
 
 describe("WidgetManager — изоляция grimhex-holo-alert", () => {

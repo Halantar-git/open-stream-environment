@@ -129,6 +129,15 @@
       this.canvas = null;
     }
 
+    onUpdate() {
+      // `syncLayout` присылает новый снимок на каждое событие, и BaseWidget
+      // заново ставит процентную высоту. Возвращаем замеренную под текст,
+      // иначе панель сжималась бы и снова резала длинное сообщение.
+      if (this.element && this._cardHeight > 0) {
+        this.element.style.height = this._cardHeight + "px";
+      }
+    }
+
     // Panel surface matching the Recent events widget: filled panel, border,
     // radius, drop shadow/glow, CRT scanline texture + corner brackets.
     _applySurface() {
@@ -172,6 +181,7 @@
       const alert = this.queue.shift();
       if (!alert) {
         this.current = null;
+        this._cardHeight = 0;
         this.element.style.opacity = "0";
         this.element.style.height = this.geometry.h + "%"; // reset to layout height while hidden
         this.setIdle(true);
@@ -301,30 +311,38 @@
         (message ? `<span style="font-family:${FONT_MONO};font-size:12px;color:${MUTED};line-height:1.35;margin-top:4px;overflow-wrap:anywhere;word-break:break-word;">«${message}»</span>` : "");
     }
 
-    // Grow the panel to fit the message (bounded), so long donation texts
-    // don't get clipped by the fixed layout height.
+    // Панель растёт под сообщение, но не бесконечно: длинный текст больше не
+    // обрезается краем панели, а высота ограничена низом экрана.
     _autoSize() {
       if (!this.element || !this.contentEl) return;
 
-      // Reset to the layout height first so `clientHeight` reflects the true
-      // base, not a leftover auto-sized height from a previous (longer) alert.
+      // Сначала сбрасываем высоту к геометрии виджета: `clientHeight` должен
+      // показать базу, а не остаток от предыдущего длинного алерта.
       this.element.style.height = this.geometry.h + "%";
       const base = this.element.clientHeight || 140;
 
       const el = this.contentEl;
       const prev = el.style.cssText;
 
-      // Temporarily let the content size naturally (same width + padding) to
-      // measure the full wrapped height, then restore the fixed layout.
+      // Отпускаем контент по высоте, чтобы замерить полный перенос текста,
+      // затем возвращаем фиксированную раскладку.
       el.style.height = "auto";
       el.style.bottom = "auto";
       el.style.justifyContent = "flex-start";
       const needed = el.offsetHeight;
 
       el.style.cssText = prev;
+      if (!needed) return;
 
-      const cap = Math.max(360, base);
-      this.element.style.height = Math.min(Math.max(base, needed), cap) + "px";
+      const viewport =
+        typeof window !== "undefined" && Number(window.innerHeight) > 0
+          ? Number(window.innerHeight)
+          : 1080;
+      const top = (Number(this.geometry.y) / 100) * viewport;
+      const maxHeight = Math.max(base, viewport - top - 8);
+
+      this.element.style.height = Math.min(Math.max(base, needed), maxHeight) + "px";
+      this._cardHeight = Number.parseFloat(this.element.style.height) || 0;
     }
 
     // ---- rendering ----

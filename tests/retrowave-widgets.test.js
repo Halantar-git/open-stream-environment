@@ -253,6 +253,33 @@ describe("WidgetRetrowaveHoloAlert", () => {
     expect(w.host).toBeNull();
   });
 
+  test("растягивает панель под длинный текст и не сжимает при обновлении", () => {
+    const ctx = makeContext("retrowave");
+    const w = new WidgetRetrowaveHoloAlert(item("retrowave-holo-alert"), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, {
+      kind: "donation",
+      user: "bob",
+      amount: 500,
+      message: "Очень длинное сообщение, которое не влезает в одну строку",
+      durationMs: 5000,
+    });
+
+    const card = w.host.children[0];
+    // В моке нет раскладки: высоту содержимого задаём сами, как её отдал бы браузер.
+    card.offsetHeight = 400;
+    w._autoSize(card);
+    expect(parseInt(w.element.style.height, 10)).toBe(420);
+
+    // Каждый снимок состояния заново ставит процентную высоту — панель
+    // не должна из-за этого сжиматься обратно.
+    w.update({});
+    expect(parseInt(w.element.style.height, 10)).toBe(420);
+
+    w.unmount();
+  });
+
   test("не инициализируется на чужой теме", () => {
     const w = new WidgetRetrowaveHoloAlert(item("retrowave-holo-alert"), makeContext("nebula"));
     w.mount(makeEl("div"));
