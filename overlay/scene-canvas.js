@@ -67,7 +67,7 @@
     remoteMicData: null,
     longshot: null,
     giveaway: { count: 0, participants: [] },
-    donatex: { enabled: false, widgets: { donation: "", ai: "", music: "", roulette: "" } },
+    donatex: { enabled: false, widgets: { donation: "", ai: "", music: "" } },
   };
 
   // ---- pure utils ----

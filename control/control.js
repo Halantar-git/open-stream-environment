@@ -212,7 +212,6 @@ const { EVENT_TYPES } = window.SharedEvents;
   const donatexWidgetDonationInput = document.getElementById("donatexWidgetDonation");
   const donatexWidgetAiInput = document.getElementById("donatexWidgetAi");
   const donatexWidgetMusicInput = document.getElementById("donatexWidgetMusic");
-  const donatexWidgetRouletteInput = document.getElementById("donatexWidgetRoulette");
   const youtubeEnabledSwitch = document.getElementById("youtubeEnabledSwitch");
   const obsEnabledSwitch = document.getElementById("obsEnabledSwitch");
   const obsHostInput = document.getElementById("obsHost");
@@ -685,7 +684,6 @@ const { EVENT_TYPES } = window.SharedEvents;
     fillWidget(donatexWidgetDonationInput, donatexWidgets.donation);
     fillWidget(donatexWidgetAiInput, donatexWidgets.ai);
     fillWidget(donatexWidgetMusicInput, donatexWidgets.music);
-    fillWidget(donatexWidgetRouletteInput, donatexWidgets.roulette);
     twitchRedirectUriEl.textContent = `http://localhost:${port}/oauth/twitch/callback`;
     daRedirectUriEl.textContent = `http://localhost:${port}/oauth/donationalerts/callback`;
     youtubeRedirectUriEl.textContent = `http://localhost:${port}/oauth/youtube/callback`;
@@ -732,7 +730,6 @@ const { EVENT_TYPES } = window.SharedEvents;
     [donatexWidgetDonationInput, "donation"],
     [donatexWidgetAiInput, "ai"],
     [donatexWidgetMusicInput, "music"],
-    [donatexWidgetRouletteInput, "roulette"],
   ].forEach(([input, key]) => {
     if (!input) return;
     input.addEventListener("change", () => {

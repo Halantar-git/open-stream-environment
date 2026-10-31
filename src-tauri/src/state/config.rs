@@ -289,7 +289,7 @@ pub fn set_app_config(config: &mut ConfigFile, patch: &Value) {
                 .and_then(Value::as_object)
                 .cloned()
                 .unwrap_or_default();
-            for key in ["donation", "ai", "music", "roulette"] {
+            for key in ["donation", "ai", "music"] {
                 if let Some(raw) = widgets.get(key) {
                     if let Some(url) = donatex_widget_url(raw) {
                         saved.insert(key.to_string(), Value::from(url));
@@ -2005,8 +2005,7 @@ mod tests {
                 "donatex": { "widgets": {
                     "donation": "https://donatex.gg/widgets/donation/abc",
                     "ai": "https://evil.example/widgets/ai",
-                    "music": "https://www.donatex.gg/widgets/music/def",
-                    "roulette": "https://donatex.gg/widgets/roulette/ghi"
+                    "music": "https://www.donatex.gg/widgets/music/def"
                 }}
             }),
         );
@@ -2018,10 +2017,6 @@ mod tests {
         assert_eq!(
             saved["music"],
             json!("https://www.donatex.gg/widgets/music/def")
-        );
-        assert_eq!(
-            saved["roulette"],
-            json!("https://donatex.gg/widgets/roulette/ghi")
         );
         // Чужой адрес не сохраняется и не затирает уже сохранённый.
         assert!(saved.get("ai").is_none());
