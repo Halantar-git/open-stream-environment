@@ -24,7 +24,11 @@
     typeof module !== "undefined" && module.exports
       ? require("./base-widget")
       : root.OSEWidgets && root.OSEWidgets.BaseWidget;
-  const ChatWidget = factory(BaseWidget);
+  const AlertTyping =
+    typeof module !== "undefined" && module.exports
+      ? require("./alert-typing")
+      : root.OSEWidgets && root.OSEWidgets.AlertTyping;
+  const ChatWidget = factory(BaseWidget, AlertTyping);
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = ChatWidget;
@@ -32,7 +36,7 @@
     root.OSEWidgets = root.OSEWidgets || {};
     root.OSEWidgets.ChatWidget = ChatWidget;
   }
-})(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
+})(typeof window !== "undefined" ? window : globalThis, function (BaseWidget, AlertTyping) {
   "use strict";
 
   class ChatWidget extends BaseWidget {
@@ -41,6 +45,10 @@
       this.host.className = "widget-chat";
       this.element.appendChild(this.host);
       this.subscribe(this.context.EVENT_TYPES.CHAT_MESSAGE, (msg) => this.push(msg));
+    }
+
+    onUnmount() {
+      this._stopTyping();
     }
 
     push(msg) {
@@ -61,6 +69,22 @@
       row.innerHTML = `${badges}<span class="widget-chat__user" style="color:${escapeAttr(msg.color || "#c9c1d6")}">${escapeHtml(msg.user)}</span><span class="widget-chat__colon">:</span><span class="widget-chat__text">${renderEmotes(msg.message, msg.emotes)}</span>`;
       this.host.appendChild(row);
       this.trim();
+      this._typeMessage(row.lastElementChild);
+    }
+
+    // Текст сообщения печатается как в терминале; ник, бейджи и время — сразу.
+    // Новое сообщение дорисовывает недопечатанное прежнее: в живом чате
+    // печать не должна копиться и отставать от эфира.
+    _typeMessage(textEl) {
+      this._stopTyping();
+      this._typing = AlertTyping ? AlertTyping.typeAlertText(textEl) : null;
+    }
+
+    _stopTyping() {
+      if (this._typing) {
+        this._typing.stop();
+        this._typing = null;
+      }
     }
 
     trim() {

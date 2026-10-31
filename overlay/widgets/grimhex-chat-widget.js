@@ -30,7 +30,11 @@
     typeof module !== "undefined" && module.exports
       ? require("./base-widget")
       : root.OSEWidgets && root.OSEWidgets.BaseWidget;
-  const WidgetGrimHexChat = factory(BaseWidget);
+  const AlertTyping =
+    typeof module !== "undefined" && module.exports
+      ? require("./alert-typing")
+      : root.OSEWidgets && root.OSEWidgets.AlertTyping;
+  const WidgetGrimHexChat = factory(BaseWidget, AlertTyping);
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = WidgetGrimHexChat;
@@ -38,7 +42,7 @@
     root.OSEWidgets = root.OSEWidgets || {};
     root.OSEWidgets.WidgetGrimHexChat = WidgetGrimHexChat;
   }
-})(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
+})(typeof window !== "undefined" ? window : globalThis, function (BaseWidget, AlertTyping) {
   "use strict";
 
   const AMBER = "#ffaa00";
@@ -111,6 +115,7 @@
     }
 
     onUnmount() {
+      this._stopTyping();
       if (this.messagesEl) this.messagesEl.innerHTML = "";
       this.messagesEl = null;
       this.messagesScroller = null;
@@ -205,6 +210,7 @@
 
       // Auto-scroll to the newest message.
       this.messagesScroller.scrollTop = this.messagesScroller.scrollHeight;
+      this._typeMessage(row.lastElementChild);
 
       // GPU-accelerated entrance: slide in from the left + fade.
       if (row.animate) {
@@ -215,6 +221,29 @@
           ],
           { duration: 220, easing: "ease-out" }
         );
+      }
+    }
+
+    // Текст сообщения печатается как в терминале; ник, бейджи и время — сразу.
+    // Новое сообщение дорисовывает недопечатанное прежнее: в живом чате
+    // печать не должна копиться и отставать от эфира.
+    _typeMessage(textEl) {
+      this._stopTyping();
+      this._typing = AlertTyping
+        ? AlertTyping.typeAlertText(textEl, { onTick: () => this._scrollToEnd() })
+        : null;
+    }
+
+    _stopTyping() {
+      if (this._typing) {
+        this._typing.stop();
+        this._typing = null;
+      }
+    }
+
+    _scrollToEnd() {
+      if (this.messagesScroller) {
+        this.messagesScroller.scrollTop = this.messagesScroller.scrollHeight;
       }
     }
   }

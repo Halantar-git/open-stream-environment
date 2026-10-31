@@ -27,7 +27,11 @@
     typeof module !== "undefined" && module.exports
       ? require("./base-widget")
       : root.OSEWidgets && root.OSEWidgets.BaseWidget;
-  const WidgetPixelChat = factory(BaseWidget);
+  const AlertTyping =
+    typeof module !== "undefined" && module.exports
+      ? require("./alert-typing")
+      : root.OSEWidgets && root.OSEWidgets.AlertTyping;
+  const WidgetPixelChat = factory(BaseWidget, AlertTyping);
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = WidgetPixelChat;
@@ -35,7 +39,7 @@
     root.OSEWidgets = root.OSEWidgets || {};
     root.OSEWidgets.WidgetPixelChat = WidgetPixelChat;
   }
-})(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
+})(typeof window !== "undefined" ? window : globalThis, function (BaseWidget, AlertTyping) {
   "use strict";
 
   const DEFAULT_TEXT = "#e6e6e6";
@@ -103,6 +107,7 @@
     }
 
     onUnmount() {
+      this._stopTyping();
       if (this.messagesEl) this.messagesEl.innerHTML = "";
       this.messagesEl = null;
       this.messagesScroller = null;
@@ -192,6 +197,7 @@
       }
 
       this.messagesScroller.scrollTop = this.messagesScroller.scrollHeight;
+      this._typeMessage(row.lastElementChild);
 
       if (row.animate) {
         row.animate(
@@ -201,6 +207,29 @@
           ],
           { duration: 140, easing: "steps(3, end)" }
         );
+      }
+    }
+
+    // Текст сообщения печатается как в терминале; ник, бейджи и время — сразу.
+    // Новое сообщение дорисовывает недопечатанное прежнее: в живом чате
+    // печать не должна копиться и отставать от эфира.
+    _typeMessage(textEl) {
+      this._stopTyping();
+      this._typing = AlertTyping
+        ? AlertTyping.typeAlertText(textEl, { onTick: () => this._scrollToEnd() })
+        : null;
+    }
+
+    _stopTyping() {
+      if (this._typing) {
+        this._typing.stop();
+        this._typing = null;
+      }
+    }
+
+    _scrollToEnd() {
+      if (this.messagesScroller) {
+        this.messagesScroller.scrollTop = this.messagesScroller.scrollHeight;
       }
     }
   }
