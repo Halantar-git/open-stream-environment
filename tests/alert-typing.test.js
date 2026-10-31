@@ -116,7 +116,7 @@ describe("typeAlertText", () => {
     // Пока не прошёл такт, все строки пустые, а каретка стоит в начале.
     expect(kicker.childNodes[0].nodeValue).toBe("");
     expect(name.childNodes[0].nodeValue).toBe("");
-    expect(kicker.childNodes[1].className).toBe("alert-type-caret");
+    expect(kicker.childNodes[1].className).toBe("type-caret");
 
     jest.advanceTimersByTime(16);
     expect(kicker.childNodes[0].nodeValue).toBe("FO");
@@ -124,12 +124,12 @@ describe("typeAlertText", () => {
     // Первая строка допечатана — каретка переехала к имени.
     jest.advanceTimersByTime(32);
     expect(kicker.childNodes[0].nodeValue).toBe("FOLLOW");
-    expect(name.childNodes.some((child) => child.className === "alert-type-caret")).toBe(true);
+    expect(name.childNodes.some((child) => child.className === "type-caret")).toBe(true);
 
     jest.advanceTimersByTime(200);
     expect(name.childNodes[0].nodeValue).toBe("bob");
     expect(message.childNodes[0].nodeValue).toBe("привет");
-    expect(message.childNodes.some((child) => child.className === "alert-type-caret")).toBe(true);
+    expect(message.childNodes.some((child) => child.className === "type-caret")).toBe(true);
     expect(jest.getTimerCount()).toBe(0);
   });
 
@@ -143,7 +143,7 @@ describe("typeAlertText", () => {
     expect(kicker.childNodes[0].nodeValue).toBe("FOLLOW");
     expect(name.childNodes[0].nodeValue).toBe("bob");
     expect(message.childNodes[0].nodeValue).toBe("привет");
-    expect(kicker.childNodes.some((child) => child.className === "alert-type-caret")).toBe(false);
+    expect(kicker.childNodes.some((child) => child.className === "type-caret")).toBe(false);
     expect(jest.getTimerCount()).toBe(0);
   });
 
@@ -157,6 +157,30 @@ describe("typeAlertText", () => {
     expect(name.childNodes[0].nodeValue).toBe("bob");
     expect(message.childNodes[0].nodeValue).toBe("привет");
     expect(jest.getTimerCount()).toBe(0);
+  });
+
+  test("keepCaret: false убирает каретку после печати", () => {
+    const { root, message } = card();
+    typeAlertText(root, { keepCaret: false });
+
+    jest.advanceTimersByTime(1000);
+
+    expect(message.childNodes[0].nodeValue).toBe("привет");
+    expect(message.childNodes.some((child) => child.className === "type-caret")).toBe(false);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  test("onTick зовётся на каждом такте печати", () => {
+    const { root } = card();
+    const ticks = jest.fn();
+    typeAlertText(root, { onTick: ticks });
+
+    jest.advanceTimersByTime(48);
+    expect(ticks).toHaveBeenCalledTimes(3);
+
+    jest.advanceTimersByTime(1000);
+    // Дальше — по такту на каждую пару символов: 3 + 2 + 3 = 8 тактов.
+    expect(ticks.mock.calls.length).toBe(8);
   });
 
   test("не трогает содержимое иконок", () => {

@@ -16,16 +16,21 @@
  */
 
 /*
-  Посимвольная печать текста алерта — тот же приём, что в теме Terminal.
+  Посимвольная печать текста — тот же приём, что в теме Terminal.
 
   Карточки тем собираются обычной разметкой, и заранее неизвестно, в каком
   узле лежит подпись события, а в каком — имя и сообщение. Поэтому печатаем
   все текстовые узлы поддерева по порядку: допечатанные строки сразу видны
-  целиком, а в конце текущей стоит каретка.
+  целиком, а в конце текущей стоит каретка. Так же печатается и текст в чате
+  Terminal — там в поддерево передаётся только сообщение.
 
   `typeAlertText` возвращает ручку с `stop()`: она дорисовывает текст и
   убирает таймер. Если печатать нечего или включён `prefers-reduced-motion`,
   ручка пустая — вызывать можно без проверок.
+
+  Опции: `keepCaret: false` убирает каретку с последней строки (когда она
+  нужна только во время печати), `onTick` зовётся после каждого такта —
+  чату по нему нужно доскроллить растущую строку.
 */
 (function (root, factory) {
   const api = factory();
@@ -69,7 +74,10 @@
     return nodes;
   }
 
-  function typeAlertText(root) {
+  function typeAlertText(root, options) {
+    const settings = options || {};
+    const keepCaret = settings.keepCaret !== false;
+    const onTick = typeof settings.onTick === "function" ? settings.onTick : null;
     const idle = { stop() {} };
     if (!root || !root.childNodes || reduceMotion()) return idle;
 
@@ -82,7 +90,7 @@
     const glyphs = originals.map((text) => Array.from(text));
 
     const caret = document.createElement("span");
-    caret.className = "alert-type-caret";
+    caret.className = "type-caret";
 
     let index = 0;
     let count = 0;
@@ -135,13 +143,16 @@
       }
       count = Math.min(chars.length, count + CHARS_PER_TICK);
       nodes[index].nodeValue = chars.slice(0, count).join("");
+      if (onTick) onTick();
       if (count < chars.length) return;
       index += 1;
       count = 0;
       if (nodes[index]) {
         placeCaret(nodes[index]);
       } else {
-        // Всё допечатано — каретка остаётся мигать в конце, как в терминале.
+        // Всё допечатано — каретка остаётся мигать в конце, как в терминале,
+        // если виджет не попросил её убрать.
+        if (!keepCaret) dropCaret();
         stopTimer();
       }
     };

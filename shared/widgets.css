@@ -164,23 +164,23 @@
   color: var(--accent);
   flex-shrink: 0;
 }
-/* Каретка посимвольной печати алерта: цвет берёт у той строки, в которой
-   стоит, — в каждой теме он свой. */
-.alert-type-caret {
+/* Каретка посимвольной печати (алерты и чат Terminal): цвет берёт у той
+   строки, в которой стоит, — в каждой теме он свой. */
+.type-caret {
   display: inline-block;
   width: 0.5em;
   height: 1em;
   margin-left: 0.08em;
   vertical-align: -0.12em;
   background: currentColor;
-  animation: alert-type-caret 1s steps(2, start) infinite;
+  animation: type-caret-blink 1s steps(2, start) infinite;
 }
-@keyframes alert-type-caret {
+@keyframes type-caret-blink {
   0%, 49% { opacity: 1; }
   50%, 100% { opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .alert-type-caret { animation: none; }
+  .type-caret { animation: none; }
 }
 .widget-alert__lockbar { display: none; }
 [data-decoration="brackets2"] .widget-alert__lockbar,

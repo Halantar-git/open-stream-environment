@@ -29,7 +29,11 @@
     typeof module !== "undefined" && module.exports
       ? require("./base-widget")
       : root.OSEWidgets && root.OSEWidgets.BaseWidget;
-  const WidgetTerminalChat = factory(BaseWidget);
+  const AlertTyping =
+    typeof module !== "undefined" && module.exports
+      ? require("./alert-typing")
+      : root.OSEWidgets && root.OSEWidgets.AlertTyping;
+  const WidgetTerminalChat = factory(BaseWidget, AlertTyping);
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = WidgetTerminalChat;
@@ -37,7 +41,7 @@
     root.OSEWidgets = root.OSEWidgets || {};
     root.OSEWidgets.WidgetTerminalChat = WidgetTerminalChat;
   }
-})(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
+})(typeof window !== "undefined" ? window : globalThis, function (BaseWidget, AlertTyping) {
   "use strict";
 
   const DEFAULT_BG = "rgba(13, 17, 23, 0.92)";
@@ -70,6 +74,7 @@
       this.windowEl = null;
       this.messagesScroller = null;
       this.messagesInner = null;
+      this._typing = null;
     }
 
     onMount() {
@@ -111,6 +116,7 @@
     }
 
     onUnmount() {
+      this._stopTyping();
       if (this.windowEl) this.windowEl.innerHTML = "";
       this.windowEl = null;
       this.messagesScroller = null;
@@ -178,8 +184,13 @@
       row.innerHTML =
         (time ? `<span style="color:${this.mutedColor};">[${escapeHtml(time)}]</span> ` : "") +
         `<span style="color:${escapeHtml(userColor)};">${escapeHtml(message.user)}</span>` +
-        `<span style="color:${this.mutedColor};">:</span> ` +
-        `<span>${text}</span>`;
+        `<span style="color:${this.mutedColor};">:</span> `;
+
+      // Текст — отдельным узлом: его печатаем посимвольно, как вывод в
+      // терминале, а время и ник появляются сразу.
+      const textEl = document.createElement("span");
+      textEl.innerHTML = text;
+      row.appendChild(textEl);
 
       this.messagesInner.appendChild(row);
 
@@ -188,11 +199,35 @@
         this.messagesInner.firstChild.remove();
       }
 
-      this.messagesScroller.scrollTop = this.messagesScroller.scrollHeight;
+      this._scrollToEnd();
+      this._typeMessage(textEl);
 
       if (row.animate) {
         row.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 90, easing: "linear" });
       }
+    }
+
+    // Печать сообщения, как в алерте Terminal. Новый текст начинает печататься
+    // сразу, а недопечатанное предыдущее сообщение дорисовывается мгновенно:
+    // в живом чате ждать очереди нельзя, иначе печать отстаёт от эфира.
+    _typeMessage(textEl) {
+      this._stopTyping();
+      this._typing = AlertTyping
+        ? AlertTyping.typeAlertText(textEl, { onTick: () => this._scrollToEnd() })
+        : null;
+    }
+
+    _stopTyping() {
+      if (this._typing) {
+        this._typing.stop();
+        this._typing = null;
+      }
+    }
+
+    // Строка растёт по мере печати — держим прокрутку внизу.
+    _scrollToEnd() {
+      if (!this.messagesScroller) return;
+      this.messagesScroller.scrollTop = this.messagesScroller.scrollHeight;
     }
   }
 
