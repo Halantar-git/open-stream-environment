@@ -344,6 +344,28 @@ describe("WidgetTerminalHoloAlert", () => {
     expect(widget.host).toBeNull();
   });
 
+  test("панель растягивается под длинный текст", () => {
+    const context = makeContext("terminal");
+    const widget = new WidgetTerminalHoloAlert(item("terminal-holo-alert"), context);
+    widget.mount(makeEl("div"));
+
+    context.bus.emit(EVENT_TYPES.ALERT, {
+      kind: "donation",
+      user: "bob",
+      amount: 500,
+      message: "Очень длинное сообщение, которое не влезает в одну строку",
+      durationMs: 5000,
+    });
+
+    const card = widget.host.children[0];
+    // В моке нет раскладки: высоту содержимого задаём сами, как её отдал бы браузер.
+    card.scrollHeight = 420;
+    widget._autoSize(card);
+    expect(parseInt(widget.element.style.height, 10)).toBeGreaterThanOrEqual(420);
+
+    widget.unmount();
+  });
+
   test("не инициализируется на чужой теме", () => {
     const widget = new WidgetTerminalHoloAlert(item("terminal-holo-alert"), makeContext("sf"));
     widget.mount(makeEl("div"));

@@ -161,6 +161,7 @@
       }
 
       this._typeLines(card, () => {
+        this._autoSize(card);
         const holdMs = alert.durationMs || 5000;
         this.later(() => {
           if (card.animate) {
@@ -254,7 +255,9 @@
 
       const card = document.createElement("div");
       card.className = "terminal-window";
-      card.style.cssText = "min-height:0;";
+      // Карточка не тянется на всю панель: её высоту задаёт текст, а
+      // `_autoSize` подгоняет под него саму панель.
+      card.style.cssText = "height:auto;flex:0 0 auto;width:100%;min-width:0;";
 
       const tab = document.createElement("div");
       tab.className = "terminal-tab";
@@ -266,7 +269,7 @@
 
       const body = document.createElement("div");
       body.className = "terminal-body";
-      body.style.cssText = "gap:1px;padding:5px 9px 7px;";
+      body.style.cssText = "gap:1px;padding:5px 9px 7px;flex:0 0 auto;overflow:visible;";
       card.appendChild(body);
 
       const prompt = `<span style="color:${this.promptColor};font-weight:700;">$</span> `;
@@ -332,6 +335,7 @@
         rows.forEach((row) => {
           row.innerHTML = row.dataset.html;
         });
+        this._autoSize(card);
         done();
         return;
       }
@@ -351,8 +355,10 @@
         row.textContent = plain.slice(0, charIndex);
         row.style.color = rowIndex === 0 ? this.textColor : "";
         if (charIndex >= plain.length) {
-          // Строка допечатана — подменяем на цветную разметку.
+          // Строка допечатана — подменяем на цветную разметку и пересчитываем
+          // высоту: длинное сообщение переносится и должно быть видно целиком.
           row.innerHTML = row.dataset.html;
+          this._autoSize(card);
           rowIndex += 1;
           charIndex = 0;
         }
@@ -374,14 +380,17 @@
       }
     }
 
-    // Панель растягивается под длинный текст доната, но не выходит за
-    // разумный предел — иначе окно закрыло бы пол-экрана.
+    // Панель растягивается под длинный текст доната: длинное сообщение
+    // должно быть видно целиком, но окно не должно закрыть пол-экрана.
     _autoSize(card) {
       if (!this.element) return;
-      this.element.style.height = this.geometry.h + "%";
       const base = this.element.clientHeight || 100;
-      const needed = (card ? card.offsetHeight : 0) + 16;
-      const cap = Math.max(360, base);
+      const viewport =
+        typeof window !== "undefined" && Number(window.innerHeight) > 0
+          ? Number(window.innerHeight)
+          : 1080;
+      const cap = Math.max(360, viewport * 0.7);
+      const needed = (card ? card.scrollHeight || card.offsetHeight : 0) + 16;
       this.element.style.height = Math.min(Math.max(base, needed), cap) + "px";
     }
   }

@@ -17,8 +17,29 @@
 
 const { WIDGET_TYPES, widgetsForTheme, themeAllowsWidget, replacedBy3d, widgetRole, resolveTypeForTheme, typeForAdd, isAnimatedWidget } = require("../shared/widget-catalog");
 const { THREE_D_STYLES } = require("../shared/themes");
+const fs = require("fs");
+const path = require("path");
 
 describe("widget-catalog helpers", () => {
+  test("3D-варианты ленты и событий зарегистрированы в оверлее и сценах", () => {
+    // Лента и «Последние события» у каждой темы — это один и тот же класс под
+    // своим типом. Забытая регистрация не ломает сборку: виджет просто не
+    // появляется в эфире — как было с лентой Terminal.
+    const sources = [
+      ["overlay.js", fs.readFileSync(path.join(__dirname, "..", "overlay", "overlay.js"), "utf8")],
+      ["scene-canvas.js", fs.readFileSync(path.join(__dirname, "..", "overlay", "scene-canvas.js"), "utf8")],
+    ];
+    const variantTypes = Object.keys(WIDGET_TYPES).filter(
+      (type) => type.endsWith("-ticker") || type.endsWith("-recent"),
+    );
+    const missing = [];
+    for (const type of variantTypes) {
+      for (const [name, source] of sources) {
+        if (!source.includes(`"${type}"`)) missing.push(`${type} → ${name}`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
   test("isAnimatedWidget отмечает только виджеты с canvas-циклом", () => {
     // Тяжёлые: собственный rAF (20–30 FPS).
     expect(isAnimatedWidget("mic")).toBe(true);
