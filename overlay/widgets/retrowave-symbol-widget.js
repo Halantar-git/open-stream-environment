@@ -27,6 +27,9 @@
   Like the Wardogs and Pixel decorative signs it is invisible while nothing is
   happening and appears on an alert, one at a time, popping harder on donations.
   Between alerts it only spins in place — no drift — so the scene never shifts.
+
+  The geometry is shared with the Orbital/Star Citizen sign
+  (`WidgetOrbitalSymbol`), which only overrides the theme-family gate.
 */
 (function (root, factory) {
   const BaseWidget =
@@ -79,7 +82,7 @@
 
     onMount() {
       // HARD theme gate: no canvas, no loop, no events on a foreign theme.
-      if (this.theme !== "retrowave") return;
+      if (this.theme !== this._themeFamily()) return;
 
       this._readColors();
       this._applyPerspective();
@@ -116,6 +119,12 @@
       } else {
         this._setTilt("");
       }
+    }
+
+    // Семья темы, которой принадлежит знак. Наследник (Orbital/Star Citizen)
+    // переопределяет только это: вся геометрия и реакция на алерты — общие.
+    _themeFamily() {
+      return "retrowave";
     }
 
     // ---- visibility / reaction ----
@@ -172,7 +181,7 @@
     // ---- rendering ----
 
     render() {
-      if (this.theme !== "retrowave") return;
+      if (this.theme !== this._themeFamily()) return;
       const ctx = this.ctx;
       if (!ctx || !this.canvas) return;
 

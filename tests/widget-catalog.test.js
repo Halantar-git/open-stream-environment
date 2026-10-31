@@ -33,6 +33,7 @@ describe("widget-catalog helpers", () => {
     expect(isAnimatedWidget("sf-goal")).toBe(true);
     expect(isAnimatedWidget("sf-cube")).toBe(true);
     expect(isAnimatedWidget("sf-ticker")).toBe(true);
+    expect(isAnimatedWidget("orbital-symbol")).toBe(true);
     expect(isAnimatedWidget("win98-cube")).toBe(true);
     expect(isAnimatedWidget("win98-ticker")).toBe(true);
 
@@ -73,7 +74,7 @@ describe("widget-catalog helpers", () => {
     expect(md3).toHaveLength(6);
 
     const grimhex = widgetsForTheme("grimhex").map((d) => d.type);
-    expect(grimhex).toEqual(expect.arrayContaining(["grimhex", "musain", "grimhex-chat", "grimhex-goal", "grimhex-holo-alert", "grimhex-recent", "grimhex-radar", "grimhex-ticker"]));
+    expect(grimhex).toEqual(expect.arrayContaining(["grimhex", "musain", "grimhex-chat", "grimhex-goal", "grimhex-holo-alert", "grimhex-recent", "grimhex-radar", "grimhex-ticker", "orbital-symbol"]));
 
     const retrowave = widgetsForTheme("retrowave").map((d) => d.type);
     expect(retrowave).toEqual(expect.arrayContaining(["retrowave-goal", "retrowave-chat", "retrowave-holo-alert", "retrowave-recent", "retrowave-symbol", "retrowave-ticker"]));
@@ -162,6 +163,7 @@ describe("widget-catalog helpers", () => {
     // аддитивные и просто скрываются при смене темы, а не подменяются.
     expect(widgetRole("grimhex")).toBe("sign");
     expect(widgetRole("musain")).toBeNull();
+    expect(widgetRole("orbital-symbol")).toBeNull();
     expect(widgetRole("nuclear")).toBe("sign");
     expect(widgetRole("cobra")).toBe("sign");
     expect(widgetRole("elite-sign")).toBeNull();

@@ -21,6 +21,7 @@ const WidgetRetrowaveGoal = require("../overlay/widgets/retrowave-goal-widget");
 const WidgetRetrowaveChat = require("../overlay/widgets/retrowave-chat-widget");
 const WidgetRetrowaveHoloAlert = require("../overlay/widgets/retrowave-holo-alert-widget");
 const WidgetRetrowaveSymbol = require("../overlay/widgets/retrowave-symbol-widget");
+const WidgetOrbitalSymbol = require("../overlay/widgets/orbital-symbol-widget");
 const WidgetManager = require("../overlay/widgets/widget-manager");
 
 // ---- minimal mocks ----
@@ -336,6 +337,38 @@ describe("WidgetRetrowaveSymbol", () => {
     w.mount(makeEl("div"));
     expect(raf.pending()).toBe(0);
     w.unmount();
+  });
+});
+
+describe("WidgetOrbitalSymbol", () => {
+  const sphereItem = () => item("orbital-symbol", { renderType: "canvas", w: 20, h: 16 });
+
+  test("тот же шар, но в семье Star Citizen", () => {
+    const ctx = makeContext("grimhex");
+    const w = new WidgetOrbitalSymbol(sphereItem(), ctx);
+    w.mount(makeEl("div"));
+
+    expect(w.element.tagName).toBe("CANVAS");
+    expect(w.element.style.opacity).toBe("0");
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "follow", durationMs: 5000 });
+    expect(w.element.style.opacity).toBe("1");
+    expect(w._iconKind).toBe("follow");
+    expect(raf.pending()).toBe(1);
+
+    raf.flush(1000);
+    expect(w.ctx.stroke).toHaveBeenCalled();
+
+    w.unmount();
+  });
+
+  test("не запускается на чужой семье", () => {
+    ["retrowave", "orbital", "sf"].forEach((theme) => {
+      const w = new WidgetOrbitalSymbol(sphereItem(), makeContext(theme));
+      w.mount(makeEl("div"));
+      expect(raf.pending()).toBe(0);
+      w.unmount();
+    });
   });
 });
 

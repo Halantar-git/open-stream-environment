@@ -1,5 +1,5 @@
 {
-  "sourceHash": "529010038e0009c0",
+  "sourceHash": "ef9b46283f7f2747",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -442,6 +442,25 @@
         "h": 21
       },
       "minW": 12,
+      "minH": 6,
+      "defaultConfig": {
+        "perspective": 0
+      }
+    },
+    "orbital-symbol": {
+      "type": "orbital-symbol",
+      "label": "Сфера Orbital",
+      "description": "Вращающаяся неоновая сфера-сетка с иконкой события в центре, появляется на алерте (Orbital и Star Citizen)",
+      "icon": "widgetRetrowaveSymbol",
+      "dimension": "3d",
+      "theme": "grimhex",
+      "defaultGeometry": {
+        "x": 40,
+        "y": 8,
+        "w": 20,
+        "h": 16
+      },
+      "minW": 10,
       "minH": 6,
       "defaultConfig": {
         "perspective": 0
@@ -2243,6 +2262,7 @@
     "pixel-goal",
     "retrowave-goal",
     "retrowave-symbol",
+    "orbital-symbol",
     "ticker",
     "grimhex-ticker",
     "nuclear-ticker",

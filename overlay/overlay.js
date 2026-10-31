@@ -471,6 +471,7 @@
   manager.register("retrowave-chat", OW.WidgetRetrowaveChat);
   manager.register("retrowave-holo-alert", OW.WidgetRetrowaveHoloAlert);
   manager.register("retrowave-symbol", OW.WidgetRetrowaveSymbol);
+  manager.register("orbital-symbol", OW.WidgetOrbitalSymbol);
   manager.register("sf-tachometer", OW.WidgetSfTachometer);
   manager.register("sf-goal", OW.WidgetSfGoal);
   manager.register("sf-chat", OW.WidgetSfChat);

@@ -275,6 +275,7 @@
       "retrowave-chat": OW.WidgetRetrowaveChat,
       "retrowave-holo-alert": OW.WidgetRetrowaveHoloAlert,
       "retrowave-symbol": OW.WidgetRetrowaveSymbol,
+      "orbital-symbol": OW.WidgetOrbitalSymbol,
       "sf-tachometer": OW.WidgetSfTachometer,
       "sf-goal": OW.WidgetSfGoal,
       "sf-chat": OW.WidgetSfChat,

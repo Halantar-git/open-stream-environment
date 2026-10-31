@@ -1328,7 +1328,8 @@ export function initCanvasEditor({
           </div>
         </div>`;
       }
-      case "retrowave-symbol": {
+      case "retrowave-symbol":
+      case "orbital-symbol": {
         const primary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#ff2d95";
         const secondary = (state.appearance.tokens && state.appearance.tokens["--md-secondary"]) || "#2de2e6";
         return `<div class="retrowave-symbol-preview" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">

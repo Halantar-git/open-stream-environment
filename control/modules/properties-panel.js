@@ -375,7 +375,7 @@ export function initPropertiesPanel({
         <div class="md-field"><label>${t("properties.maxMessages")}</label><input type="number" id="pMaxMessages" min="1" max="100" value="${config.maxMessages || 50}"></div>
         ${inst.type === "teso-chat" ? "" : `<div class="properties__toggle-row"><label>${t("properties.chatShowTime")}</label>${switchHtml("pChatShowTime", config.showTime !== false)}</div>`}
         <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>`;
-    } else if (inst.type === "grimhex" || inst.type === "musain" || inst.type === "nuclear" || inst.type === "cobra" || inst.type === "elite-sign" || inst.type === "teso-seal" || inst.type === "md3-orb" || inst.type === "pixel-cube" || inst.type === "wardogs-cube" || inst.type === "retrowave-symbol" || inst.type === "sf-tachometer" || inst.type === "sf-cube" || inst.type === "win98-cube") {
+    } else if (inst.type === "grimhex" || inst.type === "musain" || inst.type === "nuclear" || inst.type === "cobra" || inst.type === "elite-sign" || inst.type === "teso-seal" || inst.type === "md3-orb" || inst.type === "pixel-cube" || inst.type === "wardogs-cube" || inst.type === "retrowave-symbol" || inst.type === "orbital-symbol" || inst.type === "sf-tachometer" || inst.type === "sf-cube" || inst.type === "win98-cube") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>
         ${MOTION_TOGGLE_TYPES.includes(inst.type) ? `<div class="properties__toggle-row"><label>${t("properties.motion")}</label>${switchHtml("pMotion", config.motion !== false)}</div>` : ""}`;
@@ -967,7 +967,7 @@ export function initPropertiesPanel({
         if (label) label.textContent = String(v);
         send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { perspective: v } } });
       });
-    } else if (inst.type === "grimhex" || inst.type === "musain" || inst.type === "nuclear" || inst.type === "cobra" || inst.type === "elite-sign" || inst.type === "teso-seal" || inst.type === "md3-orb" || inst.type === "pixel-cube" || inst.type === "wardogs-cube" || inst.type === "retrowave-symbol" || inst.type === "sf-tachometer" || inst.type === "sf-cube" || inst.type === "win98-cube") {
+    } else if (inst.type === "grimhex" || inst.type === "musain" || inst.type === "nuclear" || inst.type === "cobra" || inst.type === "elite-sign" || inst.type === "teso-seal" || inst.type === "md3-orb" || inst.type === "pixel-cube" || inst.type === "wardogs-cube" || inst.type === "retrowave-symbol" || inst.type === "orbital-symbol" || inst.type === "sf-tachometer" || inst.type === "sf-cube" || inst.type === "win98-cube") {
       propertiesEl.querySelector("#pPerspective").addEventListener("input", (e) => {
         const v = Number(e.target.value);
         const label = propertiesEl.querySelector("#pPerspectiveValue");

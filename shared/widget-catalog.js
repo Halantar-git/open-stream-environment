@@ -375,6 +375,20 @@
       minH: 6,
       defaultConfig: { perspective: 0 },
     },
+    // Сфера пришла из Retrowave: Orbital включает тот же набор Star Citizen,
+    // а палитры у тем совпадают — знак читается одинаково в обеих.
+    "orbital-symbol": {
+      type: "orbital-symbol",
+      label: "Сфера Orbital",
+      description: "Вращающаяся неоновая сфера-сетка с иконкой события в центре, появляется на алерте (Orbital и Star Citizen)",
+      icon: "widgetRetrowaveSymbol",
+      dimension: "3d",
+      theme: "grimhex",
+      defaultGeometry: { x: 40, y: 8, w: 20, h: 16 },
+      minW: 10,
+      minH: 6,
+      defaultConfig: { perspective: 0 },
+    },
     "grimhex-chat": {
       type: "grimhex-chat",
       label: "Чат Grim HEX",
@@ -1332,6 +1346,7 @@
     "pixel-goal",
     "retrowave-goal",
     "retrowave-symbol",
+    "orbital-symbol",
     "ticker",
     "grimhex-ticker",
     "nuclear-ticker",
