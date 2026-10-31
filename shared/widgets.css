@@ -3234,6 +3234,19 @@
   animation: uec-timer var(--uec-timer-ms, 7600ms) linear forwards;
 }
 
+/* Material You: панель со скруглением 24px, и полоска времени от края до края
+   выезжает за скругление. Подрезаем её по контенту и скругляем концы. */
+[data-theme="nebula"] .uec-transfer__timer {
+  left: 22px;
+  right: 22px;
+  bottom: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+[data-theme="nebula"] .uec-transfer__timer-fill {
+  border-radius: inherit;
+}
+
 @keyframes uec-scan {
   to { background-position: 140% 0; }
 }
