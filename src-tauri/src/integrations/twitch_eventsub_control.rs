@@ -29,6 +29,68 @@ pub const EVENTS_WS_URL: &str = "wss://eventsub.wss.twitch.tv/ws?keepalive_timeo
 /// Пауза перед переподключением после обрыва.
 pub const RECONNECT_DELAY_MS: u64 = 3000;
 
+/// Окно, в котором одинаковые подарочные уведомления считаются повтором
+/// одного и того же подарка.
+pub const GIFT_DEDUPE_MS: u128 = 2000;
+
+/// Склейка массового подарка. Twitch может прислать один подарок несколькими
+/// уведомлениями (по одному на получателя), и без склейки зритель видит
+/// десятки одинаковых карточек подряд. Сравниваем пару «ник + число подписок»:
+/// у одного подарка `total` во всех уведомлениях одинаков.
+#[derive(Default)]
+struct GiftDedupe {
+    last: Option<(String, u64, std::time::Instant)>,
+}
+
+impl GiftDedupe {
+    /// `true` — повтор: всю пачку (алерт и счётчик) пропускаем.
+    fn is_repeat(&mut self, events: &[Value]) -> bool {
+        let Some(alert) = events.iter().find_map(gift_alert) else {
+            return false;
+        };
+        let user = alert
+            .get("user")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .trim()
+            .to_lowercase();
+        let count = alert.get("count").and_then(Value::as_f64).unwrap_or(0.0);
+        // Единичный подарок приходит без `total`: это отдельные покупки, их
+        // склеивать нельзя — иначе потерялись бы настоящие подарки.
+        if user.is_empty() || count < 2.0 {
+            self.last = None;
+            return false;
+        }
+        let now = std::time::Instant::now();
+        let count = count as u64;
+        if let Some((last_user, last_count, at)) = &self.last {
+            if *last_user == user
+                && *last_count == count
+                && now.duration_since(*at).as_millis() <= GIFT_DEDUPE_MS
+            {
+                // Пачка может идти дольше одного уведомления — окно продлеваем.
+                self.last = Some((user, count, now));
+                return true;
+            }
+        }
+        self.last = Some((user, count, now));
+        false
+    }
+}
+
+/// Нагрузка алерта о подарочной подписке в наборе событий уведомления.
+fn gift_alert(event: &Value) -> Option<&Value> {
+    if event.get("type").and_then(Value::as_str) != Some("alert") {
+        return None;
+    }
+    let payload = event.get("payload")?;
+    if payload.get("kind").and_then(Value::as_str) == Some("gift_sub") {
+        Some(payload)
+    } else {
+        None
+    }
+}
+
 /// Подписаться на события для сессии. В приложении — HTTP к Helix.
 pub type SubscribeFn =
     Arc<dyn Fn(String) -> Pin<Box<dyn Future<Output = Result<(), String>> + Send>> + Send + Sync>;
@@ -95,6 +157,9 @@ impl TwitchEventsControl {
             let mut url = EVENTS_WS_URL.to_string();
             // После session_reconnect подписка не запрашивается: Twitch её хранит.
             let mut reconnecting = false;
+            // Склейка подарочных подписок живёт дольше одного соединения: пачка
+            // уведомлений может продолжиться после переподключения.
+            let mut gifts = GiftDedupe::default();
             loop {
                 task_emit(connection_status("connecting"));
                 let Ok(mut transport) = connect(url.clone()).await else {
@@ -140,8 +205,14 @@ impl TwitchEventsControl {
                                 }
                                 EventSubMessage::Keepalive => {}
                                 EventSubMessage::Notification(payload) => {
-                                    for event in notification_events(&(config)(), &payload) {
-                                        task_emit(event);
+                                    let events = notification_events(&(config)(), &payload);
+                                    // Массовый подарок приходит несколькими уведомлениями:
+                                    // второе и следующие про тот же подарок пропускаем целиком —
+                                    // и карточку, и прирост подписчиков.
+                                    if !gifts.is_repeat(&events) {
+                                        for event in events {
+                                            task_emit(event);
+                                        }
                                     }
                                 }
                                 EventSubMessage::Other => {}
@@ -401,5 +472,84 @@ mod tests {
         task.await;
 
         assert_eq!(statuses(&events), ["connecting", "error"]);
+    }
+
+    fn gift_events(user: &str, count: Value) -> Vec<Value> {
+        vec![
+            json!({
+                "type": "alert",
+                "payload": { "kind": "gift_sub", "user": user, "count": count },
+            }),
+            json!({ "type": "stat_delta", "payload": { "subscriberDelta": count } }),
+        ]
+    }
+
+    #[test]
+    fn identical_gift_notifications_collapse_into_one() {
+        let mut gifts = GiftDedupe::default();
+
+        // Первый подарок проходит и запоминается.
+        assert!(!gifts.is_repeat(&gift_events("nova", json!(40))));
+        // Такая же пачка — это повтор, её пропускаем.
+        assert!(gifts.is_repeat(&gift_events("nova", json!(40))));
+        assert!(gifts.is_repeat(&gift_events("NOVA ", json!(40))));
+        // Другой размер или другой даритель — новые подарки.
+        assert!(!gifts.is_repeat(&gift_events("nova", json!(20))));
+        assert!(!gifts.is_repeat(&gift_events("star_gazer", json!(20))));
+        // Оборванная серия: следующее такое же уведомление снова показываем.
+        assert!(!gifts.is_repeat(&gift_events("nova", json!(5))));
+        assert!(gifts.is_repeat(&gift_events("nova", json!(5))));
+    }
+
+    #[test]
+    fn single_gifts_are_never_collapsed() {
+        // Единичный подарок приходит без `total` — это разные покупки.
+        let mut gifts = GiftDedupe::default();
+        assert!(!gifts.is_repeat(&gift_events("nova", Value::Null)));
+        assert!(!gifts.is_repeat(&gift_events("nova", Value::Null)));
+        assert!(!gifts.is_repeat(&gift_events("nova", json!(1))));
+        assert!(!gifts.is_repeat(&gift_events("nova", json!(1))));
+    }
+
+    #[tokio::test]
+    async fn a_mass_gift_notification_burst_emits_one_alert() {
+        let (spawn, cell) = playing_spawn();
+        let subscribe: SubscribeFn = Arc::new(|_session| Box::pin(async { Ok(()) }));
+        let gift = r#"{ "metadata": { "message_type": "notification" }, "payload": { "subscription": { "type": "channel.subscription.gift" }, "event": { "user_name": "nova", "total": 40, "tier": "1000" } } }"#;
+        let connect: ConnectFn = Arc::new(move |_url| {
+            Box::pin(async move {
+                Ok(Box::new(frames(&[
+                    r#"{ "metadata": { "message_type": "session_welcome" }, "payload": { "session": { "id": "s1" } } }"#,
+                    gift,
+                    gift,
+                    gift,
+                ])) as Box<dyn ChatTransport>)
+            })
+        });
+        let control = TwitchEventsControl::new(connect, subscribe, spawn);
+        let (emit, events) = collector();
+        let config: ConfigFn = Arc::new(|| json!({}));
+
+        control.restart(true, config, emit);
+        let task = cell.lock().unwrap().take().expect("задача");
+        task.await;
+
+        let events = events.lock().unwrap();
+        let alerts: Vec<&Value> = events
+            .iter()
+            .filter(|event| {
+                event["type"] == json!("alert") && event["payload"]["kind"] == json!("gift_sub")
+            })
+            .collect();
+        assert_eq!(alerts.len(), 1);
+        assert_eq!(alerts[0]["payload"]["count"], json!(40));
+
+        // Прирост подписчиков тоже приходит один раз и на всё число.
+        let deltas: Vec<&Value> = events
+            .iter()
+            .filter(|event| event["type"] == json!("stat_delta"))
+            .collect();
+        assert_eq!(deltas.len(), 1);
+        assert_eq!(deltas[0]["payload"]["subscriberDelta"], json!(40));
     }
 }
