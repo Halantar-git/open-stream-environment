@@ -1,5 +1,5 @@
 {
-  "sourceHash": "372e2cfb508629bd",
+  "sourceHash": "bd9d3755d03e1166",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -2018,13 +2018,13 @@
         "perspective": 25
       }
     },
-    "win98-cube": {
-      "type": "win98-cube",
-      "label": "Куб Windows 98",
-      "description": "Объёмный куб с иконкой события на гранях, появляется на алерте (только для темы Windows 98)",
-      "icon": "widgetWin98Cube",
+    "terminal-cube": {
+      "type": "terminal-cube",
+      "label": "Куб Terminal",
+      "description": "Объёмный куб из терминальных граней и цифрового дождя, появляется на алерте (только для темы Terminal)",
+      "icon": "widgetTerminalCube",
       "dimension": "3d",
-      "theme": "win98",
+      "theme": "terminal",
       "defaultGeometry": {
         "x": 3,
         "y": 58,
@@ -2037,17 +2037,17 @@
         "perspective": 0
       }
     },
-    "win98-goal": {
-      "type": "win98-goal",
-      "label": "Цель Windows 98",
-      "description": "Донат-цель в окне с сегментной шкалой (только для темы Windows 98)",
-      "icon": "widgetWin98Goal",
+    "terminal-goal": {
+      "type": "terminal-goal",
+      "label": "Цель Terminal",
+      "description": "Донат-цель как ASCII-шкала в окне терминала (только для темы Terminal)",
+      "icon": "widgetTerminalGoal",
       "services": [
         "donationAlerts",
         "youtube"
       ],
       "dimension": "3d",
-      "theme": "win98",
+      "theme": "terminal",
       "renderType": "2d",
       "defaultGeometry": {
         "x": 3,
@@ -2064,17 +2064,17 @@
         "perspectiveDirection": "left"
       }
     },
-    "win98-chat": {
-      "type": "win98-chat",
-      "label": "Чат Windows 98",
-      "description": "Чат стрима в сером окне с вдавленными полями (только для темы Windows 98)",
-      "icon": "widgetWin98Chat",
+    "terminal-chat": {
+      "type": "terminal-chat",
+      "label": "Чат Terminal",
+      "description": "Чат стрима как вывод консоли: ник, двоеточие, текст (только для темы Terminal)",
+      "icon": "widgetTerminalChat",
       "services": [
         "twitchChat",
         "youtube"
       ],
       "dimension": "3d",
-      "theme": "win98",
+      "theme": "terminal",
       "renderType": "2d",
       "defaultGeometry": {
         "x": 68,
@@ -2089,18 +2089,18 @@
         "perspective": 0
       }
     },
-    "win98-holo-alert": {
-      "type": "win98-holo-alert",
-      "label": "Алерт Windows 98",
-      "description": "Всплывающее окно события с синим заголовком (только для темы Windows 98)",
-      "icon": "widgetWin98HoloAlert",
+    "terminal-holo-alert": {
+      "type": "terminal-holo-alert",
+      "label": "Алерт Terminal",
+      "description": "Событие как вывод команды с печатью посимвольно (только для темы Terminal)",
+      "icon": "widgetTerminalHoloAlert",
       "services": [
         "twitchEvents",
         "donationAlerts",
         "youtube"
       ],
       "dimension": "3d",
-      "theme": "win98",
+      "theme": "terminal",
       "renderType": "2d",
       "defaultGeometry": {
         "x": 38,
@@ -2112,10 +2112,10 @@
       "minH": 10,
       "defaultConfig": {}
     },
-    "win98-recent": {
-      "type": "win98-recent",
-      "label": "События Windows 98",
-      "description": "3D-очередь событий с выездом слева (только для темы Windows 98)",
+    "terminal-recent": {
+      "type": "terminal-recent",
+      "label": "События Terminal",
+      "description": "3D-очередь событий как строки лога (только для темы Terminal)",
       "icon": "widgetRecent",
       "services": [
         "twitchEvents",
@@ -2123,7 +2123,7 @@
         "youtube"
       ],
       "dimension": "3d",
-      "theme": "win98",
+      "theme": "terminal",
       "renderType": "2d",
       "defaultGeometry": {
         "x": 3,
@@ -2138,10 +2138,10 @@
         "animationMs": 840
       }
     },
-    "win98-ticker": {
-      "type": "win98-ticker",
-      "label": "Лента Windows 98",
-      "description": "Бегущая строка событий в окне (только для темы Windows 98)",
+    "terminal-ticker": {
+      "type": "terminal-ticker",
+      "label": "Лента Terminal",
+      "description": "Бегущая строка событий в терминале (только для темы Terminal)",
       "icon": "widgetTicker",
       "services": [
         "twitchEvents",
@@ -2150,7 +2150,7 @@
         "youtube"
       ],
       "dimension": "3d",
-      "theme": "win98",
+      "theme": "terminal",
       "renderType": "2d",
       "defaultGeometry": {
         "x": 3,
@@ -2276,7 +2276,7 @@
     "sf-tachometer",
     "sf-ticker",
     "sf-cube",
-    "win98-cube",
-    "win98-ticker"
+    "terminal-cube",
+    "terminal-ticker"
   ]
 }

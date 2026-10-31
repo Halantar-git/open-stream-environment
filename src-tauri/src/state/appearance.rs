@@ -707,6 +707,9 @@ fn active_theme_id(config: &ConfigFile) -> String {
 fn alias_theme_id(id: &str) -> &str {
     match id {
         "synthwave" => "retrowave",
+        // Windows 98 убрали в 4.5.8 — вместо неё Terminal. Кнопки с темой
+        // продолжают работать и получают ближайшую по смыслу тему.
+        "win98" => "terminal",
         other => other,
     }
 }
@@ -1048,6 +1051,23 @@ mod tests {
         // Явный выбор старого id через CLI/пульт тоже ведёт на новую тему.
         assert!(set_active_theme(&mut config, &json!("synthwave"), None));
         assert_eq!(appearance(&config)["activeThemeId"], json!("retrowave"));
+    }
+
+    #[test]
+    fn the_former_win98_theme_migrates_to_terminal() {
+        let fixture = Fixture::new("theme-terminal");
+        let mut config = fixture.config();
+        config.set(
+            "appearance",
+            json!({ "activeThemeId": "win98", "customThemes": [] }),
+        );
+
+        migrate_appearance(&mut config);
+        assert_eq!(appearance(&config)["activeThemeId"], json!("terminal"));
+
+        // Явный выбор старого id через CLI/пульт тоже ведёт на новую тему.
+        assert!(set_active_theme(&mut config, &json!("win98"), None));
+        assert_eq!(appearance(&config)["activeThemeId"], json!("terminal"));
     }
 
     #[test]

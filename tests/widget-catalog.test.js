@@ -34,8 +34,8 @@ describe("widget-catalog helpers", () => {
     expect(isAnimatedWidget("sf-cube")).toBe(true);
     expect(isAnimatedWidget("sf-ticker")).toBe(true);
     expect(isAnimatedWidget("orbital-symbol")).toBe(true);
-    expect(isAnimatedWidget("win98-cube")).toBe(true);
-    expect(isAnimatedWidget("win98-ticker")).toBe(true);
+    expect(isAnimatedWidget("terminal-cube")).toBe(true);
+    expect(isAnimatedWidget("terminal-ticker")).toBe(true);
 
     // Лёгкие: DOM-only, без цикла.
     expect(isAnimatedWidget("chat")).toBe(false);
@@ -43,8 +43,8 @@ describe("widget-catalog helpers", () => {
     expect(isAnimatedWidget("grimhex-chat")).toBe(false);
     expect(isAnimatedWidget("teso-goal")).toBe(false);
     expect(isAnimatedWidget("md3-holo-alert")).toBe(false);
-    expect(isAnimatedWidget("win98-goal")).toBe(false);
-    expect(isAnimatedWidget("win98-chat")).toBe(false);
+    expect(isAnimatedWidget("terminal-goal")).toBe(false);
+    expect(isAnimatedWidget("terminal-chat")).toBe(false);
     expect(isAnimatedWidget(undefined)).toBe(false);
   });
 
@@ -83,18 +83,18 @@ describe("widget-catalog helpers", () => {
     expect(sf).toEqual(expect.arrayContaining(["sf-tachometer", "sf-goal", "sf-chat", "sf-holo-alert", "sf-cube", "sf-recent", "sf-ticker"]));
     expect(sf).toHaveLength(7);
 
-    const win98 = widgetsForTheme("win98").map((d) => d.type);
-    expect(win98).toEqual(
+    const terminal = widgetsForTheme("terminal").map((d) => d.type);
+    expect(terminal).toEqual(
       expect.arrayContaining([
-        "win98-cube",
-        "win98-goal",
-        "win98-chat",
-        "win98-holo-alert",
-        "win98-recent",
-        "win98-ticker",
+        "terminal-cube",
+        "terminal-goal",
+        "terminal-chat",
+        "terminal-holo-alert",
+        "terminal-recent",
+        "terminal-ticker",
       ])
     );
-    expect(win98).toHaveLength(6);
+    expect(terminal).toHaveLength(6);
 
     expect(widgetsForTheme("")).toEqual([]);
   });
@@ -153,10 +153,10 @@ describe("widget-catalog helpers", () => {
     expect(widgetRole("sf-chat")).toBe("chat");
     expect(widgetRole("sf-goal")).toBe("goal");
     expect(widgetRole("sf-holo-alert")).toBe("alerts");
-    expect(widgetRole("win98-cube")).toBeNull();
-    expect(widgetRole("win98-chat")).toBe("chat");
-    expect(widgetRole("win98-goal")).toBe("goal");
-    expect(widgetRole("win98-holo-alert")).toBe("alerts");
+    expect(widgetRole("terminal-cube")).toBeNull();
+    expect(widgetRole("terminal-chat")).toBe("chat");
+    expect(widgetRole("terminal-goal")).toBe("goal");
+    expect(widgetRole("terminal-holo-alert")).toBe("alerts");
 
     // Декоративные 3D-виджеты (основные вывески) имеют роль для кросс-темной
     // замены. Вторичные вывески (musain/elite-sign) остаются без роли — они

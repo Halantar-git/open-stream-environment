@@ -1266,109 +1266,112 @@
   color: var(--sf-glow, var(--md-primary));
 }
 
-/* ---------- Windows 98: окна с объёмными кромками ----------
-   Язык 98-й — серый корпус #c0c0c0 с двухслойным бевелом (белый верх/лево,
-   чёрный низ/право), тёмно-синий градиентный заголовок и вдавленные белые
-   поля. Класс `.win98-surface` — общий корпус окна для цели, чата и алерта;
-   бевел и градиент берутся из токенов темы, поэтому палитра правится в одном
-   месте, а виджеты читают только `--panel-*` и `--win98-*`. */
-.win98-surface {
+/* ---------- Terminal: консольные панели ----------
+   Язык темы — терминал: тёмная панель #161b22, тонкая рамка #30363d, зелёный
+   фосфорный акцент и моноширинный шрифт. Класс `.terminal-surface` — общий
+   корпус окна для цели, чата и алерта; заголовок — вкладка терминала с
+   приглашением `root@ose-overlay:~#`. */
+.terminal-surface {
   position: relative;
   overflow: hidden;
-  font-family: var(--font-body);
-  image-rendering: pixelated;
+  color: var(--md-on-surface);
+  font-family: var(--font-mono);
 }
-
-/* Окно лежит внутри поднятой рамки — так внутренние линии бевела не спорят
-   с рамкой панели. */
-.win98-window {
+/* Сканлайны CRT: тонкая сетка поверх панели, как у старого монитора. */
+.terminal-surface::after {
+  content: "";
   position: absolute;
-  inset: 3px;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.18) 0 1px, transparent 1px 3px);
+  opacity: 0.5;
+}
+.terminal-window {
+  position: relative;
   display: flex;
   flex-direction: column;
-  box-sizing: border-box;
-  color: var(--md-on-surface, #000000);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
 }
-
-.win98-window__titlebar {
-  flex: 0 0 auto;
+.terminal-tab {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 2px 3px 2px 4px;
-  background: linear-gradient(
-    90deg,
-    var(--win98-titlebar, #000080),
-    var(--win98-titlebar-end, #1080d0)
-  );
-  color: var(--win98-light, #ffffff);
-  font-family: var(--font-display);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.4px;
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border-bottom: 1px solid var(--term-accent, #58a6ff);
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.12), rgba(88, 166, 255, 0.04));
+  color: var(--term-accent, #58a6ff);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
-  user-select: none;
-}
-
-.win98-window__title {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
   text-overflow: ellipsis;
-  text-transform: uppercase;
 }
-
-.win98-window__buttons {
-  display: inline-flex;
-  gap: 2px;
+.terminal-tab__prompt {
+  color: var(--term-prompt, #00ff66);
+  font-weight: 700;
   flex-shrink: 0;
 }
-
-/* Кнопки заголовка — плоские серые квадраты. Символы «_ □ ×» на малом
-   размере виджета сливаются в шум, поэтому кромка говорит сама за себя. */
-.win98-window__btn {
-  display: inline-block;
-  width: 12px;
-  height: 11px;
-  box-sizing: border-box;
-  background: var(--win98-window, #c0c0c0);
-  box-shadow:
-    inset 1px 1px 0 var(--win98-light, #ffffff),
-    inset -1px -1px 0 var(--win98-shadow-dark, #000000);
+.terminal-tab__title {
+  color: var(--md-on-surface-variant, #8b949e);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-
-.win98-window__client {
+.terminal-tab__dots {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.terminal-tab__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--term-error, #ff3333);
+  opacity: 0.85;
+}
+.terminal-tab__dot:nth-child(2) {
+  background: #ffb000;
+}
+.terminal-tab__dot:nth-child(3) {
+  background: var(--term-prompt, #00ff66);
+}
+.terminal-body {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 6px;
-  box-sizing: border-box;
+  padding: 6px 9px;
+  gap: 2px;
+  overflow: hidden;
 }
-
-/* Вдавленное поле: тень сверху/слева, светлый кант снизу/справа — как у
-   полей ввода и списков 98-й. */
-.win98-sunken {
-  background: var(--win98-light, #ffffff);
-  box-shadow:
-    inset 1px 1px 0 var(--win98-shadow, #808080),
-    inset -1px -1px 0 var(--win98-light, #ffffff),
-    inset 2px 2px 0 var(--win98-shadow-dark, #000000),
-    inset -2px -2px 0 var(--win98-window, #c0c0c0);
-}
-
-.win98-statusbar {
+.terminal-status {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 2px;
+  padding: 3px 9px;
+  border-top: 1px solid var(--md-outline-variant, #21262d);
+  background: rgba(0, 255, 102, 0.04);
+  color: var(--md-on-surface-variant, #8b949e);
   font-family: var(--font-mono);
-  font-size: 13px;
-  line-height: 1.1;
-  color: var(--md-on-surface-variant, #404040);
+  font-size: 11px;
+  line-height: 1.3;
+}
+.terminal-caret::after {
+  content: "▌";
+  color: var(--term-prompt, #00ff66);
+  animation: terminal-caret 1s steps(2, start) infinite;
+}
+@keyframes terminal-caret {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .terminal-caret::after { animation: none; }
 }
 
 /* UEC transfer follows the same HUD decoration as the other panels: scanlines
@@ -2950,70 +2953,44 @@
 [data-decoration="nuclear"] .orbital__track {
   text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
 }
-[data-decoration="win98"] .orbital {
+/* Музыка донатов в терминале — строка вывода плеера, а не «орбитал». */
+[data-decoration="terminal"] .orbital {
   padding: 0 6px;
   gap: 6px;
   border-radius: 0;
-  border: 1px solid #000000;
-  background: linear-gradient(180deg, #4b4b4b, #2c2c2c);
-  box-shadow:
-    inset 1px 1px 0 #7a7a7a,
-    inset -1px -1px 0 #101010;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
-
-/* Классический плеер конца 90-х: тёмный корпус, вдавленный чёрный LCD
-   с зелёным моноширинным треком, анализатор слева и светодиод справа.
-   Чужой логотип и название плеера не берём — только узнаваемый язык
-   скинов, проект живёт на свободных ресурсах. */
-[data-decoration="win98"] .orbital__badge {
-  width: 16px;
-  height: 60%;
-  color: #3cff3c;
+[data-decoration="terminal"] .orbital__badge {
+  color: var(--term-prompt, #00ff66);
 }
-[data-decoration="win98"] .orbital__badge i {
-  box-shadow: 0 0 4px rgba(60, 255, 60, 0.55);
+[data-decoration="terminal"] .orbital__badge i {
+  background: var(--term-prompt, #00ff66);
+  box-shadow: none;
+  animation: none;
 }
-[data-decoration="win98"] .orbital__track {
-  display: flex;
-  align-items: center;
-  height: 68%;
-  padding: 0 6px;
-  border: 1px solid #000000;
-  background: #050805;
-  color: #3cff3c;
-  font-family: var(--font-mono, "VT323", "Consolas", monospace);
-  font-size: 14px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  text-shadow: 0 0 6px rgba(60, 255, 60, 0.6);
-  box-shadow:
-    inset 1px 1px 0 #000000,
-    inset -1px -1px 0 #4a5a4a;
+[data-decoration="terminal"] .orbital__track {
+  font-family: var(--font-mono);
+  color: var(--term-accent, #58a6ff);
+  text-shadow: none;
 }
-[data-decoration="win98"] .orbital__track-text {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+[data-decoration="terminal"] .orbital__track::before {
+  content: "▶ ";
+  color: var(--term-prompt, #00ff66);
 }
-[data-decoration="win98"] .orbital::after {
+[data-decoration="terminal"] .orbital::after {
   content: "";
   flex: 0 0 auto;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #3cff3c;
-  box-shadow: 0 0 6px #3cff3c;
-  animation: orbital-led 1.8s steps(2, end) infinite;
-}
-@keyframes orbital-led {
-  0%, 49% { opacity: 1; }
-  50%, 100% { opacity: 0.35; }
+  width: 7px;
+  height: 12px;
+  background: var(--term-prompt, #00ff66);
+  animation: terminal-caret 1s steps(2, start) infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  [data-decoration="win98"] .orbital::after { animation: none; }
+  [data-decoration="terminal"] .orbital::after { animation: none; }
 }
+
 [data-theme="sf"] .orbital__badge {
   color: var(--sf-glow, var(--md-primary));
 }
@@ -3936,80 +3913,59 @@
   }
 }
 
-/* ---------- Windows 98: серые окна с объёмным бевелом ----------
-   Бевел панелей собирается из токена --panel-glow, поэтому общий вид
-   получают все виджеты сразу. Здесь — то, что токенами не выразить:
-   синий заголовок алерта, вдавленные белые поля чата и сегментная шкала
-   цели в духе системного прогресс-бара. */
-[data-decoration="win98"] .widget-alert__dot {
-  display: none;
+/* ---------- Terminal: вывод команды, прогресс и строки лога ----------
+   Токенами не выразить зелёную каретку у алертов, сегментную шкалу цели и
+   консольные строки чата. */
+[data-decoration="terminal"] .widget-alert__dot {
+  background: var(--term-prompt, #00ff66);
+  box-shadow: 0 0 10px var(--term-glow, rgba(0, 255, 102, 0.25));
 }
-
-[data-decoration="win98"] .widget-alert__kicker {
-  border-radius: 0;
-  padding: 3px 12px;
-  background: linear-gradient(90deg, var(--win98-titlebar, #000080), var(--win98-titlebar-end, #1080d0));
-  color: var(--win98-light, #ffffff);
-  font-family: var(--font-display);
-  letter-spacing: 0.9px;
-  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.35);
+[data-decoration="terminal"] .widget-alert__kicker {
+  background: transparent;
+  color: var(--term-accent, #58a6ff);
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  text-shadow: none;
 }
-
-/* Иконка события — квадратная «кнопка» с объёмной кромкой. */
-[data-decoration="win98"] .widget-alert__icon {
-  border-radius: 0;
-  box-shadow:
-    inset 1px 1px 0 rgba(255, 255, 255, 0.35),
-    inset -1px -1px 0 rgba(0, 0, 0, 0.35);
+[data-decoration="terminal"] .widget-alert__icon {
+  color: var(--term-prompt, #00ff66);
 }
-
-/* Цель: классический сегментный прогресс-бар на вдавленной дорожке. */
-[data-decoration="win98"] .md-linear-progress {
-  height: 12px;
-  border-radius: 0;
-  padding: 1px;
-  background: var(--win98-window, #c0c0c0);
-  box-shadow: inset 1px 1px 0 var(--win98-shadow, #808080), inset -1px -1px 0 var(--win98-light, #ffffff);
+[data-decoration="terminal"] .md-linear-progress {
+  border-radius: 2px;
+  background: var(--term-panel, #161b22);
+  box-shadow: inset 0 0 0 1px var(--md-outline, #30363d);
 }
-[data-decoration="win98"] .md-linear-progress__bar {
-  border-radius: 0;
-  background: repeating-linear-gradient(90deg, var(--win98-titlebar, #000080) 0 9px, transparent 9px 11px);
-  box-shadow: none;
+[data-decoration="terminal"] .md-linear-progress__bar {
+  border-radius: 2px;
+  background: repeating-linear-gradient(90deg, var(--term-prompt, #00ff66) 0 6px, transparent 6px 8px);
+  box-shadow: 0 0 10px var(--term-glow, rgba(0, 255, 102, 0.25));
 }
-
-/* Сообщения чата и события — белые вдавленные поля, как списки в окнах. */
-[data-decoration="win98"] .widget-chat__msg,
-[data-decoration="win98"] .widget-recent3d__item,
-[data-decoration="win98"] .widget-recent__item {
-  background: var(--win98-light, #ffffff);
-  border-radius: 0;
-  box-shadow:
-    inset 1px 1px 0 var(--win98-shadow, #808080),
-    inset -1px -1px 0 var(--win98-light, #ffffff);
-}
-
-/* Рамка камеры и бейдж — окно с синим заголовком и серыми уголками. */
-[data-theme="win98"] .widget-webcam__frame {
-  opacity: 1;
-  box-shadow:
-    inset 1px 1px 0 #ffffff,
-    inset -1px -1px 0 #808080,
-    0 0 0 1px #000000;
-}
-[data-theme="win98"] .widget-webcam__corner {
-  width: 10px;
-  height: 10px;
+[data-decoration="terminal"] .widget-chat__msg,
+[data-decoration="terminal"] .widget-recent3d__item,
+[data-decoration="terminal"] .widget-recent__item {
+  background: transparent;
   border: 0;
-  background: var(--win98-window, #c0c0c0);
-  box-shadow: inset 1px 1px 0 #ffffff, inset -1px -1px 0 #808080;
-  filter: none;
-}
-[data-theme="win98"] .widget-webcam__label {
-  border: 1px solid #000000;
+  border-left: 2px solid var(--term-accent, #58a6ff);
   border-radius: 0;
-  background: linear-gradient(90deg, var(--win98-titlebar, #000080), var(--win98-titlebar-end, #1080d0));
-  color: #ffffff;
-  font-family: var(--font-display);
-  letter-spacing: 0.12em;
+  box-shadow: none;
+  padding-left: 6px;
+  font-family: var(--font-mono);
+}
+[data-theme="terminal"] .widget-webcam__frame {
+  border: 1px solid var(--md-outline, #30363d);
+  border-radius: 4px;
+  box-shadow: 0 0 18px var(--term-glow, rgba(0, 255, 102, 0.25));
+}
+[data-theme="terminal"] .widget-webcam__corner {
+  border-color: var(--term-prompt, #00ff66);
+  filter: drop-shadow(0 0 4px var(--term-glow, rgba(0, 255, 102, 0.25)));
+}
+[data-theme="terminal"] .widget-webcam__label {
+  border: 1px solid var(--term-prompt, #00ff66);
+  border-radius: 2px;
+  background: rgba(0, 255, 102, 0.12);
+  color: var(--term-prompt, #00ff66);
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
   text-shadow: none;
 }

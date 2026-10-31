@@ -442,7 +442,7 @@ export function initCanvasEditor({
       case "pixel-recent":
       case "retrowave-recent":
       case "sf-recent":
-      case "win98-recent": {
+      case "terminal-recent": {
         const items = SAMPLE_RECENT.slice(0, Math.min(3, config.maxItems || 5))
           .map((e) => `<div class="widget-recent__item widget-recent3d__item"><span class="widget-recent__dot" data-kind="${escapeAttr(e.kind)}"></span><span class="widget-recent3d__text">${recentTextPreview(e)}</span></div>`)
           .join("");
@@ -1495,121 +1495,81 @@ export function initCanvasEditor({
           </svg>
         </div>`;
       }
-      case "win98-cube": {
+      case "terminal-cube": {
         const tokens = state.appearance.tokens || {};
-        const light = tokens["--md-surface-bright"] || "#dfdfdf";
-        const mid = tokens["--win98-window"] || "#c0c0c0";
-        const dark = tokens["--win98-shadow"] || "#808080";
-        const outline = tokens["--win98-shadow-dark"] || "#000000";
-        const ink = tokens["--md-primary"] || "#000080";
+        const panel = tokens["--term-panel"] || "#161b22";
+        const prompt = tokens["--term-prompt"] || "#00ff66";
+        const glow = tokens["--term-glow"] || "rgba(0, 255, 102, 0.25)";
         return `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
           <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" style="width:76%;height:76%;">
-            <path d="M50 20 L82 36 L50 52 L18 36 Z" fill="${escapeAttr(light)}" stroke="${escapeAttr(outline)}" stroke-width="1.4"/>
-            <path d="M18 36 L50 52 L50 84 L18 68 Z" fill="${escapeAttr(mid)}" stroke="${escapeAttr(outline)}" stroke-width="1.4"/>
-            <path d="M50 52 L82 36 L82 68 L50 84 Z" fill="${escapeAttr(dark)}" stroke="${escapeAttr(outline)}" stroke-width="1.4"/>
-            <path d="M50 30 L57 34 L50 38 L43 34 Z" fill="${escapeAttr(ink)}"/>
+            <circle cx="50" cy="52" r="30" fill="none" stroke="${escapeAttr(glow)}" stroke-width="6" opacity="0.5"/>
+            <path d="M50 20 L82 36 L50 52 L18 36 Z" fill="${escapeAttr(panel)}" stroke="${escapeAttr(prompt)}" stroke-width="1.2"/>
+            <path d="M18 36 L50 52 L50 84 L18 68 Z" fill="${escapeAttr(panel)}" fill-opacity="0.8" stroke="${escapeAttr(prompt)}" stroke-width="1.2"/>
+            <path d="M50 52 L82 36 L82 68 L50 84 Z" fill="${escapeAttr(panel)}" fill-opacity="0.6" stroke="${escapeAttr(prompt)}" stroke-width="1.2"/>
+            <path d="M44 30 l6 4 -6 4" fill="none" stroke="${escapeAttr(prompt)}" stroke-width="1.6"/>
+            <path d="M53 38 h6" stroke="${escapeAttr(prompt)}" stroke-width="1.6"/>
           </svg>
         </div>`;
       }
-      case "win98-goal": {
+      case "terminal-goal": {
         const tokens = state.appearance.tokens || {};
         const pct = state.goal && state.goal.target ? Math.min(100, Math.round((state.goal.current / state.goal.target) * 100)) : 0;
-        const bg = tokens["--panel-bg"] || "#c0c0c0";
-        const border = tokens["--panel-border"] || "1px solid #808080";
-        const glow = tokens["--panel-glow"] || "inset 1px 1px 0 #ffffff, inset -1px -1px 0 #000000";
-        const win = tokens["--win98-window"] || "#c0c0c0";
-        const light = tokens["--win98-light"] || "#ffffff";
-        const shadow = tokens["--win98-shadow"] || "#808080";
-        const dark = tokens["--win98-shadow-dark"] || "#000000";
-        const titleA = tokens["--win98-titlebar"] || "#000080";
-        const titleB = tokens["--win98-titlebar-end"] || "#1080d0";
-        const muted = tokens["--md-on-surface-variant"] || "#404040";
-        return `<div style="position:relative;height:100%;box-sizing:border-box;padding:3px;background:${escapeAttr(bg)};border:${escapeAttr(border)};box-shadow:${escapeAttr(glow)};">
-          <div style="display:flex;flex-direction:column;height:100%;box-sizing:border-box;">
-            <div style="display:flex;align-items:center;gap:6px;padding:1px 3px;background:linear-gradient(90deg,${escapeAttr(titleA)},${escapeAttr(titleB)});color:${escapeAttr(light)};font-family:var(--font-display);font-size:10px;font-weight:700;">
-              <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase;">${escapeHtml(state.goal.title || t("preview.goalTitle"))}</span>
-              <span style="font-family:var(--font-mono);font-size:12px;flex-shrink:0;">[${pct}%]</span>
-              <span style="display:inline-flex;gap:2px;flex-shrink:0;"><i style="display:inline-block;width:10px;height:9px;background:${escapeAttr(win)};box-shadow:inset 1px 1px 0 ${escapeAttr(light)}, inset -1px -1px 0 ${escapeAttr(dark)};"></i><i style="display:inline-block;width:10px;height:9px;background:${escapeAttr(win)};box-shadow:inset 1px 1px 0 ${escapeAttr(light)}, inset -1px -1px 0 ${escapeAttr(dark)};"></i></span>
-            </div>
-            <div style="flex:1;min-height:0;display:flex;align-items:center;padding:0 4px;box-sizing:border-box;">
-              <div style="position:relative;width:100%;height:10px;background:${escapeAttr(light)};box-shadow:inset 1px 1px 0 ${escapeAttr(shadow)}, inset -1px -1px 0 ${escapeAttr(light)};">
-                <div style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:repeating-linear-gradient(90deg,${escapeAttr(titleA)} 0 9px,transparent 9px 11px);"></div>
-              </div>
-            </div>
-            <div style="padding:0 4px 1px;font-family:var(--font-mono);font-size:11px;color:${escapeAttr(muted)};text-align:right;white-space:nowrap;">${formatMoney(state.goal.current)} / ${formatMoney(state.goal.target)}</div>
+        const bg = tokens["--panel-bg"] || "rgba(13, 17, 23, 0.92)";
+        const border = tokens["--panel-border"] || "1px solid #30363d";
+        const glow = tokens["--panel-glow"] || "0 0 18px rgba(0, 255, 102, 0.25)";
+        const prompt = tokens["--term-prompt"] || "#00ff66";
+        const accent = tokens["--term-accent"] || "#58a6ff";
+        const muted = tokens["--md-on-surface-variant"] || "#8b949e";
+        const filled = Math.round((pct / 100) * 24);
+        const on = "█".repeat(filled);
+        const off = "░".repeat(24 - filled);
+        return `<div style="position:relative;height:100%;box-sizing:border-box;background:${escapeAttr(bg)};border:${escapeAttr(border)};border-radius:6px;box-shadow:${escapeAttr(glow)};display:flex;flex-direction:column;overflow:hidden;">
+          <div style="padding:2px 6px;border-bottom:1px solid ${escapeAttr(accent)};background:rgba(88, 166, 255, 0.1);color:${escapeAttr(accent)};font-family:var(--font-mono);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">root@ose-goal:~#</div>
+          <div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:4px 6px;">
+            <div style="font-family:var(--font-mono);font-size:12px;white-space:nowrap;overflow:hidden;color:${escapeAttr(muted)};">[<span style="color:${escapeAttr(prompt)};">${on}</span>${off}] <span style="color:${escapeAttr(prompt)};">[${pct}%]</span></div>
+            <div style="font-family:var(--font-mono);font-size:11px;color:${escapeAttr(muted)};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${formatMoney(state.goal.current)} / ${formatMoney(state.goal.target)}</div>
           </div>
         </div>`;
       }
-      case "win98-chat": {
+      case "terminal-chat": {
         const tokens = state.appearance.tokens || {};
-        const bg = tokens["--panel-bg"] || "#c0c0c0";
-        const border = tokens["--panel-border"] || "1px solid #808080";
-        const glow = tokens["--panel-glow"] || "inset 1px 1px 0 #ffffff, inset -1px -1px 0 #000000";
-        const win = tokens["--win98-window"] || "#c0c0c0";
-        const light = tokens["--win98-light"] || "#ffffff";
-        const shadow = tokens["--win98-shadow"] || "#808080";
-        const dark = tokens["--win98-shadow-dark"] || "#000000";
-        const titleA = tokens["--win98-titlebar"] || "#000080";
-        const titleB = tokens["--win98-titlebar-end"] || "#1080d0";
-        const text = tokens["--md-on-surface"] || "#000000";
-        const muted = tokens["--md-on-surface-variant"] || "#404040";
-        const primary = tokens["--md-primary"] || "#000080";
+        const bg = tokens["--panel-bg"] || "rgba(13, 17, 23, 0.92)";
+        const border = tokens["--panel-border"] || "1px solid #30363d";
+        const glow = tokens["--panel-glow"] || "0 0 18px rgba(0, 255, 102, 0.25)";
+        const prompt = tokens["--term-prompt"] || "#00ff66";
+        const accent = tokens["--term-accent"] || "#58a6ff";
+        const text = tokens["--md-on-surface"] || "#c9d1d9";
+        const muted = tokens["--md-on-surface-variant"] || "#8b949e";
         const rows = [
-          { user: "nova_viewer", badges: ["moderator"], message: t("preview.chat1") },
-          { user: "star_gazer", badges: ["subscriber"], message: t("preview.chat2") },
-          { user: "orbit_fan", badges: ["vip"], message: t("preview.chat3") },
+          { user: "nova_viewer", message: t("preview.chat1") },
+          { user: "star_gazer", message: t("preview.chat2") },
+          { user: "orbit_fan", message: t("preview.chat3") },
         ]
           .map(
             (m) =>
-              `<div style="display:flex;gap:6px;padding:2px 3px;font-family:var(--font-body);font-size:11px;line-height:1.35;color:${escapeAttr(text)};border-bottom:1px dotted rgba(0,0,0,0.18);">
-                ${config.showTime === false ? "" : `<span style="color:${escapeAttr(muted)};font-family:var(--font-mono);font-size:12px;">[12:00]</span>`}
-                ${previewBadges(m.badges, primary)}
-                <span style="color:${escapeAttr(primary)};font-weight:700">${escapeHtml(m.user)}</span>
-                <span style="color:${escapeAttr(muted)}">:</span>
-                <span style="color:${escapeAttr(text)}">${escapeHtml(m.message)}</span>
-              </div>`
+              `<div style="padding:1px 0;font-family:var(--font-mono);font-size:11px;line-height:1.35;color:${escapeAttr(text)};white-space:pre-wrap;overflow-wrap:anywhere;">
+                ${config.showTime === false ? "" : `<span style="color:${escapeAttr(muted)};">[12:00]</span> `}<span style="color:${escapeAttr(accent)};">${escapeHtml(m.user)}</span><span style="color:${escapeAttr(muted)};">:</span> ${escapeHtml(m.message)}
+              </div>`,
           )
           .join("");
-        const buttons = `<span style="display:inline-flex;gap:2px;flex-shrink:0;"><i style="display:inline-block;width:10px;height:9px;background:${escapeAttr(win)};box-shadow:inset 1px 1px 0 ${escapeAttr(light)}, inset -1px -1px 0 ${escapeAttr(dark)};"></i><i style="display:inline-block;width:10px;height:9px;background:${escapeAttr(win)};box-shadow:inset 1px 1px 0 ${escapeAttr(light)}, inset -1px -1px 0 ${escapeAttr(dark)};"></i></span>`;
-        return `<div style="position:relative;height:100%;box-sizing:border-box;padding:3px;background:${escapeAttr(bg)};border:${escapeAttr(border)};box-shadow:${escapeAttr(glow)};">
-          <div style="display:flex;flex-direction:column;height:100%;box-sizing:border-box;">
-            <div style="display:flex;align-items:center;gap:6px;padding:1px 3px;background:linear-gradient(90deg,${escapeAttr(titleA)},${escapeAttr(titleB)});color:${escapeAttr(light)};font-family:var(--font-display);font-size:10px;font-weight:700;">
-              <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase;">${escapeHtml(t("editor.chat"))}</span>${buttons}
-            </div>
-            <div style="flex:1;min-height:0;padding:3px;box-sizing:border-box;">
-              <div style="height:100%;overflow:hidden;background:${escapeAttr(light)};box-shadow:inset 1px 1px 0 ${escapeAttr(shadow)}, inset -1px -1px 0 ${escapeAttr(light)};padding:3px 5px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-end;">${rows}</div>
-            </div>
-          </div>
+        return `<div style="position:relative;height:100%;box-sizing:border-box;background:${escapeAttr(bg)};border:${escapeAttr(border)};border-radius:6px;box-shadow:${escapeAttr(glow)};display:flex;flex-direction:column;overflow:hidden;">
+          <div style="padding:2px 6px;border-bottom:1px solid ${escapeAttr(accent)};background:rgba(88, 166, 255, 0.1);color:${escapeAttr(accent)};font-family:var(--font-mono);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="color:${escapeAttr(prompt)};">root@ose-chat:~#</span> ${escapeHtml(t("editor.chat"))}</div>
+          <div style="flex:1;min-height:0;padding:4px 6px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;">${rows}</div>
         </div>`;
       }
-      case "win98-holo-alert": {
+      case "terminal-holo-alert": {
         const tokens = state.appearance.tokens || {};
-        const bg = tokens["--panel-bg"] || "#c0c0c0";
-        const border = tokens["--panel-border"] || "1px solid #808080";
-        const glow = tokens["--panel-glow"] || "inset 1px 1px 0 #ffffff, inset -1px -1px 0 #000000";
-        const win = tokens["--win98-window"] || "#c0c0c0";
-        const light = tokens["--win98-light"] || "#ffffff";
-        const shadow = tokens["--win98-shadow"] || "#808080";
-        const dark = tokens["--win98-shadow-dark"] || "#000000";
-        const titleA = tokens["--win98-titlebar"] || "#000080";
-        const titleB = tokens["--win98-titlebar-end"] || "#1080d0";
-        const text = tokens["--md-on-surface"] || "#000000";
-        const primary = tokens["--md-primary"] || "#000080";
-        return `<div style="position:relative;height:100%;box-sizing:border-box;padding:3px;background:${escapeAttr(bg)};border:${escapeAttr(border)};box-shadow:${escapeAttr(glow)};">
-          <div style="display:flex;flex-direction:column;height:100%;box-sizing:border-box;">
-            <div style="display:flex;align-items:center;gap:6px;padding:1px 3px;background:linear-gradient(90deg,${escapeAttr(titleA)},${escapeAttr(titleB)});color:${escapeAttr(light)};font-family:var(--font-display);font-size:10px;font-weight:700;">
-              <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase;">${escapeHtml(t("properties.testFollow"))}</span>
-              <span style="display:inline-flex;gap:2px;flex-shrink:0;"><i style="display:inline-block;width:10px;height:9px;background:${escapeAttr(win)};box-shadow:inset 1px 1px 0 ${escapeAttr(light)}, inset -1px -1px 0 ${escapeAttr(dark)};"></i><i style="display:inline-block;width:10px;height:9px;background:${escapeAttr(win)};box-shadow:inset 1px 1px 0 ${escapeAttr(light)}, inset -1px -1px 0 ${escapeAttr(dark)};"></i></span>
-            </div>
-            <div style="flex:1;min-height:0;display:flex;align-items:center;gap:9px;padding:6px 9px;box-sizing:border-box;">
-              <span style="display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:34px;height:34px;background:${escapeAttr(light)};color:${escapeAttr(primary)};box-shadow:inset 1px 1px 0 ${escapeAttr(shadow)}, inset -1px -1px 0 ${escapeAttr(light)};">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.2 3.1-5.4 7-5.4s7 2.2 7 5.4"/></svg>
-              </span>
-              <span style="min-width:0;display:flex;flex-direction:column;gap:1px;">
-                <span style="font-family:var(--font-display);font-size:14px;font-weight:700;color:${escapeAttr(text)};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">nova_viewer</span>
-                <span style="font-family:var(--font-mono);font-size:12px;color:${escapeAttr(primary)};">${formatMoney(500)} ${currencySymbol("RUB")}</span>
-              </span>
-            </div>
+        const bg = tokens["--panel-bg"] || "rgba(13, 17, 23, 0.95)";
+        const border = tokens["--panel-border"] || "1px solid #30363d";
+        const glow = tokens["--panel-glow"] || "0 0 18px rgba(0, 255, 102, 0.25)";
+        const prompt = tokens["--term-prompt"] || "#00ff66";
+        const accent = tokens["--term-accent"] || "#58a6ff";
+        const text = tokens["--md-on-surface"] || "#c9d1d9";
+        return `<div style="position:relative;height:100%;box-sizing:border-box;background:${escapeAttr(bg)};border:${escapeAttr(border)};border-radius:6px;box-shadow:${escapeAttr(glow)};display:flex;flex-direction:column;overflow:hidden;">
+          <div style="padding:2px 6px;border-bottom:1px solid ${escapeAttr(accent)};background:rgba(88, 166, 255, 0.1);color:${escapeAttr(accent)};font-family:var(--font-mono);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="color:${escapeAttr(prompt)};">root@ose-alert:~#</span> ${escapeHtml(t("properties.testFollow"))}</div>
+          <div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:1px;padding:5px 6px;font-family:var(--font-mono);font-size:11px;line-height:1.35;color:${escapeAttr(text)};overflow:hidden;">
+            <div><span style="color:${escapeAttr(prompt)};font-weight:700;">$</span> sudo apt install follow</div>
+            <div><span style="color:${escapeAttr(prompt)};">[OK]</span> New follower: nova_viewer</div>
           </div>
         </div>`;
       }

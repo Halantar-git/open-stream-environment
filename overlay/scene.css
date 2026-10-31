@@ -555,92 +555,74 @@ body.is-pending .scene-wrapper {
   border: 1px dashed rgba(0, 210, 255, 0.35);
 }
 
-/* ---------- Windows 98: бирюзовый рабочий стол и серое окно ----------
-   Фон сцены — тот самый teal, пятна убираем. Карточка собрана как окно
-   98-й: вдавленный бевел, синяя полоса заголовка и кнопка закрытия. */
-[data-theme="win98"] .bg-shape {
-  display: none;
+/* ---------- Terminal: сцена как окно консоли ----------
+   Фон остаётся тёмным, пятна приглушены; карточка — окно терминала с
+   вкладкой `root@ose-overlay:~#`, тонкой рамкой и зелёной шкалой таймера. */
+[data-theme="terminal"] .bg-shape {
+  opacity: 0.12;
 }
-[data-theme="win98"] .scene-card {
-  border: 1px solid #000000;
-  border-radius: 0;
-  background: var(--win98-window, #c0c0c0);
+[data-theme="terminal"] .scene-card {
+  border: 1px solid var(--md-outline, #30363d);
+  border-radius: 6px;
+  background: var(--term-panel, #161b22);
   box-shadow:
-    inset 1px 1px 0 #ffffff,
-    inset -1px -1px 0 #808080,
-    inset 2px 2px 0 #dfdfdf,
-    inset -2px -2px 0 #808080,
-    6px 6px 0 rgba(0, 0, 0, 0.35);
-  padding-top: 78px;
+    0 0 24px var(--term-glow, rgba(0, 255, 102, 0.25)),
+    inset 0 0 0 1px rgba(0, 255, 102, 0.06);
+  padding-top: 48px;
 }
-[data-theme="win98"] .scene-card::before {
-  content: "";
+[data-theme="terminal"] .scene-card::before {
+  content: "root@ose-overlay:~# ./scene --live";
   position: absolute;
-  left: 3px;
-  right: 3px;
-  top: 3px;
-  height: 22px;
-  background: linear-gradient(90deg, var(--win98-titlebar, #000080), var(--win98-titlebar-end, #1080d0));
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: rgba(88, 166, 255, 0.1);
+  border-bottom: 1px solid var(--term-accent, #58a6ff);
+  border-radius: 5px 5px 0 0;
+  color: var(--term-accent, #58a6ff);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
   pointer-events: none;
 }
-[data-theme="win98"] .scene-card::after {
-  content: "";
-  position: absolute;
-  top: 7px;
-  right: 8px;
-  width: 14px;
+[data-theme="terminal"] .timer-progress-bg {
   height: 14px;
-  background:
-    linear-gradient(45deg, transparent 44%, #000000 44% 56%, transparent 56%),
-    linear-gradient(-45deg, transparent 44%, #000000 44% 56%, transparent 56%),
-    var(--win98-window, #c0c0c0);
-  box-shadow: inset 1px 1px 0 #ffffff, inset -1px -1px 0 #808080;
-  pointer-events: none;
-}
-
-/* Прогресс сцены — тот же сегментный индикатор, что у цели. */
-[data-theme="win98"] .timer-progress-bg {
-  height: 14px;
-  border-radius: 0;
+  border-radius: 2px;
   padding: 1px;
-  background: var(--win98-window, #c0c0c0);
-  box-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #ffffff;
+  background: var(--term-panel, #161b22);
+  box-shadow: inset 0 0 0 1px var(--md-outline, #30363d);
 }
-[data-theme="win98"] .timer-progress-fill {
-  border-radius: 0;
-  background: repeating-linear-gradient(90deg, var(--win98-titlebar, #000080) 0 10px, transparent 10px 12px);
+[data-theme="terminal"] .timer-progress-fill {
+  border-radius: 2px;
+  background: repeating-linear-gradient(90deg, var(--term-prompt, #00ff66) 0 8px, transparent 8px 10px);
+  box-shadow: 0 0 12px var(--term-glow, rgba(0, 255, 102, 0.25));
 }
-
-/* Заставка — окно вместо орба. */
-[data-theme="win98"] .splash-default__orb {
-  border-radius: 0;
-  background:
-    linear-gradient(90deg, var(--win98-titlebar, #000080), var(--win98-titlebar-end, #1080d0)) top / 100% 26px no-repeat,
-    var(--win98-window, #c0c0c0);
-  box-shadow:
-    inset 1px 1px 0 #ffffff,
-    inset -1px -1px 0 #808080,
-    0 0 0 1px #000000,
-    6px 6px 0 rgba(0, 0, 0, 0.35);
+[data-theme="terminal"] .splash-default__orb {
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #b9ffd0, var(--term-prompt, #00ff66) 55%, #023a17);
+  box-shadow: 0 0 60px var(--term-glow, rgba(0, 255, 102, 0.25));
   animation: none;
 }
-[data-theme="win98"] .splash-default__orb::after {
-  content: "";
+[data-theme="terminal"] .splash-default__orb::after {
+  content: ">_";
   position: absolute;
-  top: 7px;
-  right: 7px;
-  width: 12px;
-  height: 12px;
-  background:
-    linear-gradient(45deg, transparent 44%, #000000 44% 56%, transparent 56%),
-    linear-gradient(-45deg, transparent 44%, #000000 44% 56%, transparent 56%),
-    var(--win98-window, #c0c0c0);
-  box-shadow: inset 1px 1px 0 #ffffff, inset -1px -1px 0 #808080;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #04140b;
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 700;
 }
-[data-theme="win98"] .splash-default__label {
-  color: #ffffff;
-  text-shadow: 2px 2px 0 #000000;
+[data-theme="terminal"] .splash-default__label {
+  color: var(--term-prompt, #00ff66);
+  text-shadow: 0 0 18px var(--term-glow, rgba(0, 255, 102, 0.25));
 }
-[data-theme="win98"] .splash-default__brand {
-  color: rgba(255, 255, 255, 0.75);
+[data-theme="terminal"] .splash-default__brand {
+  color: var(--md-on-surface-variant, #8b949e);
 }

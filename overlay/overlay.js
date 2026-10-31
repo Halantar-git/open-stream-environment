@@ -477,10 +477,10 @@
   manager.register("sf-chat", OW.WidgetSfChat);
   manager.register("sf-holo-alert", OW.WidgetSfHoloAlert);
   manager.register("sf-cube", OW.WidgetSfCube);
-  manager.register("win98-cube", OW.WidgetWin98Cube);
-  manager.register("win98-goal", OW.WidgetWin98Goal);
-  manager.register("win98-chat", OW.WidgetWin98Chat);
-  manager.register("win98-holo-alert", OW.WidgetWin98HoloAlert);
+  manager.register("terminal-cube", OW.WidgetTerminalCube);
+  manager.register("terminal-goal", OW.WidgetTerminalGoal);
+  manager.register("terminal-chat", OW.WidgetTerminalChat);
+  manager.register("terminal-holo-alert", OW.WidgetTerminalHoloAlert);
   manager.register("donatex-ai", OW.DonatexAiWidget);
   manager.register("music", OW.MusicWidget);
 

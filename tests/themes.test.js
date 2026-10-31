@@ -121,23 +121,26 @@ describe("встроенные темы", () => {
     expect(tokens["--panel-radius"]).toBe("6px");
   });
 
-  test("Windows 98 — светлая тема с объёмными панелями и 3D-окнами", () => {
-    const theme = BUILTIN_THEMES.win98;
+  test("Terminal — тёмная консольная тема с зелёным фосфором", () => {
+    const theme = BUILTIN_THEMES.terminal;
     expect(theme).toBeTruthy();
-    expect(theme.name).toBe("Windows 98");
+    expect(theme.name).toBe("Terminal");
     expect(theme.dimension).toBe("2d");
-    expect(theme.family).toBe("win98");
-    expect(theme.variant3d).toBe("win98");
+    expect(theme.family).toBe("terminal");
+    expect(theme.variant3d).toBe("terminal");
 
     const tokens = theme.tokens;
-    expect(tokens["--md-surface"]).toBe("#c0c0c0");
-    expect(tokens["--md-surface-dim"]).toBe("#008080");
-    expect(tokens["--md-on-surface"]).toBe("#000000");
-    expect(tokens["--panel-bg"]).toBe("#c0c0c0");
-    expect(tokens["--panel-decoration"]).toBe("win98");
-    expect(tokens["--panel-radius"]).toBe("0px");
-    expect(tokens["--font-display"]).toContain("Pixelify Sans");
-    expect(tokens["--font-body"]).toContain("Pixelify Sans");
-    expect(tokens["--font-mono"]).toContain("VT323");
+    expect(tokens["--md-surface"]).toBe("#0d1117");
+    expect(tokens["--md-surface-container"]).toBe("#161b22");
+    expect(tokens["--md-primary"]).toBe("#00ff66");
+    expect(tokens["--md-secondary"]).toBe("#58a6ff");
+    expect(tokens["--md-error"]).toBe("#ff3333");
+    expect(tokens["--panel-decoration"]).toBe("terminal");
+    expect(tokens["--panel-radius"]).toBe("6px");
+    expect(tokens["--term-glow"]).toBe("rgba(0, 255, 102, 0.25)");
+    expect(tokens["--font-display"]).toContain("JetBrains Mono");
+    expect(tokens["--font-body"]).toContain("JetBrains Mono");
+    expect(tokens["--font-mono"]).toContain("JetBrains Mono");
+    expect(THREE_D_STYLES.some((style) => style.id === "terminal")).toBe(true);
   });
 });

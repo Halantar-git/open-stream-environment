@@ -307,93 +307,81 @@
       },
     },
 
-    // Windows 98 — светлый серый интерфейс с объёмными рамками, тёмно-синим
-    // заголовком окна и бирюзовым рабочим столом. 3D-набор собран из окон
-    // 98-й: объёмный куб, цель, чат и алерт с бевелом и синим заголовком.
-    win98: {
-      id: "win98",
-      name: "Windows 98",
+    // Terminal — консоль в духе GNU/Linux и «Матрицы»: почти чёрный фон
+    // GitHub, фосфорно-зелёный текст, синие ники и команды, красные ошибки.
+    // 3D-набор собран из терминальных панелей: куб с падающими глифами,
+    // цель-прогресс, чат-лог и алерт как вывод команды.
+    terminal: {
+      id: "terminal",
+      name: "Terminal",
       builtin: true,
       category: "system",
       dimension: "2d",
-      family: "win98",
-      variant3d: "win98",
-      borderRadius: "0px",
+      family: "terminal",
+      variant3d: "terminal",
+      borderRadius: "6px",
       tokens: {
-        // Тёмно-синий заголовок активного окна (#000080) — основной акцент.
-        "--md-primary": "#000080",
-        "--md-on-primary": "#ffffff",
-        "--md-primary-container": "#000080",
-        "--md-on-primary-container": "#ffffff",
+        // Фосфорно-зелёный — основной цвет: текст, курсор, «успех».
+        "--md-primary": "#00ff66",
+        "--md-on-primary": "#04140b",
+        "--md-primary-container": "#0b3a22",
+        "--md-on-primary-container": "#b9ffd0",
 
-        // Бирюзовый рабочий стол (#008080) как вторичный акцент; для текста
-        // на сером он взят темнее, чтобы держать контраст.
-        "--md-secondary": "#006666",
-        "--md-on-secondary": "#ffffff",
-        "--md-secondary-container": "#004d4d",
-        "--md-on-secondary-container": "#ffffff",
+        // Синий консольный (цвет каталогов в Linux) — ники, команды, ссылки.
+        "--md-secondary": "#58a6ff",
+        "--md-on-secondary": "#06111f",
+        "--md-secondary-container": "#12324f",
+        "--md-on-secondary-container": "#d6e9ff",
 
-        // Голубой градиент заголовка (#1080d0) — третичный акцент.
-        "--md-tertiary": "#084a7a",
-        "--md-on-tertiary": "#ffffff",
-        "--md-tertiary-container": "#063a5e",
-        "--md-on-tertiary-container": "#ffffff",
+        // Фиолетовый GitHub — редкие пометки, чтобы не спорить с зелёным.
+        "--md-tertiary": "#bc8cff",
+        "--md-on-tertiary": "#190b26",
+        "--md-tertiary-container": "#2d1a45",
+        "--md-on-tertiary-container": "#f0e2ff",
 
-        "--md-error": "#800000",
-        "--md-on-error": "#ffffff",
-        "--md-error-container": "#ffc0c0",
-        "--md-on-error-container": "#400000",
+        "--md-error": "#ff3333",
+        "--md-on-error": "#1a0505",
+        "--md-error-container": "#4a1010",
+        "--md-on-error-container": "#ffc9c9",
 
-        // Рабочий стол — бирюзовый, окна и панели — классический серый #c0c0c0.
-        "--md-surface-dim": "#008080",
-        "--md-surface": "#c0c0c0",
-        "--md-surface-bright": "#dfdfdf",
-        "--md-surface-container-lowest": "#808080",
-        "--md-surface-container-low": "#b0b0b0",
-        "--md-surface-container": "#c0c0c0",
-        "--md-surface-container-high": "#d0d0d0",
-        "--md-surface-container-highest": "#dfdfdf",
+        // Фон и панели — как у тёмной темы GitHub: #0d1117 и #161b22.
+        "--md-surface-dim": "#010409",
+        "--md-surface": "#0d1117",
+        "--md-surface-bright": "#21262d",
+        "--md-surface-container-lowest": "#010409",
+        "--md-surface-container-low": "#0d1117",
+        "--md-surface-container": "#161b22",
+        "--md-surface-container-high": "#1f242c",
+        "--md-surface-container-highest": "#30363d",
 
-        "--md-on-surface": "#000000",
-        "--md-on-surface-variant": "#404040",
-        "--md-outline": "#808080",
-        "--md-outline-variant": "#dfdfdf",
+        "--md-on-surface": "#c9d1d9",
+        "--md-on-surface-variant": "#8b949e",
+        "--md-outline": "#30363d",
+        "--md-outline-variant": "#21262d",
 
-        // Pixelify Sans — пиксельный UI-шрифт с кириллицей; VT323 — терминальные
-        // цифры и данные. Русский в VT323 уходит в JetBrains Mono: у него нет
-        // кириллицы в Google Fonts.
-        "--font-display": '"Pixelify Sans", "PT Sans Caption", "Segoe UI", sans-serif',
-        "--font-body": '"Pixelify Sans", "PT Sans Caption", "Segoe UI", sans-serif',
-        "--font-mono": '"VT323", "JetBrains Mono", "Consolas", monospace',
+        // Всё моноширинное: JetBrains Mono с кириллицей уже вшит.
+        "--font-display": '"JetBrains Mono", "Consolas", monospace',
+        "--font-body": '"JetBrains Mono", "Consolas", monospace',
+        "--font-mono": '"JetBrains Mono", "Consolas", monospace',
 
-        // Дополнительные цвета палитры: их читает CSS объёмных рамок.
-        "--win98-desktop": "#008080",
-        "--win98-window": "#c0c0c0",
-        "--win98-light": "#ffffff",
-        "--win98-shadow": "#808080",
-        "--win98-shadow-dark": "#000000",
-        "--win98-titlebar": "#000080",
-        "--win98-titlebar-end": "#1080d0",
+        // Дополнительные цвета палитры: ими живёт CSS терминальных панелей.
+        "--term-bg": "#0d1117",
+        "--term-panel": "#161b22",
+        "--term-prompt": "#00ff66",
+        "--term-accent": "#58a6ff",
+        "--term-error": "#ff3333",
+        "--term-dim": "#8b949e",
+        "--term-glow": "rgba(0, 255, 102, 0.25)",
 
-        // Квадратные панели с двойным объёмным бевелом: светлый верх/лево,
-        // тёмный низ/право, как у окон и кнопок 98-й.
-        "--panel-radius": "0px",
+        "--panel-radius": "6px",
         "--panel-clip": "none",
-        "--panel-decoration": "win98",
-        "--panel-glow":
-          "inset 1px 1px 0 #ffffff, inset -1px -1px 0 #000000, inset 2px 2px 0 #dfdfdf, inset -2px -2px 0 #808080",
-        "--panel-bg": "#c0c0c0",
+        "--panel-decoration": "terminal",
+        "--panel-glow": "0 0 18px rgba(0, 255, 102, 0.25)",
+        "--panel-bg": "rgba(13, 17, 23, 0.92)",
         "--panel-blur": "0px",
-        "--panel-border": "1px solid #808080",
+        "--panel-border": "1px solid #30363d",
         "--alert-enter-easing": "cubic-bezier(0.2, 0.8, 0.2, 1)",
-        "--alert-enter-duration": "220ms",
-
-        "--shape-xs": "0px",
-        "--shape-sm": "0px",
-        "--shape-md": "0px",
-        "--shape-lg": "0px",
-        "--shape-xl": "0px",
-        "--shape-full": "0px",
+        "--alert-enter-duration": "180ms",
       },
     },
 
@@ -873,7 +861,7 @@
     { id: "wardogs", name: "Wardogs" },
     { id: "retrowave", name: "Retrowave" },
     { id: "sf", name: "Super Four" },
-    { id: "win98", name: "Windows 98" },
+    { id: "terminal", name: "Terminal" },
   ];
 
   const api = { BUILTIN_THEMES, THREE_D_STYLES };

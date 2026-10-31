@@ -16,19 +16,20 @@
  */
 
 /*
-  3D-набор Windows 98: куб, цель, чат и алерт.
+  3D-набор Terminal: куб, цель, чат и алерт.
 
   Проверяем то, что легко сломать незаметно: жёсткую привязку к теме (на чужой
   теме не должно быть ни DOM, ни цикла), подписки на нужные события и то, что
-  окна собираются из вдавленных полей и цветов заголовка.
+  окна собираются как терминальные панели — вкладка с приглашением, ASCII-шкала
+  цели и вывод команды в алерте.
 */
 
 const EventBus = require("../overlay/event-bus");
 const { EVENT_TYPES } = require("../shared/events");
-const WidgetWin98Cube = require("../overlay/widgets/win98-cube-widget");
-const WidgetWin98Goal = require("../overlay/widgets/win98-goal-widget");
-const WidgetWin98Chat = require("../overlay/widgets/win98-chat-widget");
-const WidgetWin98HoloAlert = require("../overlay/widgets/win98-holo-alert-widget");
+const WidgetTerminalCube = require("../overlay/widgets/terminal-cube-widget");
+const WidgetTerminalGoal = require("../overlay/widgets/terminal-goal-widget");
+const WidgetTerminalChat = require("../overlay/widgets/terminal-chat-widget");
+const WidgetTerminalHoloAlert = require("../overlay/widgets/terminal-holo-alert-widget");
 const WidgetManager = require("../overlay/widgets/widget-manager");
 
 // ---- минимальные заглушки DOM и canvas ----
@@ -204,12 +205,12 @@ afterEach(() => {
   global.performance = originalGlobals.performance;
 });
 
-describe("WidgetWin98Cube", () => {
-  const cubeItem = () => item("win98-cube", { renderType: "canvas", w: 22, h: 18 });
+describe("WidgetTerminalCube", () => {
+  const cubeItem = () => item("terminal-cube", { renderType: "canvas", w: 22, h: 18 });
 
   test("скрыт до алерта, затем показывает куб и запускает цикл", () => {
-    const context = makeContext("win98");
-    const widget = new WidgetWin98Cube(cubeItem(), context);
+    const context = makeContext("terminal");
+    const widget = new WidgetTerminalCube(cubeItem(), context);
     widget.mount(makeEl("div"));
 
     expect(widget.element.tagName).toBe("CANVAS");
@@ -223,66 +224,71 @@ describe("WidgetWin98Cube", () => {
     raf.flush(1000);
     expect(widget.ctx.clearRect).toHaveBeenCalled();
     expect(widget.ctx.fill).toHaveBeenCalled();
+    expect(widget.ctx.stroke).toHaveBeenCalled();
 
     widget.unmount();
     expect(raf.pending()).toBe(0);
   });
 
   test("не запускает цикл на чужой теме", () => {
-    const widget = new WidgetWin98Cube(cubeItem(), makeContext("sf"));
+    const widget = new WidgetTerminalCube(cubeItem(), makeContext("sf"));
     widget.mount(makeEl("div"));
     expect(raf.pending()).toBe(0);
     widget.unmount();
   });
 });
 
-describe("WidgetWin98Goal", () => {
-  test("монтируется в окне и обновляет прогресс", () => {
-    const context = makeContext("win98");
-    const widget = new WidgetWin98Goal(item("win98-goal"), context);
+describe("WidgetTerminalGoal", () => {
+  test("монтируется в терминальной панели и рисует ASCII-шкалу", () => {
+    const context = makeContext("terminal");
+    const widget = new WidgetTerminalGoal(item("terminal-goal"), context);
     widget.mount(makeEl("div"));
 
     expect(widget.windowEl).toBeTruthy();
-    expect(widget.element.classList.contains("win98-surface")).toBe(true);
+    expect(widget.element.classList.contains("terminal-surface")).toBe(true);
     expect(widget.titleEl.textContent).toBe("Цель");
-    expect(widget.fillEl.style.width).toBe("50%");
+    expect(widget.barEl.innerHTML).toContain("50%");
+    expect(widget.barEl.innerHTML).toContain("█");
     expect(widget.amountEl.innerHTML).toContain("50");
 
     context.state.goal = { title: "Новая", current: 75, target: 100, currency: "USD" };
     context.bus.emit(EVENT_TYPES.GOAL_UPDATE, context.state.goal);
     expect(widget.titleEl.textContent).toBe("Новая");
-    expect(widget.fillEl.style.width).toBe("75%");
+    expect(widget.barEl.innerHTML).toContain("75%");
 
     widget.unmount();
   });
 
-  test("без фона снимает корпус окна, но оставляет шкалу", () => {
-    const widget = new WidgetWin98Goal(item("win98-goal", { config: { showBackground: false } }), makeContext("win98"));
+  test("без фона снимает корпус панели, но оставляет шкалу", () => {
+    const widget = new WidgetTerminalGoal(
+      item("terminal-goal", { config: { showBackground: false } }),
+      makeContext("terminal"),
+    );
     widget.mount(makeEl("div"));
-    expect(widget.element.classList.contains("win98-surface")).toBe(false);
-    expect(widget.fillEl).toBeTruthy();
+    expect(widget.element.classList.contains("terminal-surface")).toBe(false);
+    expect(widget.barEl).toBeTruthy();
 
     widget.update({ config: { showBackground: true } });
-    expect(widget.element.classList.contains("win98-surface")).toBe(true);
+    expect(widget.element.classList.contains("terminal-surface")).toBe(true);
     widget.unmount();
   });
 
   test("не инициализируется на чужой теме", () => {
-    const widget = new WidgetWin98Goal(item("win98-goal"), makeContext("sf"));
+    const widget = new WidgetTerminalGoal(item("terminal-goal"), makeContext("sf"));
     widget.mount(makeEl("div"));
     expect(widget.windowEl).toBeNull();
     widget.unmount();
   });
 });
 
-describe("WidgetWin98Chat", () => {
+describe("WidgetTerminalChat", () => {
   test("монтируется и рисует сообщения", () => {
-    const context = makeContext("win98");
-    const widget = new WidgetWin98Chat(item("win98-chat"), context);
+    const context = makeContext("terminal");
+    const widget = new WidgetTerminalChat(item("terminal-chat"), context);
     widget.mount(makeEl("div"));
 
     expect(widget.windowEl).toBeTruthy();
-    expect(widget.element.classList.contains("win98-surface")).toBe(true);
+    expect(widget.element.classList.contains("terminal-surface")).toBe(true);
 
     context.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "bob", message: "hi", badges: [] });
     expect(widget.messagesInner.children).toHaveLength(1);
@@ -292,8 +298,8 @@ describe("WidgetWin98Chat", () => {
   });
 
   test("держит лимит строк maxMessages", () => {
-    const context = makeContext("win98");
-    const widget = new WidgetWin98Chat(item("win98-chat", { config: { maxMessages: 2 } }), context);
+    const context = makeContext("terminal");
+    const widget = new WidgetTerminalChat(item("terminal-chat", { config: { maxMessages: 2 } }), context);
     widget.mount(makeEl("div"));
 
     context.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "a", message: "1" });
@@ -305,17 +311,17 @@ describe("WidgetWin98Chat", () => {
   });
 
   test("не инициализируется на чужой теме", () => {
-    const widget = new WidgetWin98Chat(item("win98-chat"), makeContext("pixel"));
+    const widget = new WidgetTerminalChat(item("terminal-chat"), makeContext("pixel"));
     widget.mount(makeEl("div"));
     expect(widget.windowEl).toBeNull();
     widget.unmount();
   });
 });
 
-describe("WidgetWin98HoloAlert", () => {
-  test("скрыт до алерта, затем показывает окно", () => {
-    const context = makeContext("win98");
-    const widget = new WidgetWin98HoloAlert(item("win98-holo-alert"), context);
+describe("WidgetTerminalHoloAlert", () => {
+  test("скрыт до алерта, затем печатает вывод команды", () => {
+    const context = makeContext("terminal");
+    const widget = new WidgetTerminalHoloAlert(item("terminal-holo-alert"), context);
     widget.mount(makeEl("div"));
 
     expect(widget.host).toBeTruthy();
@@ -324,46 +330,53 @@ describe("WidgetWin98HoloAlert", () => {
     context.bus.emit(EVENT_TYPES.ALERT, { kind: "follow", user: "bob", durationMs: 5000 });
     expect(widget.element.style.opacity).toBe("1");
     expect(widget.host.children).toHaveLength(1);
-    expect(widget.host.children[0].innerHTML).toContain("bob");
-    expect(widget.host.children[0].innerHTML).toContain("alert.follow");
+
+    const card = widget.host.children[0];
+    const tab = card.children[0];
+    expect(tab.innerHTML).toContain("root@ose-alert");
+
+    const body = card.children[1];
+    const lines = body.children.map((row) => row.dataset.plain).join("\n");
+    expect(lines).toContain("bob");
+    expect(lines).toContain("sudo apt install follow");
 
     widget.unmount();
     expect(widget.host).toBeNull();
   });
 
   test("не инициализируется на чужой теме", () => {
-    const widget = new WidgetWin98HoloAlert(item("win98-holo-alert"), makeContext("sf"));
+    const widget = new WidgetTerminalHoloAlert(item("terminal-holo-alert"), makeContext("sf"));
     widget.mount(makeEl("div"));
     expect(widget.host).toBeNull();
     widget.unmount();
   });
 });
 
-describe("WidgetManager — изоляция виджетов Windows 98", () => {
-  test("не создаёт win98-виджеты, пока тема не win98", () => {
+describe("WidgetManager — изоляция виджетов Terminal", () => {
+  test("не создаёт terminal-виджеты, пока тема не terminal", () => {
     const root = makeEl("div");
     const context = makeContext("pixel");
     const manager = new WidgetManager(root, {
-      shouldMount: (inst) => (!inst.type.startsWith("win98-") ? true : context.theme === "win98"),
-      resolveRenderType: (inst) => (inst.type === "win98-cube" ? "canvas" : "2d"),
+      shouldMount: (inst) => (!inst.type.startsWith("terminal-") ? true : context.theme === "terminal"),
+      resolveRenderType: (inst) => (inst.type === "terminal-cube" ? "canvas" : "2d"),
       context,
     });
-    manager.register("win98-cube", WidgetWin98Cube);
-    manager.register("win98-goal", WidgetWin98Goal);
-    manager.register("win98-chat", WidgetWin98Chat);
-    manager.register("win98-holo-alert", WidgetWin98HoloAlert);
+    manager.register("terminal-cube", WidgetTerminalCube);
+    manager.register("terminal-goal", WidgetTerminalGoal);
+    manager.register("terminal-chat", WidgetTerminalChat);
+    manager.register("terminal-holo-alert", WidgetTerminalHoloAlert);
 
     const layout = [
-      item("win98-cube", { renderType: "canvas" }),
-      item("win98-goal"),
-      item("win98-chat"),
-      item("win98-holo-alert"),
+      item("terminal-cube", { renderType: "canvas" }),
+      item("terminal-goal"),
+      item("terminal-chat"),
+      item("terminal-holo-alert"),
     ];
 
     manager.syncLayout(layout);
     expect(manager.size).toBe(0);
 
-    context.theme = "win98";
+    context.theme = "terminal";
     manager.syncLayout(layout);
     expect(manager.size).toBe(4);
 

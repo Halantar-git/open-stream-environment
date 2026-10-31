@@ -16,12 +16,11 @@
  */
 
 /*
-  WidgetWin98Chat — чат стрима в окне Windows 98.
+  WidgetTerminalChat — чат стрима как вывод консоли.
 
-  Синий градиентный заголовок с именем окна «Чат» и серыми кнопками, ниже —
-  вдавленное белое поле списка, как в проводнике 98-й. Ник зрителя окрашен в
-  цвет активного заголовка, время набрано терминальным VT323. Разделители
-  строк — пунктир, чтобы длинный список читался как список файлов.
+  Никаких аватарок и рамок: моноширинная строка `[чч:мм] ник: текст`, ник
+  синим консольным цветом, сообщение — цветом текста темы. Заголовок — вкладка
+  терминала с приглашением `root@ose-chat:~#`.
 
   Тема изолирована жёстко: на чужой теме не строится ни DOM, ни подписки.
 */
@@ -30,32 +29,28 @@
     typeof module !== "undefined" && module.exports
       ? require("./base-widget")
       : root.OSEWidgets && root.OSEWidgets.BaseWidget;
-  const WidgetWin98Chat = factory(BaseWidget);
+  const WidgetTerminalChat = factory(BaseWidget);
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = WidgetWin98Chat;
+    module.exports = WidgetTerminalChat;
   } else {
     root.OSEWidgets = root.OSEWidgets || {};
-    root.OSEWidgets.WidgetWin98Chat = WidgetWin98Chat;
+    root.OSEWidgets.WidgetTerminalChat = WidgetTerminalChat;
   }
 })(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
   "use strict";
 
-  const DEFAULT_BG = "#c0c0c0";
-  const DEFAULT_BORDER = "1px solid #808080";
-  const DEFAULT_GLOW =
-    "inset 1px 1px 0 #ffffff, inset -1px -1px 0 #000000, inset 2px 2px 0 #dfdfdf, inset -2px -2px 0 #808080";
-  const DEFAULT_TEXT = "#000000";
-  const DEFAULT_MUTED = "#404040";
-  const DEFAULT_PRIMARY = "#000080";
-
-  const FONT_BODY = "var(--font-body, 'Pixelify Sans', 'Segoe UI', sans-serif)";
-  const FONT_MONO = "var(--font-mono, 'VT323', 'Consolas', monospace)";
+  const DEFAULT_BG = "rgba(13, 17, 23, 0.92)";
+  const DEFAULT_BORDER = "1px solid #30363d";
+  const DEFAULT_GLOW = "0 0 18px rgba(0, 255, 102, 0.25)";
+  const DEFAULT_TEXT = "#c9d1d9";
+  const DEFAULT_MUTED = "#8b949e";
+  const DEFAULT_ACCENT = "#58a6ff";
 
   const DEFAULT_MAX_MESSAGES = 50;
   const MAX_MESSAGES_LIMIT = 200;
 
-  // Лимит строк из инспектора (1..100). Мусор в конфиге не должен снимать
+  // Лимит строк из инспектора (1..200). Мусор в конфиге не должен снимать
   // лимит: иначе DOM рос бы безгранично за многочасовой эфир.
   function clampMaxMessages(value) {
     const n = Math.floor(Number(value));
@@ -63,60 +58,50 @@
     return Math.min(MAX_MESSAGES_LIMIT, n);
   }
 
-  class WidgetWin98Chat extends BaseWidget {
+  class WidgetTerminalChat extends BaseWidget {
     constructor(config, context) {
       super(config, context);
       this.theme = (context && (context.theme || context.activeThemeId)) || "";
 
       this.textColor = DEFAULT_TEXT;
       this.mutedColor = DEFAULT_MUTED;
-      this.primaryColor = DEFAULT_PRIMARY;
+      this.accentColor = DEFAULT_ACCENT;
 
       this.windowEl = null;
-      this.titleEl = null;
       this.messagesScroller = null;
       this.messagesInner = null;
     }
 
     onMount() {
       // Жёсткая привязка к теме: на чужой не строим DOM и не подписываемся.
-      if (this.theme !== "win98") return;
+      if (this.theme !== "terminal") return;
 
       this._readColors();
-
-      this.element.classList.add("win98-surface");
+      this.element.classList.add("terminal-surface");
       this._applySurface();
 
       this.windowEl = document.createElement("div");
-      this.windowEl.className = "win98-window";
+      this.windowEl.className = "terminal-window";
       this.element.appendChild(this.windowEl);
 
-      const titlebar = document.createElement("div");
-      titlebar.className = "win98-window__titlebar";
-      this.windowEl.appendChild(titlebar);
+      const tab = document.createElement("div");
+      tab.className = "terminal-tab";
+      tab.innerHTML =
+        '<span class="terminal-tab__prompt">root@ose-chat:~#</span>' +
+        `<span class="terminal-tab__title">${this.context.t("editor.chat")}</span>` +
+        '<span class="terminal-tab__dots"><i class="terminal-tab__dot"></i><i class="terminal-tab__dot"></i><i class="terminal-tab__dot"></i></span>';
+      this.windowEl.appendChild(tab);
 
-      this.titleEl = document.createElement("span");
-      this.titleEl.className = "win98-window__title";
-      this.titleEl.textContent = this.context.t("editor.chat");
-      titlebar.appendChild(this.titleEl);
-
-      const buttons = document.createElement("span");
-      buttons.className = "win98-window__buttons";
-      buttons.innerHTML = `<i class="win98-window__btn"></i><i class="win98-window__btn"></i>`;
-      titlebar.appendChild(buttons);
-
-      const client = document.createElement("div");
-      client.className = "win98-window__client";
-      this.windowEl.appendChild(client);
+      const body = document.createElement("div");
+      body.className = "terminal-body";
+      body.style.padding = "4px 9px";
+      this.windowEl.appendChild(body);
 
       this.messagesScroller = document.createElement("div");
-      this.messagesScroller.className = "win98-sunken";
-      this.messagesScroller.style.cssText =
-        "flex:1 1 auto;min-height:0;overflow:hidden;padding:3px 5px;box-sizing:border-box;";
-      client.appendChild(this.messagesScroller);
+      this.messagesScroller.style.cssText = "flex:1 1 auto;min-height:0;overflow:hidden;";
+      body.appendChild(this.messagesScroller);
 
       this.messagesInner = document.createElement("div");
-      this.messagesInner.className = "win98-chat__list";
       this.messagesInner.style.cssText =
         "display:flex;flex-direction:column;justify-content:flex-end;min-height:100%;";
       this.messagesScroller.appendChild(this.messagesInner);
@@ -128,7 +113,6 @@
     onUnmount() {
       if (this.windowEl) this.windowEl.innerHTML = "";
       this.windowEl = null;
-      this.titleEl = null;
       this.messagesScroller = null;
       this.messagesInner = null;
     }
@@ -141,7 +125,7 @@
       const read = this.context.readCssVar;
       this.textColor = (read && read("--md-on-surface")) || DEFAULT_TEXT;
       this.mutedColor = (read && read("--md-on-surface-variant")) || DEFAULT_MUTED;
-      this.primaryColor = (read && read("--md-primary")) || DEFAULT_PRIMARY;
+      this.accentColor = (read && read("--term-accent")) || DEFAULT_ACCENT;
     }
 
     _applySurface() {
@@ -150,8 +134,7 @@
 
       const bg = (read && read("--panel-bg")) || DEFAULT_BG;
       const border = (read && read("--panel-border")) || DEFAULT_BORDER;
-      const radius = (read && read("--panel-radius")) || "0px";
-      const clip = (read && read("--panel-clip")) || "none";
+      const radius = (read && read("--panel-radius")) || "6px";
       const glow = (read && read("--panel-glow")) || DEFAULT_GLOW;
 
       style.backgroundColor = bg;
@@ -160,7 +143,6 @@
       style.webkitBackdropFilter = "none";
       style.border = border;
       style.borderRadius = radius;
-      style.clipPath = clip;
       style.boxShadow = glow;
     }
 
@@ -181,34 +163,23 @@
 
     pushMessage(message) {
       if (!this.messagesInner || !message) return;
-      const { escapeHtml, escapeAttr, renderEmotes } = this.context;
+      const { escapeHtml, renderEmotes } = this.context;
 
       const row = document.createElement("div");
-      row.className = "win98-chat__row";
       row.style.cssText =
-        `font-family:${FONT_BODY};font-size:13px;line-height:1.35;color:${this.textColor};` +
-        `padding:2px 3px;box-sizing:border-box;border-bottom:1px dotted rgba(0,0,0,0.18);` +
-        `overflow-wrap:anywhere;word-break:break-word;`;
+        `font-family:var(--font-mono);font-size:13px;line-height:1.35;color:${this.textColor};` +
+        "padding:1px 0;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap;";
 
       const time = this.config.showTime === false ? "" : BaseWidget.clockTime();
-      const badges = (message.badges || [])
-        .slice(0, 3)
-        .map((badge, index) => {
-          const url = message.badgeImages && message.badgeImages[index];
-          return url
-            ? `<img src="${escapeAttr(url)}" alt="" title="${escapeAttr(String(badge))}" style="width:1.05em;height:1.05em;object-fit:contain;vertical-align:-0.15em" />`
-            : `<span style="color:${this.primaryColor};font-weight:700;">${escapeHtml(String(badge).slice(0, 1).toUpperCase())}</span>`;
-        })
-        .join(" ");
-      const userColor = message.color || this.primaryColor;
+      const userColor = message.color || this.accentColor;
       const text = renderEmotes ? renderEmotes(message.message, message.emotes) : escapeHtml(message.message);
 
+      // Строка как в tail -f: время приглушено, ник — синим, текст — основным.
       row.innerHTML =
-        (time ? `<span style="color:${this.mutedColor};font-family:${FONT_MONO};font-size:13px;">[${escapeHtml(time)}]</span> ` : "") +
-        (badges ? `${badges} ` : "") +
-        `<span style="color:${escapeAttr(userColor)};font-weight:700;">${escapeHtml(message.user)}</span>` +
+        (time ? `<span style="color:${this.mutedColor};">[${escapeHtml(time)}]</span> ` : "") +
+        `<span style="color:${escapeHtml(userColor)};">${escapeHtml(message.user)}</span>` +
         `<span style="color:${this.mutedColor};">:</span> ` +
-        `<span style="color:${this.textColor};">${text}</span>`;
+        `<span>${text}</span>`;
 
       this.messagesInner.appendChild(row);
 
@@ -220,16 +191,10 @@
       this.messagesScroller.scrollTop = this.messagesScroller.scrollHeight;
 
       if (row.animate) {
-        row.animate(
-          [
-            { opacity: 0, transform: "translateY(4px)" },
-            { opacity: 1, transform: "translateY(0)" },
-          ],
-          { duration: 140, easing: "ease-out" }
-        );
+        row.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 90, easing: "linear" });
       }
     }
   }
 
-  return WidgetWin98Chat;
+  return WidgetTerminalChat;
 });

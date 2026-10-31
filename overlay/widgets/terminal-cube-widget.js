@@ -16,12 +16,12 @@
  */
 
 /*
-  WidgetWin98Cube — объёмный куб темы Windows 98.
+  WidgetTerminalCube — объёмный куб темы Terminal.
 
   Геометрия та же, что у кубов Pixel Perfect, Wardogs и Super Four, но грань
-  нарисована как кнопка 98-й: заливка одним из трёх серых тонов корпуса,
-  вдавленный светлый кант по кромке и чёрный контур. Иконка активного алерта
-  наклеена на все грани цветом заголовка окна и вращается вместе с кубом.
+  нарисована как панель терминала: тёмное стекло с зелёным контуром и свечением
+  по кромке, а за кубом идёт «цифровой дождь» из глифов. Иконка активного
+  алерта наклеена на все грани и вращается вместе с кубом.
 
   Куба нет на экране, пока не играет алерт; алерты идут по одному, донат даёт
   короткий «поп». Тема изолирована жёстко: на чужой теме цикл не поднимается.
@@ -31,26 +31,28 @@
     typeof module !== "undefined" && module.exports
       ? require("./base-widget")
       : root.OSEWidgets && root.OSEWidgets.BaseWidget;
-  const WidgetWin98Cube = factory(BaseWidget);
+  const WidgetTerminalCube = factory(BaseWidget);
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = WidgetWin98Cube;
+    module.exports = WidgetTerminalCube;
   } else {
     root.OSEWidgets = root.OSEWidgets || {};
-    root.OSEWidgets.WidgetWin98Cube = WidgetWin98Cube;
+    root.OSEWidgets.WidgetTerminalCube = WidgetTerminalCube;
   }
 })(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
   "use strict";
 
   const clamp = (v, min, max) => (v < min ? min : v > max ? max : v);
 
-  // Запасные цвета — палитра 98-й; живые значения читаются из токенов.
-  const DEFAULT_LIGHT = "#dfdfdf";
-  const DEFAULT_MID = "#c0c0c0";
-  const DEFAULT_DARK = "#808080";
-  const DEFAULT_OUTLINE = "#000000";
-  const DEFAULT_HIGHLIGHT = "#ffffff";
-  const DEFAULT_INK = "#000080";
+  // Запасные цвета — палитра Terminal; живые значения читаются из токенов.
+  const DEFAULT_FACE = "#161b22";
+  const DEFAULT_EDGE = "#00ff66";
+  const DEFAULT_GLOW = "rgba(0, 255, 102, 0.25)";
+  const DEFAULT_DIM = "#0d1117";
+  const DEFAULT_INK = "#00ff66";
+
+  // Глифы дождя: латиница, цифры и катакана — как в «Матрице».
+  const GLYPHS = "01アイウエオカキクケコサシスセソタチツテトナニヌネノ0123456789";
 
   // Вершины куба (полуразмер 1).
   const VERTICES = [
@@ -68,16 +70,15 @@
     { q: [0, 1, 5, 4], c: [0, -1, 0], u: [1, 0, 0], v: [0, 0, 1] }, // нижняя
   ];
 
-  class WidgetWin98Cube extends BaseWidget {
+  class WidgetTerminalCube extends BaseWidget {
     constructor(config, context) {
       super(config, context);
       this.theme = (context && (context.theme || context.activeThemeId)) || "";
 
-      this.lightColor = DEFAULT_LIGHT;
-      this.midColor = DEFAULT_MID;
-      this.darkColor = DEFAULT_DARK;
-      this.outlineColor = DEFAULT_OUTLINE;
-      this.highlightColor = DEFAULT_HIGHLIGHT;
+      this.faceColor = DEFAULT_FACE;
+      this.edgeColor = DEFAULT_EDGE;
+      this.glowColor = DEFAULT_GLOW;
+      this.dimColor = DEFAULT_DIM;
       this.inkColor = DEFAULT_INK;
 
       this._popUntil = 0;
@@ -85,11 +86,12 @@
       this._iconKind = null;
       this._iconUntil = 0;
       this._iconImages = {};
+      this._rain = null;
     }
 
     onMount() {
       // Жёсткая привязка к теме: на чужой не тратим ни canvas, ни подписки.
-      if (this.theme !== "win98") return;
+      if (this.theme !== "terminal") return;
       this._readColors();
       this._applyPerspective();
       this.bindEvents();
@@ -103,6 +105,7 @@
       this._iconQueue = [];
       this._iconKind = null;
       this._iconUntil = 0;
+      this._rain = null;
     }
 
     onUpdate(prev, next) {
@@ -111,12 +114,11 @@
 
     _readColors() {
       const read = this.context.readCssVar;
-      this.lightColor = (read && read("--md-surface-bright")) || DEFAULT_LIGHT;
-      this.midColor = (read && read("--win98-window")) || DEFAULT_MID;
-      this.darkColor = (read && read("--win98-shadow")) || DEFAULT_DARK;
-      this.outlineColor = (read && read("--win98-shadow-dark")) || DEFAULT_OUTLINE;
-      this.highlightColor = (read && read("--win98-light")) || DEFAULT_HIGHLIGHT;
-      this.inkColor = (read && read("--md-primary")) || DEFAULT_INK;
+      this.faceColor = (read && read("--term-panel")) || DEFAULT_FACE;
+      this.edgeColor = (read && read("--term-prompt")) || DEFAULT_EDGE;
+      this.glowColor = (read && read("--term-glow")) || DEFAULT_GLOW;
+      this.dimColor = (read && read("--term-bg")) || DEFAULT_DIM;
+      this.inkColor = (read && read("--term-prompt")) || DEFAULT_INK;
     }
 
     _applyPerspective() {
@@ -168,7 +170,7 @@
       this._popUntil = performance.now() + 450;
     }
 
-    // Иконку алерта (shared/icons.js) растрируем в цвет заголовка и кэшируем
+    // Иконку алерта (shared/icons.js) растрируем в зелёный фосфор и кэшируем
     // по виду события: SVG красят currentColor, подставляем чернила темы.
     _iconImage(kind) {
       const icons = this.context.ICONS || {};
@@ -184,16 +186,49 @@
       return img;
     }
 
-    // Тон грани: ближние светлее, дальние темнее — три плоских тона вместо
-    // градиента, как у корпусов 98-й.
-    _shade(depth) {
-      if (depth >= 0.62) return this.lightColor;
-      if (depth >= 0.32) return this.midColor;
-      return this.darkColor;
+    // Цифровой дождь: колонки глифов, падающие сверху вниз за кубом.
+    _drawRain(ctx, cw, ch, now) {
+      if (!this._rain) {
+        const columns = Math.max(6, Math.round(cw / 26));
+        this._rain = [];
+        for (let i = 0; i < columns; i += 1) {
+          this._rain.push({
+            x: (i + 0.5) * (cw / columns),
+            y: Math.random() * ch,
+            speed: 40 + Math.random() * 90,
+            glyphs: Array.from({ length: 8 }, () => GLYPHS[Math.floor(Math.random() * GLYPHS.length)]),
+          });
+        }
+      }
+
+      const dt = 1 / 30;
+      ctx.font = "12px var(--font-mono, monospace)";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      for (const column of this._rain) {
+        column.y += column.speed * dt;
+        if (column.y - column.glyphs.length * 14 > ch) column.y = -14;
+        for (let i = 0; i < column.glyphs.length; i += 1) {
+          const y = column.y - i * 14;
+          if (y < -14 || y > ch + 14) continue;
+          const fade = 1 - i / column.glyphs.length;
+          ctx.fillStyle = this.edgeColor;
+          ctx.globalAlpha = 0.06 + fade * 0.2;
+          ctx.fillText(column.glyphs[i], column.x, y);
+        }
+        // Голова колонки — ярче остальных.
+        ctx.globalAlpha = 0.55;
+        ctx.fillStyle = this.edgeColor;
+        ctx.fillText("█", column.x, column.y);
+      }
+      ctx.globalAlpha = 1;
+      ctx.textAlign = "start";
+      ctx.textBaseline = "alphabetic";
+      void now;
     }
 
     render() {
-      if (this.theme !== "win98") return;
+      if (this.theme !== "terminal") return;
       const ctx = this.ctx;
       if (!ctx) return;
 
@@ -258,39 +293,32 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, cw, ch);
 
+      // Дождь идёт за кубом: сначала он, потом грани.
+      this._drawRain(ctx, cw, ch, now);
+
       for (const f of faces) {
         const d = clamp((f.depth - minDepth) / span, 0, 1);
 
         ctx.beginPath();
         f.pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
         ctx.closePath();
-        ctx.fillStyle = this._shade(d);
+        ctx.fillStyle = this.faceColor;
+        ctx.globalAlpha = 0.35 + d * 0.35;
         ctx.fill();
-
-        // Вдавленный кант: светлый у ближних граней, тёмный у дальних.
-        const mx = f.pts.reduce((sum, p) => sum + p.x, 0) / f.pts.length;
-        const my = f.pts.reduce((sum, p) => sum + p.y, 0) / f.pts.length;
-        ctx.beginPath();
-        f.pts.forEach((p, i) => {
-          const x = p.x + (mx - p.x) * 0.14;
-          const y = p.y + (my - p.y) * 0.14;
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        });
-        ctx.closePath();
-        ctx.strokeStyle = d >= 0.5 ? this.highlightColor : this.outlineColor;
-        ctx.globalAlpha = d >= 0.5 ? 0.85 : 0.35;
-        ctx.lineWidth = 1;
-        ctx.stroke();
         ctx.globalAlpha = 1;
 
-        // Чёрный контур держит силуэт на светлой игре.
+        // Зелёный контур с мягким свечением — грань читается как экран.
         ctx.beginPath();
         f.pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
         ctx.closePath();
-        ctx.strokeStyle = this.outlineColor;
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = this.edgeColor;
+        ctx.globalAlpha = 0.35 + d * 0.55;
+        ctx.lineWidth = d >= 0.5 ? 1.6 : 1;
+        ctx.shadowColor = this.glowColor;
+        ctx.shadowBlur = 10 * d;
         ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
 
         // Иконка события на грани, гаснет с глубиной.
         if (this._iconKind && now < this._iconUntil) {
@@ -323,5 +351,5 @@
     }
   }
 
-  return WidgetWin98Cube;
+  return WidgetTerminalCube;
 });
