@@ -1,5 +1,5 @@
 {
-  "sourceHash": "679c1419b3e5f38c",
+  "sourceHash": "372e2cfb508629bd",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -2228,64 +2228,6 @@
         "autoplay": true,
         "queue": true,
         "volume": 1,
-        "perspective": 0,
-        "perspectiveDirection": "left"
-      }
-    },
-    "roulette": {
-      "type": "roulette",
-      "label": "Рулетка донатов",
-      "description": "Лента призов с весами: донат от заданной суммы запускает спин, оформление из активной темы",
-      "icon": "widgetRoulette",
-      "services": [
-        "donationAlerts",
-        "youtube",
-        "donatex"
-      ],
-      "defaultGeometry": {
-        "x": 10,
-        "y": 34,
-        "w": 80,
-        "h": 22
-      },
-      "minW": 30,
-      "minH": 12,
-      "defaultConfig": {
-        "items": [
-          {
-            "title": "Показать любимую игру",
-            "category": "common",
-            "weight": 40
-          },
-          {
-            "title": "Рассказать историю",
-            "category": "common",
-            "weight": 30
-          },
-          {
-            "title": "Спеть припев",
-            "category": "common",
-            "weight": 20
-          },
-          {
-            "title": "Сменить сцену",
-            "category": "rare",
-            "weight": 12
-          },
-          {
-            "title": "Ник на час",
-            "category": "epic",
-            "weight": 5
-          },
-          {
-            "title": "Костюм на стрим",
-            "category": "legendary",
-            "weight": 1
-          }
-        ],
-        "minAmount": 100,
-        "spinMs": 4200,
-        "showBackground": true,
         "perspective": 0,
         "perspectiveDirection": "left"
       }

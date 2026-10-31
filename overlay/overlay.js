@@ -483,7 +483,6 @@
   manager.register("win98-holo-alert", OW.WidgetWin98HoloAlert);
   manager.register("donatex-ai", OW.DonatexAiWidget);
   manager.register("music", OW.MusicWidget);
-  manager.register("roulette", OW.WidgetRoulette);
 
   // Пакеты подключаются до сокета: иначе первый снимок раскладки пришёл бы
   // раньше классов, и менеджер создал бы пустые заглушки BaseWidget вместо

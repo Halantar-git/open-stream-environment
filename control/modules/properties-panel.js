@@ -40,42 +40,6 @@ function escapeHtml(s) {
 // seal, the Pixel cube and the Wardogs cube are left out — they always spin.
 const MOTION_TOGGLE_TYPES = ["grimhex", "musain", "nuclear", "cobra", "elite-sign", "md3-orb"];
 
-// Рулетка редактируется строкой «название | категория | вес»: отдельный
-// редактор строк был бы тяжелее, а формат читается и правится на месте.
-const ROULETTE_CATEGORY_KEYS = {
-  common: "common",
-  обычная: "common",
-  rare: "rare",
-  редкая: "rare",
-  epic: "epic",
-  эпическая: "epic",
-  legendary: "legendary",
-  легендарная: "legendary",
-};
-
-function rouletteItemsToText(items) {
-  return (Array.isArray(items) ? items : [])
-    .map((item) => [item.title || "", item.category || "common", item.weight ?? 1].join(" | "))
-    .join("\n");
-}
-
-function rouletteTextToItems(text) {
-  return String(text || "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .slice(0, 24)
-    .map((line) => {
-      const [title, category, weight] = line.split("|").map((part) => part.trim());
-      return {
-        title: String(title || "").slice(0, 48),
-        category: ROULETTE_CATEGORY_KEYS[String(category || "").toLowerCase()] || "common",
-        weight: Math.max(1, Math.min(9999, Math.floor(Number(weight) || 1))),
-      };
-    })
-    .filter((item) => item.title);
-}
-
 export function initPropertiesPanel({
   state,
   t,
@@ -861,25 +825,6 @@ export function initPropertiesPanel({
             <option value="down" ${config.perspectiveDirection === "down" ? "selected" : ""}>${t("properties.perspectiveDown")}</option>
           </select>
         </div>`;
-    } else if (inst.type === "roulette") {
-      extraHtml = `
-        <p class="properties__hint">${t("properties.rouletteItemsHint")}</p>
-        <div class="md-field"><label>${t("properties.rouletteItems")}</label><textarea id="pRouletteItems" rows="6">${escapeHtml(rouletteItemsToText(config.items))}</textarea></div>
-        <div class="properties__row">
-          <div class="md-field"><label>${t("properties.rouletteMin")}</label><input type="number" id="pRouletteMin" min="0" step="1" value="${config.minAmount ?? 100}"></div>
-          <div class="md-field"><label>${t("properties.rouletteSpinMs")}</label><input type="number" id="pRouletteSpinMs" min="600" max="15000" step="100" value="${config.spinMs || 4200}"></div>
-        </div>
-        <div class="properties__toggle-row"><label>${t("properties.showBackground")}</label>${switchHtml("pRouletteBg", config.showBackground !== false)}</div>
-        <div class="properties__actions"><button class="md-button" id="pRouletteSpin" type="button">${t("properties.rouletteSpin")}</button></div>
-        <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>
-        <div class="md-field"><label>${t("properties.perspectiveDirection")}</label>
-          <select id="pPerspectiveDirection">
-            <option value="left" ${(config.perspectiveDirection || "left") === "left" ? "selected" : ""}>${t("properties.perspectiveLeft")}</option>
-            <option value="right" ${config.perspectiveDirection === "right" ? "selected" : ""}>${t("properties.perspectiveRight")}</option>
-            <option value="up" ${config.perspectiveDirection === "up" ? "selected" : ""}>${t("properties.perspectiveUp")}</option>
-            <option value="down" ${config.perspectiveDirection === "down" ? "selected" : ""}>${t("properties.perspectiveDown")}</option>
-          </select>
-        </div>`;
     } else if (inst.type === "uec-transfer") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.uecChannel")}</label><input type="text" id="pUecChannel" value="${escapeAttr(config.channel || "")}" placeholder="${escapeAttr(t("uec.channel"))}"></div>
@@ -1393,41 +1338,6 @@ export function initPropertiesPanel({
         musicPerspectiveDirection.addEventListener("change", (e) =>
           send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { perspectiveDirection: e.target.value } } }),
         );
-      }
-    } else if (inst.type === "roulette") {
-      const patchRoulette = (config) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config } });
-      const itemsField = propertiesEl.querySelector("#pRouletteItems");
-      if (itemsField) {
-        itemsField.addEventListener("change", (e) => {
-          const items = rouletteTextToItems(e.target.value);
-          // Пустой список оставил бы виджет без призов — не шлём, пока не
-          // появится хотя бы одна заполненная строка.
-          if (items.length) patchRoulette({ items });
-        });
-      }
-      const minField = propertiesEl.querySelector("#pRouletteMin");
-      if (minField) minField.addEventListener("change", (e) => patchRoulette({ minAmount: Math.max(0, Number(e.target.value) || 0) }));
-      const spinMsField = propertiesEl.querySelector("#pRouletteSpinMs");
-      if (spinMsField) {
-        spinMsField.addEventListener("change", (e) =>
-          patchRoulette({ spinMs: Math.max(600, Math.min(15000, Number(e.target.value) || 4200)) }),
-        );
-      }
-      wireSwitch(propertiesEl.querySelector("#pRouletteBg"), (on) => patchRoulette({ showBackground: on }));
-      const spinButton = propertiesEl.querySelector("#pRouletteSpin");
-      if (spinButton) spinButton.addEventListener("click", () => patchRoulette({ spinId: Date.now() }));
-      const roulettePerspective = propertiesEl.querySelector("#pPerspective");
-      if (roulettePerspective) {
-        roulettePerspective.addEventListener("input", (e) => {
-          const value = Number(e.target.value);
-          const label = propertiesEl.querySelector("#pPerspectiveValue");
-          if (label) label.textContent = String(value);
-          patchRoulette({ perspective: value });
-        });
-      }
-      const roulettePerspectiveDirection = propertiesEl.querySelector("#pPerspectiveDirection");
-      if (roulettePerspectiveDirection) {
-        roulettePerspectiveDirection.addEventListener("change", (e) => patchRoulette({ perspectiveDirection: e.target.value }));
       }
     } else if (inst.type === "uec-transfer") {
       propertiesEl.querySelector("#pUecChannel").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { channel: e.target.value.trim() } } }));

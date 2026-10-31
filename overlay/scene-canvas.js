@@ -287,7 +287,6 @@
       "win98-holo-alert": OW.WidgetWin98HoloAlert,
       "donatex-ai": OW.DonatexAiWidget,
       music: OW.MusicWidget,
-      roulette: OW.WidgetRoulette,
     };
     for (const [type, WidgetClass] of Object.entries(classes)) {
       if (WidgetClass) target.register(type, WidgetClass);

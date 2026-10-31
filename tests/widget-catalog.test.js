@@ -43,7 +43,6 @@ describe("widget-catalog helpers", () => {
     expect(isAnimatedWidget("grimhex-chat")).toBe(false);
     expect(isAnimatedWidget("teso-goal")).toBe(false);
     expect(isAnimatedWidget("md3-holo-alert")).toBe(false);
-    expect(isAnimatedWidget("roulette")).toBe(false);
     expect(isAnimatedWidget("win98-goal")).toBe(false);
     expect(isAnimatedWidget("win98-chat")).toBe(false);
     expect(isAnimatedWidget(undefined)).toBe(false);
@@ -181,7 +180,6 @@ describe("widget-catalog helpers", () => {
 
     // Без роли: остальные 2D-виджеты.
     expect(widgetRole("custom")).toBeNull();
-    expect(widgetRole("roulette")).toBeNull();
     expect(widgetRole(null)).toBeNull();
   });
 
