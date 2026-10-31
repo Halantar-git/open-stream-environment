@@ -20,8 +20,8 @@
 
   Проверяем то, что легко сломать незаметно: жёсткую привязку к теме (на чужой
   теме не должно быть ни DOM, ни цикла), подписки на нужные события и
-  поведение тахометра — он не гаснет между алертами, но раскручивается на
-  событии и возвращается на холостые.
+  поведение тахометра — он не гаснет между алертами, поднимает обороты от
+  активности чата и возвращается на холостые в тишине.
 */
 
 const EventBus = require("../overlay/event-bus");
@@ -257,7 +257,7 @@ describe("WidgetSfTachometer", () => {
     widget.unmount();
   });
 
-  test("вздрагивает на сообщении чата, не трогая передачу и частоту кадров", () => {
+  test("обороты растут от активности чата и гаснут в тишине", () => {
     const context = makeContext("sf");
     const widget = new WidgetSfTachometer(tachItem(), context);
     widget.mount(makeEl("div"));
@@ -268,11 +268,23 @@ describe("WidgetSfTachometer", () => {
 
     expect(widget._gear).toBe("N");
     expect(widget._fps).toBe(20);
-    expect(widget._chatBlipRpm).toBeGreaterThan(2.1);
-    expect(widget._chatBlipUntil).toBeGreaterThan(clock);
+    expect(widget._chatActivity).toBeGreaterThan(0);
 
     raf.flush(100);
-    expect(widget._displayRpm).toBeGreaterThan(before);
+    const afterOne = widget._displayRpm;
+    expect(afterOne).toBeGreaterThan(before);
+
+    // Плотный чат поднимает уровень, а с ним и обороты.
+    for (let i = 0; i < 3; i++) {
+      context.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: `viewer${i}`, message: "ещё сообщение" });
+    }
+    raf.flush(150);
+    expect(widget._displayRpm).toBeGreaterThan(afterOne);
+
+    // Пауза гасит активность, стрелка возвращается к холостым.
+    clock = 100000;
+    raf.flush(100000);
+    expect(widget._chatActivity).toBeLessThan(0.01);
 
     widget.unmount();
   });

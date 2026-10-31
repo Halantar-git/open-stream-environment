@@ -1020,7 +1020,7 @@
     "sf-tachometer": {
       type: "sf-tachometer",
       label: "Тахометр Super Four",
-      description: "Аналоговый тахометр с отсечкой: стрелка подгазовывает на сообщениях чата и раскручивается на алерте (только для темы Super Four)",
+      description: "Аналоговый тахометр с отсечкой: обороты растут от активности чата и раскручиваются на алерте (только для темы Super Four)",
       icon: "widgetSfTachometer",
       dimension: "3d",
       theme: "sf",
