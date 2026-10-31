@@ -1344,9 +1344,9 @@ export function initCanvasEditor({
                 <ellipse cx="50" cy="64" rx="29" ry="6"/>
               </g>
               <ellipse cx="50" cy="50" rx="40" ry="9" fill="none" stroke="${escapeAttr(primary)}" stroke-width="1.6"/>
-              <circle cx="88" cy="50" r="2.1" fill="${escapeAttr(secondary)}"/>
             </g>
             <circle cx="50" cy="50" r="40" fill="none" stroke="url(#rwl)" stroke-width="1.2"/>
+            <svg x="77.7" y="27.5" width="14" height="14" viewBox="0 0 24 24" style="filter:drop-shadow(0 0 3px ${escapeAttr(secondary)});"><path d="M12 2l2.4 6.1 6.6.4-5.1 4.2 1.7 6.4L12 15.6 6.4 19.1l1.7-6.4L3 8.5l6.6-.4L12 2z" fill="${escapeAttr(secondary)}"/></svg>
             <circle cx="33.7" cy="13.5" r="1.6" fill="${escapeAttr(secondary)}"/>
             <circle cx="66.3" cy="86.5" r="1.6" fill="${escapeAttr(secondary)}"/>
           </svg>

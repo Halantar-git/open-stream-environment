@@ -987,7 +987,7 @@
     "retrowave-symbol": {
       type: "retrowave-symbol",
       label: "Символ Retrowave",
-      description: "Вращающаяся неоновая сфера-сетка, появляется на алерте (только для темы Retrowave)",
+      description: "Вращающаяся неоновая сфера-сетка с иконкой события на экваторе, появляется на алерте (только для темы Retrowave)",
       icon: "widgetRetrowaveSymbol",
       dimension: "3d",
       theme: "retrowave",

@@ -19,10 +19,10 @@
   WidgetRetrowaveSymbol — rotating neon wireframe globe for the Retrowave theme.
 
   A sphere of meridians and parallels spins around its own axis with a slight
-  axial tilt; front segments glow cyan, back segments fade to magenta, and a
-  primary-coloured ring circles the equator. There is no solid fill and no
-  backdrop: the sign is light on top of the stream, not a panel, so the scene
-  stays transparent behind it.
+  axial tilt; front segments glow cyan, back segments fade to magenta, and the
+  icon of the active event travels along the equator. There is no solid fill
+  and no backdrop: the sign is light on top of the stream, not a panel, so the
+  scene stays transparent behind it.
 
   Like the Wardogs and Pixel decorative signs it is invisible while nothing is
   happening and appears on an alert, one at a time, popping harder on donations.
@@ -73,6 +73,8 @@
       this._visibleUntil = 0;
       this._popUntil = 0;
       this._popAmp = 0;
+      this._iconKind = null;
+      this._iconImages = {};
     }
 
     onMount() {
@@ -92,6 +94,7 @@
       this._visibleUntil = 0;
       this._popUntil = 0;
       this._popAmp = 0;
+      this._iconKind = null;
     }
 
     onUpdate(prev, next) {
@@ -127,11 +130,13 @@
       const alert = this._queue.shift();
       if (!alert) {
         this._visibleUntil = 0;
+        this._iconKind = null;
         this._setVisible(false);
         return;
       }
       const duration = alert.durationMs || DEFAULT_ALERT_MS;
       this._visibleUntil = performance.now() + duration;
+      this._iconKind = alert.kind || null;
       this._setVisible(true);
       this._pop(alert.kind);
       this.later(() => this._drain(), duration);
@@ -146,6 +151,22 @@
     _pop(kind) {
       this._popUntil = performance.now() + 450;
       this._popAmp = kind === "donation" ? 0.18 : 0.09;
+    }
+
+    // Иконка активного события — тот же приём, что у кубов: SVG красим
+    // currentColor в цвет темы и кэшируем растровую копию по виду события.
+    _iconImage(kind) {
+      const icons = this.context.ICONS || {};
+      const svg = icons[kind];
+      if (!svg || typeof Image === "undefined") return null;
+      const key = kind + "|" + this.secondary;
+      if (this._iconImages[key]) return this._iconImages[key];
+      const colored = svg.split("currentColor").join(this.secondary);
+      const sized = colored.replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" ');
+      const img = new Image();
+      img.src = "data:image/svg+xml," + encodeURIComponent(sized);
+      this._iconImages[key] = img;
+      return img;
     }
 
     // ---- rendering ----
@@ -271,8 +292,8 @@
       ctx.restore();
     }
 
-    // Экватор — яркий шов знака; по нему бежит светящаяся точка, чтобы сфера
-    // «жила» даже когда сетка на дальней стороне погашена.
+    // Экватор — яркий шов знака; по нему бежит иконка события, а не точка:
+    // тип события читается прямо со знака. Без иконки остаётся свечение.
     _drawEquator(ctx, project, radius, t) {
       ctx.save();
       ctx.strokeStyle = this.primary;
@@ -292,6 +313,21 @@
       const a = t * 1.1;
       const p = project(Math.cos(a), 0, Math.sin(a), radius);
       const behind = p.z < 0;
+      const img = this._iconKind ? this._iconImage(this._iconKind) : null;
+
+      if (img && img.complete && img.naturalWidth) {
+        // Иконка не вращается вместе с сеткой — она висит по экватору
+        // ровно, как маркер на карте.
+        const size = Math.max(12, radius * 0.46);
+        ctx.save();
+        ctx.globalAlpha = behind ? 0.4 : 1;
+        ctx.shadowColor = this.secondary;
+        ctx.shadowBlur = behind ? 8 : 16;
+        ctx.drawImage(img, p.x - size / 2, p.y - size / 2, size, size);
+        ctx.restore();
+        return;
+      }
+
       ctx.save();
       ctx.globalAlpha = behind ? 0.35 : 1;
       ctx.fillStyle = behind ? this.primary : this.secondary;

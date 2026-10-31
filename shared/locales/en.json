@@ -868,7 +868,7 @@
     "retrowave-holo-alert": "Retrowave Alert",
     "retrowave-holo-alertDesc": "Floating neon alert with a striped sun (Retrowave theme only)",
     "retrowave-symbol": "Retrowave Symbol",
-    "retrowave-symbolDesc": "Rotating neon wireframe sphere that appears on alerts (Retrowave theme only)",
+    "retrowave-symbolDesc": "Rotating neon wireframe sphere with the event icon on its equator, appears on alerts (Retrowave theme only)",
     "sf-tachometer": "Super Four Tachometer",
     "sf-tachometerDesc": "Analog tachometer with a redline: revs and gears rise with chat activity, spikes on alerts (Super Four theme only)",
     "sf-goal": "Super Four Goal",

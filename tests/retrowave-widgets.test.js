@@ -319,6 +319,18 @@ describe("WidgetRetrowaveSymbol", () => {
     w.unmount();
   });
 
+  test("держит иконку активного события для экватора", () => {
+    const ctx = makeContext("retrowave");
+    const w = new WidgetRetrowaveSymbol(symbolItem(), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "donation", durationMs: 5000 });
+    expect(w._iconKind).toBe("donation");
+
+    w.unmount();
+    expect(w._iconKind).toBeNull();
+  });
+
   test("не запускает цикл на чужой теме", () => {
     const w = new WidgetRetrowaveSymbol(symbolItem(), makeContext("pixel"));
     w.mount(makeEl("div"));
