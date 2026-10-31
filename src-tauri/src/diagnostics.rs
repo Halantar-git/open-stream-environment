@@ -2771,13 +2771,23 @@ fn apply_bus_event(event: &Value, ctx: &BusContext) {
             }
         }
         "goal_external_update" => {
-            // Порт `bus.on("goal_external_update")`: цель правится в настройках,
-            // затем панель получает свежий срез.
+            // Своя цель из сервиса донатов применяется только к той же кампании:
+            // чужая сумма сбора закрывала полоску цели в OSE (см.
+            // `apply_external_goal`).
             let goal = {
                 let mut config = config.lock().unwrap_or_else(|error| error.into_inner());
-                crate::state::config::set_goal(&mut config, &payload)
+                crate::state::config::apply_external_goal(&mut config, &payload)
             };
-            broadcast_clients(clients, event_types::GOAL_UPDATE, goal);
+            match goal {
+                Some(goal) => broadcast_clients(clients, event_types::GOAL_UPDATE, goal),
+                None => Logger::new("goal", None).info(
+                    "goal update from service ignored",
+                    Some(&json!({
+                        "current": payload.get("current").cloned().unwrap_or(Value::Null),
+                        "target": payload.get("target").cloned().unwrap_or(Value::Null),
+                    })),
+                ),
+            }
         }
         "donatex_ai_event" => {
             // Ответ ИИ-персонажа DonateX — отдельному виджету, а не алертам.
@@ -2966,6 +2976,17 @@ fn apply_alert_side_effects(
         );
         (goal, top)
     };
+    if let Some(goal) = &goal {
+        Logger::new("goal", None).info(
+            "goal updated by donation",
+            Some(&json!({
+                "amount": donated,
+                "currency": donation_currency,
+                "current": goal.get("current").cloned().unwrap_or(Value::Null),
+                "target": goal.get("target").cloned().unwrap_or(Value::Null),
+            })),
+        );
+    }
     if let Some(goal) = goal {
         broadcast_clients(clients, event_types::GOAL_UPDATE, goal);
     }

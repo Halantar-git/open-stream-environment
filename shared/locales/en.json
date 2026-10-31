@@ -1912,7 +1912,7 @@
       "p2": "Appearance manages overlay themes; Export/Import saves the full config.json together with media files (it contains secrets — don't share it).",
       "p3": "Language switches the whole interface between English and Russian.",
       "p4": "The event notification sound and its volume are configured in the Application card (the Notification sound toggle and Notification volume slider).",
-      "p5": "Base currency is the currency of the stream total. Donations in other currencies are converted at the rate loaded at startup and refreshed every twelve hours; without a rate the amount is shown on a separate line. The donation goal keeps its own currency in the widget properties."
+      "p5": "Base currency is the currency of the stream total. Donations in other currencies are converted at the rate loaded at startup and refreshed every twelve hours; without a rate the amount is shown on a separate line. The donation goal keeps its own currency in the widget properties. A goal coming from DonateX or DonationAlerts never replaces yours: its “collected” amount is applied only when the target matches, otherwise donations simply add up to your goal."
     },
     "updates": {
       "title": "Updates",

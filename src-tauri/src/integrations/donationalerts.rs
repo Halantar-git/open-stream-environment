@@ -320,6 +320,14 @@ pub fn goal_update(payload: &Value) -> Option<Value> {
             number_value(js_number_or_zero(Some(target))),
         );
     }
+    let currency = payload
+        .get("currency")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .unwrap_or_default();
+    if !currency.is_empty() {
+        out.insert("currency".to_string(), Value::from(currency));
+    }
     Some(Value::Object(out))
 }
 

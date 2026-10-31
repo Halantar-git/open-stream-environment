@@ -282,6 +282,10 @@ pub fn goal_update_from_payload(payload: &Value) -> Option<Value> {
             number_value(js_number_or_zero(Some(target))),
         );
     }
+    let currency = string_trimmed(payload.get("currency"));
+    if !currency.is_empty() {
+        out.insert("currency".to_string(), Value::from(currency));
+    }
     Some(Value::Object(out))
 }
 
@@ -753,6 +757,13 @@ mod tests {
         );
         assert_eq!(goal_update_from_payload(&json!(null)), None);
         assert_eq!(goal_update_from_payload(&json!({})), None);
+        // Валюта едет вместе с целью: по ней сверяется своя кампания или чужая.
+        assert_eq!(
+            goal_update_from_payload(
+                &json!({ "currentAmount": 100, "goalAmount": 5000, "currency": "RUB" })
+            ),
+            Some(json!({ "current": 100, "target": 5000, "currency": "RUB" }))
+        );
     }
 
     #[test]

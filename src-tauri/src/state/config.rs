@@ -89,6 +89,45 @@ pub fn add_to_goal(config: &mut ConfigFile, amount: &Value) -> Value {
     put_section(config, "goal", goal)
 }
 
+/// Применить обновление цели от сервиса донатов (DonateX, DonationAlerts).
+///
+/// Цель ведётся в настройках OSE, а сервис присылает свою кампанию со своей
+/// суммой сбора. Совпали суммы — берём «собрано» сервиса: оно авторитетнее
+/// локального счёта, если донаты шли без запущенного OSE. Не совпали — это
+/// чужая кампания, и её сумму сбора нельзя подставлять в нашу цель: одна
+/// такая подмена закрывала полоску на цели в двадцать пять тысяч.
+///
+/// `None` — обновление не применили (нет суммы сбора или она чужая).
+pub fn apply_external_goal(config: &mut ConfigFile, patch: &Value) -> Option<Value> {
+    let local_target = js_number_or_zero(section(config, "goal").get("target"));
+    let external_target = patch.get("target").filter(|value| js_truthy(Some(value)));
+    let matches = match external_target {
+        Some(target) => {
+            let target = js_number_or_zero(Some(target));
+            local_target > 0.0 && (target - local_target).abs() < 0.5
+        }
+        None => false,
+    };
+    // Совпавшая сумма в чужой валюте — всё равно чужая кампания.
+    let currency_matches = match patch.get("currency").filter(|value| js_truthy(Some(value))) {
+        Some(currency) => {
+            let local = section(config, "goal")
+                .get("currency")
+                .map(crate::state::currency_code)
+                .unwrap_or_default();
+            crate::state::currency_code(currency) == local
+        }
+        None => true,
+    };
+    if !matches || !currency_matches {
+        return None;
+    }
+    Some(set_goal(
+        config,
+        &json!({ "current": patch.get("current").cloned().unwrap_or(json!(0)) }),
+    ))
+}
+
 // ---- Очередь алертов ----
 
 pub fn alert_queue_config(config: &ConfigFile) -> Value {
@@ -2212,6 +2251,40 @@ mod tests {
 
         let goal = add_to_goal(&mut config, &json!(200));
         assert_eq!(goal["current"], json!(200));
+    }
+
+    #[test]
+    fn an_external_goal_applies_only_to_the_same_campaign() {
+        let fixture = Fixture::new("goal-external");
+        let mut config = fixture.config();
+        set_goal(
+            &mut config,
+            &json!({ "title": "Цель", "current": 0, "target": 25000, "currency": "RUB" }),
+        );
+
+        // Чужая кампания: сумма сбора другая — цель остаётся как была.
+        assert!(
+            apply_external_goal(&mut config, &json!({ "current": 100, "target": 100 })).is_none()
+        );
+        assert_eq!(config.get("goal").unwrap()["current"], json!(0));
+        assert_eq!(config.get("goal").unwrap()["target"], json!(25000));
+
+        // Без суммы сбора сверять нечего — тоже не применяем.
+        assert!(apply_external_goal(&mut config, &json!({ "current": 100 })).is_none());
+
+        // Та же сумма, но чужая валюта — тоже чужая кампания.
+        assert!(apply_external_goal(
+            &mut config,
+            &json!({ "current": 150, "target": 25000, "currency": "USD" })
+        )
+        .is_none());
+        assert_eq!(config.get("goal").unwrap()["current"], json!(0));
+
+        // Та же цель: «собрано» сервиса авторитетнее локального счёта.
+        let goal = apply_external_goal(&mut config, &json!({ "current": 150, "target": 25000 }))
+            .expect("цель той же кампании применяется");
+        assert_eq!(goal["current"], json!(150));
+        assert_eq!(goal["target"], json!(25000));
     }
 
     #[test]
