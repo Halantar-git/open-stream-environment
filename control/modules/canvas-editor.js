@@ -1334,23 +1334,23 @@ export function initCanvasEditor({
       case "sf-goal": {
         const tokens = state.appearance.tokens || {};
         const pct = state.goal && state.goal.target ? Math.min(100, Math.round((state.goal.current / state.goal.target) * 100)) : 0;
-        const primary = tokens["--md-primary"] || "#a855f7";
-        const secondary = tokens["--md-secondary"] || "#f59e0b";
-        const tertiary = tokens["--md-tertiary"] || "#22d3ee";
-        const text = tokens["--md-on-surface"] || "#f3e8ff";
-        const muted = tokens["--md-on-surface-variant"] || "#cbb8de";
-        const bg = tokens["--panel-bg"] || "rgba(15, 12, 25, 0.9)";
-        const border = tokens["--panel-border"] || "2px solid rgba(168, 85, 247, 0.35)";
+        const primary = tokens["--md-primary"] || "#7b2cbf";
+        const secondary = tokens["--md-secondary"] || "#ffb700";
+        const tertiary = tokens["--md-tertiary"] || "#00f5d4";
+        const text = tokens["--md-on-surface"] || "#ffffff";
+        const muted = tokens["--md-on-surface-variant"] || "#9a8c98";
+        const bg = tokens["--panel-bg"] || "rgba(34, 22, 62, 0.92)";
+        const border = tokens["--panel-border"] || "2px solid rgba(123, 44, 191, 0.55)";
         const radius = tokens["--panel-radius"] || "6px";
-        const glow = tokens["--panel-glow"] || "0 0 10px rgba(147, 51, 234, 0.5)";
-        // Те же 14 клеток, что и в эфире: последние три — янтарная отсечка.
+        const glow = tokens["--panel-glow"] || "0 0 12px rgba(157, 78, 221, 0.5)";
+        // Те же 14 клеток, что и в эфире: последние три — золотая отсечка.
         const cells = Array.from({ length: 14 }, (_, i) => {
           const x = i * 14.5;
           const redline = i >= 11;
           const fill = Math.max(0, Math.min(1, (pct - i * (100 / 14)) / (100 / 14)));
           const color = redline ? secondary : i < 6 ? primary : tertiary;
           return (
-            `<rect x="${x}" y="0" width="13" height="22" fill="${redline ? "rgba(245,158,11,0.16)" : "rgba(203,184,222,0.10)"}"/>` +
+            `<rect x="${x}" y="0" width="13" height="22" fill="${redline ? "rgba(255,183,0,0.16)" : "rgba(154,140,152,0.12)"}"/>` +
             (fill > 0 ? `<rect x="${x}" y="0" width="${(13 * fill).toFixed(2)}" height="22" fill="${color}"/>` : "") +
             (fill > 0 && fill < 1 ? `<rect x="${(x + 13 * fill - 1).toFixed(2)}" y="1" width="1" height="20" fill="#ffffff"/>` : "")
           );
@@ -1362,16 +1362,16 @@ export function initCanvasEditor({
       }
       case "sf-chat": {
         const tokens = state.appearance.tokens || {};
-        const text = tokens["--md-on-surface"] || "#f3e8ff";
-        const muted = tokens["--md-on-surface-variant"] || "#cbb8de";
-        const primary = tokens["--md-primary"] || "#a855f7";
-        const secondary = tokens["--md-secondary"] || "#f59e0b";
-        const tertiary = tokens["--md-tertiary"] || "#22d3ee";
-        const bg = tokens["--panel-bg"] || "rgba(15, 12, 25, 0.9)";
-        const border = tokens["--panel-border"] || "2px solid rgba(168, 85, 247, 0.35)";
+        const text = tokens["--md-on-surface"] || "#ffffff";
+        const muted = tokens["--md-on-surface-variant"] || "#9a8c98";
+        const primary = tokens["--md-primary"] || "#7b2cbf";
+        const pink = tokens["--sf-candy-pink"] || tokens["--md-secondary"] || "#ff007f";
+        const cyan = tokens["--sf-candy-cyan"] || tokens["--md-tertiary"] || "#00f5d4";
+        const bg = tokens["--panel-bg"] || "rgba(34, 22, 62, 0.92)";
+        const border = tokens["--panel-border"] || "2px solid rgba(123, 44, 191, 0.55)";
         const radius = tokens["--panel-radius"] || "6px";
-        const glow = tokens["--panel-glow"] || "0 0 10px rgba(147, 51, 234, 0.5)";
-        const cylinders = Array.from({ length: 4 }, (_, i) => `<span style="width:5px;height:5px;border-radius:50%;background:${i === 0 ? escapeAttr(secondary) : "rgba(203,184,222,0.28)"};box-shadow:${i === 0 ? `0 0 7px ${escapeAttr(secondary)}` : `inset 0 0 0 1px ${escapeAttr(primary)}`};"></span>`).join("");
+        const glow = tokens["--panel-glow"] || "0 0 12px rgba(157, 78, 221, 0.5)";
+        const cylinders = Array.from({ length: 4 }, (_, i) => `<span style="width:5px;height:5px;border-radius:50%;background:${i === 0 ? escapeAttr(pink) : "rgba(154,140,152,0.3)"};box-shadow:${i === 0 ? `0 0 7px ${escapeAttr(pink)}` : `inset 0 0 0 1px ${escapeAttr(primary)}`};"></span>`).join("");
         const rows = [
           { user: "nova_viewer", badges: ["moderator"], message: t("preview.chat1") },
           { user: "star_gazer", badges: ["subscriber"], message: t("preview.chat2") },
@@ -1379,31 +1379,31 @@ export function initCanvasEditor({
         ]
           .map(
             (m) =>
-              `<div style="display:flex;gap:7px;padding:3px 8px 3px 9px;font-family:'Manrope','Segoe UI',sans-serif;font-size:12px;line-height:1.45;color:${escapeAttr(text)};background:linear-gradient(90deg,rgba(168,85,247,0.12),rgba(8,6,13,0.28) 46%,transparent);border-left:2px solid ${escapeAttr(secondary)};">
+              `<div style="display:flex;gap:7px;padding:3px 8px 3px 9px;font-family:'Manrope','Segoe UI',sans-serif;font-size:12px;line-height:1.45;color:${escapeAttr(text)};background:linear-gradient(90deg,rgba(123,44,191,0.12),rgba(13,8,25,0.28) 46%,transparent);border-left:2px solid ${escapeAttr(pink)};">
                 ${config.showTime === false ? "" : `<span style="color:${escapeAttr(muted)};font-family:'JetBrains Mono','Consolas',monospace;font-size:10px;">[12:00]</span>`}
-                ${previewBadges(m.badges, tertiary)}
-                <span style="color:${escapeAttr(secondary)};font-weight:700">${escapeHtml(m.user)}</span>
+                ${previewBadges(m.badges, cyan)}
+                <span style="color:${escapeAttr(cyan)};font-weight:700">${escapeHtml(m.user)}</span>
                 <span style="color:${escapeAttr(muted)}">:</span>
                 <span style="color:${escapeAttr(text)}">${escapeHtml(m.message)}</span>
               </div>`
           )
           .join("");
         return `<div style="position:relative;height:100%;padding:12px 12px 12px 14px;box-sizing:border-box;display:flex;flex-direction:column;background:${escapeAttr(bg)};border:${escapeAttr(border)};border-radius:${escapeAttr(radius)};box-shadow:${escapeAttr(glow)};overflow:hidden;">
-          <div style="display:flex;align-items:center;gap:9px;flex-shrink:0;color:${escapeAttr(text)};font-family:'Rajdhani','Segoe UI',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:1.8px;font-size:11px;"><span style="display:inline-flex;gap:3px;">${cylinders}</span><span>${escapeHtml(t("editor.chat"))}</span><span style="flex:1;height:1px;background:linear-gradient(90deg,${escapeAttr(primary)},${escapeAttr(secondary)} 70%,transparent);"></span></div>
+          <div style="display:flex;align-items:center;gap:9px;flex-shrink:0;color:${escapeAttr(text)};font-family:'Rajdhani','Segoe UI',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:1.8px;font-size:11px;"><span style="display:inline-flex;gap:3px;">${cylinders}</span><span>${escapeHtml(t("editor.chat"))}</span><span style="flex:1;height:1px;background:linear-gradient(90deg,${escapeAttr(pink)},${escapeAttr(cyan)} 70%,transparent);"></span></div>
           <div style="flex:1;min-height:0;overflow:hidden;margin-top:10px;display:flex;flex-direction:column;justify-content:flex-end;gap:5px;">${rows}</div>
         </div>`;
       }
       case "sf-holo-alert": {
         const tokens = state.appearance.tokens || {};
-        const primary = tokens["--md-primary"] || "#a855f7";
-        const secondary = tokens["--md-secondary"] || "#f59e0b";
-        const tertiary = tokens["--md-tertiary"] || "#22d3ee";
-        const text = tokens["--md-on-surface"] || "#f3e8ff";
-        const muted = tokens["--md-on-surface-variant"] || "#cbb8de";
-        const bg = tokens["--panel-bg"] || "rgba(15, 12, 25, 0.9)";
-        const border = tokens["--panel-border"] || "2px solid rgba(168, 85, 247, 0.35)";
+        const primary = tokens["--md-primary"] || "#7b2cbf";
+        const secondary = tokens["--md-secondary"] || "#ffb700";
+        const tertiary = tokens["--md-tertiary"] || "#00f5d4";
+        const text = tokens["--md-on-surface"] || "#ffffff";
+        const muted = tokens["--md-on-surface-variant"] || "#9a8c98";
+        const bg = tokens["--panel-bg"] || "rgba(34, 22, 62, 0.92)";
+        const border = tokens["--panel-border"] || "2px solid rgba(123, 44, 191, 0.55)";
         const radius = tokens["--panel-radius"] || "6px";
-        const glow = tokens["--panel-glow"] || "0 0 10px rgba(147, 51, 234, 0.5)";
+        const glow = tokens["--panel-glow"] || "0 0 12px rgba(157, 78, 221, 0.5)";
         const angle = (rpm) => Math.PI * 0.75 + (Math.PI * 1.5 * rpm) / 14;
         const point = (rpm, r) => [24 + Math.cos(angle(rpm)) * r, 24 + Math.sin(angle(rpm)) * r];
         const arc = (a, b, r) => {
@@ -1414,7 +1414,7 @@ export function initCanvasEditor({
         const [nx, ny] = point(6.4, 13);
         return `<div style="position:relative;height:100%;display:flex;align-items:center;gap:10px;padding:8px 12px;box-sizing:border-box;background:${escapeAttr(bg)};border:${escapeAttr(border)};border-radius:${escapeAttr(radius)};box-shadow:${escapeAttr(glow)};">
           <svg viewBox="0 0 48 48" preserveAspectRatio="xMidYMid meet" style="flex-shrink:0;width:42px;height:42px;">
-            <circle cx="24" cy="24" r="19" fill="rgba(15,12,25,0.9)" stroke="${escapeAttr(primary)}" stroke-opacity="0.55" stroke-width="1.2"/>
+            <circle cx="24" cy="24" r="19" fill="rgba(34,22,62,0.9)" stroke="${escapeAttr(primary)}" stroke-opacity="0.55" stroke-width="1.2"/>
             <path d="${arc(0, 14, 16)}" fill="none" stroke="${escapeAttr(muted)}" stroke-opacity="0.28" stroke-width="1.2"/>
             <path d="${arc(11.5, 14, 16)}" fill="none" stroke="${escapeAttr(secondary)}" stroke-width="2" stroke-linecap="round"/>
             <line x1="21.5" y1="25.5" x2="${nx.toFixed(2)}" y2="${ny.toFixed(2)}" stroke="${escapeAttr(text)}" stroke-width="1.4" stroke-linecap="round"/>
@@ -1422,18 +1422,19 @@ export function initCanvasEditor({
             <circle cx="24" cy="24" r="1" fill="${escapeAttr(tertiary)}"/>
           </svg>
           <div style="min-width:0;display:flex;flex-direction:column;gap:2px;">
-            <span style="font-family:'JetBrains Mono','Consolas',monospace;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${escapeAttr(secondary)};">DASH // ${escapeHtml(t("properties.testFollow"))}</span>
+            <span style="font-family:'JetBrains Mono','Consolas',monospace;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${escapeAttr(tertiary)};">DASH // ${escapeHtml(t("properties.testFollow"))}</span>
             <span style="font-family:'Rajdhani','Segoe UI',sans-serif;font-size:14px;font-weight:700;color:${escapeAttr(text)};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">nova_viewer</span>
           </div>
         </div>`;
       }
       case "sf-tachometer": {
         const tokens = state.appearance.tokens || {};
-        const primary = tokens["--md-primary"] || "#a855f7";
-        const secondary = tokens["--md-secondary"] || "#f59e0b";
-        const text = tokens["--md-on-surface"] || "#f3e8ff";
-        const muted = tokens["--md-on-surface-variant"] || "#cbb8de";
-        const dial = tokens["--panel-bg"] || "rgba(15, 12, 25, 0.9)";
+        const primary = tokens["--md-primary"] || "#7b2cbf";
+        const secondary = tokens["--md-secondary"] || "#ffb700";
+        const text = tokens["--md-on-surface"] || "#ffffff";
+        const muted = tokens["--md-on-surface-variant"] || "#9a8c98";
+        const dial = tokens["--panel-bg"] || "rgba(34, 22, 62, 0.92)";
+        const pink = tokens["--sf-candy-pink"] || secondary || "#ff007f";
         const angle = (rpm) => Math.PI * 0.75 + (Math.PI * 1.5 * rpm) / 14;
         const point = (rpm, r) => [50 + Math.cos(angle(rpm)) * r, 50 + Math.sin(angle(rpm)) * r];
         const arc = (a, b, r) => {
@@ -1464,8 +1465,8 @@ export function initCanvasEditor({
             <line x1="48" y1="52" x2="${nx.toFixed(2)}" y2="${ny.toFixed(2)}" stroke="${escapeAttr(text)}" stroke-width="1.1" stroke-linecap="round"/>
             <circle cx="50" cy="50" r="1.6" fill="${escapeAttr(primary)}"/>
             <text x="50" y="66" fill="${escapeAttr(muted)}" font-family="'JetBrains Mono','Consolas',monospace" font-size="3.6" text-anchor="middle">CB400SF</text>
-            <rect x="43" y="69" width="14" height="9" fill="rgba(8,6,13,0.92)" stroke="${escapeAttr(primary)}" stroke-opacity="0.6" stroke-width="0.6"/>
-            <rect x="43" y="69" width="14" height="1" fill="${escapeAttr(secondary)}"/>
+            <rect x="43" y="69" width="14" height="9" fill="rgba(13,8,25,0.92)" stroke="${escapeAttr(primary)}" stroke-opacity="0.6" stroke-width="0.6"/>
+            <rect x="43" y="69" width="14" height="1" fill="${escapeAttr(pink)}"/>
             <text x="50" y="75" fill="${escapeAttr(muted)}" font-family="'JetBrains Mono','Consolas',monospace" font-size="5" font-weight="700" text-anchor="middle">N</text>
           </svg>
         </div>`;

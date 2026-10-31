@@ -1033,7 +1033,7 @@
     "sf-goal": {
       type: "sf-goal",
       label: "Цель Super Four",
-      description: "Донат-цель как шкала оборотов с оранжевой зоной (только для темы Super Four)",
+      description: "Донат-цель как шкала оборотов с золотой зоной отсечки (только для темы Super Four)",
       icon: "widgetSfGoal",
       services: ["donationAlerts", "youtube"],
       dimension: "3d",

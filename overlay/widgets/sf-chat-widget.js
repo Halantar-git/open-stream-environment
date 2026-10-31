@@ -21,8 +21,9 @@
   Шапка повторяет тахометр в миниатюре: четыре огонька цилиндров вместо
   заголовка-плашки. При новом сообщении они срабатывают по очереди, как
   четырёхцилиндровый двигатель, — это единственная анимация, которую чат
-  позволяет себе в эфире. Имя зрителя окрашено янтарными «поворотниками»
-  (вторичный акцент темы), время и цифры остаются моноширинными.
+  позволяет себе в эфире. Имя зрителя окрашено бирюзой Candy Flash (как
+  вторая полоса графики), розовая кромка строки повторяет первую. Время и
+  цифры остаются моноширинными.
 
   Тема изолирована жёстко: на чужой теме не строится ни DOM, ни подписки.
 */
@@ -42,11 +43,12 @@
 })(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
   "use strict";
 
-  const DEFAULT_TEXT = "#f3e8ff"; // --md-on-surface
-  const DEFAULT_MUTED = "#cbb8de"; // --md-on-surface-variant
-  const DEFAULT_USER = "#f59e0b"; // --md-secondary, янтарные «поворотники»
-  const DEFAULT_PRIMARY = "#a855f7"; // --md-primary
-  const DEFAULT_TERTIARY = "#22d3ee"; // --md-tertiary
+  const DEFAULT_TEXT = "#ffffff"; // --md-on-surface
+  const DEFAULT_MUTED = "#9a8c98"; // --md-on-surface-variant
+  const DEFAULT_USER = "#00f5d4"; // --sf-candy-cyan, бирюзовая полоса Candy Flash
+  const DEFAULT_PRIMARY = "#7b2cbf"; // --md-primary
+  const DEFAULT_TERTIARY = "#00f5d4"; // --md-tertiary
+  const DEFAULT_PINK = "#ff007f"; // --sf-candy-pink
 
   const FONT_DISPLAY = "'Rajdhani', 'Segoe UI', sans-serif";
   const FONT_BODY = "'Manrope', 'Segoe UI', sans-serif";
@@ -73,6 +75,7 @@
       this.userColor = DEFAULT_USER;
       this.primaryColor = DEFAULT_PRIMARY;
       this.tertiaryColor = DEFAULT_TERTIARY;
+      this.pinkColor = DEFAULT_PINK;
 
       this.frameEl = null;
       this.headerEl = null;
@@ -114,7 +117,7 @@
       this.headerEl.innerHTML =
         `<span class="sf-chat__cyl"></span>` +
         `<span>${this.context.escapeHtml(this.context.t("editor.chat"))}</span>` +
-        `<span style="flex:1;height:1px;background:linear-gradient(90deg,${this.primaryColor},${this.userColor} 70%,transparent);"></span>`;
+        `<span style="flex:1;height:1px;background:linear-gradient(90deg,${this.pinkColor},${this.userColor} 70%,transparent);"></span>`;
       frame.appendChild(this.headerEl);
 
       // Четыре цилиндра: огоньки загораются по очереди на каждом сообщении.
@@ -156,9 +159,12 @@
       const read = this.context.readCssVar;
       this.textColor = (read && read("--md-on-surface")) || DEFAULT_TEXT;
       this.mutedColor = (read && read("--md-on-surface-variant")) || DEFAULT_MUTED;
-      this.userColor = (read && read("--md-secondary")) || DEFAULT_USER;
       this.primaryColor = (read && read("--md-primary")) || DEFAULT_PRIMARY;
       this.tertiaryColor = (read && read("--md-tertiary")) || DEFAULT_TERTIARY;
+      // Ник — бирюзовая полоса Candy Flash; в своей теме без этих токенов
+      // остаётся третичный цвет палитры.
+      this.userColor = (read && read("--sf-candy-cyan")) || this.tertiaryColor;
+      this.pinkColor = (read && read("--sf-candy-pink")) || this.primaryColor;
     }
 
     // Поверхность из токенов темы: одна панель на цель, чат и алерт.
@@ -166,13 +172,13 @@
       const read = this.context.readCssVar;
       const style = this.element.style;
 
-      const bg = (read && read("--panel-bg")) || "rgba(15, 12, 25, 0.9)";
+      const bg = (read && read("--panel-bg")) || "rgba(34, 22, 62, 0.92)";
       const blur = (read && read("--panel-blur")) || "12px";
-      const border = (read && read("--panel-border")) || "2px solid rgba(168, 85, 247, 0.35)";
+      const border = (read && read("--panel-border")) || "2px solid rgba(123, 44, 191, 0.55)";
       const radius = (read && read("--panel-radius")) || "6px";
       const clip = (read && read("--panel-clip")) || "none";
       const elev = (read && read("--elev-1")) || "0 1px 3px rgba(0,0,0,0.55), 0 1px 2px rgba(0,0,0,0.35)";
-      const glow = (read && read("--panel-glow")) || "0 0 10px rgba(147, 51, 234, 0.5)";
+      const glow = (read && read("--panel-glow")) || "0 0 12px rgba(157, 78, 221, 0.5)";
 
       // Пустая backgroundImage оставляет фактуру из `.sf-surface`.
       style.backgroundColor = bg;
@@ -217,8 +223,8 @@
       row.className = "sf-chat__row";
       row.style.cssText =
         `font-family:${FONT_BODY};font-size:14px;line-height:1.45;color:${this.textColor};` +
-        `padding:3px 8px 3px 10px;box-sizing:border-box;background:linear-gradient(90deg,${rgba(this.primaryColor, 0.12)},rgba(8,6,13,0.28) 46%,transparent);` +
-        `border-left:2px solid ${rgba(this.userColor, 0.7)};`;
+        `padding:3px 8px 3px 10px;box-sizing:border-box;background:linear-gradient(90deg,${rgba(this.primaryColor, 0.12)},rgba(13,8,25,0.28) 46%,transparent);` +
+        `border-left:2px solid ${rgba(this.pinkColor, 0.75)};`;
 
       const time = this.config.showTime === false ? "" : BaseWidget.clockTime();
       const badges = (message.badges || [])

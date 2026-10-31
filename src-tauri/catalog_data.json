@@ -1,5 +1,5 @@
 {
-  "sourceHash": "e9fa56b4ecab4a61",
+  "sourceHash": "214d5f119c2e549d",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -1842,7 +1842,7 @@
     "sf-goal": {
       "type": "sf-goal",
       "label": "Цель Super Four",
-      "description": "Донат-цель как шкала оборотов с оранжевой зоной (только для темы Super Four)",
+      "description": "Донат-цель как шкала оборотов с золотой зоной отсечки (только для темы Super Four)",
       "icon": "widgetSfGoal",
       "services": [
         "donationAlerts",

@@ -19,13 +19,14 @@
   WidgetSfGoal — донат-цель в виде шкалы оборотов.
 
   Язык темы — приборка CB400SF, поэтому прогресс читается не сплошной полосой,
-  а секторами тахометра: четырнадцать клеток по тысяче оборотов, фиолетовый
-  перламутр переходит в холодный циан, последние три клетки — янтарная зона
-  отсечки. Голова заливки светится, поэтому процент видно и на тёмной сцене.
+  а секторами тахометра: четырнадцать клеток по тысяче оборотов, перламутровый
+  фиолетовый переходит в бирюзу Candy Flash, последние три клетки — золотая
+  зона отсечки (цвет пружин Showa). Голова заливки светится, поэтому процент
+  видно и на тёмной сцене.
 
-  Панель собирается из токенов темы (`--panel-*`), а фактуру и хромовую кромку
-  даёт класс `.sf-surface` из shared/widgets.css — так цель не расходится с
-  чатом и алертом при смене палитры.
+  Панель собирается из токенов темы (`--panel-*`), а фактуру и полосу Candy
+  Flash даёт класс `.sf-surface` из shared/widgets.css — так цель не
+  расходится с чатом и алертом при смене палитры.
 */
 (function (root, factory) {
   const BaseWidget =
@@ -43,15 +44,15 @@
 })(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
   "use strict";
 
-  const DEFAULT_PRIMARY = "#a855f7";
-  const DEFAULT_SECONDARY = "#f59e0b";
-  const DEFAULT_TERTIARY = "#22d3ee";
-  const DEFAULT_TEXT = "#f3e8ff";
-  const DEFAULT_MUTED = "#cbb8de";
+  const DEFAULT_PRIMARY = "#7b2cbf";
+  const DEFAULT_SECONDARY = "#ffb700";
+  const DEFAULT_TERTIARY = "#00f5d4";
+  const DEFAULT_TEXT = "#ffffff";
+  const DEFAULT_MUTED = "#9a8c98";
 
-  const DEFAULT_PANEL_BG = "rgba(15, 12, 25, 0.9)";
-  const DEFAULT_PANEL_BORDER = "2px solid rgba(168, 85, 247, 0.35)";
-  const DEFAULT_PANEL_GLOW = "0 0 10px rgba(147, 51, 234, 0.5)";
+  const DEFAULT_PANEL_BG = "rgba(34, 22, 62, 0.92)";
+  const DEFAULT_PANEL_BORDER = "2px solid rgba(123, 44, 191, 0.55)";
+  const DEFAULT_PANEL_GLOW = "0 0 12px rgba(157, 78, 221, 0.5)";
 
   const FONT_DISPLAY = "'Rajdhani', 'Segoe UI', sans-serif";
   const FONT_MONO = "'JetBrains Mono', 'Consolas', monospace";
@@ -81,7 +82,7 @@
 
   function rgba(hex, alpha) {
     const rgb = parseHex(hex);
-    if (!rgb) return `rgba(168, 85, 247, ${alpha})`;
+    if (!rgb) return `rgba(123, 44, 191, ${alpha})`;
     return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
   }
 
@@ -299,7 +300,7 @@
         const redline = i >= REDLINE_CELL;
         const fill = clamp((pct - i * cellPct) / cellPct, 0, 1);
 
-        // Дорожка: в зоне отсечки она тонирована янтарём, чтобы граница
+        // Дорожка: в зоне отсечки она тонирована золотом, чтобы граница
         // читалась до заполнения.
         ctx.fillStyle = redline ? rgba(this.secondary, 0.16) : rgba(this.mutedColor, 0.1);
         ctx.fillRect(x, 0, cellW, ch);

@@ -19,12 +19,12 @@
   WidgetSfTachometer — аналоговый тахометр темы Super Four.
 
   Тема названа по Honda CB400SF, поэтому вывеска — не логотип, а сам прибор:
-  круглый тахометр с оцифровкой до 14 тысяч, янтарной зоной отсечки и окном
-  передачи. В покое стрелка «держит холостые» и еле заметно дрожит, как живой
-  двигатель; на алерте она уходит в свою зону — чем весомее событие, тем выше
-  обороты, донат доходит до отсечки. Это делает виджет живым даже между
-  событиями, в отличие от вывесок Retrowave/Pixel/Wardogs, которые появляются
-  только на алерте.
+  круглый тахометр с оцифровкой до 14 тысяч, золотой зоной отсечки (цвет
+  пружин Showa) и окном передачи. В покое стрелка «держит холостые» и еле
+  заметно дрожит, как живой двигатель; на алерте она уходит в свою зону —
+  чем весомее событие, тем выше обороты, донат доходит до отсечки. Это делает
+  виджет живым даже между событиями, в отличие от вывесок Retrowave/Pixel/
+  Wardogs, которые появляются только на алерте.
 
   Так как цикл не останавливается, в покое он идёт на AMBIENT_FPS (20 кадров
   хватает для спокойной стрелки), а на алерте на время раскрутки — на 30.
@@ -49,11 +49,13 @@
 
   // Запасные цвета повторяют токены Super Four из shared/themes.js: живые
   // значения читаются из CSS, чтобы своя тема с этим набором не потеряла палитру.
-  const DEFAULT_PRIMARY = "#a855f7";
-  const DEFAULT_SECONDARY = "#f59e0b";
-  const DEFAULT_TEXT = "#f3e8ff";
-  const DEFAULT_MUTED = "#cbb8de";
-  const DEFAULT_DIAL = "rgba(15, 12, 25, 0.9)";
+  const DEFAULT_PRIMARY = "#7b2cbf";
+  const DEFAULT_SECONDARY = "#ffb700";
+  const DEFAULT_TEXT = "#ffffff";
+  const DEFAULT_MUTED = "#9a8c98";
+  const DEFAULT_DIAL = "rgba(34, 22, 62, 0.9)";
+  const DEFAULT_GLOW = "#9d4edd";
+  const DEFAULT_PINK = "#ff007f";
 
   const FONT_MONO = "'JetBrains Mono', 'Consolas', monospace";
 
@@ -107,7 +109,7 @@
   // `#rrggbb` + прозрачность — для ореолов и приглушённых меток.
   function rgba(hex, alpha) {
     const match = /^#?([0-9a-f]{6})$/i.exec(String(hex || "").trim());
-    if (!match) return `rgba(168, 85, 247, ${alpha})`;
+    if (!match) return `rgba(123, 44, 191, ${alpha})`;
     const n = parseInt(match[1], 16);
     return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
   }
@@ -122,6 +124,8 @@
       this.textColor = DEFAULT_TEXT;
       this.mutedColor = DEFAULT_MUTED;
       this.dialColor = DEFAULT_DIAL;
+      this.glowColor = DEFAULT_GLOW;
+      this.pinkColor = DEFAULT_PINK;
 
       this._displayRpm = IDLE_RPM;
       this._alertRpm = 0;
@@ -160,6 +164,10 @@
       this.textColor = (read && read("--md-on-surface")) || DEFAULT_TEXT;
       this.mutedColor = (read && read("--md-on-surface-variant")) || DEFAULT_MUTED;
       this.dialColor = (read && read("--panel-bg")) || DEFAULT_DIAL;
+      // Свечение и розовая полоса Candy Flash — свои токены: в Material-роли они
+      // не влезают, а для своей темы достаточно откатиться на primary.
+      this.glowColor = (read && read("--sf-glow")) || this.primary;
+      this.pinkColor = (read && read("--sf-candy-pink")) || this.primary;
     }
 
     _applyPerspective() {
@@ -262,7 +270,7 @@
       const face = ctx.createRadialGradient(cx, cy - radius * 0.25, radius * 0.1, cx, cy, radius);
       face.addColorStop(0, rgba(this.primary, 0.16));
       face.addColorStop(0.55, this.dialColor);
-      face.addColorStop(1, "rgba(8, 6, 13, 0.86)");
+      face.addColorStop(1, "rgba(13, 8, 25, 0.9)");
       ctx.fillStyle = face;
       ctx.beginPath();
       ctx.arc(cx, cy, radius, 0, Math.PI * 2);
@@ -270,8 +278,8 @@
 
       ctx.strokeStyle = rgba(this.primary, 0.55);
       ctx.lineWidth = Math.max(1.4, radius * 0.018);
-      ctx.shadowColor = rgba(this.primary, 0.7);
-      ctx.shadowBlur = radius * 0.14;
+      ctx.shadowColor = rgba(this.glowColor, 0.75);
+      ctx.shadowBlur = radius * 0.16;
       ctx.stroke();
       ctx.restore();
 
@@ -310,7 +318,7 @@
         }
       }
 
-      // Янтарная зона отсечки. На высоких оборотах она пульсирует — это и есть
+      // Золотая зона отсечки. На высоких оборотах она пульсирует — это и есть
       // «шифт-ламп», а не отдельная лампочка поверх прибора.
       const pulse = rpm >= REDLINE_RPM ? 0.55 + 0.45 * Math.abs(Math.sin(seconds * 6)) : 0.55;
       ctx.save();
@@ -324,7 +332,7 @@
       ctx.stroke();
       ctx.restore();
 
-      // Стрелка: почти белая с фиолетовым ореолом, в отсечке — янтарная.
+      // Стрелка: почти белая с фиолетовым ореолом, в отсечке — золотая.
       const needleAngle = angleFor(rpm);
       const needleLength = radius * 0.72;
       const inRedline = rpm >= REDLINE_RPM;
@@ -332,7 +340,7 @@
       ctx.strokeStyle = inRedline ? this.secondary : this.textColor;
       ctx.lineWidth = Math.max(1.8, radius * 0.022);
       ctx.lineCap = "round";
-      ctx.shadowColor = inRedline ? this.secondary : this.primary;
+      ctx.shadowColor = inRedline ? this.secondary : rgba(this.glowColor, 0.9);
       ctx.shadowBlur = radius * 0.12;
       ctx.beginPath();
       ctx.moveTo(cx - Math.cos(needleAngle) * radius * 0.08, cy - Math.sin(needleAngle) * radius * 0.08);
@@ -343,7 +351,7 @@
       // Ступица.
       ctx.save();
       ctx.fillStyle = this.primary;
-      ctx.shadowColor = rgba(this.primary, 0.8);
+      ctx.shadowColor = rgba(this.glowColor, 0.85);
       ctx.shadowBlur = radius * 0.1;
       ctx.beginPath();
       ctx.arc(cx, cy, Math.max(2, radius * 0.035), 0, Math.PI * 2);
@@ -369,13 +377,13 @@
       const top = y - h / 2;
 
       ctx.save();
-      ctx.fillStyle = "rgba(8, 6, 13, 0.92)";
+      ctx.fillStyle = "rgba(13, 8, 25, 0.92)";
       ctx.strokeStyle = rgba(this.primary, 0.6);
       ctx.lineWidth = Math.max(1, radius * 0.012);
       ctx.fillRect(left, top, w, h);
       ctx.strokeRect(left, top, w, h);
-      // Кромка окна: янтарная полоска сверху, как индикатор поворотника.
-      ctx.fillStyle = rgba(this.secondary, 0.85);
+      // Кромка окна: розовая полоска Candy Flash, как язычок индикатора.
+      ctx.fillStyle = rgba(this.pinkColor, 0.9);
       ctx.fillRect(left, top, w, Math.max(1, radius * 0.014));
       ctx.fillStyle = this._gear === "N" ? this.mutedColor : this.textColor;
       ctx.font = `700 ${Math.max(8, radius * 0.17)}px ${FONT_MONO}`;

@@ -18,10 +18,10 @@
 /*
   WidgetSfHoloAlert — всплывающий алерт на приборной панели Super Four.
 
-  Слева — мини-тахометр с отсечкой: стрелка стоит по весу события (донат
-  доходит до красной зоны), в центре прибора — значок события. Справа
-  моноширинная строка «DASH // <ТИП>», имя зрителя в Rajdhani, сумма в
-  янтарных «поворотниках» и сообщение доната.
+  Слева — мини-тахометр с золотой отсечкой: стрелка стоит по весу события
+  (донат доходит до красной зоны), в центре прибора — значок события. Справа
+  моноширинная строка «DASH // <ТИП>», имя зрителя в Rajdhani, сумма в золоте
+  Showa и сообщение доната.
 
   Алерты приходят по шине и играются по одному; панель невидима до первого
   события, чтобы ничего не висело в эфире зря. Тема изолирована жёстко.
@@ -42,11 +42,12 @@
 })(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
   "use strict";
 
-  const DEFAULT_PRIMARY = "#a855f7"; // --md-primary
-  const DEFAULT_SECONDARY = "#f59e0b"; // --md-secondary
-  const DEFAULT_TERTIARY = "#22d3ee"; // --md-tertiary
-  const DEFAULT_TEXT = "#f3e8ff"; // --md-on-surface
-  const DEFAULT_MUTED = "#cbb8de"; // --md-on-surface-variant
+  const DEFAULT_PRIMARY = "#7b2cbf"; // --md-primary
+  const DEFAULT_SECONDARY = "#ffb700"; // --md-secondary, золото отсечки
+  const DEFAULT_TERTIARY = "#00f5d4"; // --md-tertiary, бирюза Candy Flash
+  const DEFAULT_TEXT = "#ffffff"; // --md-on-surface
+  const DEFAULT_MUTED = "#9a8c98"; // --md-on-surface-variant
+  const DEFAULT_GLOW = "#9d4edd"; // --sf-glow
 
   const FONT_DISPLAY = "'Rajdhani', 'Segoe UI', sans-serif";
   const FONT_BODY = "'Manrope', 'Segoe UI', sans-serif";
@@ -105,6 +106,7 @@
       this.tertiary = DEFAULT_TERTIARY;
       this.textColor = DEFAULT_TEXT;
       this.mutedColor = DEFAULT_MUTED;
+      this.glowColor = DEFAULT_GLOW;
 
       this.host = null;
       this.queue = [];
@@ -150,6 +152,7 @@
       this.tertiary = (read && read("--md-tertiary")) || DEFAULT_TERTIARY;
       this.textColor = (read && read("--md-on-surface")) || DEFAULT_TEXT;
       this.mutedColor = (read && read("--md-on-surface-variant")) || DEFAULT_MUTED;
+      this.glowColor = (read && read("--sf-glow")) || this.primary;
     }
 
     // Поверхность из токенов темы: одна панель на цель, чат и алерт.
@@ -157,13 +160,13 @@
       const read = this.context.readCssVar;
       const style = this.element.style;
 
-      const bg = (read && read("--panel-bg")) || "rgba(15, 12, 25, 0.9)";
+      const bg = (read && read("--panel-bg")) || "rgba(34, 22, 62, 0.92)";
       const blur = (read && read("--panel-blur")) || "12px";
-      const border = (read && read("--panel-border")) || "2px solid rgba(168, 85, 247, 0.35)";
+      const border = (read && read("--panel-border")) || "2px solid rgba(123, 44, 191, 0.55)";
       const radius = (read && read("--panel-radius")) || "6px";
       const clip = (read && read("--panel-clip")) || "none";
       const elev = (read && read("--elev-1")) || "0 1px 3px rgba(0,0,0,0.55), 0 1px 2px rgba(0,0,0,0.35)";
-      const glow = (read && read("--panel-glow")) || "0 0 10px rgba(147, 51, 234, 0.5)";
+      const glow = (read && read("--panel-glow")) || "0 0 12px rgba(157, 78, 221, 0.5)";
 
       // Пустая backgroundImage оставляет фактуру из `.sf-surface`.
       style.backgroundColor = bg;
@@ -309,9 +312,9 @@
           </span>
         </div>
         <div style="min-width:0;display:flex;flex-direction:column;gap:2px;">
-          <span style="font-family:${FONT_MONO};color:${this.secondary};font-size:10px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;">DASH // ${escapeHtml(this.kindLabel(alert))}</span>
-          <span style="font-family:${FONT_DISPLAY};color:${this.textColor};font-size:16px;font-weight:700;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 0 10px rgba(168,85,247,0.5);">${nameHtml}</span>
-          ${showAmount ? `<span style="font-family:${FONT_MONO};color:${this.secondary};font-size:13px;font-weight:700;text-shadow:0 0 10px rgba(245,158,11,0.45);">${escapeHtml(this.formatAmount(alert))}</span>` : ""}
+          <span style="font-family:${FONT_MONO};color:${this.tertiary};font-size:10px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;">DASH // ${escapeHtml(this.kindLabel(alert))}</span>
+          <span style="font-family:${FONT_DISPLAY};color:${this.textColor};font-size:16px;font-weight:700;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 0 10px ${this.glowColor};">${nameHtml}</span>
+          ${showAmount ? `<span style="font-family:${FONT_MONO};color:${this.secondary};font-size:13px;font-weight:700;text-shadow:0 0 10px ${this.secondary};">${escapeHtml(this.formatAmount(alert))}</span>` : ""}
           ${musicHtml}
           ${messageHtml}
         </div>`;
@@ -319,14 +322,14 @@
       return card;
     }
 
-    // Мини-тахометр: дорожка 0–14, янтарная отсечка, стрелка по весу события.
+    // Мини-тахометр: дорожка 0–14, золотая отсечка, стрелка по весу события.
     // Рисуется SVG, поэтому остаётся чётким на любом размере виджета.
     _gaugeSvg(alert) {
       const rpm = REV_BY_KIND[alert.kind] || 7.5;
       const needle = pointAt(rpm, GAUGE_RADIUS - 3);
       const tail = pointAt(rpm, -3);
       return `<svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true" style="display:block;overflow:visible;">
-        <circle cx="24" cy="24" r="19" fill="rgba(15,12,25,0.9)" stroke="${this.primary}" stroke-opacity="0.55" stroke-width="1.2"/>
+        <circle cx="24" cy="24" r="19" fill="rgba(34,22,62,0.9)" stroke="${this.primary}" stroke-opacity="0.55" stroke-width="1.2"/>
         <path d="${arcPath(0, MAX_RPM, GAUGE_RADIUS)}" fill="none" stroke="${this.mutedColor}" stroke-opacity="0.28" stroke-width="1.2"/>
         <path d="${arcPath(REDLINE_RPM, MAX_RPM, GAUGE_RADIUS)}" fill="none" stroke="${this.secondary}" stroke-width="2" stroke-linecap="round"/>
         <line x1="${tail.x.toFixed(2)}" y1="${tail.y.toFixed(2)}" x2="${needle.x.toFixed(2)}" y2="${needle.y.toFixed(2)}" stroke="${rpm >= REDLINE_RPM ? this.secondary : this.textColor}" stroke-width="1.4" stroke-linecap="round"/>

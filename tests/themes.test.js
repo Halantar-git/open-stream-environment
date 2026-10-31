@@ -109,10 +109,14 @@ describe("встроенные темы", () => {
     expect(THREE_D_STYLES.some((style) => style.id === "sf")).toBe(true);
   });
 
-  test("Super Four выкрашен в перламутр и янтарные «поворотники»", () => {
+  test("Super Four выкрашен в палитру Candy Flash CB400SF", () => {
     const tokens = BUILTIN_THEMES.sf.tokens;
-    expect(tokens["--md-primary"]).toBe("#a855f7");
-    expect(tokens["--md-secondary"]).toBe("#f59e0b");
+    expect(tokens["--md-primary"]).toBe("#7b2cbf");
+    expect(tokens["--md-secondary"]).toBe("#ffb700");
+    expect(tokens["--md-tertiary"]).toBe("#00f5d4");
+    expect(tokens["--sf-candy-pink"]).toBe("#ff007f");
+    expect(tokens["--sf-glow"]).toBe("#9d4edd");
+    expect(tokens["--md-on-surface"]).toBe("#ffffff");
     expect(tokens["--panel-radius"]).toBe("6px");
   });
 });
