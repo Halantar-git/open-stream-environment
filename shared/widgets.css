@@ -1246,6 +1246,15 @@
   border-left: 2px solid var(--sf-candy-pink, #ff007f);
 }
 
+/* Заголовок/имя в алерте — угловатый Orbitron в духе надписи SUPER FOUR на
+   баке. Меняем только строку имени: у Orbitron нет кириллицы, и русские
+   подписи видов событий (kicker) остаются в Manrope/Mono без fallback. */
+[data-theme="sf"] .widget-alert__name {
+  font-family: "Orbitron", var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
 /* Акцент кузова #7b2cbf на ночном фоне слишком глубок для мелкого текста
    (контраст ниже 3:1). Там, где primary служит цветом текста, берём
    glowColor — он светлее и читается на панели. */

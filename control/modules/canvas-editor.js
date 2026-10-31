@@ -1438,7 +1438,7 @@ export function initCanvasEditor({
           </svg>
           <div style="min-width:0;display:flex;flex-direction:column;gap:2px;">
             <span style="font-family:'JetBrains Mono','Consolas',monospace;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${escapeAttr(tertiary)};">DASH // ${escapeHtml(t("properties.testFollow"))}</span>
-            <span style="font-family:'Rajdhani','Segoe UI',sans-serif;font-size:14px;font-weight:700;color:${escapeAttr(text)};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">nova_viewer</span>
+            <span style="font-family:'Orbitron','Rajdhani','Segoe UI',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.04em;color:${escapeAttr(text)};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">nova_viewer</span>
           </div>
         </div>`;
       }

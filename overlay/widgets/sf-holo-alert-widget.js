@@ -50,7 +50,7 @@
   const DEFAULT_MUTED = "#9a8c98"; // --md-on-surface-variant
   const DEFAULT_GLOW = "#9d4edd"; // --sf-glow
 
-  const FONT_DISPLAY = "'Rajdhani', 'Segoe UI', sans-serif";
+  const FONT_HEADING = "'Orbitron', 'Rajdhani', 'Segoe UI', sans-serif";
   const FONT_BODY = "'Manrope', 'Segoe UI', sans-serif";
   const FONT_MONO = "'JetBrains Mono', 'Consolas', monospace";
 
@@ -316,7 +316,7 @@
         </div>
         <div style="min-width:0;display:flex;flex-direction:column;gap:2px;">
           <span style="font-family:${FONT_MONO};color:${this.tertiary};font-size:10px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;">DASH // ${escapeHtml(this.kindLabel(alert))}</span>
-          <span style="font-family:${FONT_DISPLAY};color:${this.textColor};font-size:16px;font-weight:700;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 0 10px ${this.glowColor};">${nameHtml}</span>
+          <span style="font-family:${FONT_HEADING};color:${this.textColor};font-size:15px;font-weight:700;letter-spacing:0.04em;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 0 10px ${this.glowColor};">${nameHtml}</span>
           ${showAmount ? `<span style="font-family:${FONT_MONO};color:${this.secondary};font-size:13px;font-weight:700;text-shadow:0 0 10px ${this.secondary};">${escapeHtml(this.formatAmount(alert))}</span>` : ""}
           ${musicHtml}
           ${messageHtml}
