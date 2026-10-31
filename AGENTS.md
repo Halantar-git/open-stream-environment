@@ -123,8 +123,8 @@
   виджетов. Ключи идут блоками по темам: общие 2D → Orbital/свои → Star
   Citizen (Grim HEX) → Nuclear → Cobra Mk II → TESO → Wardogs → Material You →
   Pixel Perfect → интеграции DonateX. Новый виджет ставится в блок своей темы,
-  а не в конец файла; UEC-перевод, доступный в любой теме, живёт в блоке Grim
-  HEX сразу после «Цель Grim HEX». После правки каталога — `node
+  а не в конец файла; UEC-перевод закреплён за Orbital (`themes: ["orbital"]`)
+  и стоит в блоке Orbital сразу после таймера. После правки каталога — `node
   src-tauri/tools/build-widget-catalog.mjs`.
 - Данные dev- и релизной сборки лежат в разных местах: `npm run tauri:dev`
   читает `config/` в корне репозитория, установленная версия —

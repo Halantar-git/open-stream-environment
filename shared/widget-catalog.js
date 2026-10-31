@@ -335,6 +335,20 @@
       minH: 10,
       defaultConfig: { ...EXEC_TIMER_DEFAULT_CONFIG },
     },
+    // UEC-перевод — 2D-виджет в стиле Star Citizen. Живёт в блоке Orbital и
+    // предлагается только в этой теме: в остальных у него нет своей графики.
+    "uec-transfer": {
+      type: "uec-transfer",
+      label: "UEC-перевод",
+      description: "Входящая передача: канал, позывной и сумма — в стиле Star Citizen (только для темы Orbital)",
+      icon: "widgetUecTransfer",
+      themes: ["orbital"],
+      services: ["twitchEvents", "donationAlerts", "donatex", "youtube"],
+      defaultGeometry: { x: 25, y: 3, w: 50, h: 20 },
+      minW: 30,
+      minH: 14,
+      defaultConfig: { showAmount: true, showMessage: true, durationMs: 9000, decodeTickMs: 76 },
+    },
 
     // ---- Star Citizen / Grim HEX (3D) ----
     "grimhex-timer": {
@@ -416,19 +430,6 @@
       minW: 16,
       minH: 4,
       defaultConfig: { showPercentage: false },
-    },
-    // UEC-перевод — 2D-виджет и доступен в любой теме, но по стилю это Star
-    // Citizen, поэтому в колонке он стоит в блоке Grim HEX сразу после цели.
-    "uec-transfer": {
-      type: "uec-transfer",
-      label: "UEC-перевод",
-      description: "Входящая передача: канал, позывной и сумма — в стиле Star Citizen",
-      icon: "widgetUecTransfer",
-      services: ["twitchEvents", "donationAlerts", "donatex", "youtube"],
-      defaultGeometry: { x: 25, y: 3, w: 50, h: 20 },
-      minW: 30,
-      minH: 14,
-      defaultConfig: { showAmount: true, showMessage: true, durationMs: 9000, decodeTickMs: 76 },
     },
     "grimhex-holo-alert": {
       type: "grimhex-holo-alert",

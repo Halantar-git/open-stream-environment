@@ -9,6 +9,11 @@
 
 ## [Unreleased]
 
+### Changed
+- UEC-перевод закреплён за темой Orbital: в колонке виджетов других тем его
+  больше нет, и в чужой теме он не выводится на оверлее — раньше карточка
+  стояла в блоке Grim HEX и предлагалась везде.
+
 ### Fixed
 - Алерты остальных тем — Material You, Pixel Perfect, Retrowave, Super Four,
   Nuclear, Cobra Mk II, TESO, Wardogs и общая карточка — тоже больше не режут

@@ -1,5 +1,5 @@
 {
-  "sourceHash": "bd9d3755d03e1166",
+  "sourceHash": "78f202634f48972b",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -386,6 +386,35 @@
         "showTelemetry": true
       }
     },
+    "uec-transfer": {
+      "type": "uec-transfer",
+      "label": "UEC-перевод",
+      "description": "Входящая передача: канал, позывной и сумма — в стиле Star Citizen (только для темы Orbital)",
+      "icon": "widgetUecTransfer",
+      "themes": [
+        "orbital"
+      ],
+      "services": [
+        "twitchEvents",
+        "donationAlerts",
+        "donatex",
+        "youtube"
+      ],
+      "defaultGeometry": {
+        "x": 25,
+        "y": 3,
+        "w": 50,
+        "h": 20
+      },
+      "minW": 30,
+      "minH": 14,
+      "defaultConfig": {
+        "showAmount": true,
+        "showMessage": true,
+        "durationMs": 9000,
+        "decodeTickMs": 76
+      }
+    },
     "grimhex-timer": {
       "type": "grimhex-timer",
       "label": "Таймер Grim HEX",
@@ -513,32 +542,6 @@
       "minH": 4,
       "defaultConfig": {
         "showPercentage": false
-      }
-    },
-    "uec-transfer": {
-      "type": "uec-transfer",
-      "label": "UEC-перевод",
-      "description": "Входящая передача: канал, позывной и сумма — в стиле Star Citizen",
-      "icon": "widgetUecTransfer",
-      "services": [
-        "twitchEvents",
-        "donationAlerts",
-        "donatex",
-        "youtube"
-      ],
-      "defaultGeometry": {
-        "x": 25,
-        "y": 3,
-        "w": 50,
-        "h": 20
-      },
-      "minW": 30,
-      "minH": 14,
-      "defaultConfig": {
-        "showAmount": true,
-        "showMessage": true,
-        "durationMs": 9000,
-        "decodeTickMs": 76
       }
     },
     "grimhex-holo-alert": {

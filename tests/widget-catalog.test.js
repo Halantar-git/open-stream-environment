@@ -133,7 +133,7 @@ describe("widget-catalog helpers", () => {
     });
     for (const [theme, indices] of byTheme) {
       // Внутри блока могут стоять виджеты без привязки к теме (например,
-      // UEC-перевод в блоке Grim HEX), но чужая тема разрывать блок не должна.
+      // UEC-перевод в блоке Orbital), но чужая тема разрывать блок не должна.
       const foreign = keys
         .slice(indices[0], indices[indices.length - 1] + 1)
         .map((key) => WIDGET_TYPES[key].theme)
@@ -142,9 +142,21 @@ describe("widget-catalog helpers", () => {
     }
   });
 
-  test("UEC-перевод стоит сразу после «Цель Grim HEX»", () => {
+  test("UEC-перевод закреплён за Orbital", () => {
     const keys = Object.keys(WIDGET_TYPES);
-    expect(keys[keys.indexOf("grimhex-goal") + 1]).toBe("uec-transfer");
+    // Карточка стоит в блоке Orbital сразу после таймера.
+    expect(keys[keys.indexOf("timer") + 1]).toBe("uec-transfer");
+
+    // И предлагается только в самой теме: в остальных её не видно.
+    const uec = WIDGET_TYPES["uec-transfer"];
+    const themes = [
+      { id: "orbital", builtin: true },
+      { id: "nebula", builtin: true },
+      { id: "grimhex", builtin: true },
+    ];
+    expect(themeAllowsWidget(uec, { activeThemeId: "orbital", themes })).toBe(true);
+    expect(themeAllowsWidget(uec, { activeThemeId: "nebula", themes })).toBe(false);
+    expect(themeAllowsWidget(uec, { activeThemeId: "grimhex", themes })).toBe(false);
   });
 
   test("widgetRole сводит 2D-базу и её 3D-варианты к одной роли", () => {
