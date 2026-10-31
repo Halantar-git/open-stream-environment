@@ -14,6 +14,11 @@ name: Notify the site
 # репозитории сайта (у классического PAT — scope `repo`). Токен самого workflow
 # для запроса в чужой репозиторий не годится.
 #
+# У токенов есть срок: просроченный или отозванный GitHub принимает за неверные
+# данные и отвечает 401, поэтому шаг отдельно проверяет код ответа и говорит, что
+# пора выпустить новый токен. Проверить связку без релиза можно ручным запуском
+# этого workflow.
+#
 # Что тип события и адрес не разойдутся с тем, что слушает сайт, проверяет
 # tests/ci-config.test.js.
 
@@ -40,9 +45,22 @@ jobs:
             echo "::error::Нет секрета SITE_DISPATCH_TOKEN — сайт пересоберётся только по своему расписанию"
             exit 1
           fi
-          curl -fsS --retry 3 --retry-delay 5 -X POST \
+          # Токен могли вставить вместе со схемой или с переводом строки: такой
+          # заголовок GitHub принимает за неверные данные и отвечает 401.
+          TOKEN="${TOKEN#Bearer }"
+          TOKEN="$(printf '%s' "$TOKEN" | tr -d '[:space:]')"
+          response="$(curl -sS --retry 3 --retry-delay 5 -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -w '\n%{http_code}' \
             https://api.github.com/repos/Halantar-git/ose-website/dispatches \
-            -d '{"event_type":"app-release"}'
+            -d '{"event_type":"app-release"}')"
+          status="$(printf '%s\n' "$response" | tail -n 1)"
+          body="$(printf '%s\n' "$response" | sed '$d')"
+          # 204 — событие принято, тела у ответа нет.
+          if [ "$status" != "204" ]; then
+            echo "::error::GitHub отверг запрос (HTTP $status). 401 значит, что SITE_DISPATCH_TOKEN просрочен, отозван или не даёт доступа к репозиторию сайта — выпустите новый токен и обновите секрет. Ответ API: $body"
+            exit 1
+          fi
           echo "Сайт попросили пересобраться"
