@@ -1102,18 +1102,17 @@
 
     // ---- Windows 98 (3D) ----
     // Окна 98-й: серый корпус с бевелом, синий заголовок, вдавленные поля.
-    // Вывеска — песочные часы, как системный курсор ожидания.
-    "win98-hourglass": {
-      type: "win98-hourglass",
-      label: "Песочные часы Windows 98",
-      description: "Песочные часы с объёмной кромкой, появляются на алерте (только для темы Windows 98)",
-      icon: "widgetWin98Hourglass",
+    // Знак темы — объёмный куб, грань нарисована как кнопка 98-й.
+    "win98-cube": {
+      type: "win98-cube",
+      label: "Куб Windows 98",
+      description: "Объёмный куб с иконкой события на гранях, появляется на алерте (только для темы Windows 98)",
+      icon: "widgetWin98Cube",
       dimension: "3d",
       theme: "win98",
-      role: "sign",
-      defaultGeometry: { x: 38, y: 8, w: 22, h: 20 },
+      defaultGeometry: { x: 3, y: 58, w: 22, h: 18 },
       minW: 10,
-      minH: 8,
+      minH: 6,
       defaultConfig: { perspective: 0 },
     },
     "win98-goal": {
@@ -1346,7 +1345,7 @@
     "sf-tachometer",
     "sf-ticker",
     "sf-cube",
-    "win98-hourglass",
+    "win98-cube",
     "win98-ticker",
   ]);
 

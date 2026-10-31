@@ -16,7 +16,7 @@
  */
 
 /*
-  3D-набор Windows 98: песочные часы, цель, чат и алерт.
+  3D-набор Windows 98: куб, цель, чат и алерт.
 
   Проверяем то, что легко сломать незаметно: жёсткую привязку к теме (на чужой
   теме не должно быть ни DOM, ни цикла), подписки на нужные события и то, что
@@ -25,7 +25,7 @@
 
 const EventBus = require("../overlay/event-bus");
 const { EVENT_TYPES } = require("../shared/events");
-const WidgetWin98Hourglass = require("../overlay/widgets/win98-hourglass-widget");
+const WidgetWin98Cube = require("../overlay/widgets/win98-cube-widget");
 const WidgetWin98Goal = require("../overlay/widgets/win98-goal-widget");
 const WidgetWin98Chat = require("../overlay/widgets/win98-chat-widget");
 const WidgetWin98HoloAlert = require("../overlay/widgets/win98-holo-alert-widget");
@@ -204,12 +204,12 @@ afterEach(() => {
   global.performance = originalGlobals.performance;
 });
 
-describe("WidgetWin98Hourglass", () => {
-  const hoursItem = () => item("win98-hourglass", { renderType: "canvas", w: 22, h: 20 });
+describe("WidgetWin98Cube", () => {
+  const cubeItem = () => item("win98-cube", { renderType: "canvas", w: 22, h: 18 });
 
-  test("скрыт до алерта, затем показывает часы и запускает цикл", () => {
+  test("скрыт до алерта, затем показывает куб и запускает цикл", () => {
     const context = makeContext("win98");
-    const widget = new WidgetWin98Hourglass(hoursItem(), context);
+    const widget = new WidgetWin98Cube(cubeItem(), context);
     widget.mount(makeEl("div"));
 
     expect(widget.element.tagName).toBe("CANVAS");
@@ -228,8 +228,8 @@ describe("WidgetWin98Hourglass", () => {
     expect(raf.pending()).toBe(0);
   });
 
-  test("не поднимает цикл на чужой теме", () => {
-    const widget = new WidgetWin98Hourglass(hoursItem(), makeContext("sf"));
+  test("не запускает цикл на чужой теме", () => {
+    const widget = new WidgetWin98Cube(cubeItem(), makeContext("sf"));
     widget.mount(makeEl("div"));
     expect(raf.pending()).toBe(0);
     widget.unmount();
@@ -345,16 +345,16 @@ describe("WidgetManager — изоляция виджетов Windows 98", () =>
     const context = makeContext("pixel");
     const manager = new WidgetManager(root, {
       shouldMount: (inst) => (!inst.type.startsWith("win98-") ? true : context.theme === "win98"),
-      resolveRenderType: (inst) => (inst.type === "win98-hourglass" ? "canvas" : "2d"),
+      resolveRenderType: (inst) => (inst.type === "win98-cube" ? "canvas" : "2d"),
       context,
     });
-    manager.register("win98-hourglass", WidgetWin98Hourglass);
+    manager.register("win98-cube", WidgetWin98Cube);
     manager.register("win98-goal", WidgetWin98Goal);
     manager.register("win98-chat", WidgetWin98Chat);
     manager.register("win98-holo-alert", WidgetWin98HoloAlert);
 
     const layout = [
-      item("win98-hourglass", { renderType: "canvas" }),
+      item("win98-cube", { renderType: "canvas" }),
       item("win98-goal"),
       item("win98-chat"),
       item("win98-holo-alert"),

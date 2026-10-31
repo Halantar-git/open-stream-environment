@@ -33,7 +33,7 @@ describe("widget-catalog helpers", () => {
     expect(isAnimatedWidget("sf-goal")).toBe(true);
     expect(isAnimatedWidget("sf-cube")).toBe(true);
     expect(isAnimatedWidget("sf-ticker")).toBe(true);
-    expect(isAnimatedWidget("win98-hourglass")).toBe(true);
+    expect(isAnimatedWidget("win98-cube")).toBe(true);
     expect(isAnimatedWidget("win98-ticker")).toBe(true);
 
     // Лёгкие: DOM-only, без цикла.
@@ -85,7 +85,7 @@ describe("widget-catalog helpers", () => {
     const win98 = widgetsForTheme("win98").map((d) => d.type);
     expect(win98).toEqual(
       expect.arrayContaining([
-        "win98-hourglass",
+        "win98-cube",
         "win98-goal",
         "win98-chat",
         "win98-holo-alert",
@@ -152,7 +152,7 @@ describe("widget-catalog helpers", () => {
     expect(widgetRole("sf-chat")).toBe("chat");
     expect(widgetRole("sf-goal")).toBe("goal");
     expect(widgetRole("sf-holo-alert")).toBe("alerts");
-    expect(widgetRole("win98-hourglass")).toBe("sign");
+    expect(widgetRole("win98-cube")).toBeNull();
     expect(widgetRole("win98-chat")).toBe("chat");
     expect(widgetRole("win98-goal")).toBe("goal");
     expect(widgetRole("win98-holo-alert")).toBe("alerts");

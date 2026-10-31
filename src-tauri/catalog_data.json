@@ -1,5 +1,5 @@
 {
-  "sourceHash": "e78534421d4694d4",
+  "sourceHash": "6b64316ab989bb50",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -1999,22 +1999,21 @@
         "perspective": 25
       }
     },
-    "win98-hourglass": {
-      "type": "win98-hourglass",
-      "label": "Песочные часы Windows 98",
-      "description": "Песочные часы с объёмной кромкой, появляются на алерте (только для темы Windows 98)",
-      "icon": "widgetWin98Hourglass",
+    "win98-cube": {
+      "type": "win98-cube",
+      "label": "Куб Windows 98",
+      "description": "Объёмный куб с иконкой события на гранях, появляется на алерте (только для темы Windows 98)",
+      "icon": "widgetWin98Cube",
       "dimension": "3d",
       "theme": "win98",
-      "role": "sign",
       "defaultGeometry": {
-        "x": 38,
-        "y": 8,
+        "x": 3,
+        "y": 58,
         "w": 22,
-        "h": 20
+        "h": 18
       },
       "minW": 10,
-      "minH": 8,
+      "minH": 6,
       "defaultConfig": {
         "perspective": 0
       }
@@ -2257,7 +2256,7 @@
     "sf-tachometer",
     "sf-ticker",
     "sf-cube",
-    "win98-hourglass",
+    "win98-cube",
     "win98-ticker"
   ]
 }

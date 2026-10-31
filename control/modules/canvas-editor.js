@@ -1488,22 +1488,19 @@ export function initCanvasEditor({
           </svg>
         </div>`;
       }
-      case "win98-hourglass": {
+      case "win98-cube": {
         const tokens = state.appearance.tokens || {};
-        const win = tokens["--win98-window"] || "#c0c0c0";
-        const light = tokens["--win98-light"] || "#ffffff";
-        const dark = tokens["--win98-shadow-dark"] || "#000000";
-        const sand = tokens["--md-primary"] || "#000080";
+        const light = tokens["--md-surface-bright"] || "#dfdfdf";
+        const mid = tokens["--win98-window"] || "#c0c0c0";
+        const dark = tokens["--win98-shadow"] || "#808080";
+        const outline = tokens["--win98-shadow-dark"] || "#000000";
+        const ink = tokens["--md-primary"] || "#000080";
         return `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
-          <svg viewBox="0 0 60 100" preserveAspectRatio="xMidYMid meet" style="width:54%;height:88%;overflow:visible;">
-            <rect x="6" y="4" width="48" height="8" fill="${escapeAttr(win)}" stroke="${escapeAttr(dark)}" stroke-width="1"/>
-            <rect x="6" y="5" width="48" height="1" fill="${escapeAttr(light)}"/>
-            <rect x="6" y="88" width="48" height="8" fill="${escapeAttr(win)}" stroke="${escapeAttr(dark)}" stroke-width="1"/>
-            <rect x="6" y="89" width="48" height="1" fill="${escapeAttr(light)}"/>
-            <path d="M12 12 L48 12 L33 48 L33 52 L48 88 L12 88 L27 52 L27 48 Z" fill="rgba(255,255,255,0.22)" stroke="${escapeAttr(light)}" stroke-width="1.2"/>
-            <path d="M12 12 L48 12 L33 48 L27 48 Z" fill="${escapeAttr(sand)}"/>
-            <path d="M27 60 L33 60 L48 88 L12 88 Z" fill="${escapeAttr(sand)}"/>
-            <line x1="30" y1="48" x2="30" y2="60" stroke="${escapeAttr(sand)}" stroke-width="1.6"/>
+          <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" style="width:76%;height:76%;">
+            <path d="M50 20 L82 36 L50 52 L18 36 Z" fill="${escapeAttr(light)}" stroke="${escapeAttr(outline)}" stroke-width="1.4"/>
+            <path d="M18 36 L50 52 L50 84 L18 68 Z" fill="${escapeAttr(mid)}" stroke="${escapeAttr(outline)}" stroke-width="1.4"/>
+            <path d="M50 52 L82 36 L82 68 L50 84 Z" fill="${escapeAttr(dark)}" stroke="${escapeAttr(outline)}" stroke-width="1.4"/>
+            <path d="M50 30 L57 34 L50 38 L43 34 Z" fill="${escapeAttr(ink)}"/>
           </svg>
         </div>`;
       }
