@@ -307,6 +307,92 @@
       },
     },
 
+    // Windows 98 — светлый серый интерфейс с объёмными рамками, тёмно-синим
+    // заголовком окна и бирюзовым рабочим столом. Чистый 2D: у темы нет 3D-набора.
+    win98: {
+      id: "win98",
+      name: "Windows 98",
+      builtin: true,
+      category: "system",
+      dimension: "2d",
+      family: "win98",
+      borderRadius: "0px",
+      tokens: {
+        // Тёмно-синий заголовок активного окна (#000080) — основной акцент.
+        "--md-primary": "#000080",
+        "--md-on-primary": "#ffffff",
+        "--md-primary-container": "#000080",
+        "--md-on-primary-container": "#ffffff",
+
+        // Бирюзовый рабочий стол (#008080) как вторичный акцент; для текста
+        // на сером он взят темнее, чтобы держать контраст.
+        "--md-secondary": "#006666",
+        "--md-on-secondary": "#ffffff",
+        "--md-secondary-container": "#004d4d",
+        "--md-on-secondary-container": "#ffffff",
+
+        // Голубой градиент заголовка (#1080d0) — третичный акцент.
+        "--md-tertiary": "#084a7a",
+        "--md-on-tertiary": "#ffffff",
+        "--md-tertiary-container": "#063a5e",
+        "--md-on-tertiary-container": "#ffffff",
+
+        "--md-error": "#800000",
+        "--md-on-error": "#ffffff",
+        "--md-error-container": "#ffc0c0",
+        "--md-on-error-container": "#400000",
+
+        // Рабочий стол — бирюзовый, окна и панели — классический серый #c0c0c0.
+        "--md-surface-dim": "#008080",
+        "--md-surface": "#c0c0c0",
+        "--md-surface-bright": "#dfdfdf",
+        "--md-surface-container-lowest": "#808080",
+        "--md-surface-container-low": "#b0b0b0",
+        "--md-surface-container": "#c0c0c0",
+        "--md-surface-container-high": "#d0d0d0",
+        "--md-surface-container-highest": "#dfdfdf",
+
+        "--md-on-surface": "#000000",
+        "--md-on-surface-variant": "#404040",
+        "--md-outline": "#808080",
+        "--md-outline-variant": "#dfdfdf",
+
+        // PT Sans Caption поддерживает кириллицу и ближе всего к системному UI 90-х.
+        "--font-display": '"PT Sans Caption", "Segoe UI", sans-serif',
+        "--font-body": '"PT Sans Caption", "Segoe UI", sans-serif',
+        "--font-mono": '"JetBrains Mono", "Consolas", monospace',
+
+        // Дополнительные цвета палитры: их читает CSS объёмных рамок.
+        "--win98-desktop": "#008080",
+        "--win98-window": "#c0c0c0",
+        "--win98-light": "#ffffff",
+        "--win98-shadow": "#808080",
+        "--win98-shadow-dark": "#000000",
+        "--win98-titlebar": "#000080",
+        "--win98-titlebar-end": "#1080d0",
+
+        // Квадратные панели с двойным объёмным бевелом: светлый верх/лево,
+        // тёмный низ/право, как у окон и кнопок 98-й.
+        "--panel-radius": "0px",
+        "--panel-clip": "none",
+        "--panel-decoration": "win98",
+        "--panel-glow":
+          "inset 1px 1px 0 #ffffff, inset -1px -1px 0 #000000, inset 2px 2px 0 #dfdfdf, inset -2px -2px 0 #808080",
+        "--panel-bg": "#c0c0c0",
+        "--panel-blur": "0px",
+        "--panel-border": "1px solid #808080",
+        "--alert-enter-easing": "cubic-bezier(0.2, 0.8, 0.2, 1)",
+        "--alert-enter-duration": "220ms",
+
+        "--shape-xs": "0px",
+        "--shape-sm": "0px",
+        "--shape-md": "0px",
+        "--shape-lg": "0px",
+        "--shape-xl": "0px",
+        "--shape-full": "0px",
+      },
+    },
+
     grimhex: {
       id: "grimhex",
       name: "Star Citizen",

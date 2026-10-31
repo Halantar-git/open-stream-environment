@@ -3659,3 +3659,81 @@
     animation: none;
   }
 }
+
+/* ---------- Windows 98: серые окна с объёмным бевелом ----------
+   Бевел панелей собирается из токена --panel-glow, поэтому общий вид
+   получают все виджеты сразу. Здесь — то, что токенами не выразить:
+   синий заголовок алерта, вдавленные белые поля чата и сегментная шкала
+   цели в духе системного прогресс-бара. */
+[data-decoration="win98"] .widget-alert__dot {
+  display: none;
+}
+
+[data-decoration="win98"] .widget-alert__kicker {
+  border-radius: 0;
+  padding: 3px 12px;
+  background: linear-gradient(90deg, var(--win98-titlebar, #000080), var(--win98-titlebar-end, #1080d0));
+  color: var(--win98-light, #ffffff);
+  font-family: var(--font-display);
+  letter-spacing: 0.9px;
+  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+/* Иконка события — квадратная «кнопка» с объёмной кромкой. */
+[data-decoration="win98"] .widget-alert__icon {
+  border-radius: 0;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.35),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.35);
+}
+
+/* Цель: классический сегментный прогресс-бар на вдавленной дорожке. */
+[data-decoration="win98"] .md-linear-progress {
+  height: 12px;
+  border-radius: 0;
+  padding: 1px;
+  background: var(--win98-window, #c0c0c0);
+  box-shadow: inset 1px 1px 0 var(--win98-shadow, #808080), inset -1px -1px 0 var(--win98-light, #ffffff);
+}
+[data-decoration="win98"] .md-linear-progress__bar {
+  border-radius: 0;
+  background: repeating-linear-gradient(90deg, var(--win98-titlebar, #000080) 0 9px, transparent 9px 11px);
+  box-shadow: none;
+}
+
+/* Сообщения чата и события — белые вдавленные поля, как списки в окнах. */
+[data-decoration="win98"] .widget-chat__msg,
+[data-decoration="win98"] .widget-recent3d__item,
+[data-decoration="win98"] .widget-recent__item {
+  background: var(--win98-light, #ffffff);
+  border-radius: 0;
+  box-shadow:
+    inset 1px 1px 0 var(--win98-shadow, #808080),
+    inset -1px -1px 0 var(--win98-light, #ffffff);
+}
+
+/* Рамка камеры и бейдж — окно с синим заголовком и серыми уголками. */
+[data-theme="win98"] .widget-webcam__frame {
+  opacity: 1;
+  box-shadow:
+    inset 1px 1px 0 #ffffff,
+    inset -1px -1px 0 #808080,
+    0 0 0 1px #000000;
+}
+[data-theme="win98"] .widget-webcam__corner {
+  width: 10px;
+  height: 10px;
+  border: 0;
+  background: var(--win98-window, #c0c0c0);
+  box-shadow: inset 1px 1px 0 #ffffff, inset -1px -1px 0 #808080;
+  filter: none;
+}
+[data-theme="win98"] .widget-webcam__label {
+  border: 1px solid #000000;
+  border-radius: 0;
+  background: linear-gradient(90deg, var(--win98-titlebar, #000080), var(--win98-titlebar-end, #1080d0));
+  color: #ffffff;
+  font-family: var(--font-display);
+  letter-spacing: 0.12em;
+  text-shadow: none;
+}

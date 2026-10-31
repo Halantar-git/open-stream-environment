@@ -120,4 +120,21 @@ describe("встроенные темы", () => {
     expect(tokens["--md-on-surface"]).toBe("#ffffff");
     expect(tokens["--panel-radius"]).toBe("6px");
   });
+
+  test("Windows 98 — светлая тема с объёмными панелями и без 3D", () => {
+    const theme = BUILTIN_THEMES.win98;
+    expect(theme).toBeTruthy();
+    expect(theme.name).toBe("Windows 98");
+    expect(theme.dimension).toBe("2d");
+    expect(theme.family).toBe("win98");
+    expect(theme.variant3d).toBeUndefined();
+
+    const tokens = theme.tokens;
+    expect(tokens["--md-surface"]).toBe("#c0c0c0");
+    expect(tokens["--md-surface-dim"]).toBe("#008080");
+    expect(tokens["--md-on-surface"]).toBe("#000000");
+    expect(tokens["--panel-bg"]).toBe("#c0c0c0");
+    expect(tokens["--panel-decoration"]).toBe("win98");
+    expect(tokens["--panel-radius"]).toBe("0px");
+  });
 });
