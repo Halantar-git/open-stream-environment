@@ -143,6 +143,10 @@ impl ChatBot {
     /// Оба текста пустые — благодарность выключена. В текстах работают
     /// `$(user)`, `$(message)`, `$(channel)` и `$(amount)`.
     pub fn thank_donation(self: &Arc<Self>, alert: &Value) {
+        // Тестовый алерт — проверка виджета, а не событие канала: в чат он не идёт.
+        if js_truthy(alert.get("isTest")) {
+            return;
+        }
         let (before, after, channel) = {
             let runtime = self.lock(&self.runtime);
             match runtime.as_ref() {
@@ -183,6 +187,10 @@ impl ChatBot {
     /// Счётчик передаёт вызывающий: событие `alert` приходит раньше `stat_delta`,
     /// поэтому готовое число — это текущее значение плюс прирост.
     pub fn thank_follower(self: &Arc<Self>, alert: &Value, followers: Option<f64>, delta: f64) {
+        // Тестовый алерт — проверка виджета, а не событие канала: в чат он не идёт.
+        if js_truthy(alert.get("isTest")) {
+            return;
+        }
         let (before, after, channel) = {
             let runtime = self.lock(&self.runtime);
             match runtime.as_ref() {
@@ -772,6 +780,28 @@ mod tests {
 
         chat.thank_follower(
             &json!({ "kind": "follow", "user": "dmit_nl" }),
+            Some(434.0),
+            1.0,
+        );
+        drain(&tasks).await;
+
+        assert!(recorded.lock().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_test_alert_gets_no_thanks() {
+        let recorded = Arc::new(Mutex::new(Vec::new()));
+        let (spawn, tasks) = slot();
+        let chat = bot(Arc::clone(&recorded), spawn);
+        chat.restart(&config(), "chan", Some(0));
+        tasks.lock().unwrap().clear();
+
+        chat.thank_donation(&json!({
+            "kind": "donation", "user": "Вася", "amount": 500,
+            "currency": "RUB", "isTest": true,
+        }));
+        chat.thank_follower(
+            &json!({ "kind": "follow", "user": "dmit_nl", "isTest": true }),
             Some(434.0),
             1.0,
         );
