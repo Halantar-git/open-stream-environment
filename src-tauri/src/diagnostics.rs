@@ -2708,10 +2708,20 @@ fn apply_bus_event(event: &Value, ctx: &BusContext) {
         "alert" => {
             publish_alert_static(&payload, config, queue, clients);
             apply_alert_side_effects(&payload, config, runtime, database, clients, rates);
-            // Донат — повод поблагодарить в чате, если владелец написал текст
-            // в настройках бота.
-            if payload.get("kind").and_then(Value::as_str) == Some("donation") {
-                chat_bot.thank_donation(&payload);
+            // Донат и фолловер — повод поблагодарить в чате, если владелец
+            // написал текст в настройках бота.
+            match payload.get("kind").and_then(Value::as_str) {
+                Some("donation") => chat_bot.thank_donation(&payload),
+                Some("follow") => {
+                    // `stat_delta` приходит следом за `alert`, поэтому счётчик
+                    // здесь ещё старый: итог — текущее число плюс прирост.
+                    let current = runtime
+                        .lock()
+                        .unwrap_or_else(|error| error.into_inner())
+                        .follower_count();
+                    chat_bot.thank_follower(&payload, current.map(|count| count + 1.0), 1.0);
+                }
+                _ => {}
             }
             // Нативное уведомление — как `onStreamAlert` в `main.js`: когда панель
             // в фокусе, реальные события не дублируются (решает оболочка).

@@ -272,6 +272,8 @@ const { EVENT_TYPES } = window.SharedEvents;
   const chatBotPrefixInput = document.getElementById("chatBotPrefix");
   const chatBotDonationBeforeInput = document.getElementById("chatBotDonationBefore");
   const chatBotDonationAfterInput = document.getElementById("chatBotDonationAfter");
+  const chatBotFollowerBeforeInput = document.getElementById("chatBotFollowerBefore");
+  const chatBotFollowerAfterInput = document.getElementById("chatBotFollowerAfter");
   const chatBotCommandsList = document.getElementById("chatBotCommandsList");
   const addChatBotCommandBtn = document.getElementById("addChatBotCommandBtn");
   const chatBotTimersList = document.getElementById("chatBotTimersList");
@@ -658,6 +660,12 @@ const { EVENT_TYPES } = window.SharedEvents;
       }
       if (chatBotDonationAfterInput) {
         chatBotDonationAfterInput.value = state.chatBot.donationThanksAfter || "";
+      }
+      if (chatBotFollowerBeforeInput) {
+        chatBotFollowerBeforeInput.value = state.chatBot.followerThanksBefore || "";
+      }
+      if (chatBotFollowerAfterInput) {
+        chatBotFollowerAfterInput.value = state.chatBot.followerThanksAfter || "";
       }
       renderChatBotCommands();
       renderChatBotTimers();
@@ -1361,6 +1369,16 @@ const { EVENT_TYPES } = window.SharedEvents;
   if (chatBotDonationAfterInput) {
     chatBotDonationAfterInput.addEventListener("change", () => {
       sendChatBotConfig({ donationThanksAfter: chatBotDonationAfterInput.value.trim() });
+    });
+  }
+  if (chatBotFollowerBeforeInput) {
+    chatBotFollowerBeforeInput.addEventListener("change", () => {
+      sendChatBotConfig({ followerThanksBefore: chatBotFollowerBeforeInput.value.trim() });
+    });
+  }
+  if (chatBotFollowerAfterInput) {
+    chatBotFollowerAfterInput.addEventListener("change", () => {
+      sendChatBotConfig({ followerThanksAfter: chatBotFollowerAfterInput.value.trim() });
     });
   }
   if (addChatBotCommandBtn) {

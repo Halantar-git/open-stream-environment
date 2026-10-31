@@ -24,7 +24,9 @@
 
 use serde_json::{json, Map, Value};
 
-use crate::integrations::chat_bot::{DONATION_THANKS_AFTER, DONATION_THANKS_BEFORE};
+use crate::integrations::chat_bot::{
+    DONATION_THANKS_AFTER, DONATION_THANKS_BEFORE, FOLLOWER_THANKS_AFTER, FOLLOWER_THANKS_BEFORE,
+};
 use crate::state::{js_string, string_trim};
 use crate::storage::config_file::ConfigFile;
 use crate::storage::db::Database;
@@ -608,11 +610,14 @@ pub fn set_chat_bot_config(config: &mut ConfigFile, patch: &Value) -> Value {
     };
     next.insert("prefix".to_string(), Value::from(prefix));
 
-    // Благодарность за донат: два текста вокруг суммы. Оба пустые — молчим;
-    // отсутствующий ключ (старый конфиг) получает текст по умолчанию.
+    // Благодарность за донат и фолловера: два текста вокруг суммы и ника.
+    // Оба пустые — молчим; отсутствующий ключ (старый конфиг) получает текст
+    // по умолчанию.
     for (key, default) in [
         ("donationThanksBefore", DONATION_THANKS_BEFORE),
         ("donationThanksAfter", DONATION_THANKS_AFTER),
+        ("followerThanksBefore", FOLLOWER_THANKS_BEFORE),
+        ("followerThanksAfter", FOLLOWER_THANKS_AFTER),
     ] {
         let value = match next.get(key).and_then(Value::as_str) {
             Some(text) => text.trim().to_string(),
@@ -1663,11 +1668,14 @@ fn normalized_chat_bot(current: &Map<String, Value>) -> Map<String, Value> {
         _ => "!".to_string(),
     };
     bot.insert("prefix".to_string(), Value::from(prefix));
-    // Благодарность за донат: два текста вокруг суммы. Оба пустые — молчим;
-    // отсутствующий ключ (старый конфиг) получает текст по умолчанию.
+    // Благодарность за донат и фолловера: два текста вокруг суммы и ника.
+    // Оба пустые — молчим; отсутствующий ключ (старый конфиг) получает текст
+    // по умолчанию.
     for (key, default) in [
         ("donationThanksBefore", DONATION_THANKS_BEFORE),
         ("donationThanksAfter", DONATION_THANKS_AFTER),
+        ("followerThanksBefore", FOLLOWER_THANKS_BEFORE),
+        ("followerThanksAfter", FOLLOWER_THANKS_AFTER),
     ] {
         let value = match current.get(key).and_then(Value::as_str) {
             Some(text) => text.trim().to_string(),
@@ -1930,6 +1938,8 @@ mod tests {
                 "prefix": "?",
                 "donationThanksBefore": "  Спасибо, $(user)!  ",
                 "donationThanksAfter": "$(message)",
+                "followerThanksBefore": "  Новый фолловер:  ",
+                "followerThanksAfter": "($(followers), +$(delta))",
                 "commands": [
                     { "id": "c1", "name": "!Discord", "response": "  discord.gg/test  ", "level": "bad", "cooldown": -5, "userCooldown": 2.7 },
                     { "id": "c2", "name": "", "response": "", "level": "everyone", "cooldown": 0, "userCooldown": 0 },
@@ -1944,6 +1954,11 @@ mod tests {
         assert_eq!(bot["prefix"], json!("?"));
         assert_eq!(bot["donationThanksBefore"], json!("Спасибо, $(user)!"));
         assert_eq!(bot["donationThanksAfter"], json!("$(message)"));
+        assert_eq!(bot["followerThanksBefore"], json!("Новый фолловер:"));
+        assert_eq!(
+            bot["followerThanksAfter"],
+            json!("($(followers), +$(delta))")
+        );
         assert_eq!(
             bot["commands"][0],
             json!({ "id": "c1", "name": "discord", "response": "discord.gg/test", "level": "everyone", "cooldown": 0, "userCooldown": 3 })

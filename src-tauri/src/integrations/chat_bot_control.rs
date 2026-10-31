@@ -24,7 +24,7 @@ use tokio::sync::oneshot;
 
 use crate::integrations::chat_bot::{
     self, render_template, BotEngine, Clock, ModCommand, TemplateContext, DONATION_THANKS_AFTER,
-    DONATION_THANKS_BEFORE,
+    DONATION_THANKS_BEFORE, FOLLOWER_THANKS_AFTER, FOLLOWER_THANKS_BEFORE,
 };
 use crate::integrations::chat_moderation::{ModerationEngine, ModerationStore, WarnsBackend};
 use crate::integrations::twitch_chat::ChatSender;
@@ -47,6 +47,9 @@ struct BotRuntime {
     /// Благодарность за донат: текст до суммы и после неё. Оба пустые — молчим.
     thanks_before: String,
     thanks_after: String,
+    /// Благодарность за фолловера: текст до ника и после него.
+    follower_before: String,
+    follower_after: String,
 }
 
 /// Чат-бот приложения.
@@ -124,6 +127,8 @@ impl ChatBot {
             channel: channel.to_string(),
             thanks_before: thanks_text(chat_bot, "donationThanksBefore", DONATION_THANKS_BEFORE),
             thanks_after: thanks_text(chat_bot, "donationThanksAfter", DONATION_THANKS_AFTER),
+            follower_before: thanks_text(chat_bot, "followerThanksBefore", FOLLOWER_THANKS_BEFORE),
+            follower_after: thanks_text(chat_bot, "followerThanksAfter", FOLLOWER_THANKS_AFTER),
         });
         self.start_tick();
     }
@@ -169,12 +174,59 @@ impl ChatBot {
             ..TemplateContext::default()
         };
 
-        // Пустые части не оставляют двойных пробелов: «спасибо» + сумма +
-        // «нам ценен вклад» — что владелец написал, то и склеиваем.
+        self.send_thanks(&before, &ctx.amount, &after, &ctx);
+    }
+
+    /// Поблагодарить за фолловера: «до ника» + ник + «после ника».
+    ///
+    /// В текстах работают `$(user)`, `$(channel)`, `$(followers)` и `$(delta)`.
+    /// Счётчик передаёт вызывающий: событие `alert` приходит раньше `stat_delta`,
+    /// поэтому готовое число — это текущее значение плюс прирост.
+    pub fn thank_follower(self: &Arc<Self>, alert: &Value, followers: Option<f64>, delta: f64) {
+        let (before, after, channel) = {
+            let runtime = self.lock(&self.runtime);
+            match runtime.as_ref() {
+                Some(runtime) => (
+                    runtime.follower_before.clone(),
+                    runtime.follower_after.clone(),
+                    runtime.channel.clone(),
+                ),
+                None => return,
+            }
+        };
+        if before.is_empty() && after.is_empty() {
+            return;
+        }
+        let ctx = TemplateContext {
+            user: alert
+                .get("user")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_string(),
+            channel,
+            followers: followers.map(count_text).unwrap_or_default(),
+            delta: count_text(delta),
+            ..TemplateContext::default()
+        };
+
+        self.send_thanks(&before, &ctx.user, &after, &ctx);
+    }
+
+    /// Склеить благодарность из двух текстов и вставки между ними и отправить.
+    ///
+    /// Пустые части не оставляют двойных пробелов: что владелец написал, то и
+    /// склеиваем; оба текста пустые — молчим.
+    fn send_thanks(
+        self: &Arc<Self>,
+        before: &str,
+        middle: &str,
+        after: &str,
+        ctx: &TemplateContext,
+    ) {
         let parts: Vec<String> = [
-            render_template(&before, &ctx),
-            ctx.amount.clone(),
-            render_template(&after, &ctx),
+            render_template(before, ctx),
+            middle.trim().to_string(),
+            render_template(after, ctx),
         ]
         .into_iter()
         .map(|part| part.trim().to_string())
@@ -417,6 +469,15 @@ fn thanks_text(config: &Value, key: &str, default: &str) -> String {
     }
 }
 
+/// Счётчик в текст без хвоста `.0`: «434», а не «434.0».
+fn count_text(value: f64) -> String {
+    if value.fract() == 0.0 {
+        format!("{}", value as i64)
+    } else {
+        format!("{value}")
+    }
+}
+
 /// Сумма доната для шаблона: «500 ₽», «12.5 $»; неизвестная валюта — кодом.
 fn donation_amount(alert: &Value) -> String {
     let Some(amount) = alert.get("amount").and_then(Value::as_f64) else {
@@ -648,6 +709,72 @@ mod tests {
         chat.thank_donation(&json!({
             "kind": "donation", "user": "Вася", "amount": 500, "currency": "RUB",
         }));
+        drain(&tasks).await;
+
+        assert!(recorded.lock().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_follow_gets_a_thanks_message_with_the_follower_count() {
+        let recorded = Arc::new(Mutex::new(Vec::new()));
+        let (spawn, tasks) = slot();
+        let chat = bot(Arc::clone(&recorded), spawn);
+        chat.restart(&config(), "chan", Some(0));
+        tasks.lock().unwrap().clear();
+
+        chat.thank_follower(
+            &json!({ "kind": "follow", "user": "dmit_nl" }),
+            Some(434.0),
+            1.0,
+        );
+        drain(&tasks).await;
+
+        let recorded = recorded.lock().unwrap();
+        assert_eq!(recorded.len(), 1);
+        assert_eq!(
+            recorded[0]["message"],
+            json!("НОВЫЕ ПОСЛЕДОВАТЕЛИ ❤ dmit_nl ❤, ДОБРО ПОЖАЛОВАТЬ! (434 последователей) (+1)")
+        );
+    }
+
+    #[tokio::test]
+    async fn a_follow_thanks_omits_an_unknown_count_instead_of_null() {
+        let recorded = Arc::new(Mutex::new(Vec::new()));
+        let (spawn, tasks) = slot();
+        let chat = bot(Arc::clone(&recorded), spawn);
+        let mut settings = config();
+        settings["followerThanksBefore"] = json!("Новый фолловер:");
+        settings["followerThanksAfter"] = json!("$(followers) (+$(delta))");
+        chat.restart(&settings, "chan", Some(0));
+        tasks.lock().unwrap().clear();
+
+        chat.thank_follower(&json!({ "kind": "follow", "user": "dmit_nl" }), None, 1.0);
+        drain(&tasks).await;
+
+        let recorded = recorded.lock().unwrap();
+        assert_eq!(recorded.len(), 1);
+        assert_eq!(
+            recorded[0]["message"],
+            json!("Новый фолловер: dmit_nl (+1)")
+        );
+    }
+
+    #[tokio::test]
+    async fn an_empty_follower_template_stays_silent() {
+        let recorded = Arc::new(Mutex::new(Vec::new()));
+        let (spawn, tasks) = slot();
+        let chat = bot(Arc::clone(&recorded), spawn);
+        let mut settings = config();
+        settings["followerThanksBefore"] = json!("");
+        settings["followerThanksAfter"] = json!("");
+        chat.restart(&settings, "chan", Some(0));
+        tasks.lock().unwrap().clear();
+
+        chat.thank_follower(
+            &json!({ "kind": "follow", "user": "dmit_nl" }),
+            Some(434.0),
+            1.0,
+        );
         drain(&tasks).await;
 
         assert!(recorded.lock().unwrap().is_empty());

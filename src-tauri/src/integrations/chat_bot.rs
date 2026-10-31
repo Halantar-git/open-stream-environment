@@ -130,6 +130,11 @@ pub fn parse_mod_command(prefix: &str, message: &str) -> Option<ModCommand> {
 pub const DONATION_THANKS_BEFORE: &str = "спасибо за поддержку";
 pub const DONATION_THANKS_AFTER: &str = "Нам ценен твой вклад!";
 
+/// Благодарность за фолловера по умолчанию: текст до ника и после него.
+pub const FOLLOWER_THANKS_BEFORE: &str = "НОВЫЕ ПОСЛЕДОВАТЕЛИ ❤";
+pub const FOLLOWER_THANKS_AFTER: &str =
+    "❤, ДОБРО ПОЖАЛОВАТЬ! ($(followers) последователей) (+$(delta))";
+
 /// Значения для шаблона ответа.
 #[derive(Default)]
 pub struct TemplateContext {
@@ -141,10 +146,15 @@ pub struct TemplateContext {
     pub amount: String,
     /// Сообщение зрителя (у доната): может быть пустым.
     pub message: String,
+    /// Сколько фолловеров стало после события. Пусто, если счётчик ещё не
+    /// пришёл от Twitch, — тогда в шаблоне не появится «null».
+    pub followers: String,
+    /// Прирост фолловеров от события: «1».
+    pub delta: String,
 }
 
 /// Подстановка `$(user)`, `$(channel)`, `$(args)`, `$(count)`, `$(amount)`,
-/// `$(message)` и `$(random a|b)`.
+/// `$(message)`, `$(followers)`, `$(delta)` и `$(random a|b)`.
 ///
 /// Регулярного выражения нет: разбираем по символам, как и адреса в модерации.
 pub fn render_template(template: &str, ctx: &TemplateContext) -> String {
@@ -178,6 +188,8 @@ fn expand(inner: &str, ctx: &TemplateContext) -> Option<String> {
         "count" => Some(ctx.count.to_string()),
         "amount" => Some(ctx.amount.clone()),
         "message" => Some(ctx.message.clone()),
+        "followers" => Some(ctx.followers.clone()),
+        "delta" => Some(ctx.delta.clone()),
         _ => {
             let lower = trimmed.to_lowercase();
             let rest = lower.strip_prefix("random")?;
@@ -661,6 +673,16 @@ mod tests {
             },
         );
         assert_eq!(donation, "Bob — 500 ₽: на корабль");
+
+        let follower = render_template(
+            "$(followers) (+$(delta))",
+            &TemplateContext {
+                followers: "434".to_string(),
+                delta: "1".to_string(),
+                ..TemplateContext::default()
+            },
+        );
+        assert_eq!(follower, "434 (+1)");
 
         let random = render_template("$(random a|b|c)", &TemplateContext::default());
         assert!(["a", "b", "c"].contains(&random.as_str()), "{random}");

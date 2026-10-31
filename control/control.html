@@ -729,6 +729,19 @@
             </div>
           </div>
 
+          <div class="settings__subhead"><h3 data-i18n="settings.chatBotFollower">Благодарность за фолловера</h3></div>
+          <p class="settings__desc" data-i18n="settings.chatBotFollowerDesc">Бот пишет в чат, когда приходит новый фолловер: текст до ника, ник и текст после него. Очистите оба поля, чтобы бот молчал. Можно использовать $(user), $(followers) и $(delta).</p>
+          <div class="properties__row">
+            <div class="md-field">
+              <label data-i18n="settings.chatBotFollowerBefore">Текст до ника</label>
+              <input type="text" id="chatBotFollowerBefore" maxlength="200" placeholder="НОВЫЕ ПОСЛЕДОВАТЕЛИ ❤" />
+            </div>
+            <div class="md-field">
+              <label data-i18n="settings.chatBotFollowerAfter">Текст после ника</label>
+              <input type="text" id="chatBotFollowerAfter" maxlength="200" placeholder="❤, ДОБРО ПОЖАЛОВАТЬ! ($(followers) последователей) (+$(delta))" />
+            </div>
+          </div>
+
           <div class="settings__subhead"><h3 data-i18n="settings.chatBotCommands">Команды</h3></div>
           <p class="settings__desc" data-i18n="settings.chatBotCommandsDesc">В ответе можно использовать $(user), $(channel), $(args), $(count) и $(random a|b|c).</p>
           <div class="chatbot-commands" id="chatBotCommandsList"></div>
