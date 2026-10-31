@@ -72,7 +72,7 @@
     giveaway: { count: 0, participants: [] },
     // Ссылки на виджеты DonateX из Настроек → DonateX: по ним виджеты
     // открывают скрытые страницы, чтобы сервис играл звук сам.
-    donatex: { enabled: false, widgets: { donation: "", ai: "", music: "" } },
+    donatex: { enabled: false, widgets: { donation: "", ai: "", music: "", roulette: "" } },
   };
 
   let ws;

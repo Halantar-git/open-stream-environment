@@ -207,6 +207,7 @@ pub fn snapshot(config: &ConfigFile, db: &Database, runtime: &Runtime) -> Value 
                 "donation": widget_url("donation"),
                 "ai": widget_url("ai"),
                 "music": widget_url("music"),
+                "roulette": widget_url("roulette"),
             },
         }),
     );
@@ -433,7 +434,8 @@ mod tests {
             &mut config,
             &json!({"donatex": {"widgets": {
                 "donation": "https://donatex.gg/widgets/donation/abc",
-                "music": "https://donatex.gg/widgets/music/def"
+                "music": "https://donatex.gg/widgets/music/def",
+                "roulette": "https://donatex.gg/widgets/roulette/ghi"
             }}}),
         );
 
@@ -445,6 +447,10 @@ mod tests {
         assert_eq!(
             snap["donatex"]["widgets"]["music"],
             json!("https://donatex.gg/widgets/music/def")
+        );
+        assert_eq!(
+            snap["donatex"]["widgets"]["roulette"],
+            json!("https://donatex.gg/widgets/roulette/ghi")
         );
         assert_eq!(snap["donatex"]["widgets"]["ai"], json!(""));
     }
