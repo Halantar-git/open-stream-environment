@@ -126,6 +126,10 @@ pub fn parse_mod_command(prefix: &str, message: &str) -> Option<ModCommand> {
     })
 }
 
+/// Благодарность за донат по умолчанию: текст до суммы и после неё.
+pub const DONATION_THANKS_BEFORE: &str = "спасибо за поддержку";
+pub const DONATION_THANKS_AFTER: &str = "Нам ценен твой вклад!";
+
 /// Значения для шаблона ответа.
 #[derive(Default)]
 pub struct TemplateContext {

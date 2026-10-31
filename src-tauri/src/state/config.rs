@@ -24,6 +24,7 @@
 
 use serde_json::{json, Map, Value};
 
+use crate::integrations::chat_bot::{DONATION_THANKS_AFTER, DONATION_THANKS_BEFORE};
 use crate::state::{js_string, string_trim};
 use crate::storage::config_file::ConfigFile;
 use crate::storage::db::Database;
@@ -607,14 +608,18 @@ pub fn set_chat_bot_config(config: &mut ConfigFile, patch: &Value) -> Value {
     };
     next.insert("prefix".to_string(), Value::from(prefix));
 
-    // Благодарность за донат: пустая строка значит «не писать».
-    let thanks = next
-        .get("donationThanks")
-        .and_then(Value::as_str)
-        .unwrap_or("")
-        .trim()
-        .to_string();
-    next.insert("donationThanks".to_string(), Value::from(thanks));
+    // Благодарность за донат: два текста вокруг суммы. Оба пустые — молчим;
+    // отсутствующий ключ (старый конфиг) получает текст по умолчанию.
+    for (key, default) in [
+        ("donationThanksBefore", DONATION_THANKS_BEFORE),
+        ("donationThanksAfter", DONATION_THANKS_AFTER),
+    ] {
+        let value = match next.get(key).and_then(Value::as_str) {
+            Some(text) => text.trim().to_string(),
+            None => default.to_string(),
+        };
+        next.insert(key.to_string(), Value::from(value));
+    }
 
     let commands = match next.get("commands").and_then(Value::as_array) {
         Some(commands) => Value::Array(
@@ -1658,14 +1663,18 @@ fn normalized_chat_bot(current: &Map<String, Value>) -> Map<String, Value> {
         _ => "!".to_string(),
     };
     bot.insert("prefix".to_string(), Value::from(prefix));
-    // Благодарность за донат: пустая строка значит «не писать».
-    let thanks = current
-        .get("donationThanks")
-        .and_then(Value::as_str)
-        .unwrap_or("")
-        .trim()
-        .to_string();
-    bot.insert("donationThanks".to_string(), Value::from(thanks));
+    // Благодарность за донат: два текста вокруг суммы. Оба пустые — молчим;
+    // отсутствующий ключ (старый конфиг) получает текст по умолчанию.
+    for (key, default) in [
+        ("donationThanksBefore", DONATION_THANKS_BEFORE),
+        ("donationThanksAfter", DONATION_THANKS_AFTER),
+    ] {
+        let value = match current.get(key).and_then(Value::as_str) {
+            Some(text) => text.trim().to_string(),
+            None => default.to_string(),
+        };
+        bot.insert(key.to_string(), Value::from(value));
+    }
     bot.insert(
         "commands".to_string(),
         match current.get("commands").and_then(Value::as_array) {
@@ -1919,7 +1928,8 @@ mod tests {
             &json!({
                 "enabled": true,
                 "prefix": "?",
-                "donationThanks": "  Спасибо, $(user)! $(amount)  ",
+                "donationThanksBefore": "  Спасибо, $(user)!  ",
+                "donationThanksAfter": "$(message)",
                 "commands": [
                     { "id": "c1", "name": "!Discord", "response": "  discord.gg/test  ", "level": "bad", "cooldown": -5, "userCooldown": 2.7 },
                     { "id": "c2", "name": "", "response": "", "level": "everyone", "cooldown": 0, "userCooldown": 0 },
@@ -1932,7 +1942,8 @@ mod tests {
 
         assert_eq!(bot["enabled"], json!(true));
         assert_eq!(bot["prefix"], json!("?"));
-        assert_eq!(bot["donationThanks"], json!("Спасибо, $(user)! $(amount)"));
+        assert_eq!(bot["donationThanksBefore"], json!("Спасибо, $(user)!"));
+        assert_eq!(bot["donationThanksAfter"], json!("$(message)"));
         assert_eq!(
             bot["commands"][0],
             json!({ "id": "c1", "name": "discord", "response": "discord.gg/test", "level": "everyone", "cooldown": 0, "userCooldown": 3 })

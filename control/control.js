@@ -270,7 +270,8 @@ const { EVENT_TYPES } = window.SharedEvents;
   const createMarkerBtn = document.getElementById("createMarkerBtn");
   const chatBotEnabledSwitch = document.getElementById("chatBotEnabledSwitch");
   const chatBotPrefixInput = document.getElementById("chatBotPrefix");
-  const chatBotDonationThanksInput = document.getElementById("chatBotDonationThanks");
+  const chatBotDonationBeforeInput = document.getElementById("chatBotDonationBefore");
+  const chatBotDonationAfterInput = document.getElementById("chatBotDonationAfter");
   const chatBotCommandsList = document.getElementById("chatBotCommandsList");
   const addChatBotCommandBtn = document.getElementById("addChatBotCommandBtn");
   const chatBotTimersList = document.getElementById("chatBotTimersList");
@@ -652,8 +653,11 @@ const { EVENT_TYPES } = window.SharedEvents;
     if (state.chatBot) {
       setSwitchState(chatBotEnabledSwitch, !!state.chatBot.enabled);
       if (chatBotPrefixInput) chatBotPrefixInput.value = state.chatBot.prefix || "!";
-      if (chatBotDonationThanksInput) {
-        chatBotDonationThanksInput.value = state.chatBot.donationThanks || "";
+      if (chatBotDonationBeforeInput) {
+        chatBotDonationBeforeInput.value = state.chatBot.donationThanksBefore || "";
+      }
+      if (chatBotDonationAfterInput) {
+        chatBotDonationAfterInput.value = state.chatBot.donationThanksAfter || "";
       }
       renderChatBotCommands();
       renderChatBotTimers();
@@ -1347,11 +1351,16 @@ const { EVENT_TYPES } = window.SharedEvents;
       sendChatBotConfig({ prefix: chatBotPrefixInput.value.trim() || "!" });
     });
   }
-  if (chatBotDonationThanksInput) {
-    // Пустая строка — благодарность выключена, поэтому пустое значение
-    // отправляем как есть, а не подставляем шаблон.
-    chatBotDonationThanksInput.addEventListener("change", () => {
-      sendChatBotConfig({ donationThanks: chatBotDonationThanksInput.value.trim() });
+  if (chatBotDonationBeforeInput) {
+    // Пустая строка отключает эту часть, поэтому пустое значение отправляем
+    // как есть, а не подставляем шаблон.
+    chatBotDonationBeforeInput.addEventListener("change", () => {
+      sendChatBotConfig({ donationThanksBefore: chatBotDonationBeforeInput.value.trim() });
+    });
+  }
+  if (chatBotDonationAfterInput) {
+    chatBotDonationAfterInput.addEventListener("change", () => {
+      sendChatBotConfig({ donationThanksAfter: chatBotDonationAfterInput.value.trim() });
     });
   }
   if (addChatBotCommandBtn) {

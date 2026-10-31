@@ -475,9 +475,9 @@
     "chatBotDesc": "Chat commands and timers: the bot replies in Twitch chat as the channel. Sending requires connecting Twitch with the user:write:chat scope.",
     "chatBotPrefix": "Command prefix",
     "chatBotDonation": "Donation thank-you",
-    "chatBotDonationDesc": "The bot posts to chat when a donation arrives. Leave it empty to stay silent. The text supports $(user), $(amount) and $(message); if the viewer left no message, $(message) becomes an empty string.",
-    "chatBotDonationThanks": "Thank-you text",
-    "chatBotDonationThanksPlaceholder": "Thanks, $(user)! $(amount) — $(message)",
+    "chatBotDonationDesc": "The bot posts to chat when a donation arrives: text before the amount, the amount, then text after it. Clear both fields to stay silent. The text supports $(user), $(message) and $(channel).",
+    "chatBotDonationBefore": "Text before the amount",
+    "chatBotDonationAfter": "Text after the amount",
     "chatBotCommands": "Commands",
     "chatBotCommandsDesc": "Responses support $(user), $(channel), $(args), $(count) and $(random a|b|c).",
     "addChatBotCommand": "+ Add command",
@@ -1800,7 +1800,7 @@
       "p2": "The bot can only reply when Twitch is connected with the user:write:chat scope — messages are posted as the channel via Twitch Helix.",
       "p3": "The Moderation section enables auto moderation: link protection (with an allowed-domain whitelist), a blocked-word list with de-leetization of lookalike characters, caps and emote limits, and cumulative warnings: first offense clears the message and warns, second times out, third bans.",
       "p4": "Timeouts and bans require the additional moderator:manage:banned_users scope — reconnect Twitch. In the terminal, the modtest <message> command checks a message without actually banning.",
-      "p5": "When a donation arrives, the bot can thank the viewer in chat: the text is set in the Donation thank-you field. An empty field keeps the bot silent. The text supports $(user), $(amount) — the amount with its currency — and $(message), the viewer's message (empty if the donation had none)."
+      "p5": "When a donation arrives, the bot can thank the viewer in chat. Settings has two fields — text before the amount and text after it; the bot joins them around the amount. Both texts are pre-filled in Russian; clear both fields to keep the bot silent. The text supports $(user), $(message) and $(channel)."
     },
     "donationalerts": {
       "title": "DonationAlerts",

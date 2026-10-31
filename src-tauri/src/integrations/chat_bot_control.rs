@@ -23,7 +23,8 @@ use serde_json::Value;
 use tokio::sync::oneshot;
 
 use crate::integrations::chat_bot::{
-    self, render_template, BotEngine, Clock, ModCommand, TemplateContext,
+    self, render_template, BotEngine, Clock, ModCommand, TemplateContext, DONATION_THANKS_AFTER,
+    DONATION_THANKS_BEFORE,
 };
 use crate::integrations::chat_moderation::{ModerationEngine, ModerationStore, WarnsBackend};
 use crate::integrations::twitch_chat::ChatSender;
@@ -43,8 +44,9 @@ struct BotRuntime {
     moderation: ModerationEngine,
     prefix: String,
     channel: String,
-    /// Шаблон благодарности за донат; пустой — не пишем.
-    thanks: String,
+    /// Благодарность за донат: текст до суммы и после неё. Оба пустые — молчим.
+    thanks_before: String,
+    thanks_after: String,
 }
 
 /// Чат-бот приложения.
@@ -120,12 +122,8 @@ impl ChatBot {
             moderation,
             prefix,
             channel: channel.to_string(),
-            thanks: chat_bot
-                .get("donationThanks")
-                .and_then(Value::as_str)
-                .unwrap_or("")
-                .trim()
-                .to_string(),
+            thanks_before: thanks_text(chat_bot, "donationThanksBefore", DONATION_THANKS_BEFORE),
+            thanks_after: thanks_text(chat_bot, "donationThanksAfter", DONATION_THANKS_AFTER),
         });
         self.start_tick();
     }
@@ -136,39 +134,53 @@ impl ChatBot {
         *self.lock(&self.runtime) = None;
     }
 
-    /// Поблагодарить за донат в чате. Текст — шаблон из настроек бота
-    /// (`$(user)`, `$(amount)`, `$(message)`, `$(channel)`); пустой шаблон
-    /// означает, что благодарность выключена.
+    /// Поблагодарить за донат в чате: «до суммы» + сумма + «после суммы».
+    /// Оба текста пустые — благодарность выключена. В текстах работают
+    /// `$(user)`, `$(message)`, `$(channel)` и `$(amount)`.
     pub fn thank_donation(self: &Arc<Self>, alert: &Value) {
-        let (template, channel) = {
+        let (before, after, channel) = {
             let runtime = self.lock(&self.runtime);
             match runtime.as_ref() {
-                Some(runtime) => (runtime.thanks.clone(), runtime.channel.clone()),
+                Some(runtime) => (
+                    runtime.thanks_before.clone(),
+                    runtime.thanks_after.clone(),
+                    runtime.channel.clone(),
+                ),
                 None => return,
             }
         };
-        if template.is_empty() {
+        if before.is_empty() && after.is_empty() {
             return;
         }
-        let text = render_template(
-            &template,
-            &TemplateContext {
-                user: alert
-                    .get("user")
-                    .and_then(Value::as_str)
-                    .unwrap_or("")
-                    .to_string(),
-                channel,
-                message: alert
-                    .get("message")
-                    .and_then(Value::as_str)
-                    .unwrap_or("")
-                    .trim()
-                    .to_string(),
-                amount: donation_amount(alert),
-                ..TemplateContext::default()
-            },
-        );
+        let ctx = TemplateContext {
+            user: alert
+                .get("user")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_string(),
+            channel,
+            message: alert
+                .get("message")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .trim()
+                .to_string(),
+            amount: donation_amount(alert),
+            ..TemplateContext::default()
+        };
+
+        // Пустые части не оставляют двойных пробелов: «спасибо» + сумма +
+        // «нам ценен вклад» — что владелец написал, то и склеиваем.
+        let parts: Vec<String> = [
+            render_template(&before, &ctx),
+            ctx.amount.clone(),
+            render_template(&after, &ctx),
+        ]
+        .into_iter()
+        .map(|part| part.trim().to_string())
+        .filter(|part| !part.is_empty())
+        .collect();
+        let text = parts.join(" ");
         if !text.is_empty() {
             self.send_reply(text);
         }
@@ -396,6 +408,15 @@ impl ChatBot {
     }
 }
 
+/// Текст благодарности из настроек: пустое поле — части нет, а отсутствующий
+/// ключ (старый конфиг) — умолчание.
+fn thanks_text(config: &Value, key: &str, default: &str) -> String {
+    match config.get(key).and_then(Value::as_str) {
+        Some(text) => text.trim().to_string(),
+        None => default.to_string(),
+    }
+}
+
 /// Сумма доната для шаблона: «500 ₽», «12.5 $»; неизвестная валюта — кодом.
 fn donation_amount(alert: &Value) -> String {
     let Some(amount) = alert.get("amount").and_then(Value::as_f64) else {
@@ -573,7 +594,8 @@ mod tests {
         let (spawn, tasks) = slot();
         let chat = bot(Arc::clone(&recorded), spawn);
         let mut settings = config();
-        settings["donationThanks"] = json!("Спасибо, $(user)! $(amount) — $(message)");
+        settings["donationThanksBefore"] = json!("Спасибо, $(user)!");
+        settings["donationThanksAfter"] = json!("— $(message)");
         chat.restart(&settings, "chan", Some(0));
         tasks.lock().unwrap().clear();
 
@@ -592,11 +614,35 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn an_empty_thanks_template_stays_silent() {
+    async fn a_missing_thanks_setting_uses_the_default_text() {
         let recorded = Arc::new(Mutex::new(Vec::new()));
         let (spawn, tasks) = slot();
         let chat = bot(Arc::clone(&recorded), spawn);
         chat.restart(&config(), "chan", Some(0));
+        tasks.lock().unwrap().clear();
+
+        chat.thank_donation(&json!({
+            "kind": "donation", "user": "Вася", "amount": 1000, "currency": "RUB",
+        }));
+        drain(&tasks).await;
+
+        let recorded = recorded.lock().unwrap();
+        assert_eq!(recorded.len(), 1);
+        assert_eq!(
+            recorded[0]["message"],
+            json!("спасибо за поддержку 1000 ₽ Нам ценен твой вклад!")
+        );
+    }
+
+    #[tokio::test]
+    async fn an_empty_thanks_template_stays_silent() {
+        let recorded = Arc::new(Mutex::new(Vec::new()));
+        let (spawn, tasks) = slot();
+        let chat = bot(Arc::clone(&recorded), spawn);
+        let mut settings = config();
+        settings["donationThanksBefore"] = json!("");
+        settings["donationThanksAfter"] = json!("");
+        chat.restart(&settings, "chan", Some(0));
         tasks.lock().unwrap().clear();
 
         chat.thank_donation(&json!({
