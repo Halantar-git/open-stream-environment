@@ -557,7 +557,7 @@ export function initCanvasEditor({
       case "music": {
         // Та же строка, что в эфире, и с тем же наклоном: без неё виджет
         // на канвасе — пустой прямоугольник, который легко потерять.
-        const html = `<div class="widget-music"><div class="orbital"><div class="orbital__track"><span class="orbital__track-text">${escapeHtml(t("music.track"))}</span></div></div></div>`;
+        const html = `<div class="widget-music"><div class="orbital"><span class="orbital__badge" aria-hidden="true"><i></i><i></i><i></i></span><div class="orbital__track"><span class="orbital__track-text">${escapeHtml(t("music.track"))}</span></div></div></div>`;
         const transform = perspectiveStyle(config);
         return transform
           ? `<div style="width:100%;height:100%;transform:${transform};transform-style:preserve-3d;">${html}</div>`

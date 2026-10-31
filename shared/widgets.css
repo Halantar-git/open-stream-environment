@@ -2823,8 +2823,14 @@
   display: flex;
 }
 /* Строка одна: название трека. Обложку, заказчика и прогресс убрали —
-   звук и очередь всё равно у страницы DonateX. */
+   звук и очередь всё равно у страницы DonateX.
+
+   Плашка собирается из тех же токенов, что и остальные 2D-виджеты: фон,
+   рамка, скругление, срез (retrowave), размытие и свечение/бевел темы.
+   Раньше здесь были только фон и рамка, и в тематических наборах строка
+   выглядела чужой плоской плашкой. */
 .orbital {
+  position: relative;
   display: flex;
   align-items: center;
   height: 100%;
@@ -2834,8 +2840,48 @@
   border-radius: var(--panel-radius, 16px);
   border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.16));
   background: var(--panel-bg, rgba(10, 10, 12, 0.9));
-  box-shadow: var(--elev-1, 0 6px 20px rgba(0, 0, 0, 0.4));
+  backdrop-filter: blur(var(--panel-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--panel-blur, 0px));
+  clip-path: var(--panel-clip, none);
+  box-shadow: var(--panel-glow, 0 6px 20px rgba(0, 0, 0, 0.4));
 }
+
+/* Акцент темы внутри строки: три полоски эквалайзера в primary. Именно
+   цвет набора делает виджет «своим» в каждой теме; у Super Four тёмный
+   кузовной акцент заменяется светлым glow выше по файлу. */
+.orbital__badge {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  width: 18px;
+  height: 70%;
+  max-height: 18px;
+  margin-right: 10px;
+  flex-shrink: 0;
+  color: var(--md-primary, #00f0ff);
+}
+.orbital__badge i {
+  flex: 1;
+  height: 100%;
+  background: currentColor;
+  box-shadow: 0 0 8px color-mix(in srgb, currentColor 60%, transparent);
+  transform-origin: bottom;
+  animation: orbital-eq 900ms ease-in-out infinite;
+}
+.orbital__badge i:nth-child(1) { animation-delay: -0.15s; }
+.orbital__badge i:nth-child(2) { animation-delay: -0.45s; }
+.orbital__badge i:nth-child(3) { animation-delay: -0.75s; }
+@keyframes orbital-eq {
+  0%, 100% { transform: scaleY(0.35); }
+  50% { transform: scaleY(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .orbital__badge i { animation: none; }
+  .orbital__badge i:nth-child(1) { transform: scaleY(0.45); }
+  .orbital__badge i:nth-child(2) { transform: scaleY(1); }
+  .orbital__badge i:nth-child(3) { transform: scaleY(0.7); }
+}
+
 .orbital__track {
   flex: 1;
   min-width: 0;
@@ -2845,6 +2891,72 @@
   font-family: var(--font-display, "Segoe UI", sans-serif);
   font-size: 15px;
   font-weight: 700;
+}
+
+/* Декорация темы на строке: тот же язык, что у остальных панелей набора. */
+[data-decoration="retrowave"] .orbital { padding-left: 34px; }
+[data-decoration="retrowave"] .orbital::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--md-primary);
+  clip-path: polygon(26px 0, 27px 0, 1px 100%, 0 100%);
+  filter: drop-shadow(0 0 4px rgba(255, 45, 149, 0.6));
+  opacity: 0.85;
+}
+[data-decoration="brackets2"] .orbital,
+[data-decoration="brackets4"] .orbital {
+  padding-left: 20px;
+  padding-right: 20px;
+  background-image: repeating-linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.035) 0 1px,
+    transparent 1px 3px
+  );
+}
+[data-decoration="brackets2"] .orbital::before,
+[data-decoration="brackets2"] .orbital::after,
+[data-decoration="brackets4"] .orbital::before,
+[data-decoration="brackets4"] .orbital::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 0 solid var(--md-primary);
+  opacity: 0.75;
+  pointer-events: none;
+}
+[data-decoration="brackets2"] .orbital::before,
+[data-decoration="brackets4"] .orbital::before {
+  left: 3px;
+  top: 3px;
+  border-width: 1px 0 0 1px;
+}
+[data-decoration="brackets2"] .orbital::after,
+[data-decoration="brackets4"] .orbital::after {
+  right: 3px;
+  bottom: 3px;
+  border-width: 0 1px 1px 0;
+}
+[data-decoration="nuclear"] .orbital {
+  padding-left: 20px;
+  background-image: repeating-linear-gradient(
+    180deg,
+    rgba(57, 255, 20, 0.1) 0 1px,
+    transparent 1px 3px
+  );
+}
+[data-decoration="nuclear"] .orbital__track {
+  text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
+}
+[data-decoration="win98"] .orbital {
+  padding: 0 8px;
+  border-radius: 0;
+  background-image: none;
+}
+[data-theme="sf"] .orbital__badge {
+  color: var(--sf-glow, var(--md-primary));
 }
 
 /* ==== UEC transfer — входящая передача (токены активной темы) ==== */

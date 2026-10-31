@@ -221,8 +221,12 @@
 
       // В кадре — одна строка с названием трека: обложка, заказчик и
       // прогресс только отвлекали от игры, а очередь и звук всё равно
-      // остаются у страницы DonateX.
+      // остаются у страницы DonateX. Слева — эквалайзер в цвете темы.
       const orbital = el("div", "orbital");
+      const badge = el("span", "orbital__badge");
+      badge.setAttribute("aria-hidden", "true");
+      badge.innerHTML = "<i></i><i></i><i></i>";
+      orbital.appendChild(badge);
       const track = el("div", "orbital__track");
       const text = el("span", "orbital__track-text");
       track.appendChild(text);

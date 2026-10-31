@@ -217,6 +217,16 @@ describe("music widget", () => {
     w.unmount();
   });
 
+  test("строка собирается с акцентным эквалайзером", () => {
+    const { w } = mountWidget();
+    const orbital = w.host.children.find((child) => child.className === "orbital");
+    const badge = orbital.children.find((child) => child.className === "orbital__badge");
+
+    expect(badge).toBeTruthy();
+    expect(badge.innerHTML).toContain("<i>");
+    w.unmount();
+  });
+
   test("стоп прячет строку: музыки больше нет", () => {
     const { w } = mountWidget({ autoplay: false });
     w.context.bus.emit(EVENT_TYPES.ALERT, donation());
