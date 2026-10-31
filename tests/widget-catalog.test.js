@@ -31,6 +31,7 @@ describe("widget-catalog helpers", () => {
     expect(isAnimatedWidget("retrowave-ticker")).toBe(true);
     expect(isAnimatedWidget("sf-tachometer")).toBe(true);
     expect(isAnimatedWidget("sf-goal")).toBe(true);
+    expect(isAnimatedWidget("sf-cube")).toBe(true);
     expect(isAnimatedWidget("sf-ticker")).toBe(true);
 
     // Лёгкие: DOM-only, без цикла.
@@ -74,8 +75,8 @@ describe("widget-catalog helpers", () => {
     expect(retrowave).toEqual(expect.arrayContaining(["retrowave-goal", "retrowave-chat", "retrowave-holo-alert", "retrowave-recent", "retrowave-symbol", "retrowave-ticker"]));
 
     const sf = widgetsForTheme("sf").map((d) => d.type);
-    expect(sf).toEqual(expect.arrayContaining(["sf-tachometer", "sf-goal", "sf-chat", "sf-holo-alert", "sf-recent", "sf-ticker"]));
-    expect(sf).toHaveLength(6);
+    expect(sf).toEqual(expect.arrayContaining(["sf-tachometer", "sf-goal", "sf-chat", "sf-holo-alert", "sf-cube", "sf-recent", "sf-ticker"]));
+    expect(sf).toHaveLength(7);
 
     expect(widgetsForTheme("")).toEqual([]);
   });
@@ -130,6 +131,7 @@ describe("widget-catalog helpers", () => {
     expect(widgetRole("retrowave-ticker")).toBe("ticker");
     expect(widgetRole("md3-ticker")).toBe("ticker");
     expect(widgetRole("sf-tachometer")).toBe("sign");
+    expect(widgetRole("sf-cube")).toBeNull();
     expect(widgetRole("sf-chat")).toBe("chat");
     expect(widgetRole("sf-goal")).toBe("goal");
     expect(widgetRole("sf-holo-alert")).toBe("alerts");

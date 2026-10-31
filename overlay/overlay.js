@@ -475,6 +475,7 @@
   manager.register("sf-goal", OW.WidgetSfGoal);
   manager.register("sf-chat", OW.WidgetSfChat);
   manager.register("sf-holo-alert", OW.WidgetSfHoloAlert);
+  manager.register("sf-cube", OW.WidgetSfCube);
   manager.register("donatex-ai", OW.DonatexAiWidget);
   manager.register("music", OW.MusicWidget);
 

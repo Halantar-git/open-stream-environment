@@ -1072,6 +1072,18 @@
       minH: 8,
       defaultConfig: {},
     },
+    "sf-cube": {
+      type: "sf-cube",
+      label: "Куб Super Four",
+      description: "Каркасный куб со значком события на гранях, появляется на алерте (только для темы Super Four)",
+      icon: "widgetSfCube",
+      dimension: "3d",
+      theme: "sf",
+      defaultGeometry: { x: 72, y: 58, w: 20, h: 18 },
+      minW: 10,
+      minH: 6,
+      defaultConfig: { perspective: 0 },
+    },
 
     "sf-recent": recent3d(
       "sf-recent",
@@ -1259,6 +1271,7 @@
     "sf-goal",
     "sf-tachometer",
     "sf-ticker",
+    "sf-cube",
   ]);
 
   function isAnimatedWidget(type) {

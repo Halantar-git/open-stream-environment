@@ -279,6 +279,7 @@
       "sf-goal": OW.WidgetSfGoal,
       "sf-chat": OW.WidgetSfChat,
       "sf-holo-alert": OW.WidgetSfHoloAlert,
+      "sf-cube": OW.WidgetSfCube,
       "donatex-ai": OW.DonatexAiWidget,
       music: OW.MusicWidget,
     };

@@ -1188,6 +1188,21 @@ export function initCanvasEditor({
           </svg>
         </div>`;
       }
+      case "sf-cube": {
+        const tokens = state.appearance.tokens || {};
+        const glow = tokens["--sf-glow"] || tokens["--md-primary"] || "#9d4edd";
+        const pink = tokens["--sf-candy-pink"] || "#ff007f";
+        return `<div class="sf-cube-preview" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" style="width:76%;height:76%;filter:drop-shadow(0 0 5px ${escapeAttr(glow)});">
+            <g fill="none" stroke="${escapeAttr(glow)}" stroke-linecap="square" stroke-linejoin="miter">
+              <path d="M50 52 L82 68 L82 36 L50 20 L50 52 Z" stroke-width="2"/>
+              <path d="M18 68 L50 84 L50 52 L18 36 L18 68 Z" stroke-width="1" opacity="0.45"/>
+              <path d="M50 52 L18 68 M82 68 L50 84 M82 36 L50 52 M50 20 L18 36" stroke-width="1" opacity="0.45"/>
+            </g>
+            <path d="M50 46 L54 52 L50 58 L46 52 Z" fill="${escapeAttr(pink)}" stroke="none"/>
+          </svg>
+        </div>`;
+      }
       case "pixel-chat": {
         const text = (state.appearance.tokens && state.appearance.tokens["--md-on-surface"]) || "#e6e6e6";
         const muted = (state.appearance.tokens && state.appearance.tokens["--md-on-surface-variant"]) || "#b8b8b8";

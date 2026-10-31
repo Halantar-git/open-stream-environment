@@ -16,7 +16,7 @@
  */
 
 /*
-  3D-набор Super Four: тахометр, цель, чат и алерт.
+  3D-набор Super Four: тахометр, цель, чат, алерт и куб.
 
   Проверяем то, что легко сломать незаметно: жёсткую привязку к теме (на чужой
   теме не должно быть ни DOM, ни цикла), подписки на нужные события и
@@ -30,6 +30,7 @@ const WidgetSfTachometer = require("../overlay/widgets/sf-tachometer-widget");
 const WidgetSfGoal = require("../overlay/widgets/sf-goal-widget");
 const WidgetSfChat = require("../overlay/widgets/sf-chat-widget");
 const WidgetSfHoloAlert = require("../overlay/widgets/sf-holo-alert-widget");
+const WidgetSfCube = require("../overlay/widgets/sf-cube-widget");
 const WidgetManager = require("../overlay/widgets/widget-manager");
 
 // ---- минимальные заглушки DOM и canvas ----
@@ -404,25 +405,59 @@ describe("WidgetSfHoloAlert", () => {
   });
 });
 
+describe("WidgetSfCube", () => {
+  const cubeItem = () => item("sf-cube", { renderType: "canvas", w: 20, h: 18 });
+
+  test("скрыт до алерта, затем появляется и вращается", () => {
+    const context = makeContext("sf");
+    const widget = new WidgetSfCube(cubeItem(), context);
+    widget.mount(makeEl("div"));
+
+    expect(widget.element.tagName).toBe("CANVAS");
+    expect(widget.element.style.opacity).toBe("0");
+    expect(raf.pending()).toBe(0);
+
+    context.bus.emit(EVENT_TYPES.ALERT, { kind: "follow" });
+    expect(widget.element.style.opacity).toBe("1");
+    expect(raf.pending()).toBe(1);
+
+    raf.flush(1000);
+    expect(widget.ctx.clearRect).toHaveBeenCalled();
+    expect(widget.ctx.stroke).toHaveBeenCalled();
+
+    widget.unmount();
+    expect(raf.pending()).toBe(0);
+  });
+
+  test("не запускает цикл на чужой теме", () => {
+    const widget = new WidgetSfCube(cubeItem(), makeContext("pixel"));
+    widget.mount(makeEl("div"));
+    expect(raf.pending()).toBe(0);
+    widget.unmount();
+  });
+});
+
 describe("WidgetManager — изоляция виджетов Super Four", () => {
   test("не создаёт sf-виджеты, пока тема не sf", () => {
     const root = makeEl("div");
     const context = makeContext("pixel");
     const manager = new WidgetManager(root, {
       shouldMount: (inst) => (!inst.type.startsWith("sf-") ? true : context.theme === "sf"),
-      resolveRenderType: (inst) => (inst.type === "sf-tachometer" ? "canvas" : "2d"),
+      resolveRenderType: (inst) => (["sf-tachometer", "sf-cube"].includes(inst.type) ? "canvas" : "2d"),
       context,
     });
     manager.register("sf-tachometer", WidgetSfTachometer);
     manager.register("sf-goal", WidgetSfGoal);
     manager.register("sf-chat", WidgetSfChat);
     manager.register("sf-holo-alert", WidgetSfHoloAlert);
+    manager.register("sf-cube", WidgetSfCube);
 
     const layout = [
       item("sf-tachometer", { renderType: "canvas" }),
       item("sf-goal"),
       item("sf-chat"),
       item("sf-holo-alert"),
+      item("sf-cube", { renderType: "canvas" }),
     ];
 
     manager.syncLayout(layout);
@@ -430,7 +465,7 @@ describe("WidgetManager — изоляция виджетов Super Four", () =>
 
     context.theme = "sf";
     manager.syncLayout(layout);
-    expect(manager.size).toBe(4);
+    expect(manager.size).toBe(5);
 
     context.theme = "retrowave";
     manager.syncLayout(layout);
