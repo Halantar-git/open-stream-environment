@@ -1013,6 +1013,81 @@
       45
     ),
 
+    // ---- Super Four (3D) ----
+    // Набор собран вокруг приборной панели CB400SF: тахометр — вывеска темы,
+    // цель — шкала оборотов, чат и алерт — панель приборов с четырьмя
+    // «цилиндрами». Шрифты и цвета берутся из токенов темы.
+    "sf-tachometer": {
+      type: "sf-tachometer",
+      label: "Тахометр Super Four",
+      description: "Аналоговый тахометр с отсечкой: стрелка оживляется на алерте (только для темы Super Four)",
+      icon: "widgetSfTachometer",
+      dimension: "3d",
+      theme: "sf",
+      role: "sign",
+      defaultGeometry: { x: 38, y: 10, w: 24, h: 18 },
+      minW: 12,
+      minH: 10,
+      defaultConfig: { perspective: 0 },
+    },
+    "sf-goal": {
+      type: "sf-goal",
+      label: "Цель Super Four",
+      description: "Донат-цель как шкала оборотов с оранжевой зоной (только для темы Super Four)",
+      icon: "widgetSfGoal",
+      services: ["donationAlerts", "youtube"],
+      dimension: "3d",
+      theme: "sf",
+      renderType: "2d",
+      defaultGeometry: { x: 3, y: 84, w: 32, h: 6 },
+      minW: 16,
+      minH: 4,
+      defaultConfig: { showPercentage: true, perspective: 0, perspectiveDirection: "left" },
+    },
+    "sf-chat": {
+      type: "sf-chat",
+      label: "Чат Super Four",
+      description: "Чат стрима на панели приборов с четырьмя «цилиндрами» (только для темы Super Four)",
+      icon: "widgetSfChat",
+      services: ["twitchChat", "youtube"],
+      dimension: "3d",
+      theme: "sf",
+      renderType: "2d",
+      defaultGeometry: { x: 68, y: 6, w: 29, h: 46 },
+      minW: 16,
+      minH: 16,
+      defaultConfig: { maxMessages: 50, perspective: 0 },
+    },
+    "sf-holo-alert": {
+      type: "sf-holo-alert",
+      label: "Алерт Super Four",
+      description: "Всплывающий алерт с мини-тахометром и значком события (только для темы Super Four)",
+      icon: "widgetSfHoloAlert",
+      services: ["twitchEvents", "donationAlerts", "youtube"],
+      dimension: "3d",
+      theme: "sf",
+      renderType: "2d",
+      defaultGeometry: { x: 40, y: 16, w: 26, h: 14 },
+      minW: 16,
+      minH: 8,
+      defaultConfig: {},
+    },
+
+    "sf-recent": recent3d(
+      "sf-recent",
+      "События Super Four",
+      "3D-очередь событий с выездом слева (только для темы Super Four)",
+      "sf"
+    ),
+
+    "sf-ticker": ticker3d(
+      "sf-ticker",
+      "Лента Super Four",
+      "Бегущая строка событий на панели приборов (только для темы Super Four)",
+      "sf",
+      25
+    ),
+
     // ---- Интеграции DonateX ----
     "donatex-ai": {
       type: "donatex-ai",
@@ -1181,6 +1256,9 @@
     "md3-ticker",
     "pixel-ticker",
     "retrowave-ticker",
+    "sf-goal",
+    "sf-tachometer",
+    "sf-ticker",
   ]);
 
   function isAnimatedWidget(type) {

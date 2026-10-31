@@ -34,6 +34,7 @@ const WIDGETS = [
   { name: "pixel-chat", theme: "pixel", Widget: require("../overlay/widgets/pixel-chat-widget") },
   { name: "teso-chat", theme: "teso-seal", Widget: require("../overlay/widgets/teso-chat-widget") },
   { name: "retrowave-chat", theme: "retrowave", Widget: require("../overlay/widgets/retrowave-chat-widget") },
+  { name: "sf-chat", theme: "sf", Widget: require("../overlay/widgets/sf-chat-widget") },
   { name: "wardogs-chat", theme: "wardogs", Widget: require("../overlay/widgets/wardogs-chat-widget") },
 ];
 

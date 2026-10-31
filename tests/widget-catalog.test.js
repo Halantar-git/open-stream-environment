@@ -29,6 +29,9 @@ describe("widget-catalog helpers", () => {
     expect(isAnimatedWidget("teso-seal")).toBe(true);
     expect(isAnimatedWidget("ticker")).toBe(true);
     expect(isAnimatedWidget("retrowave-ticker")).toBe(true);
+    expect(isAnimatedWidget("sf-tachometer")).toBe(true);
+    expect(isAnimatedWidget("sf-goal")).toBe(true);
+    expect(isAnimatedWidget("sf-ticker")).toBe(true);
 
     // Лёгкие: DOM-only, без цикла.
     expect(isAnimatedWidget("chat")).toBe(false);
@@ -69,6 +72,10 @@ describe("widget-catalog helpers", () => {
 
     const retrowave = widgetsForTheme("retrowave").map((d) => d.type);
     expect(retrowave).toEqual(expect.arrayContaining(["retrowave-goal", "retrowave-chat", "retrowave-holo-alert", "retrowave-recent", "retrowave-symbol", "retrowave-ticker"]));
+
+    const sf = widgetsForTheme("sf").map((d) => d.type);
+    expect(sf).toEqual(expect.arrayContaining(["sf-tachometer", "sf-goal", "sf-chat", "sf-holo-alert", "sf-recent", "sf-ticker"]));
+    expect(sf).toHaveLength(6);
 
     expect(widgetsForTheme("")).toEqual([]);
   });
@@ -122,6 +129,10 @@ describe("widget-catalog helpers", () => {
     expect(widgetRole("ticker")).toBe("ticker");
     expect(widgetRole("retrowave-ticker")).toBe("ticker");
     expect(widgetRole("md3-ticker")).toBe("ticker");
+    expect(widgetRole("sf-tachometer")).toBe("sign");
+    expect(widgetRole("sf-chat")).toBe("chat");
+    expect(widgetRole("sf-goal")).toBe("goal");
+    expect(widgetRole("sf-holo-alert")).toBe("alerts");
 
     // Декоративные 3D-виджеты (основные вывески) имеют роль для кросс-темной
     // замены. Вторичные вывески (musain/elite-sign) остаются без роли — они

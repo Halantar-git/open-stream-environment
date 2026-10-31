@@ -98,4 +98,21 @@ describe("встроенные темы", () => {
     expect(tokens["--panel-clip"]).toContain("polygon(26px 0");
     expect(tokens["--panel-radius"]).toBe("0px");
   });
+
+  test("Super Four — встроенная тема с 3D-набором приборной панели", () => {
+    const theme = BUILTIN_THEMES.sf;
+    expect(theme).toBeTruthy();
+    expect(theme.name).toBe("Super Four");
+    expect(theme.dimension).toBe("2d");
+    expect(theme.family).toBe("sf");
+    expect(theme.variant3d).toBe("sf");
+    expect(THREE_D_STYLES.some((style) => style.id === "sf")).toBe(true);
+  });
+
+  test("Super Four выкрашен в перламутр и янтарные «поворотники»", () => {
+    const tokens = BUILTIN_THEMES.sf.tokens;
+    expect(tokens["--md-primary"]).toBe("#a855f7");
+    expect(tokens["--md-secondary"]).toBe("#f59e0b");
+    expect(tokens["--panel-radius"]).toBe("6px");
+  });
 });

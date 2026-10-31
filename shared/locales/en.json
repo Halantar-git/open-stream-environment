@@ -868,7 +868,19 @@
     "retrowave-holo-alert": "Retrowave Alert",
     "retrowave-holo-alertDesc": "Floating neon alert with a striped sun (Retrowave theme only)",
     "retrowave-symbol": "Retrowave Symbol",
-    "retrowave-symbolDesc": "Rotating neon wireframe sphere that appears on alerts (Retrowave theme only)"
+    "retrowave-symbolDesc": "Rotating neon wireframe sphere that appears on alerts (Retrowave theme only)",
+    "sf-tachometer": "Super Four Tachometer",
+    "sf-tachometerDesc": "Analog tachometer with a redline that revs on alerts (Super Four theme only)",
+    "sf-goal": "Super Four Goal",
+    "sf-goalDesc": "Donation goal as a rev scale with an orange redline zone (Super Four theme only)",
+    "sf-chat": "Super Four Chat",
+    "sf-chatDesc": "Stream chat on a dashboard with four cylinders (Super Four theme only)",
+    "sf-holo-alert": "Super Four Alert",
+    "sf-holo-alertDesc": "Floating alert with a mini tachometer and the event icon (Super Four theme only)",
+    "sf-recent": "Super Four events",
+    "sf-recentDesc": "3D event queue sliding in from the left (Super Four theme only)",
+    "sf-ticker": "Super Four ticker",
+    "sf-tickerDesc": "Scrolling stream events on a dashboard panel (Super Four theme only)"
   },
   "timer": {
     "defaultTitle": "Executive Hangar",
@@ -1716,11 +1728,11 @@
     },
     "themes": {
       "title": "Themes",
-      "p1": "In Settings → Appearance each theme is a \"family\" with a base 2D palette and, for some, a 3D variant: Material You, Orbital (a Star Citizen HUD), Pixel Perfect (a minimal pixel-style UI), Elite (an orange Elite Dangerous HUD), Nuclear (a CRT terminal), TESO (dark gold/bronze, Cinzel/Montserrat fonts) and Wardogs (a tactical shooter HUD with an amber accent).",
-      "p2": "The 3D toggle on a theme card turns on its 3D widgets over the same palette: Material You → orb, chat, goal and alert, Pixel Perfect → cube, chat, goal and alert, Orbital → Star Citizen (Grim HEX), Elite → Cobra Mk II (ship hologram and radar where donors appear as ships), Nuclear → radiation sign, chat, goal and holo-alert, TESO → Ouroboros Seal, chat, goal and holo-alert, Wardogs → a goal loading bar, chat, holo-alert and a wireframe cube.",
+      "p1": "In Settings → Appearance each theme is a \"family\" with a base 2D palette and, for some, a 3D variant: Material You, Orbital (a Star Citizen HUD), Pixel Perfect (a minimal pixel-style UI), Elite (an orange Elite Dangerous HUD), Nuclear (a CRT terminal), TESO (dark gold/bronze, Cinzel/Montserrat fonts), Wardogs (a tactical shooter HUD with an amber accent) and Super Four (a Honda CB400SF motorcycle dashboard: pearl violet, amber turn signals, a tachometer).",
+      "p2": "The 3D toggle on a theme card turns on its 3D widgets over the same palette: Material You → orb, chat, goal and alert, Pixel Perfect → cube, chat, goal and alert, Orbital → Star Citizen (Grim HEX), Elite → Cobra Mk II (ship hologram and radar where donors appear as ships), Nuclear → radiation sign, chat, goal and holo-alert, TESO → Ouroboros Seal, chat, goal and holo-alert, Wardogs → a goal loading bar, chat, holo-alert and a wireframe cube, Super Four → tachometer, chat, goal and alert.",
       "p3": "When 3D is on, its widgets appear over the base overlay and the matching 2D widgets (chat, goal, alerts) are hidden — their 3D versions replace them; switching 3D off brings them back. An active 3D theme also shows a \"3D widgets\" list below, where each widget can be toggled individually. The theme only affects the overlay and its canvas preview.",
       "p4": "Create custom theme and Edit open a full theme editor in a separate window: 4 seed colors, seven panel shapes, separate fonts for headings/body/data, border, glow, background and text color, panel opacity and blur, error color and alert enter animation (duration and curve), plus a CSS editor. Pixel Perfect snaps widget text to the pixel grid (12/16/24/32px).",
-      "p5": "A custom theme shows a list of every 3D widget (Material You, Star Citizen/Grim HEX, Nuclear, Pixel Perfect, TESO, Cobra Mk II, Wardogs) with toggles — pick any, styles can be mixed. The \"3D\" toggle on its card enables the selection; panel 3D widgets use your palette, while decorative signs/radar/shield keep their signature colors. If exactly one widget is ticked for a role (chat/goal/alerts) the 2D widget is replaced by it automatically; with several it stays as is."
+      "p5": "A custom theme shows a list of every 3D widget (Material You, Star Citizen/Grim HEX, Nuclear, Pixel Perfect, TESO, Cobra Mk II, Wardogs, Retrowave, Super Four) with toggles — pick any, styles can be mixed. The \"3D\" toggle on its card enables the selection; panel 3D widgets use your palette, while decorative signs/radar/shield keep their signature colors. If exactly one widget is ticked for a role (chat/goal/alerts) the 2D widget is replaced by it automatically; with several it stays as is."
     },
     "scenes": {
       "title": "Scenes",

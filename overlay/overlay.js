@@ -410,6 +410,7 @@
   manager.register("md3-recent", OW.RecentWidget3d);
   manager.register("pixel-recent", OW.RecentWidget3d);
   manager.register("retrowave-recent", OW.RecentWidget3d);
+  manager.register("sf-recent", OW.RecentWidget3d);
   manager.register("ticker", OW.WidgetTicker);
   manager.register("grimhex-ticker", OW.WidgetTicker);
   manager.register("nuclear-ticker", OW.WidgetTicker);
@@ -419,6 +420,7 @@
   manager.register("md3-ticker", OW.WidgetTicker);
   manager.register("pixel-ticker", OW.WidgetTicker);
   manager.register("retrowave-ticker", OW.WidgetTicker);
+  manager.register("sf-ticker", OW.WidgetTicker);
   manager.register("stat", OW.StatWidget);
   manager.register("social", OW.SocialWidget);
   manager.register("participants", OW.ParticipantsWidget);
@@ -469,6 +471,10 @@
   manager.register("retrowave-chat", OW.WidgetRetrowaveChat);
   manager.register("retrowave-holo-alert", OW.WidgetRetrowaveHoloAlert);
   manager.register("retrowave-symbol", OW.WidgetRetrowaveSymbol);
+  manager.register("sf-tachometer", OW.WidgetSfTachometer);
+  manager.register("sf-goal", OW.WidgetSfGoal);
+  manager.register("sf-chat", OW.WidgetSfChat);
+  manager.register("sf-holo-alert", OW.WidgetSfHoloAlert);
   manager.register("donatex-ai", OW.DonatexAiWidget);
   manager.register("music", OW.MusicWidget);
 

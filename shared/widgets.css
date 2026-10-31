@@ -1180,6 +1180,71 @@
 [data-decoration="retrowave"] .uec-transfer__panel { padding-left: 34px; }
 [data-decoration="retrowave"] .uec-transfer__compact { padding-left: 26px; }
 
+/* ---------- Super Four: приборная панель ----------
+   Тема названа по Honda CB400SF, поэтому 3D-панели — не неон и не HUD, а
+   приборка: тёмное стекло с лёгкой карбоновой фактурой, хромовая риска по
+   верхней кромке и янтарный язычок индикатора. Фон и рамку задают токены
+   темы, а здесь — только фактура, общая для цели, чата и алерта. */
+.sf-surface {
+  position: relative;
+  background-image:
+    repeating-linear-gradient(135deg, rgba(168, 85, 247, 0.05) 0 1px, transparent 1px 9px),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 9px);
+}
+.sf-surface::before {
+  content: "";
+  position: absolute;
+  left: 18px;
+  top: 0;
+  width: 42px;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: linear-gradient(90deg, var(--md-secondary), transparent);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+/* Четыре огонька цилиндров в шапке чата. Срабатывают по очереди на каждом
+   сообщении; задержки задаются переменной на самих точках из виджета. */
+.sf-chat__cyl {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.sf-chat__cyl i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(203, 184, 222, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(168, 85, 247, 0.35);
+}
+.sf-chat__cyl.is-firing i {
+  animation: sf-fire 460ms ease-out var(--sf-delay, 0ms) 1;
+}
+@keyframes sf-fire {
+  0% {
+    background: var(--md-secondary);
+    box-shadow: 0 0 8px var(--md-secondary);
+  }
+  100% {
+    background: rgba(203, 184, 222, 0.28);
+    box-shadow: inset 0 0 0 1px rgba(168, 85, 247, 0.35);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sf-chat__cyl.is-firing i { animation: none; }
+}
+
+/* Карточки 3D-чата и последних событий в Super Four получают янтарную полосу:
+   это тот же мотив «поворотника», что у имён и суммы в алерте. */
+[data-theme="sf"] .widget-chat__user {
+  text-shadow: 0 0 9px rgba(245, 158, 11, 0.5);
+}
+[data-theme="sf"] .widget-recent3d__item {
+  border-left: 2px solid var(--md-secondary);
+}
+
 /* UEC transfer follows the same HUD decoration as the other panels: scanlines
    and four corner brackets under Orbital (brackets4), two corners under
    angular custom themes (brackets2). */

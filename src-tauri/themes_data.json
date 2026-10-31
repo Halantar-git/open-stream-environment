@@ -1,5 +1,5 @@
 {
-  "sourceHash": "edeb2ee58eab73bc",
+  "sourceHash": "13b56546e386280f",
   "builtinThemes": {
     "nebula": {
       "id": "nebula",
@@ -285,6 +285,7 @@
       "category": "system",
       "dimension": "2d",
       "family": "sf",
+      "variant3d": "sf",
       "borderRadius": "6px",
       "tokens": {
         "--md-primary": "#a855f7",
@@ -694,6 +695,10 @@
     {
       "id": "retrowave",
       "name": "Retrowave"
+    },
+    {
+      "id": "sf",
+      "name": "Super Four"
     }
   ]
 }

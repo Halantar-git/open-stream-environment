@@ -463,6 +463,9 @@
       },
     },
 
+    // Super Four — мотоциклетная приборная панель Honda CB400SF: фиолетовый
+    // перламутр, янтарные «поворотники» и циан. 3D-набор повторяет язык темы
+    // (тахометр с отсечкой, шкала оборотов, панель приборов).
     sf: {
       id: "sf",
       name: "Super Four",
@@ -470,6 +473,7 @@
       category: "system",
       dimension: "2d",
       family: "sf",
+      variant3d: "sf",
       borderRadius: "6px",
       tokens: {
         // Фиолетовый перламутр (#a855f7) — основной акцент.
@@ -765,6 +769,7 @@
     { id: "cobra-mk2", name: "Cobra Mk II" },
     { id: "wardogs", name: "Wardogs" },
     { id: "retrowave", name: "Retrowave" },
+    { id: "sf", name: "Super Four" },
   ];
 
   const api = { BUILTIN_THEMES, THREE_D_STYLES };
