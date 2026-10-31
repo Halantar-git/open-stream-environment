@@ -196,6 +196,9 @@
         if (typeof msg.payload.activeScene === "string") activeScene = msg.payload.activeScene;
         sceneStartedAt = typeof msg.payload.sceneStartedAt === "number" ? msg.payload.sceneStartedAt : null;
         renderScene(msg.payload.scenes && msg.payload.scenes[sceneType]);
+        // Первое состояние пришло — тема и содержимое на месте, можно
+        // показывать страницу (см. `body.is-pending` в scene.css).
+        document.body.classList.remove("is-pending");
         break;
       case EVENT_TYPES.REMOTE_ACTION: {
         const action = msg.payload && msg.payload.action;

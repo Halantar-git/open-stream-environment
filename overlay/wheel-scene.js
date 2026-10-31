@@ -422,6 +422,8 @@
           }
         }
         firstStateSeen = true;
+        // Первое состояние пришло — фон темы и барабан на месте.
+        document.body.classList.remove("is-pending");
         break;
       case EVENT_TYPES.SCENES_UPDATE:
         if (sceneBackground && msg.payload && msg.payload.wheel) {

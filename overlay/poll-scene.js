@@ -202,6 +202,8 @@
           poll = msg.payload.poll;
           renderPoll();
         }
+        // Первое состояние пришло — фон темы и содержимое на месте.
+        document.body.classList.remove("is-pending");
         break;
       case EVENT_TYPES.SCENES_UPDATE:
         if (sceneBackground && msg.payload && msg.payload.poll) {
