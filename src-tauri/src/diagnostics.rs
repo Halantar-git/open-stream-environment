@@ -750,6 +750,7 @@ impl Diagnostics {
             clients: Arc::clone(&self.clients),
             obs: Arc::clone(&self.obs),
             database: Arc::clone(&self.database),
+            chat_bot: Arc::clone(&self.chat_bot),
             remote_scene: Arc::clone(&self.remote_scene),
             notifier: Arc::clone(&self.notifier),
             rates: Arc::clone(&self.rates),
@@ -2682,6 +2683,7 @@ struct BusContext {
     clients: Arc<ClientRegistry>,
     obs: Arc<ObsClient>,
     database: Arc<Database>,
+    chat_bot: Arc<ChatBot>,
     remote_scene: Arc<OnceLock<RemoteSceneFn>>,
     notifier: Arc<OnceLock<NotifyFn>>,
     rates: crate::integrations::exchange_rates::Shared,
@@ -2695,6 +2697,7 @@ fn apply_bus_event(event: &Value, ctx: &BusContext) {
         clients,
         obs,
         database,
+        chat_bot,
         remote_scene,
         notifier,
         rates,
@@ -2705,6 +2708,11 @@ fn apply_bus_event(event: &Value, ctx: &BusContext) {
         "alert" => {
             publish_alert_static(&payload, config, queue, clients);
             apply_alert_side_effects(&payload, config, runtime, database, clients, rates);
+            // Донат — повод поблагодарить в чате, если владелец написал текст
+            // в настройках бота.
+            if payload.get("kind").and_then(Value::as_str) == Some("donation") {
+                chat_bot.thank_donation(&payload);
+            }
             // Нативное уведомление — как `onStreamAlert` в `main.js`: когда панель
             // в фокусе, реальные события не дублируются (решает оболочка).
             // Реплика ИИ идёт в той же пачке, что и донат, — второе уведомление

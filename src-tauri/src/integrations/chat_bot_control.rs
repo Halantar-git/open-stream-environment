@@ -22,7 +22,9 @@ use std::time::Duration;
 use serde_json::Value;
 use tokio::sync::oneshot;
 
-use crate::integrations::chat_bot::{self, BotEngine, Clock, ModCommand};
+use crate::integrations::chat_bot::{
+    self, render_template, BotEngine, Clock, ModCommand, TemplateContext,
+};
 use crate::integrations::chat_moderation::{ModerationEngine, ModerationStore, WarnsBackend};
 use crate::integrations::twitch_chat::ChatSender;
 use crate::integrations::twitch_chat_control::SpawnFn;
@@ -41,6 +43,8 @@ struct BotRuntime {
     moderation: ModerationEngine,
     prefix: String,
     channel: String,
+    /// Шаблон благодарности за донат; пустой — не пишем.
+    thanks: String,
 }
 
 /// Чат-бот приложения.
@@ -116,6 +120,12 @@ impl ChatBot {
             moderation,
             prefix,
             channel: channel.to_string(),
+            thanks: chat_bot
+                .get("donationThanks")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .trim()
+                .to_string(),
         });
         self.start_tick();
     }
@@ -124,6 +134,44 @@ impl ChatBot {
     pub fn stop(self: &Arc<Self>) {
         self.stop_tick();
         *self.lock(&self.runtime) = None;
+    }
+
+    /// Поблагодарить за донат в чате. Текст — шаблон из настроек бота
+    /// (`$(user)`, `$(amount)`, `$(message)`, `$(channel)`); пустой шаблон
+    /// означает, что благодарность выключена.
+    pub fn thank_donation(self: &Arc<Self>, alert: &Value) {
+        let (template, channel) = {
+            let runtime = self.lock(&self.runtime);
+            match runtime.as_ref() {
+                Some(runtime) => (runtime.thanks.clone(), runtime.channel.clone()),
+                None => return,
+            }
+        };
+        if template.is_empty() {
+            return;
+        }
+        let text = render_template(
+            &template,
+            &TemplateContext {
+                user: alert
+                    .get("user")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string(),
+                channel,
+                message: alert
+                    .get("message")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .trim()
+                    .to_string(),
+                amount: donation_amount(alert),
+                ..TemplateContext::default()
+            },
+        );
+        if !text.is_empty() {
+            self.send_reply(text);
+        }
     }
 
     /// Обработать сообщение чата — как `onChat` в JS.
@@ -348,6 +396,43 @@ impl ChatBot {
     }
 }
 
+/// Сумма доната для шаблона: «500 ₽», «12.5 $»; неизвестная валюта — кодом.
+fn donation_amount(alert: &Value) -> String {
+    let Some(amount) = alert.get("amount").and_then(Value::as_f64) else {
+        return String::new();
+    };
+    if !amount.is_finite() {
+        return String::new();
+    }
+    let code = alert
+        .get("currency")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim()
+        .to_uppercase();
+    let symbol = match code.as_str() {
+        "RUB" => "₽",
+        "USD" => "$",
+        "EUR" => "€",
+        "UAH" => "₴",
+        "KZT" => "₸",
+        "GBP" => "£",
+        _ => "",
+    };
+    let number = if amount.fract() == 0.0 {
+        format!("{}", amount as i64)
+    } else {
+        format!("{amount}")
+    };
+    if !symbol.is_empty() {
+        format!("{number} {symbol}")
+    } else if !code.is_empty() {
+        format!("{number} {code}")
+    } else {
+        number
+    }
+}
+
 /// `Math.max(1, Math.min(1209600, Math.round(Number(raw) || 600)))`.
 fn timeout_seconds(raw: Option<&str>) -> f64 {
     let parsed = raw
@@ -480,6 +565,63 @@ mod tests {
         let recorded = recorded.lock().unwrap();
         assert_eq!(recorded.len(), 1);
         assert_eq!(recorded[0]["message"], json!("привет, viewer!"));
+    }
+
+    #[tokio::test]
+    async fn a_donation_gets_a_thanks_message_with_amount_and_text() {
+        let recorded = Arc::new(Mutex::new(Vec::new()));
+        let (spawn, tasks) = slot();
+        let chat = bot(Arc::clone(&recorded), spawn);
+        let mut settings = config();
+        settings["donationThanks"] = json!("Спасибо, $(user)! $(amount) — $(message)");
+        chat.restart(&settings, "chan", Some(0));
+        tasks.lock().unwrap().clear();
+
+        chat.thank_donation(&json!({
+            "kind": "donation", "user": "Вася", "amount": 500,
+            "currency": "RUB", "message": "на корабль",
+        }));
+        drain(&tasks).await;
+
+        let recorded = recorded.lock().unwrap();
+        assert_eq!(recorded.len(), 1);
+        assert_eq!(
+            recorded[0]["message"],
+            json!("Спасибо, Вася! 500 ₽ — на корабль")
+        );
+    }
+
+    #[tokio::test]
+    async fn an_empty_thanks_template_stays_silent() {
+        let recorded = Arc::new(Mutex::new(Vec::new()));
+        let (spawn, tasks) = slot();
+        let chat = bot(Arc::clone(&recorded), spawn);
+        chat.restart(&config(), "chan", Some(0));
+        tasks.lock().unwrap().clear();
+
+        chat.thank_donation(&json!({
+            "kind": "donation", "user": "Вася", "amount": 500, "currency": "RUB",
+        }));
+        drain(&tasks).await;
+
+        assert!(recorded.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_donation_amount_keeps_its_currency() {
+        assert_eq!(
+            donation_amount(&json!({ "amount": 500, "currency": "RUB" })),
+            "500 ₽"
+        );
+        assert_eq!(
+            donation_amount(&json!({ "amount": 12.5, "currency": "usd" })),
+            "12.5 $"
+        );
+        assert_eq!(
+            donation_amount(&json!({ "amount": 300, "currency": "BYN" })),
+            "300 BYN"
+        );
+        assert_eq!(donation_amount(&json!({})), "");
     }
 
     #[tokio::test]

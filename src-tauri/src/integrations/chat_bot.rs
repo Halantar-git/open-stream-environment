@@ -133,9 +133,14 @@ pub struct TemplateContext {
     pub channel: String,
     pub args: String,
     pub count: i64,
+    /// Сумма доната для благодарности: «500 ₽». В командах и таймерах пусто.
+    pub amount: String,
+    /// Сообщение зрителя (у доната): может быть пустым.
+    pub message: String,
 }
 
-/// Подстановка `$(user)`, `$(channel)`, `$(args)`, `$(count)` и `$(random a|b)`.
+/// Подстановка `$(user)`, `$(channel)`, `$(args)`, `$(count)`, `$(amount)`,
+/// `$(message)` и `$(random a|b)`.
 ///
 /// Регулярного выражения нет: разбираем по символам, как и адреса в модерации.
 pub fn render_template(template: &str, ctx: &TemplateContext) -> String {
@@ -167,6 +172,8 @@ fn expand(inner: &str, ctx: &TemplateContext) -> Option<String> {
         "channel" => Some(ctx.channel.clone()),
         "args" => Some(ctx.args.clone()),
         "count" => Some(ctx.count.to_string()),
+        "amount" => Some(ctx.amount.clone()),
+        "message" => Some(ctx.message.clone()),
         _ => {
             let lower = trimmed.to_lowercase();
             let rest = lower.strip_prefix("random")?;
@@ -376,6 +383,7 @@ impl BotEngine {
                 channel: self.channel.clone(),
                 args,
                 count,
+                ..TemplateContext::default()
             },
         );
         (!reply.is_empty()).then_some(reply)
@@ -429,6 +437,7 @@ impl BotEngine {
                     channel: self.channel.clone(),
                     args: String::new(),
                     count,
+                    ..TemplateContext::default()
                 },
             );
             if !reply.is_empty() {
@@ -633,9 +642,21 @@ mod tests {
                 channel: "chan".to_string(),
                 args: "привет мир".to_string(),
                 count: 3,
+                ..TemplateContext::default()
             },
         );
         assert_eq!(out, "Привет, Bob! Счёт: 3. привет мир");
+
+        let donation = render_template(
+            "$(user) — $(amount): $(message)",
+            &TemplateContext {
+                user: "Bob".to_string(),
+                amount: "500 ₽".to_string(),
+                message: "на корабль".to_string(),
+                ..TemplateContext::default()
+            },
+        );
+        assert_eq!(donation, "Bob — 500 ₽: на корабль");
 
         let random = render_template("$(random a|b|c)", &TemplateContext::default());
         assert!(["a", "b", "c"].contains(&random.as_str()), "{random}");

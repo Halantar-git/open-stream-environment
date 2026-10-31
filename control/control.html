@@ -716,6 +716,13 @@
             <input type="text" id="chatBotPrefix" placeholder="!" maxlength="4" />
           </div>
 
+          <div class="settings__subhead"><h3 data-i18n="settings.chatBotDonation">Благодарность за донат</h3></div>
+          <p class="settings__desc" data-i18n="settings.chatBotDonationDesc">Бот пишет в чат, когда приходит донат. Пустое поле — не пишет. В тексте можно использовать $(user), $(amount) и $(message).</p>
+          <div class="md-field">
+            <label data-i18n="settings.chatBotDonationThanks">Текст благодарности</label>
+            <input type="text" id="chatBotDonationThanks" maxlength="400" data-i18n-placeholder="settings.chatBotDonationThanksPlaceholder" placeholder="Спасибо, $(user)! $(amount) — $(message)" />
+          </div>
+
           <div class="settings__subhead"><h3 data-i18n="settings.chatBotCommands">Команды</h3></div>
           <p class="settings__desc" data-i18n="settings.chatBotCommandsDesc">В ответе можно использовать $(user), $(channel), $(args), $(count) и $(random a|b|c).</p>
           <div class="chatbot-commands" id="chatBotCommandsList"></div>

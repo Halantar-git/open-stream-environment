@@ -607,6 +607,15 @@ pub fn set_chat_bot_config(config: &mut ConfigFile, patch: &Value) -> Value {
     };
     next.insert("prefix".to_string(), Value::from(prefix));
 
+    // Благодарность за донат: пустая строка значит «не писать».
+    let thanks = next
+        .get("donationThanks")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    next.insert("donationThanks".to_string(), Value::from(thanks));
+
     let commands = match next.get("commands").and_then(Value::as_array) {
         Some(commands) => Value::Array(
             commands
@@ -1649,6 +1658,14 @@ fn normalized_chat_bot(current: &Map<String, Value>) -> Map<String, Value> {
         _ => "!".to_string(),
     };
     bot.insert("prefix".to_string(), Value::from(prefix));
+    // Благодарность за донат: пустая строка значит «не писать».
+    let thanks = current
+        .get("donationThanks")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    bot.insert("donationThanks".to_string(), Value::from(thanks));
     bot.insert(
         "commands".to_string(),
         match current.get("commands").and_then(Value::as_array) {
@@ -1902,6 +1919,7 @@ mod tests {
             &json!({
                 "enabled": true,
                 "prefix": "?",
+                "donationThanks": "  Спасибо, $(user)! $(amount)  ",
                 "commands": [
                     { "id": "c1", "name": "!Discord", "response": "  discord.gg/test  ", "level": "bad", "cooldown": -5, "userCooldown": 2.7 },
                     { "id": "c2", "name": "", "response": "", "level": "everyone", "cooldown": 0, "userCooldown": 0 },
@@ -1914,6 +1932,7 @@ mod tests {
 
         assert_eq!(bot["enabled"], json!(true));
         assert_eq!(bot["prefix"], json!("?"));
+        assert_eq!(bot["donationThanks"], json!("Спасибо, $(user)! $(amount)"));
         assert_eq!(
             bot["commands"][0],
             json!({ "id": "c1", "name": "discord", "response": "discord.gg/test", "level": "everyone", "cooldown": 0, "userCooldown": 3 })

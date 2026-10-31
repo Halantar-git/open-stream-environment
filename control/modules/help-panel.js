@@ -201,6 +201,7 @@ const SECTIONS = [
       { type: "p", key: "help.chatbot.p2" },
       { type: "p", key: "help.chatbot.p3" },
       { type: "p", key: "help.chatbot.p4" },
+      { type: "p", key: "help.chatbot.p5" },
     ],
   },
   {
