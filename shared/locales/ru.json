@@ -868,7 +868,7 @@
     "retrowave-holo-alert": "Алерт Retrowave",
     "retrowave-holo-alertDesc": "Всплывающий неоновый алерт с полосатым солнцем (только для темы Retrowave)",
     "retrowave-symbol": "Символ Retrowave",
-    "retrowave-symbolDesc": "Вращающаяся неоновая сфера-сетка с иконкой события на экваторе, появляется на алерте (только для темы Retrowave)",
+    "retrowave-symbolDesc": "Вращающаяся неоновая сфера-сетка с иконкой события в центре, появляется на алерте (только для темы Retrowave)",
     "sf-tachometer": "Тахометр Super Four",
     "sf-tachometerDesc": "Аналоговый тахометр с отсечкой: обороты и передача растут от активности чата, на алерте раскручивается (только для темы Super Four)",
     "sf-goal": "Цель Super Four",

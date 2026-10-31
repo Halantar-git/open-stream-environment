@@ -20,9 +20,9 @@
 
   A sphere of meridians and parallels spins around its own axis with a slight
   axial tilt; front segments glow cyan, back segments fade to magenta, and the
-  icon of the active event travels along the equator. There is no solid fill
-  and no backdrop: the sign is light on top of the stream, not a panel, so the
-  scene stays transparent behind it.
+  icon of the active event sits at the centre of the sphere. There is no solid
+  fill and no backdrop: the sign is light on top of the stream, not a panel, so
+  the scene stays transparent behind it.
 
   Like the Wardogs and Pixel decorative signs it is invisible while nothing is
   happening and appears on an alert, one at a time, popping harder on donations.
@@ -273,6 +273,7 @@
       this._drawLimb(ctx, cx, cy, radius);
       this._drawEquator(ctx, project, radius, t);
       this._drawPoles(ctx, project, radius);
+      this._drawCenterIcon(ctx, cx, cy, radius, t);
     }
 
     // Силуэт сферы: тонкий градиентный обод. Он держит форму даже когда сетка
@@ -292,8 +293,8 @@
       ctx.restore();
     }
 
-    // Экватор — яркий шов знака; по нему бежит иконка события, а не точка:
-    // тип события читается прямо со знака. Без иконки остаётся свечение.
+    // Экватор — яркий шов знака; по нему бежит светящаяся точка, чтобы сфера
+    // «жила» даже когда сетка на дальней стороне погашена.
     _drawEquator(ctx, project, radius, t) {
       ctx.save();
       ctx.strokeStyle = this.primary;
@@ -313,21 +314,6 @@
       const a = t * 1.1;
       const p = project(Math.cos(a), 0, Math.sin(a), radius);
       const behind = p.z < 0;
-      const img = this._iconKind ? this._iconImage(this._iconKind) : null;
-
-      if (img && img.complete && img.naturalWidth) {
-        // Иконка не вращается вместе с сеткой — она висит по экватору
-        // ровно, как маркер на карте.
-        const size = Math.max(12, radius * 0.46);
-        ctx.save();
-        ctx.globalAlpha = behind ? 0.4 : 1;
-        ctx.shadowColor = this.secondary;
-        ctx.shadowBlur = behind ? 8 : 16;
-        ctx.drawImage(img, p.x - size / 2, p.y - size / 2, size, size);
-        ctx.restore();
-        return;
-      }
-
       ctx.save();
       ctx.globalAlpha = behind ? 0.35 : 1;
       ctx.fillStyle = behind ? this.primary : this.secondary;
@@ -336,6 +322,22 @@
       ctx.beginPath();
       ctx.arc(p.x, p.y, Math.max(1.4, radius * 0.045), 0, Math.PI * 2);
       ctx.fill();
+      ctx.restore();
+    }
+
+    // Иконка события — в центре сферы, поверх сетки: она не вращается вместе
+    // с глобусом и слегка дышит, чтобы знак не выглядел застывшим.
+    _drawCenterIcon(ctx, cx, cy, radius, t) {
+      const img = this._iconKind ? this._iconImage(this._iconKind) : null;
+      if (!img || !img.complete || !img.naturalWidth) return;
+
+      const pulse = 1 + 0.05 * Math.sin(t * 2);
+      const size = Math.max(14, radius * 0.62) * pulse;
+
+      ctx.save();
+      ctx.shadowColor = this.secondary;
+      ctx.shadowBlur = 18;
+      ctx.drawImage(img, cx - size / 2, cy - size / 2, size, size);
       ctx.restore();
     }
 

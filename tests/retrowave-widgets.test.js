@@ -319,7 +319,7 @@ describe("WidgetRetrowaveSymbol", () => {
     w.unmount();
   });
 
-  test("держит иконку активного события для экватора", () => {
+  test("держит иконку активного события для центра сферы", () => {
     const ctx = makeContext("retrowave");
     const w = new WidgetRetrowaveSymbol(symbolItem(), ctx);
     w.mount(makeEl("div"));
