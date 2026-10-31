@@ -360,8 +360,13 @@ describe("WidgetTerminalHoloAlert", () => {
     const card = widget.host.children[0];
     // В моке нет раскладки: высоту содержимого задаём сами, как её отдал бы браузер.
     card.scrollHeight = 420;
-    widget._autoSize(card);
+    widget._prepareHeight(card);
     expect(parseInt(widget.element.style.height, 10)).toBeGreaterThanOrEqual(420);
+
+    // Замер идёт по полному тексту, а печати ещё нет: строки снова пустые,
+    // иначе весь ответ показался бы сразу.
+    const body = card.children[1];
+    expect(body.children.every((row) => row.innerHTML === "")).toBe(true);
 
     // Каждый снимок состояния заново ставит процентную высоту — панель
     // не должна из-за этого сжиматься обратно.

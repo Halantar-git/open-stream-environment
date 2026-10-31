@@ -115,9 +115,12 @@
 
     onUpdate() {
       // `syncLayout` присылает новый снимок на каждое событие, и BaseWidget
-      // заново ставит процентную высоту. Без пересчёта растянутая под текст
-      // панель тут же сжимается и снова врёжет длинное сообщение.
-      if (this.playing && this.cardEl) this._autoSize(this.cardEl);
+      // заново ставит процентную высоту. Возвращаем уже замеренную под текст,
+      // а не меряем заново: иначе окно сжималось бы к ещё не напечатанному
+      // тексту и догоняло печать.
+      if (this.playing && this._cardHeight > 0) {
+        this.element.style.height = this._cardHeight + "px";
+      }
     }
 
     _readColors() {
@@ -157,6 +160,7 @@
       if (!alert) {
         this.playing = false;
         this.cardEl = null;
+        this._cardHeight = 0;
         this.element.style.opacity = "0";
         this.element.style.height = this.geometry.h + "%";
         return;
@@ -169,7 +173,9 @@
       this.cardEl = card;
       this.host.appendChild(card);
       this.element.style.opacity = "1";
-      this._autoSize(card);
+      // Высоту меряем сразу по полному тексту: окно успевает вырасти до
+      // того, как напечатается первая строка.
+      this._prepareHeight(card);
 
       // Вспышка рамки при появлении: окно «включается», как терминал.
       this.element.classList.remove("is-booting");
@@ -191,7 +197,6 @@
       }
 
       this._typeLines(card, () => {
-        this._autoSize(card);
         const holdMs = alert.durationMs || 5000;
         this.later(() => {
           if (card.animate) {
@@ -286,7 +291,7 @@
       const card = document.createElement("div");
       card.className = "terminal-window";
       // Карточка не тянется на всю панель: её высоту задаёт текст, а
-      // `_autoSize` подгоняет под него саму панель.
+      // `_prepareHeight` подгоняет под него саму панель.
       card.style.cssText = "height:auto;flex:0 0 auto;width:100%;min-width:0;";
 
       const tab = document.createElement("div");
@@ -365,7 +370,6 @@
         rows.forEach((row) => {
           row.innerHTML = row.dataset.html;
         });
-        this._autoSize(card);
         done();
         return;
       }
@@ -402,10 +406,9 @@
         charIndex = Math.min(plain.length, charIndex + 2);
         if (textEl) textEl.textContent = plain.slice(0, charIndex);
         if (charIndex >= plain.length) {
-          // Строка допечатана — подменяем на цветную разметку и пересчитываем
-          // высоту: длинное сообщение переносится и должно быть видно целиком.
+          // Строка допечатана — подменяем на цветную разметку. Высота уже
+          // замерена по всему тексту, так что окно не догоняет печать.
           row.innerHTML = row.dataset.html;
-          this._autoSize(card);
           rowIndex += 1;
           charIndex = 0;
           if (rowIndex < rows.length) {
@@ -430,54 +433,90 @@
       }
     }
 
+    // Высоту меряем по полному тексту ещё до печати: строки на этот момент
+    // пустые, и окно иначе росло бы вслед за символами — текст вылезал бы за
+    // край, пока панель догоняет печать. Временно показываем финальную
+    // разметку всех строк, меряем и снова очищаем их под посимвольный вывод.
+    _prepareHeight(card) {
+      if (!this.element || !card) return;
+      const rows = card._rows || [];
+      rows.forEach((row) => {
+        row.innerHTML = row.dataset.html;
+      });
+      const height = this._measureHeight(card, rows);
+      rows.forEach((row) => {
+        row.innerHTML = "";
+      });
+      this._cardHeight = height;
+    }
+
     // Панель растёт под сообщение, как в виджете UEC-перевода: сначала замер по
     // содержимому, затем высота до нижней границы экрана, а если и так не
     // влезает — уплотняем текст, а не режем его краем панели.
-    _autoSize(card) {
-      if (!this.element || !card) return;
+    _measureHeight(card, rows) {
+      if (!this.element || !card) return 0;
       const viewport =
         typeof window !== "undefined" && Number(window.innerHeight) > 0
           ? Number(window.innerHeight)
           : 1080;
       const top = (Number(this.geometry.y) / 100) * viewport;
 
-      // Базовая высота — из геометрии виджета: панель могла быть растянута
-      // под предыдущий длинный алерт.
-      this.element.style.height = this.geometry.h + "%";
+      const style = this.element.style;
+      // Переход высоты нужен только для анимации роста, но во время него
+      // `clientHeight` отдаёт промежуточное значение — база вышла бы от
+      // предыдущего алерта. Ставим её мгновенно, без перехода.
+      const previousTransition = style.transition;
+      style.transition = "none";
+      style.height = this.geometry.h + "%";
       const base = this.element.clientHeight || 100;
       const maxHeight = Math.max(base, viewport - top - 8);
 
       // Замер: у auto-высоты содержимое не поджимается flex-родителем.
       const measure = () => {
-        const previous = this.element.style.height;
-        this.element.style.height = "auto";
+        const previous = style.height;
+        style.height = "auto";
         const needed = card.scrollHeight || card.offsetHeight || 0;
-        this.element.style.height = previous;
+        style.height = previous;
         return needed;
       };
 
       let needed = measure();
-      if (!needed) return;
+      if (!needed) {
+        style.height = this.geometry.h + "%";
+        style.transition = previousTransition;
+        return 0;
+      }
 
       // Не влезает до края экрана — сначала пробуем помельче, а не обрезать.
       const dense = needed + 12 > maxHeight;
-      const rows = card._rows || [];
-      rows.forEach((row) => {
+      (rows || []).forEach((row) => {
         row.style.fontSize = dense ? "11px" : "12px";
       });
       if (dense) needed = measure();
 
-      this.element.style.height = Math.min(Math.max(base, needed + 12), maxHeight) + "px";
+      style.height = Math.min(Math.max(base, needed + 12), maxHeight) + "px";
 
       // Замер может недосчитать пару пикселей (переносы, отступы): растим по факту.
       for (let attempt = 0; attempt < 3; attempt++) {
         const overflow = this.element.scrollHeight - this.element.clientHeight;
         if (!Number.isFinite(overflow) || overflow <= 0) break;
-        const current = Number.parseFloat(this.element.style.height) || 0;
+        const current = Number.parseFloat(style.height) || 0;
         const next = Math.min(current + overflow + 2, maxHeight);
         if (next <= current) break;
-        this.element.style.height = next + "px";
+        style.height = next + "px";
       }
+
+      const final = Number.parseFloat(style.height) || base;
+
+      // Анимация роста: окно стартует от базовой высоты и плавно идёт к
+      // итоговой. Обе правки в одном задании браузер склеил бы, поэтому
+      // между ними заставляем его пересчитать раскладку.
+      style.height = base + "px";
+      void this.element.offsetWidth;
+      style.transition = previousTransition;
+      style.height = final + "px";
+
+      return final;
     }
   }
 
