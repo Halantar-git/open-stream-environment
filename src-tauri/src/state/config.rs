@@ -283,6 +283,12 @@ pub fn set_app_config(config: &mut ConfigFile, patch: &Value) {
         // Ссылки на виджеты DonateX: их открывает оверлей, чтобы сервис
         // считал виджеты подключёнными. Некорректная ссылка не затирает
         // сохранённую — панель просто покажет прежнее значение.
+        if let Some(ai_alert) = donatex.get("aiAlert") {
+            service.insert(
+                "aiAlert".to_string(),
+                Value::Bool(js_truthy(Some(ai_alert))),
+            );
+        }
         if let Some(widgets) = donatex.get("widgets").and_then(Value::as_object) {
             let mut saved = service
                 .get("widgets")
@@ -2041,6 +2047,9 @@ mod tests {
             config.get("donatex").unwrap()["widgets"]["music"],
             json!("")
         );
+
+        set_app_config(&mut config, &json!({ "donatex": { "aiAlert": false } }));
+        assert_eq!(config.get("donatex").unwrap()["aiAlert"], json!(false));
     }
 
     #[test]

@@ -208,6 +208,12 @@ pub fn snapshot(config: &ConfigFile, db: &Database, runtime: &Runtime) -> Value 
                 "ai": widget_url("ai"),
                 "music": widget_url("music"),
             },
+            // Тумблер «Ответ ИИ в алертах»: без ключа считаем включённым.
+            "aiAlert": config
+                .get("donatex")
+                .and_then(|service| service.get("aiAlert"))
+                .map(|value| js_truthy(Some(value)))
+                .unwrap_or(true),
         }),
     );
     out.insert(
@@ -434,7 +440,7 @@ mod tests {
             &json!({"donatex": {"widgets": {
                 "donation": "https://donatex.gg/widgets/donation/abc",
                 "music": "https://donatex.gg/widgets/music/def"
-            }}}),
+            }, "aiAlert": false}}),
         );
 
         let snap = snapshot(&config, &db, &Runtime::new(0, &serde_json::Map::new()));
@@ -447,6 +453,7 @@ mod tests {
             json!("https://donatex.gg/widgets/music/def")
         );
         assert_eq!(snap["donatex"]["widgets"]["ai"], json!(""));
+        assert_eq!(snap["donatex"]["aiAlert"], json!(false));
     }
 
     #[test]

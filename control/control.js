@@ -207,6 +207,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const twitchEnabledSwitch = document.getElementById("twitchEnabledSwitch");
   const donationAlertsEnabledSwitch = document.getElementById("donationAlertsEnabledSwitch");
   const donatexEnabledSwitch = document.getElementById("donatexEnabledSwitch");
+  const donatexAiAlertSwitch = document.getElementById("donatexAiAlertSwitch");
   const donatexTokenInput = document.getElementById("donatexToken");
   const donatexTokenStatusEl = document.getElementById("donatexTokenStatus");
   const donatexWidgetDonationInput = document.getElementById("donatexWidgetDonation");
@@ -684,6 +685,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     fillWidget(donatexWidgetDonationInput, donatexWidgets.donation);
     fillWidget(donatexWidgetAiInput, donatexWidgets.ai);
     fillWidget(donatexWidgetMusicInput, donatexWidgets.music);
+    setSwitchState(donatexAiAlertSwitch, !state.donatex || state.donatex.aiAlert !== false);
     twitchRedirectUriEl.textContent = `http://localhost:${port}/oauth/twitch/callback`;
     daRedirectUriEl.textContent = `http://localhost:${port}/oauth/donationalerts/callback`;
     youtubeRedirectUriEl.textContent = `http://localhost:${port}/oauth/youtube/callback`;
@@ -2028,6 +2030,16 @@ const { EVENT_TYPES } = window.SharedEvents;
       send(EVENT_TYPES.CMD_SET_INTEGRATION_ENABLED, { service, enabled: on });
     });
   });
+
+  // Ответ ИИ в алертах — глобальная настройка DonateX: бэкенд решает,
+  // добавлять ли карточку `ai` в очередь алертов.
+  if (donatexAiAlertSwitch) {
+    donatexAiAlertSwitch.addEventListener("click", () => {
+      const on = !donatexAiAlertSwitch.classList.contains("is-on");
+      setSwitchState(donatexAiAlertSwitch, on);
+      send(EVENT_TYPES.CMD_SET_APP_CONFIG, { donatex: { aiAlert: on } });
+    });
+  }
   document.getElementById("resetLayoutBtn").addEventListener("click", () => {
     if (!confirm(t("common.resetLayoutConfirm"))) return;
     state.layout.forEach((w) => send(EVENT_TYPES.CMD_REMOVE_WIDGET, { id: w.id }));

@@ -284,6 +284,18 @@ impl Diagnostics {
         let donatex = DonatexControl::new(
             Arc::new(crate::integrations::twitch_chat_socket::donatex_connect),
             donatex_token(Arc::clone(&config)),
+            {
+                let config = Arc::clone(&config);
+                Arc::new(move || {
+                    config
+                        .lock()
+                        .unwrap_or_else(|error| error.into_inner())
+                        .get("donatex")
+                        .and_then(|service| service.get("aiAlert"))
+                        .map(|value| js_truthy(Some(value)))
+                        .unwrap_or(true)
+                })
+            },
             spawn_task(),
         );
         let obs = {

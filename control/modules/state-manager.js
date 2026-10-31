@@ -45,7 +45,7 @@ export function createStateManager() {
     twitchEnabled: true,
     donationAlertsEnabled: true,
     donatexEnabled: true,
-    donatex: { enabled: true, hasToken: false, widgets: { donation: "", ai: "", music: "" } },
+    donatex: { enabled: true, hasToken: false, aiAlert: true, widgets: { donation: "", ai: "", music: "" } },
     youtubeEnabled: true,
     notificationSound: true,
     notificationVolume: 0.8,

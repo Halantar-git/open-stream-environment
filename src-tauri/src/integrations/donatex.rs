@@ -327,6 +327,8 @@ pub struct DonatexControl {
     connect: ConnectFn,
     /// External token из настроек (`donatex.externalToken`).
     get_token: Arc<dyn Fn() -> String + Send + Sync>,
+    /// Глобальный тумблер «Ответ ИИ в алертах» (`donatex.aiAlert`).
+    get_ai_alert: Arc<dyn Fn() -> bool + Send + Sync>,
     spawn: SpawnFn,
     stop: Mutex<Option<oneshot::Sender<()>>>,
 }
@@ -335,11 +337,13 @@ impl DonatexControl {
     pub fn new(
         connect: ConnectFn,
         get_token: Arc<dyn Fn() -> String + Send + Sync>,
+        get_ai_alert: Arc<dyn Fn() -> bool + Send + Sync>,
         spawn: SpawnFn,
     ) -> Self {
         Self {
             connect,
             get_token,
+            get_ai_alert,
             spawn,
             stop: Mutex::new(None),
         }
@@ -357,6 +361,7 @@ impl DonatexControl {
         let (stop_tx, mut stop_rx) = oneshot::channel::<()>();
         let connect = Arc::clone(&self.connect);
         let get_token = Arc::clone(&self.get_token);
+        let get_ai_alert = Arc::clone(&self.get_ai_alert);
         let emit = Arc::clone(&emit);
 
         (self.spawn)(Box::pin(async move {
@@ -450,7 +455,7 @@ impl DonatexControl {
                                 .and_then(|args| args.get(0))
                                 .cloned()
                                 .unwrap_or(Value::Null);
-                            handle_invocation(target, &payload, &emit).await;
+                            handle_invocation(target, &payload, &emit, get_ai_alert.as_ref()).await;
                         }
                     }
                 }
@@ -480,7 +485,12 @@ impl DonatexControl {
 }
 
 /// Разобрать invocation SignalR и отправить событие шины.
-async fn handle_invocation(target: &str, payload: &Value, emit: &EmitFn) {
+async fn handle_invocation(
+    target: &str,
+    payload: &Value,
+    emit: &EmitFn,
+    ai_alert: &(dyn Fn() -> bool + Send + Sync),
+) {
     // Часть установок DonateX шлёт ответ ИИ отдельными целями.
     if [
         "AiAssistantGenerated",
@@ -530,7 +540,7 @@ async fn handle_invocation(target: &str, payload: &Value, emit: &EmitFn) {
                 .unwrap_or("")
                 .trim()
                 .to_string();
-            if !reply.is_empty() {
+            if !reply.is_empty() && ai_alert() {
                 emit(bus_event(
                     "alert",
                     json!({
@@ -660,6 +670,7 @@ mod tests {
     fn control_with(
         incoming: Vec<String>,
         sent: Arc<Mutex<Vec<String>>>,
+        ai_alert: bool,
     ) -> (DonatexControl, Arc<Mutex<Option<BoxedTask>>>) {
         let connect: ConnectFn = Arc::new(move |_url| {
             let sent = Arc::clone(&sent);
@@ -672,7 +683,10 @@ mod tests {
             })
         });
         let (spawn, cell) = playing_spawn();
-        (DonatexControl::new(connect, token("tok"), spawn), cell)
+        (
+            DonatexControl::new(connect, token("tok"), Arc::new(move || ai_alert), spawn),
+            cell,
+        )
     }
 
     #[test]
@@ -799,7 +813,7 @@ mod tests {
                 r#"{"type":1,"target":"DonationCreated","arguments":[{"username":"fan","amount":300,"currency":"RUB","message":"hi","aiResponse":"Спасибо!","aiResponseVoiceFilePath":"https://cdn.donatex.gg/v.mp3"}]}"#,
             ),
         ];
-        let (control, cell) = control_with(incoming, Arc::clone(&sent));
+        let (control, cell) = control_with(incoming, Arc::clone(&sent), true);
         let (emit, events) = collector();
 
         control.restart(true, emit);
@@ -845,6 +859,33 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn the_ai_reply_alert_can_be_turned_off() {
+        let sent = Arc::new(Mutex::new(Vec::new()));
+        let incoming = vec![
+            frame("{}"),
+            frame(
+                r#"{"type":1,"target":"DonationCreated","arguments":[{"username":"fan","amount":300,"currency":"RUB","message":"hi","aiResponse":"Спасибо!"}]}"#,
+            ),
+        ];
+        let (control, cell) = control_with(incoming, Arc::clone(&sent), false);
+        let (emit, events) = collector();
+
+        control.restart(true, emit);
+        let task = cell.lock().unwrap().take().expect("задача");
+        let _ = tokio::time::timeout(Duration::from_millis(200), task).await;
+
+        let events = events.lock().unwrap();
+        assert!(events
+            .iter()
+            .filter(|event| event["type"] == json!("alert"))
+            .all(|event| event["payload"]["kind"] != json!("ai")));
+        // Само ИИ-событие и донат всё равно доходят до виджетов.
+        assert!(events
+            .iter()
+            .any(|event| event["type"] == json!("donatex_ai_event")));
+    }
+
+    #[tokio::test]
     async fn a_goal_frame_becomes_a_goal_update() {
         let sent = Arc::new(Mutex::new(Vec::new()));
         let incoming = vec![
@@ -853,7 +894,7 @@ mod tests {
                 r#"{"type":1,"target":"GoalUpdated","arguments":[{"currentAmount":150,"goalAmount":1000}]}"#,
             ),
         ];
-        let (control, cell) = control_with(incoming, sent);
+        let (control, cell) = control_with(incoming, sent, true);
         let (emit, events) = collector();
 
         control.restart(true, emit);
@@ -873,7 +914,7 @@ mod tests {
         let connect: ConnectFn =
             Arc::new(|_url| Box::pin(async { Err("нельзя".to_string()) }));
         let (spawn, cell) = playing_spawn();
-        let control = DonatexControl::new(connect, token(""), spawn);
+        let control = DonatexControl::new(connect, token(""), Arc::new(|| true), spawn);
         let (emit, events) = collector();
 
         control.restart(true, emit);
@@ -888,7 +929,7 @@ mod tests {
         let connect: ConnectFn =
             Arc::new(|_url| Box::pin(async { Err("нельзя".to_string()) }));
         let (spawn, cell) = playing_spawn();
-        let control = DonatexControl::new(connect, token("tok"), spawn);
+        let control = DonatexControl::new(connect, token("tok"), Arc::new(|| true), spawn);
         let (emit, events) = collector();
 
         control.restart(false, emit);
