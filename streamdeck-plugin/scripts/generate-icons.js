@@ -1,6 +1,8 @@
 /*
- * Generates minimal placeholder PNG icons for the Stream Deck plugin so the
- * manifest references resolve. Replace these with real artwork any time.
+ * Creates placeholder PNG icons for the Stream Deck plugin, but only where a
+ * file is missing: the shipped artwork (plugin, fallback scene, ticker) lives in
+ * assets/ and must never be overwritten by a one-off solid colour. The scene
+ * keys in assets/scenes/ are not touched here at all.
  *
  * Produces solid-colour PNGs with only Node built-ins (zlib + a tiny CRC32),
  * so it never needs an external dependency.
@@ -80,6 +82,13 @@ const icons = {
 };
 
 for (const [name, data] of Object.entries(icons)) {
-  fs.writeFileSync(path.join(outDir, name), data);
-  console.log("wrote", path.join(outDir, name), `(${data.length} bytes)`);
+  const target = path.join(outDir, name);
+  // Готовую картинку не трогаем: скрипт нужен только чтобы манифест не
+  // ссылался на несуществующий файл в свежей копии репозитория.
+  if (fs.existsSync(target)) {
+    console.log("kept", target);
+    continue;
+  }
+  fs.writeFileSync(target, data);
+  console.log("wrote", target, `(${data.length} bytes)`);
 }

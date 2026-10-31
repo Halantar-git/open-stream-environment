@@ -26,21 +26,21 @@ streamdeck-plugin/
   app.js                 # точка входа: мост Stream Deck <-> OSE
   package.json
   pi/settings.html       # Property Inspector (выбор сцены для кнопки)
-  scripts/generate-icons.js  # генератор плейсхолдер-иконок
-  assets/                # PNG-иконки плагина (плейсхолдеры `npm run icons`)
+  scripts/generate-icons.js  # заглушки для недостающих картинок
+  assets/                # иконки плагина: plugin, запасная scene, ticker
   assets/scenes/         # стандартные иконки сцен (обычная + активная)
   dist/app.js            # бандл (после `npm run build`)
 ```
 
 ## Иконки
 
-В `manifest.json` используются пути `assets/*` без расширения `.png`. Базовые
-плейсхолдеры генерируются командой `npm run icons`:
+В `manifest.json` используются пути `assets/*` без расширения `.png`:
 
 | Файл | Размер |
 |---|---|
 | `assets/plugin.png` (иконка плагина) | 288×288 |
 | `assets/scene.png`, `assets/scene-active.png` (запасная иконка кнопки) | 144×144 |
+| `assets/ticker.png`, `assets/ticker-active.png` (кнопка «Сообщение в ленту») | 144×144 |
 | `assets/scenes/<сцена>.png`, `assets/scenes/<сцена>-active.png` | 144×144 |
 
 Каждой сцене OSE (`start`, `brb`, `wheel`, `talk`, `main`, `end`, `poll`,
@@ -49,8 +49,8 @@ streamdeck-plugin/
 картинки нет.
 
 Стандартные иконки сцен уезжают вместе с плагином, настраивать их не нужно.
-`npm run icons` генерирует только плейсхолдеры `plugin.png`/`scene*.png` и
-содержимое `assets/scenes/` не трогает.
+`npm run icons` пишет одноцветные заглушки только для отсутствующих файлов и
+не трогает ни готовую графику, ни `assets/scenes/`.
 
 Пользователь может переопределить иконку любой сцены через панель управления OSE
 («Настройки → Stream Deck»): плагин получает пути из `state.streamdeck.icons`
@@ -68,7 +68,7 @@ streamdeck-plugin/
 ```
 cd streamdeck-plugin
 npm install
-npm run icons     # сгенерировать плейсхолдер-иконки (один раз)
+npm run icons     # дозаполнить отсутствующие заглушки (обычно не нужно)
 npm run build     # собрать app.js + ws в dist/app.js
 ```
 
