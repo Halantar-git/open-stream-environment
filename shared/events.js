@@ -224,6 +224,7 @@
     wheel_start: 6000,
     wheel_winner: 8000,
     reward: 6000,
+    ai: 7000,
   };
 
   const api = { EVENT_TYPES, CONNECTION_SERVICES, ALERT_DURATIONS_MS };

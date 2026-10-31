@@ -827,13 +827,9 @@ export function initPropertiesPanel({
         </div>
         <div id="pCustomFields"></div>`;
     } else if (inst.type === "donatex-ai") {
-      const donatexWidgets = (state.donatex && state.donatex.widgets) || {};
-      const bridge = [donatexWidgets.donation, donatexWidgets.ai, config.donationUrl, config.url].some(
-        (value) => String(value || "").trim() !== "",
-      );
       extraHtml = `
         <p class="properties__hint">${t("properties.donatexBridgeHint")}</p>
-        <div ${bridge ? "style=\"display:none\"" : ""}>
+        <div>
           <div class="md-field"><label>${t("properties.donatexAiName")}</label><input type="text" id="pDonatexName" value="${escapeAttr(config.characterName || "")}" placeholder="${escapeAttr(t("donatexAi.defaultName"))}"></div>
           <div class="md-field"><label>${t("properties.donatexAiAvatar")}</label><input type="text" id="pDonatexAvatar" value="${escapeAttr(config.avatarUrl || "")}" placeholder="https://..."></div>
           <div class="properties__toggle-row"><label>${t("properties.donatexAiShowName")}</label>${switchHtml("pDonatexShowName", config.showName !== false)}</div>

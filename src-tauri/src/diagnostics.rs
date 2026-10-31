@@ -2695,8 +2695,12 @@ fn apply_bus_event(event: &Value, ctx: &BusContext) {
             apply_alert_side_effects(&payload, config, runtime, database, clients, rates);
             // Нативное уведомление — как `onStreamAlert` в `main.js`: когда панель
             // в фокусе, реальные события не дублируются (решает оболочка).
-            if let Some(notify) = notifier.get() {
-                notify(&payload);
+            // Реплика ИИ идёт в той же пачке, что и донат, — второе уведомление
+            // о ней было бы шумом.
+            if payload.get("kind").and_then(Value::as_str) != Some("ai") {
+                if let Some(notify) = notifier.get() {
+                    notify(&payload);
+                }
             }
         }
         "stat_snapshot" => {
@@ -2833,7 +2837,9 @@ fn apply_alert_side_effects(
     rates: &crate::integrations::exchange_rates::Shared,
 ) {
     let kind = alert.get("kind").and_then(Value::as_str).unwrap_or("");
-    if kind == "wheel_start" || kind == "wheel_winner" {
+    // Колесо и реплика ИИ — только картинка для алертов: в «последние
+    // события» и историю они не идут, иначе один донат записывался бы дважды.
+    if kind == "wheel_start" || kind == "wheel_winner" || kind == "ai" {
         return;
     }
     let now = chrono::Utc::now().timestamp_millis();

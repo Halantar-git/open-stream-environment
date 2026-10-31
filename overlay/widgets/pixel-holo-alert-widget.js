@@ -186,6 +186,7 @@
         case "gift_sub": return t("alert.giftSub", { count: alert.count || 1 });
         case "cheer": return t("alert.cheer");
         case "donation": return t("alert.donation");
+        case "ai": return t("alert.ai");
         case "boosty_sub": return t("alert.boostySub");
         case "boosty_resub": return t("alert.boostyResub");
         case "wheel_start": return t("alert.wheelStart");
@@ -228,7 +229,7 @@
         if (alert.isElimination) nameHtml = t("alert.eliminated", { name });
         else if (alert.isFinalWinner) nameHtml = t("alert.finalWinner", { name });
         else nameHtml = t("alert.winner", { name });
-      } else if (alert.kind === "donation" || alert.kind === "cheer") {
+      } else if (alert.kind === "ai" || alert.kind === "donation" || alert.kind === "cheer") {
         if (alert.message) messageHtml = `<div style="color:${this.mutedColor};font-size:13px;font-family:${FONT};">«${escapeHtml(alert.message)}»</div>`;
         if (alert.musicTitle) {
           musicHtml = `<div style="color:${this.mutedColor};font-size:12px;font-family:${FONT};font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">♪ ${escapeHtml(alert.musicTitle)}</div>`;

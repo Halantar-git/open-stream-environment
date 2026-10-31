@@ -522,6 +522,26 @@ async fn handle_invocation(target: &str, payload: &Value, emit: &EmitFn) {
                     alert.get("message").cloned().unwrap_or(Value::Null),
                 );
             }
+            // Текст ИИ дублируется в алерты отдельной карточкой: если виджет
+            // персонажа скрыт или в режиме ссылок, реплика всё равно дойдёт до зрителя.
+            let reply = event
+                .get("aiText")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            if !reply.is_empty() {
+                emit(bus_event(
+                    "alert",
+                    json!({
+                        "kind": "ai",
+                        "user": alert.get("user").cloned().unwrap_or(Value::Null),
+                        "characterName": event.get("characterName").cloned().unwrap_or(Value::Null),
+                        "message": reply,
+                        "durationMs": 7000,
+                    }),
+                ));
+            }
             emit(bus_event("donatex_ai_event", event));
         }
         return;
@@ -809,6 +829,15 @@ mod tests {
             ai["payload"]["aiAudio"],
             json!("https://cdn.donatex.gg/v.mp3")
         );
+
+        // Реплика ИИ дублируется в алерты отдельной карточкой.
+        let ai_alert = events
+            .iter()
+            .filter(|event| event["type"] == json!("alert"))
+            .find(|event| event["payload"]["kind"] == json!("ai"))
+            .expect("ИИ-алерт");
+        assert_eq!(ai_alert["payload"]["message"], json!("Спасибо!"));
+        assert_eq!(ai_alert["payload"]["user"], json!("fan"));
 
         // Рукопожатие ушло в сокет первым кадром.
         let sent = sent.lock().unwrap();

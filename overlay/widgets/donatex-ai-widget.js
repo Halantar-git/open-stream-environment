@@ -20,14 +20,10 @@
 
   Two modes. With links it is an audio bridge: the DonateX donation widget and
   the DonateX AI widget are embedded as full-size transparent iframes, so their
-  voices play but nothing is drawn. This is the mode for streamers who already
-  have their own alerts: DonateX supplies the sound, OSE — the picture.
-
-  Without links the widget keeps the built-in character: it listens for
-  `donatex_ai_event` pushed by the backend from the single DonateX SignalR
-  connection and shows a speaking avatar + dialog bubble, playing the generated
-  voice line. The bubble shows who donated and how much when DonateX sends this
-  with the reply. Replies wait in a queue while the previous line is speaking.
+  voices play while OSE draws the avatar and the reply. Without links the widget
+  keeps the built-in character and plays the generated voice line itself. In
+  both modes the reply also goes out as an `ai` alert, so it lands in the alert
+  queue even when this widget is hidden.
 */
 (function (root, factory) {
   const BaseWidget =
@@ -175,20 +171,17 @@
 
     applyMode() {
       // Ссылки на виджеты DonateX включают режим аудио-моста: iframe'ы полноразмерные, но
-      // прозрачные, поэтому играет только звук. Без ссылок остаётся встроенный
-      // персонаж с аватаром и пузырём.
+      // прозрачные, поэтому играет только звук. Картинку (аватар и реплику)
+      // рисуем сами: сервис даёт голос, OSE — оформление.
       this._bridgeActive = this.applyBridge();
 
       if (this._bridgeActive) {
         this.stopAudio();
         this.clearHideTimer();
-        this.host.classList.remove("is-active");
-        this.host.classList.remove("is-speaking");
-        this._active = false;
-        this._current = null;
         this.queue.length = 0;
         this.renderQueue();
-        this.eventHost.style.display = "none";
+        this.applyAvatar();
+        if (this._active) this.scheduleHide();
         return;
       }
 
@@ -260,8 +253,22 @@
     }
 
     trigger(data) {
-      if (!data || this._bridgeActive) return;
-      if (!this.eventHost) return;
+      if (!data || !this.eventHost) return;
+
+      // В режиме ссылок звук играет DonateX, поэтому свою очередь не ведём:
+      // показываем аватар и реплику и отпускаем через hideDelayMs.
+      if (this._bridgeActive) {
+        this.stopAudio();
+        this._active = true;
+        this._current = data;
+        this.renderSpeaker(data);
+        this.textEl.textContent = data.aiText || data.message || "";
+        this.eventHost.style.display = "flex";
+        this.host.classList.add("is-active");
+        this.clearHideTimer();
+        this.scheduleHide();
+        return;
+      }
 
       if (this._active && this.queueEnabled()) {
         this.queue.push(data);
@@ -286,6 +293,12 @@
 
       this.stopAudio();
       this.clearHideTimer();
+
+      // В режиме моста голос у DonateX: только показываем текст.
+      if (this._bridgeActive) {
+        this.scheduleHide();
+        return;
+      }
 
       const audioUrl = String(data.aiAudio || "").trim();
       if (audioUrl) {

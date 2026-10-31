@@ -242,6 +242,7 @@
         case "gift_sub": return t("alert.giftSub", { count: alert.count || 1 });
         case "cheer": return t("alert.cheer");
         case "donation": return t("alert.donation");
+        case "ai": return t("alert.ai");
         case "wheel_start": return t("alert.wheelStart");
         case "wheel_winner": return t("alert.wheelWinner");
         case "reward": return t("alert.reward");
@@ -264,7 +265,7 @@
       const color = this.kindColor(alert.kind);
       const amount = this.formatAmount(alert);
       const message =
-        (alert.kind === "donation" || alert.kind === "cheer") && alert.message
+        (alert.kind === "ai" || alert.kind === "donation" || alert.kind === "cheer") && alert.message
           ? escapeHtml(alert.message)
           : "";
       const music =

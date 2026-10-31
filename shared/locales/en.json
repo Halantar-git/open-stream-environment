@@ -611,7 +611,8 @@
     "eliminated": "❌ Eliminated: {{name}}",
     "finalWinner": "🎉 Winner: {{name}}!",
     "winner": "🏆 Winner: {{name}}!",
-    "reward": "Reward"
+    "reward": "Reward",
+    "ai": "AI character"
   },
   "wheelScene": {
     "participantsTitle": "Participants: {{count}}"
@@ -760,7 +761,7 @@
     "custom": "Custom widget",
     "customDesc": "Text, image or custom HTML",
     "donatex-ai": "DonateX AI character",
-    "donatex-aiDesc": "Audio from the DonateX donation and AI widgets — no picture; the links are set in DonateX settings",
+    "donatex-aiDesc": "DonateX AI character avatar, name and reply; with widget links the service plays the voice, otherwise the built-in player does",
     "music": "Donation music",
     "musicDesc": "The donation track title on a single line; the widget is hidden while there is no music",
     "roulette": "Donation roulette",
@@ -1128,7 +1129,7 @@
   },
   "properties": {
     "goalTitle": "Goal title",
-    "donatexBridgeHint": "The DonateX donation and AI widget links are set in Settings → DonateX. With them the character only plays their sound and draws nothing.",
+    "donatexBridgeHint": "The DonateX widget links are set in Settings → DonateX. With them the voice and queue belong to the service while OSE draws the avatar, name and reply; without links the character voices itself.",
     "donatexAiAvatar": "Avatar link",
     "donatexAiName": "Character name",
     "donatexAiShowName": "Show character name",
@@ -1725,7 +1726,7 @@
       "p6": "The webcam frame has two modes. Frame only is decoration: corners, a thin border and a LIVE badge in the current theme color; the camera is a separate OBS source. Live video from the panel makes the control panel capture the camera and send frames to the overlay; device, frame width, FPS (up to 60), codec, bitrate or JPEG quality are configurable, plus mirror and fit. H.264 through WebCodecs is used by default; if the browser or hardware cannot handle it, the panel falls back to JPEG. The OBS browser source itself has no camera access. The corner colour can be set separately from the frame (empty — taken from the theme), and the Neon toggle adds a glow around the frame and corners; the glow strength is 2–40 px.",
       "p7": "The news ticker is a scrolling line of stream events: donations, follows, subs, rewards, and optionally chat, the goal and the top donation. Speed is set in pixels per second and does not depend on message length; direction and sources are toggled in the inspector. There is a flat 2D variant and 3D tickers in the theme sets with a slight perspective. Ready-made phrases for it live in the Templates panel — send one into the ticker or the breaking bar in one click.",
       "p8": "3D chats have a Show time toggle: it affects new messages only — chat keeps no history, just the rows on screen, so messages already shown keep their time. The TESO chat has no time at all.",
-      "p9": "DonateX widgets — Donation music and the AI character — show what came with the donation: a single line with the track title, or a voiced reply. While there is no music, the line is not on screen at all. The inspector sets the queue and the character name: when donations arrive back to back, the next track or reply waits its turn instead of cutting off the current one. If the track link points to a YouTube page, there is no audio to play — the track stays for twenty seconds and then the widget takes the next one. The queue is controlled from the web remote: “Skip track” cuts the current track and takes the next one, “Stop” stops the player and clears the queue. If a donation ordered music, the alert also shows the track title — DonateX sends only the link, so the title comes from the YouTube video.",
+      "p9": "DonateX widgets — Donation music and the AI character — show what came with the donation: a single line with the track title, or a voiced reply. While there is no music, the line is not on screen at all. The inspector sets the queue and the character name: when donations arrive back to back, the next track or reply waits its turn instead of cutting off the current one. If the track link points to a YouTube page, there is no audio to play — the track stays for twenty seconds and then the widget takes the next one. The queue is controlled from the web remote: “Skip track” cuts the current track and takes the next one, “Stop” stops the player and clears the queue. If a donation ordered music, the alert also shows the track title — DonateX sends only the link, so the title comes from the YouTube video. The AI reply also goes out as a separate AI character alert card, so it stays visible even when the character widget is hidden.",
       "p10": "The DonateX widget links — donation, AI character and music — are set in Settings → DonateX. They open hidden in the overlay: the service sees the widgets as connected and plays the sound itself, while OSE draws the picture. Our music widget then shows the title and does not duplicate the sound.",
       "p11": "The music widget link makes DonateX the owner of the queue: our line shows whatever track its page is playing, even if the donation arrived earlier or the track was queued in the service dashboard. Titles for YouTube links come from the video itself. The line stays while the music plays and disappears when the service stops the queue — it has no twenty-second timer. If the widget is tilted or the theme runs in 3D, it fades in and out.",
       "p12": "The donation roulette is a horizontal prize reel like the ones streamer services use: a donation from the set amount starts a spin, and the pointer in the centre lands on a prize. Prizes, categories (common/rare/epic/legendary) and weights are set in the inspector as title | category | weight lines; chances come from the weights, not split evenly, so a rare prize is rarer. The Spin button tests the roulette without a donation. Styling comes from the active theme — cards, pointer and the result use its palette, fonts and decoration. Donations arrive from DonateX, DonationAlerts and YouTube, while the prize list lives in OSE: the DonateX roulette page does not expose its list."

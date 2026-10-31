@@ -236,7 +236,7 @@ pub const CONNECTION_SERVICES: [&str; 6] = [
 ///
 /// Таблицей, а не структурой: виды приходят строками из чата и наград, и
 /// значение ищется по имени.
-pub const ALERT_DURATIONS_MS: [(&str, i64); 10] = [
+pub const ALERT_DURATIONS_MS: [(&str, i64); 11] = [
     ("follow", 5000),
     ("sub", 6000),
     ("gift_sub", 6000),
@@ -247,6 +247,7 @@ pub const ALERT_DURATIONS_MS: [(&str, i64); 10] = [
     ("wheel_start", 6000),
     ("wheel_winner", 8000),
     ("reward", 6000),
+    ("ai", 7000),
 ];
 
 /// Сколько показывать алерт этого вида; `None` — вид неизвестен.

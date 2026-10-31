@@ -207,10 +207,27 @@ describe("donatex-ai widget", () => {
     w.unmount();
   });
 
-  test("в режиме ссылок реплика не рисуется", () => {
+  test("в режиме ссылок реплика рисуется, а звук у DonateX", () => {
     const { w } = mountWidget({ url: "https://example.com/ai" });
-    w.context.bus.emit(EVENT_TYPES.DONATEX_AI_EVENT, { aiText: "Привет" });
-    expect(w.eventHost.style.display).toBe("none");
+    w.context.bus.emit(EVENT_TYPES.DONATEX_AI_EVENT, {
+      characterName: "Katy",
+      aiText: "Привет",
+    });
+    expect(w.eventHost.style.display).toBe("flex");
+    expect(w.textEl.textContent).toBe("Привет");
+    expect(w.nameEl.textContent).toBe("Katy");
+    expect(w._audio).toBeNull();
+    w.unmount();
+  });
+
+  test("в режиме ссылок показывает аватар из настроек", () => {
+    const { w } = mountWidget({
+      url: "https://example.com/ai",
+      avatarUrl: "https://cdn.example/katy.png",
+    });
+    expect(w.avatarArt.style.display).toBe("");
+    expect(w.avatarArt.src).toBe("https://cdn.example/katy.png");
+    expect(w.avatarVisual.style.display).toBe("none");
     w.unmount();
   });
 

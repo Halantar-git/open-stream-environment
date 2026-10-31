@@ -106,6 +106,8 @@
           return t("alert.cheer");
         case "donation":
           return t("alert.donation");
+        case "ai":
+          return t("alert.ai");
         case "boosty_sub":
           return t("alert.boostySub");
         case "boosty_resub":
@@ -159,7 +161,7 @@
       } else if (alert.kind === "reward") {
         nameHtml = escapeHtml(alert.rewardTitle || alert.user || "");
         if (alert.message) messageHtml = `<div class="widget-alert__message">«${escapeHtml(alert.message)}»</div>`;
-      } else if (alert.kind === "donation" || alert.kind === "cheer") {
+      } else if (alert.kind === "ai" || alert.kind === "donation" || alert.kind === "cheer") {
         if (alert.message) messageHtml = `<div class="widget-alert__message">«${escapeHtml(alert.message)}»</div>`;
         // Заказанный трек показываем рядом с суммой: зритель видит, за что
         // заплатили, не дожидаясь карточки музыки.

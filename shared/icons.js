@@ -33,6 +33,7 @@
     boosty_sub: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 2c3 2.5 4.5 6 4.5 9.5l-2 2V21h-5v-7.5l-2-2C7.5 8 9 4.5 12 2z"/><circle cx="12" cy="9" r="1.5"/></svg>`,
     boosty_resub: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 2c3 2.5 4.5 6 4.5 9.5l-2 2V21h-5v-7.5l-2-2C7.5 8 9 4.5 12 2z"/><circle cx="12" cy="9" r="1.5"/><path d="M20 3v5M17.5 5.5H22.5"/></svg>`,
     reward: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="8" r="5"/><path d="M8.2 13 7 21l5-3 5 3-1.2-8"/></svg>`,
+    ai: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 3l1.7 4.3L18 9l-4.3 1.7L12 15l-1.7-4.3L6 9l4.3-1.7L12 3z"/><path d="M5 15l.9 2.1L8 18l-2.1.9L5 21l-.9-2.1L2 18l2.1-.9L5 15z"/></svg>`,
     // widget-type icons for the editor library rail
     widgetAlerts: `<svg viewBox="0 0 24 24" ${stroke}><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/><circle cx="12" cy="12" r="3.4"/></svg>`,
     widgetGoal: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>`,
