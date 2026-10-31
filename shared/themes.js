@@ -524,6 +524,8 @@
         "--sf-candy-pink": "#ff007f",
         "--sf-candy-cyan": "#00f5d4",
         "--sf-gold": "#ffb700",
+        // Зона отсечки на тахометре: красная, как на приборке, а не золотая.
+        "--sf-redline": "#ff3b30",
 
         "--font-display": '"Rajdhani", "Segoe UI", sans-serif',
         "--font-body": '"Manrope", "Segoe UI", sans-serif',

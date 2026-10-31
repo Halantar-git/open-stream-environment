@@ -116,6 +116,7 @@ describe("встроенные темы", () => {
     expect(tokens["--md-tertiary"]).toBe("#00f5d4");
     expect(tokens["--sf-candy-pink"]).toBe("#ff007f");
     expect(tokens["--sf-glow"]).toBe("#9d4edd");
+    expect(tokens["--sf-redline"]).toBe("#ff3b30");
     expect(tokens["--md-on-surface"]).toBe("#ffffff");
     expect(tokens["--panel-radius"]).toBe("6px");
   });

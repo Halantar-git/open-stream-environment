@@ -1411,7 +1411,6 @@ export function initCanvasEditor({
       case "sf-holo-alert": {
         const tokens = state.appearance.tokens || {};
         const primary = tokens["--md-primary"] || "#7b2cbf";
-        const secondary = tokens["--md-secondary"] || "#ffb700";
         const tertiary = tokens["--md-tertiary"] || "#00f5d4";
         const text = tokens["--md-on-surface"] || "#ffffff";
         const muted = tokens["--md-on-surface-variant"] || "#9a8c98";
@@ -1419,6 +1418,7 @@ export function initCanvasEditor({
         const border = tokens["--panel-border"] || "2px solid rgba(123, 44, 191, 0.55)";
         const radius = tokens["--panel-radius"] || "6px";
         const glow = tokens["--panel-glow"] || "0 0 12px rgba(157, 78, 221, 0.5)";
+        const redline = tokens["--sf-redline"] || tokens["--md-error"] || "#ff3b30";
         const angle = (rpm) => Math.PI * 0.75 + (Math.PI * 1.5 * rpm) / 14;
         const point = (rpm, r) => [24 + Math.cos(angle(rpm)) * r, 24 + Math.sin(angle(rpm)) * r];
         const arc = (a, b, r) => {
@@ -1431,7 +1431,7 @@ export function initCanvasEditor({
           <svg viewBox="0 0 48 48" preserveAspectRatio="xMidYMid meet" style="flex-shrink:0;width:42px;height:42px;">
             <circle cx="24" cy="24" r="19" fill="rgba(34,22,62,0.9)" stroke="${escapeAttr(primary)}" stroke-opacity="0.55" stroke-width="1.2"/>
             <path d="${arc(0, 14, 16)}" fill="none" stroke="${escapeAttr(muted)}" stroke-opacity="0.28" stroke-width="1.2"/>
-            <path d="${arc(11.5, 14, 16)}" fill="none" stroke="${escapeAttr(secondary)}" stroke-width="2" stroke-linecap="round"/>
+            <path d="${arc(11.5, 14, 16)}" fill="none" stroke="${escapeAttr(redline)}" stroke-width="2" stroke-linecap="round"/>
             <line x1="21.5" y1="25.5" x2="${nx.toFixed(2)}" y2="${ny.toFixed(2)}" stroke="${escapeAttr(text)}" stroke-width="1.4" stroke-linecap="round"/>
             <circle cx="24" cy="24" r="2" fill="${escapeAttr(primary)}"/>
             <circle cx="24" cy="24" r="1" fill="${escapeAttr(tertiary)}"/>
@@ -1450,6 +1450,7 @@ export function initCanvasEditor({
         const muted = tokens["--md-on-surface-variant"] || "#9a8c98";
         const dial = tokens["--panel-bg"] || "rgba(34, 22, 62, 0.92)";
         const pink = tokens["--sf-candy-pink"] || secondary || "#ff007f";
+        const redline = tokens["--sf-redline"] || tokens["--md-error"] || "#ff3b30";
         const angle = (rpm) => Math.PI * 0.75 + (Math.PI * 1.5 * rpm) / 14;
         const point = (rpm, r) => [50 + Math.cos(angle(rpm)) * r, 50 + Math.sin(angle(rpm)) * r];
         const arc = (a, b, r) => {
@@ -1465,8 +1466,8 @@ export function initCanvasEditor({
           const [x2, y2] = point(rpm, 34);
           const [lx, ly] = point(rpm, 25);
           return (
-            `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="${redline ? escapeAttr(secondary) : escapeAttr(text)}" stroke-opacity="${major ? 0.72 : 0.36}" stroke-width="${major ? 0.9 : 0.5}"/>` +
-            (major ? `<text x="${lx.toFixed(2)}" y="${ly.toFixed(2)}" fill="${redline ? escapeAttr(secondary) : escapeAttr(muted)}" font-family="'JetBrains Mono','Consolas',monospace" font-size="4.4" text-anchor="middle" dominant-baseline="middle">${rpm}</text>` : "")
+            `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="${redline ? escapeAttr(redline) : escapeAttr(text)}" stroke-opacity="${major ? 0.72 : 0.36}" stroke-width="${major ? 0.9 : 0.5}"/>` +
+            (major ? `<text x="${lx.toFixed(2)}" y="${ly.toFixed(2)}" fill="${redline ? escapeAttr(redline) : escapeAttr(muted)}" font-family="'JetBrains Mono','Consolas',monospace" font-size="4.4" text-anchor="middle" dominant-baseline="middle">${rpm}</text>` : "")
           );
         }).join("");
         const [nx, ny] = point(4.2, 27);
@@ -1475,7 +1476,7 @@ export function initCanvasEditor({
             <circle cx="50" cy="50" r="38" fill="${escapeAttr(dial)}" stroke="${escapeAttr(primary)}" stroke-opacity="0.55" stroke-width="1.1"/>
             <circle cx="50" cy="50" r="33" fill="none" stroke="${escapeAttr(muted)}" stroke-opacity="0.22" stroke-width="0.6"/>
             <path d="${arc(0, 14, 35)}" fill="none" stroke="${escapeAttr(muted)}" stroke-opacity="0.3" stroke-width="0.7"/>
-            <path d="${arc(11.5, 14, 35.5)}" fill="none" stroke="${escapeAttr(secondary)}" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="${arc(11.5, 14, 35.5)}" fill="none" stroke="${escapeAttr(redline)}" stroke-width="1.8" stroke-linecap="round"/>
             ${ticks}
             <line x1="48" y1="52" x2="${nx.toFixed(2)}" y2="${ny.toFixed(2)}" stroke="${escapeAttr(text)}" stroke-width="1.1" stroke-linecap="round"/>
             <circle cx="50" cy="50" r="1.6" fill="${escapeAttr(primary)}"/>

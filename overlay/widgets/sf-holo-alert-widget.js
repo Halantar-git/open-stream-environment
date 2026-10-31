@@ -18,7 +18,7 @@
 /*
   WidgetSfHoloAlert — всплывающий алерт на приборной панели Super Four.
 
-  Слева — мини-тахометр с золотой отсечкой: стрелка стоит по весу события
+  Слева — мини-тахометр с красной отсечкой: стрелка стоит по весу события
   (донат доходит до красной зоны), в центре прибора — значок события. Справа
   моноширинная строка «DASH // <ТИП>», имя зрителя в Rajdhani, сумма в золоте
   Showa и сообщение доната.
@@ -43,8 +43,9 @@
   "use strict";
 
   const DEFAULT_PRIMARY = "#7b2cbf"; // --md-primary
-  const DEFAULT_SECONDARY = "#ffb700"; // --md-secondary, золото отсечки
+  const DEFAULT_SECONDARY = "#ffb700"; // --md-secondary, золото Showa
   const DEFAULT_TERTIARY = "#00f5d4"; // --md-tertiary, бирюза Candy Flash
+  const DEFAULT_REDLINE = "#ff3b30"; // --sf-redline, зона отсечки
   const DEFAULT_TEXT = "#ffffff"; // --md-on-surface
   const DEFAULT_MUTED = "#9a8c98"; // --md-on-surface-variant
   const DEFAULT_GLOW = "#9d4edd"; // --sf-glow
@@ -104,6 +105,7 @@
       this.primary = DEFAULT_PRIMARY;
       this.secondary = DEFAULT_SECONDARY;
       this.tertiary = DEFAULT_TERTIARY;
+      this.redlineColor = DEFAULT_REDLINE;
       this.textColor = DEFAULT_TEXT;
       this.mutedColor = DEFAULT_MUTED;
       this.glowColor = DEFAULT_GLOW;
@@ -150,6 +152,7 @@
       this.primary = (read && read("--md-primary")) || DEFAULT_PRIMARY;
       this.secondary = (read && read("--md-secondary")) || DEFAULT_SECONDARY;
       this.tertiary = (read && read("--md-tertiary")) || DEFAULT_TERTIARY;
+      this.redlineColor = (read && read("--sf-redline")) || (read && read("--md-error")) || DEFAULT_REDLINE;
       this.textColor = (read && read("--md-on-surface")) || DEFAULT_TEXT;
       this.mutedColor = (read && read("--md-on-surface-variant")) || DEFAULT_MUTED;
       this.glowColor = (read && read("--sf-glow")) || this.primary;
@@ -322,7 +325,7 @@
       return card;
     }
 
-    // Мини-тахометр: дорожка 0–14, золотая отсечка, стрелка по весу события.
+    // Мини-тахометр: дорожка 0–14, красная отсечка, стрелка по весу события.
     // Рисуется SVG, поэтому остаётся чётким на любом размере виджета.
     _gaugeSvg(alert) {
       const rpm = REV_BY_KIND[alert.kind] || 7.5;
@@ -331,8 +334,8 @@
       return `<svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true" style="display:block;overflow:visible;">
         <circle cx="24" cy="24" r="19" fill="rgba(34,22,62,0.9)" stroke="${this.primary}" stroke-opacity="0.55" stroke-width="1.2"/>
         <path d="${arcPath(0, MAX_RPM, GAUGE_RADIUS)}" fill="none" stroke="${this.mutedColor}" stroke-opacity="0.28" stroke-width="1.2"/>
-        <path d="${arcPath(REDLINE_RPM, MAX_RPM, GAUGE_RADIUS)}" fill="none" stroke="${this.secondary}" stroke-width="2" stroke-linecap="round"/>
-        <line x1="${tail.x.toFixed(2)}" y1="${tail.y.toFixed(2)}" x2="${needle.x.toFixed(2)}" y2="${needle.y.toFixed(2)}" stroke="${rpm >= REDLINE_RPM ? this.secondary : this.textColor}" stroke-width="1.4" stroke-linecap="round"/>
+        <path d="${arcPath(REDLINE_RPM, MAX_RPM, GAUGE_RADIUS)}" fill="none" stroke="${this.redlineColor}" stroke-width="2" stroke-linecap="round"/>
+        <line x1="${tail.x.toFixed(2)}" y1="${tail.y.toFixed(2)}" x2="${needle.x.toFixed(2)}" y2="${needle.y.toFixed(2)}" stroke="${rpm >= REDLINE_RPM ? this.redlineColor : this.textColor}" stroke-width="1.4" stroke-linecap="round"/>
         <circle cx="24" cy="24" r="2" fill="${this.primary}"/>
         <circle cx="24" cy="24" r="1" fill="${this.tertiary}"/>
       </svg>`;

@@ -1,5 +1,5 @@
 {
-  "sourceHash": "fb8ddbe899ec79fe",
+  "sourceHash": "5dc7049a120bb5c3",
   "builtinThemes": {
     "nebula": {
       "id": "nebula",
@@ -320,6 +320,7 @@
         "--sf-candy-pink": "#ff007f",
         "--sf-candy-cyan": "#00f5d4",
         "--sf-gold": "#ffb700",
+        "--sf-redline": "#ff3b30",
         "--font-display": "\"Rajdhani\", \"Segoe UI\", sans-serif",
         "--font-body": "\"Manrope\", \"Segoe UI\", sans-serif",
         "--font-mono": "\"JetBrains Mono\", \"Consolas\", monospace",

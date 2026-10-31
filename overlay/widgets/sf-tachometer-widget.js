@@ -19,9 +19,8 @@
   WidgetSfTachometer — аналоговый тахометр темы Super Four.
 
   Тема названа по Honda CB400SF, поэтому вывеска — не логотип, а сам прибор:
-  круглый тахометр с оцифровкой до 14 тысяч, золотой зоной отсечки (цвет
-  пружин Showa) и окном передачи. В покое стрелка «держит холостые» и еле
-  заметно дрожит, как живой двигатель; обороты отражают активность чата —
+  круглый тахометр с оцифровкой до 14 тысяч, красной зоной отсечки и окном
+  передачи. В покое стрелка «держит холостые» и еле заметно дрожит, как живой двигатель; обороты отражают активность чата —
   каждое сообщение поднимает уровень, пауза плавно его сбрасывает, — а на
   алерте стрелка уходит в свою зону: чем весомее событие, тем выше обороты,
   донат доходит до отсечки. Это делает виджет живым даже между событиями,
@@ -52,7 +51,7 @@
   // Запасные цвета повторяют токены Super Four из shared/themes.js: живые
   // значения читаются из CSS, чтобы своя тема с этим набором не потеряла палитру.
   const DEFAULT_PRIMARY = "#7b2cbf";
-  const DEFAULT_SECONDARY = "#ffb700";
+  const DEFAULT_REDLINE = "#ff3b30";
   const DEFAULT_TEXT = "#ffffff";
   const DEFAULT_MUTED = "#9a8c98";
   const DEFAULT_DIAL = "rgba(34, 22, 62, 0.9)";
@@ -133,7 +132,7 @@
       this.theme = (context && (context.theme || context.activeThemeId)) || "";
 
       this.primary = DEFAULT_PRIMARY;
-      this.secondary = DEFAULT_SECONDARY;
+      this.redlineColor = DEFAULT_REDLINE;
       this.textColor = DEFAULT_TEXT;
       this.mutedColor = DEFAULT_MUTED;
       this.dialColor = DEFAULT_DIAL;
@@ -178,7 +177,9 @@
     _readColors() {
       const read = this.context.readCssVar;
       this.primary = (read && read("--md-primary")) || DEFAULT_PRIMARY;
-      this.secondary = (read && read("--md-secondary")) || DEFAULT_SECONDARY;
+      // Зона отсечки — красная, как на приборке: свой токен, иначе берём
+      // error (в своих темах он тоже красный) и только потом запасной цвет.
+      this.redlineColor = (read && read("--sf-redline")) || (read && read("--md-error")) || DEFAULT_REDLINE;
       this.textColor = (read && read("--md-on-surface")) || DEFAULT_TEXT;
       this.mutedColor = (read && read("--md-on-surface-variant")) || DEFAULT_MUTED;
       this.dialColor = (read && read("--panel-bg")) || DEFAULT_DIAL;
@@ -338,7 +339,7 @@
         const redline = value >= REDLINE_RPM;
         const inner = radius * (major ? 0.78 : 0.83);
         const outer = radius * 0.88;
-        ctx.strokeStyle = redline ? rgba(this.secondary, 0.9) : rgba(this.textColor, major ? 0.72 : 0.38);
+        ctx.strokeStyle = redline ? rgba(this.redlineColor, 0.9) : rgba(this.textColor, major ? 0.72 : 0.38);
         ctx.lineWidth = major ? Math.max(1.3, radius * 0.014) : 1;
         ctx.beginPath();
         ctx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner);
@@ -348,7 +349,7 @@
         if (major) {
           const labelR = radius * 0.62;
           ctx.save();
-          ctx.fillStyle = redline ? this.secondary : rgba(this.textColor, 0.78);
+          ctx.fillStyle = redline ? this.redlineColor : rgba(this.textColor, 0.78);
           ctx.font = `${Math.max(7, radius * 0.11)}px ${FONT_MONO}`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
@@ -357,29 +358,29 @@
         }
       }
 
-      // Золотая зона отсечки. На высоких оборотах она пульсирует — это и есть
+      // Красная зона отсечки. На высоких оборотах она пульсирует — это и есть
       // «шифт-ламп», а не отдельная лампочка поверх прибора.
       const pulse = rpm >= REDLINE_RPM ? 0.55 + 0.45 * Math.abs(Math.sin(seconds * 6)) : 0.55;
       ctx.save();
-      ctx.strokeStyle = rgba(this.secondary, pulse);
+      ctx.strokeStyle = rgba(this.redlineColor, pulse);
       ctx.lineWidth = Math.max(2, radius * 0.035);
       ctx.lineCap = "round";
-      ctx.shadowColor = this.secondary;
+      ctx.shadowColor = this.redlineColor;
       ctx.shadowBlur = rpm >= REDLINE_RPM ? radius * 0.16 : 0;
       ctx.beginPath();
       ctx.arc(cx, cy, radius * 0.93, angleFor(REDLINE_RPM), angleFor(MAX_RPM));
       ctx.stroke();
       ctx.restore();
 
-      // Стрелка: почти белая с фиолетовым ореолом, в отсечке — золотая.
+      // Стрелка: почти белая с фиолетовым ореолом, в отсечке — красная.
       const needleAngle = angleFor(rpm);
       const needleLength = radius * 0.72;
       const inRedline = rpm >= REDLINE_RPM;
       ctx.save();
-      ctx.strokeStyle = inRedline ? this.secondary : this.textColor;
+      ctx.strokeStyle = inRedline ? this.redlineColor : this.textColor;
       ctx.lineWidth = Math.max(1.8, radius * 0.022);
       ctx.lineCap = "round";
-      ctx.shadowColor = inRedline ? this.secondary : rgba(this.glowColor, 0.9);
+      ctx.shadowColor = inRedline ? this.redlineColor : rgba(this.glowColor, 0.9);
       ctx.shadowBlur = radius * 0.12;
       ctx.beginPath();
       ctx.moveTo(cx - Math.cos(needleAngle) * radius * 0.08, cy - Math.sin(needleAngle) * radius * 0.08);
