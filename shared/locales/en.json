@@ -418,6 +418,8 @@
     "streamdeckIconSoundboard": "Soundboard icon",
     "streamdeckIconCounter": "Counter icon",
     "streamdeckIconWheel": "Wheel icon",
+    "streamdeckIconGuests": "Guests icon",
+    "streamdeckIconPoll": "Poll icon",
     "streamdeckIconStart": "Start icon",
     "streamdeckIconBrb": "BRB icon",
     "streamdeckIconTalk": "Talk icon",
@@ -1841,7 +1843,7 @@
     },
     "streamdeck": {
       "title": "Stream Deck",
-      "p1": "The Elgato plugin switches scenes: Start, BRB, Wheel, Talk and End.",
+      "p1": "The Elgato plugin switches the same scenes as the web remote: Main, Start, BRB, Talk, Guests, End, Wheel, Poll and Pause.",
       "p2": "Set custom per-scene icons in Settings → Stream Deck."
     },
     "remote": {

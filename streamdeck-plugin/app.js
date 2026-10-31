@@ -18,10 +18,11 @@
 /*
   Elgato Stream Deck plugin for Open Stream Environment (OSE).
 
-  Scene-only remote: one key per OSE scene (start / brb / wheel / talk / main /
-  end / poll / pause). The active scene is highlighted via a second state:
-  bundled per-scene artwork from assets/scenes/, or custom icons from the OSE
-  control panel (streamdeck.icons.<scene>) applied over the defaults.
+  Scene-only remote: one key per OSE scene (main / start / brb / talk /
+  guests / end / wheel / poll / pause) — the same set the web remote shows.
+  The active scene is highlighted via a second state: bundled per-scene
+  artwork from assets/scenes/, or custom icons from the OSE control panel
+  (streamdeck.icons.<scene>) applied over the defaults.
 
   Bridges two WebSockets:
     - the Stream Deck application on 127.0.0.1 (registration + key events);
@@ -51,13 +52,16 @@ const OSE_HTTP_BASE = OSE_URL
   .replace(/^ws:\/\//i, "http://")
   .replace(/\/ws\/?$/, "");
 
+// Порядок повторяет маппинг сцен в настройках OSE. Набор — как в веб-пульте:
+// сцены заставки в нём нет, её приложение показывает само на переходах.
 const SCENES = [
+  ["main", "Main"],
   ["start", "Start"],
   ["brb", "BRB"],
-  ["wheel", "Wheel"],
   ["talk", "Talk"],
-  ["main", "Main"],
+  ["guests", "Guests"],
   ["end", "End"],
+  ["wheel", "Wheel"],
   ["poll", "Poll"],
   ["pause", "Pause"],
 ];
@@ -74,7 +78,7 @@ const appliedIcon = new Map(); // context -> iconPath
 
 let oseState = {
   activeScene: null,
-  icons: { start: "", brb: "", wheel: "", talk: "", main: "", end: "", pause: "" },
+  icons: { main: "", start: "", brb: "", talk: "", guests: "", end: "", wheel: "", poll: "", pause: "" },
 };
 
 function sceneLabel(scene) {

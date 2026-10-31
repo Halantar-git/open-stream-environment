@@ -56,7 +56,7 @@ export function createStateManager() {
     donationMedia: { enabled: true, volume: 0.8, rules: [] },
     twitchRewards: [],
     tts: { enabled: true, volume: 0.9, rate: 1, lang: "ru-RU", voice: "" },
-    streamdeck: { icons: { start: "", brb: "", wheel: "", talk: "", end: "", pause: "" } },
+    streamdeck: { icons: { main: "", start: "", brb: "", talk: "", guests: "", end: "", wheel: "", poll: "", pause: "" } },
     selectedId: null,
     pendingAdd: null,
     appearance: { activeThemeId: "nebula", enable3d: false, activeThemeId3d: "", active3dWidgets: [], enabled3d: {}, tokens: {}, customCss: "", themes: [] },

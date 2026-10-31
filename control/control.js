@@ -286,8 +286,10 @@ const { EVENT_TYPES } = window.SharedEvents;
   const streamdeckIconBrb = document.getElementById("streamdeckIconBrb");
   const streamdeckIconWheel = document.getElementById("streamdeckIconWheel");
   const streamdeckIconTalk = document.getElementById("streamdeckIconTalk");
+  const streamdeckIconGuests = document.getElementById("streamdeckIconGuests");
   const streamdeckIconMain = document.getElementById("streamdeckIconMain");
   const streamdeckIconEnd = document.getElementById("streamdeckIconEnd");
+  const streamdeckIconPoll = document.getElementById("streamdeckIconPoll");
   const streamdeckIconPause = document.getElementById("streamdeckIconPause");
   const appPortInput = document.getElementById("appPort");
   const appBaseCurrencyInput = document.getElementById("appBaseCurrency");
@@ -1454,12 +1456,14 @@ const { EVENT_TYPES } = window.SharedEvents;
   }
 
   function renderStreamDeckIcons() {
+    makeStreamDeckIconField(streamdeckIconMain, "main", "media/...png");
     makeStreamDeckIconField(streamdeckIconStart, "start", "media/...png");
     makeStreamDeckIconField(streamdeckIconBrb, "brb", "media/...png");
-    makeStreamDeckIconField(streamdeckIconWheel, "wheel", "media/...png");
     makeStreamDeckIconField(streamdeckIconTalk, "talk", "media/...png");
-    makeStreamDeckIconField(streamdeckIconMain, "main", "media/...png");
+    makeStreamDeckIconField(streamdeckIconGuests, "guests", "media/...png");
     makeStreamDeckIconField(streamdeckIconEnd, "end", "media/...png");
+    makeStreamDeckIconField(streamdeckIconWheel, "wheel", "media/...png");
+    makeStreamDeckIconField(streamdeckIconPoll, "poll", "media/...png");
     makeStreamDeckIconField(streamdeckIconPause, "pause", "media/...png");
   }
 

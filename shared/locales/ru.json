@@ -418,6 +418,8 @@
     "streamdeckIconSoundboard": "Иконка «Soundboard»",
     "streamdeckIconCounter": "Иконка «Счётчик»",
     "streamdeckIconWheel": "Иконка «Колесо»",
+    "streamdeckIconGuests": "Иконка «Гости»",
+    "streamdeckIconPoll": "Иконка «Голосование»",
     "streamdeckIconStart": "Иконка «Начало»",
     "streamdeckIconBrb": "Иконка «BRB»",
     "streamdeckIconTalk": "Иконка «Разговор»",
@@ -1841,7 +1843,7 @@
     },
     "streamdeck": {
       "title": "Stream Deck",
-      "p1": "Плагин Elgato переключает сцены: Старт, BRB, Колесо, Разговор и Конец.",
+      "p1": "Плагин Elgato переключает те же сцены, что web-пульт: Main, Старт, BRB, Разговор, Гости, Конец, Колесо, Голосование и Паузу.",
       "p2": "Задайте свои иконки для каждой сцены в Настройках → Stream Deck."
     },
     "remote": {

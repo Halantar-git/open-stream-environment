@@ -103,4 +103,34 @@ describe("Stream Deck: иконки сцен", () => {
     const missing = [...refs].filter((ref) => !fs.existsSync(path.join(PLUGIN_DIR, `${ref}.png`)));
     expect(missing).toEqual([]);
   });
+
+  test("в настройках панели есть поле иконки для каждой сцены", () => {
+    // Кастомную иконку плагин берёт по ключу сцены из `streamdeck.icons`.
+    // Сцена без поля в панели навсегда осталась бы со стандартной картинкой,
+    // и заметить это можно только глазами на железе.
+    const html = fs.readFileSync(path.join(__dirname, "..", "control", "control.html"), "utf8");
+    const js = fs.readFileSync(path.join(__dirname, "..", "control", "control.js"), "utf8");
+
+    const missing = [];
+    for (const id of scenes) {
+      const field = `streamdeckIcon${id[0].toUpperCase()}${id.slice(1)}`;
+      if (!html.includes(`id="${field}"`)) missing.push(`${id}: нет поля в control.html`);
+      if (!js.includes(`${field}, "${id}"`)) missing.push(`${id}: поле не привязано в control.js`);
+    }
+    expect(missing).toEqual([]);
+  });
+
+  test("у поля каждой сцены есть подпись в обоих словарях", () => {
+    const missing = [];
+    for (const lang of ["ru", "en"]) {
+      const locale = JSON.parse(
+        fs.readFileSync(path.join(__dirname, "..", "shared", "locales", `${lang}.json`), "utf8"),
+      );
+      for (const id of scenes) {
+        const key = `streamdeckIcon${id[0].toUpperCase()}${id.slice(1)}`;
+        if (!locale.settings || !locale.settings[key]) missing.push(`${lang}.${key}`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
 });
