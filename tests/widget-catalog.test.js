@@ -33,6 +33,8 @@ describe("widget-catalog helpers", () => {
     expect(isAnimatedWidget("sf-goal")).toBe(true);
     expect(isAnimatedWidget("sf-cube")).toBe(true);
     expect(isAnimatedWidget("sf-ticker")).toBe(true);
+    expect(isAnimatedWidget("win98-hourglass")).toBe(true);
+    expect(isAnimatedWidget("win98-ticker")).toBe(true);
 
     // Лёгкие: DOM-only, без цикла.
     expect(isAnimatedWidget("chat")).toBe(false);
@@ -40,6 +42,8 @@ describe("widget-catalog helpers", () => {
     expect(isAnimatedWidget("grimhex-chat")).toBe(false);
     expect(isAnimatedWidget("teso-goal")).toBe(false);
     expect(isAnimatedWidget("md3-holo-alert")).toBe(false);
+    expect(isAnimatedWidget("win98-goal")).toBe(false);
+    expect(isAnimatedWidget("win98-chat")).toBe(false);
     expect(isAnimatedWidget(undefined)).toBe(false);
   });
 
@@ -77,6 +81,19 @@ describe("widget-catalog helpers", () => {
     const sf = widgetsForTheme("sf").map((d) => d.type);
     expect(sf).toEqual(expect.arrayContaining(["sf-tachometer", "sf-goal", "sf-chat", "sf-holo-alert", "sf-cube", "sf-recent", "sf-ticker"]));
     expect(sf).toHaveLength(7);
+
+    const win98 = widgetsForTheme("win98").map((d) => d.type);
+    expect(win98).toEqual(
+      expect.arrayContaining([
+        "win98-hourglass",
+        "win98-goal",
+        "win98-chat",
+        "win98-holo-alert",
+        "win98-recent",
+        "win98-ticker",
+      ])
+    );
+    expect(win98).toHaveLength(6);
 
     expect(widgetsForTheme("")).toEqual([]);
   });
@@ -135,6 +152,10 @@ describe("widget-catalog helpers", () => {
     expect(widgetRole("sf-chat")).toBe("chat");
     expect(widgetRole("sf-goal")).toBe("goal");
     expect(widgetRole("sf-holo-alert")).toBe("alerts");
+    expect(widgetRole("win98-hourglass")).toBe("sign");
+    expect(widgetRole("win98-chat")).toBe("chat");
+    expect(widgetRole("win98-goal")).toBe("goal");
+    expect(widgetRole("win98-holo-alert")).toBe("alerts");
 
     // Декоративные 3D-виджеты (основные вывески) имеют роль для кросс-темной
     // замены. Вторичные вывески (musain/elite-sign) остаются без роли — они

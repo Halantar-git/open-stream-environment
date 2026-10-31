@@ -1100,6 +1100,80 @@
       25
     ),
 
+    // ---- Windows 98 (3D) ----
+    // Окна 98-й: серый корпус с бевелом, синий заголовок, вдавленные поля.
+    // Вывеска — песочные часы, как системный курсор ожидания.
+    "win98-hourglass": {
+      type: "win98-hourglass",
+      label: "Песочные часы Windows 98",
+      description: "Песочные часы с объёмной кромкой, появляются на алерте (только для темы Windows 98)",
+      icon: "widgetWin98Hourglass",
+      dimension: "3d",
+      theme: "win98",
+      role: "sign",
+      defaultGeometry: { x: 38, y: 8, w: 22, h: 20 },
+      minW: 10,
+      minH: 8,
+      defaultConfig: { perspective: 0 },
+    },
+    "win98-goal": {
+      type: "win98-goal",
+      label: "Цель Windows 98",
+      description: "Донат-цель в окне с сегментной шкалой (только для темы Windows 98)",
+      icon: "widgetWin98Goal",
+      services: ["donationAlerts", "youtube"],
+      dimension: "3d",
+      theme: "win98",
+      renderType: "2d",
+      defaultGeometry: { x: 3, y: 83, w: 34, h: 9 },
+      minW: 18,
+      minH: 6,
+      defaultConfig: { showPercentage: true, showBackground: true, perspective: 0, perspectiveDirection: "left" },
+    },
+    "win98-chat": {
+      type: "win98-chat",
+      label: "Чат Windows 98",
+      description: "Чат стрима в сером окне с вдавленными полями (только для темы Windows 98)",
+      icon: "widgetWin98Chat",
+      services: ["twitchChat", "youtube"],
+      dimension: "3d",
+      theme: "win98",
+      renderType: "2d",
+      defaultGeometry: { x: 68, y: 6, w: 29, h: 48 },
+      minW: 16,
+      minH: 16,
+      defaultConfig: { maxMessages: 50, perspective: 0 },
+    },
+    "win98-holo-alert": {
+      type: "win98-holo-alert",
+      label: "Алерт Windows 98",
+      description: "Всплывающее окно события с синим заголовком (только для темы Windows 98)",
+      icon: "widgetWin98HoloAlert",
+      services: ["twitchEvents", "donationAlerts", "youtube"],
+      dimension: "3d",
+      theme: "win98",
+      renderType: "2d",
+      defaultGeometry: { x: 38, y: 18, w: 26, h: 16 },
+      minW: 16,
+      minH: 10,
+      defaultConfig: {},
+    },
+
+    "win98-recent": recent3d(
+      "win98-recent",
+      "События Windows 98",
+      "3D-очередь событий с выездом слева (только для темы Windows 98)",
+      "win98"
+    ),
+
+    "win98-ticker": ticker3d(
+      "win98-ticker",
+      "Лента Windows 98",
+      "Бегущая строка событий в окне (только для темы Windows 98)",
+      "win98",
+      10
+    ),
+
     // ---- Интеграции DonateX ----
     "donatex-ai": {
       type: "donatex-ai",
@@ -1272,6 +1346,8 @@
     "sf-tachometer",
     "sf-ticker",
     "sf-cube",
+    "win98-hourglass",
+    "win98-ticker",
   ]);
 
   function isAnimatedWidget(type) {

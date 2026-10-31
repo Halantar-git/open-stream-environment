@@ -121,13 +121,13 @@ describe("встроенные темы", () => {
     expect(tokens["--panel-radius"]).toBe("6px");
   });
 
-  test("Windows 98 — светлая тема с объёмными панелями и без 3D", () => {
+  test("Windows 98 — светлая тема с объёмными панелями и 3D-окнами", () => {
     const theme = BUILTIN_THEMES.win98;
     expect(theme).toBeTruthy();
     expect(theme.name).toBe("Windows 98");
     expect(theme.dimension).toBe("2d");
     expect(theme.family).toBe("win98");
-    expect(theme.variant3d).toBeUndefined();
+    expect(theme.variant3d).toBe("win98");
 
     const tokens = theme.tokens;
     expect(tokens["--md-surface"]).toBe("#c0c0c0");

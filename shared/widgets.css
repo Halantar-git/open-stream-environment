@@ -1266,6 +1266,111 @@
   color: var(--sf-glow, var(--md-primary));
 }
 
+/* ---------- Windows 98: окна с объёмными кромками ----------
+   Язык 98-й — серый корпус #c0c0c0 с двухслойным бевелом (белый верх/лево,
+   чёрный низ/право), тёмно-синий градиентный заголовок и вдавленные белые
+   поля. Класс `.win98-surface` — общий корпус окна для цели, чата и алерта;
+   бевел и градиент берутся из токенов темы, поэтому палитра правится в одном
+   месте, а виджеты читают только `--panel-*` и `--win98-*`. */
+.win98-surface {
+  position: relative;
+  overflow: hidden;
+  font-family: var(--font-body);
+  image-rendering: pixelated;
+}
+
+/* Окно лежит внутри поднятой рамки — так внутренние линии бевела не спорят
+   с рамкой панели. */
+.win98-window {
+  position: absolute;
+  inset: 3px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  color: var(--md-on-surface, #000000);
+}
+
+.win98-window__titlebar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 3px 2px 4px;
+  background: linear-gradient(
+    90deg,
+    var(--win98-titlebar, #000080),
+    var(--win98-titlebar-end, #1080d0)
+  );
+  color: var(--win98-light, #ffffff);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  overflow: hidden;
+  user-select: none;
+}
+
+.win98-window__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+}
+
+.win98-window__buttons {
+  display: inline-flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+/* Кнопки заголовка — плоские серые квадраты. Символы «_ □ ×» на малом
+   размере виджета сливаются в шум, поэтому кромка говорит сама за себя. */
+.win98-window__btn {
+  display: inline-block;
+  width: 12px;
+  height: 11px;
+  box-sizing: border-box;
+  background: var(--win98-window, #c0c0c0);
+  box-shadow:
+    inset 1px 1px 0 var(--win98-light, #ffffff),
+    inset -1px -1px 0 var(--win98-shadow-dark, #000000);
+}
+
+.win98-window__client {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+/* Вдавленное поле: тень сверху/слева, светлый кант снизу/справа — как у
+   полей ввода и списков 98-й. */
+.win98-sunken {
+  background: var(--win98-light, #ffffff);
+  box-shadow:
+    inset 1px 1px 0 var(--win98-shadow, #808080),
+    inset -1px -1px 0 var(--win98-light, #ffffff),
+    inset 2px 2px 0 var(--win98-shadow-dark, #000000),
+    inset -2px -2px 0 var(--win98-window, #c0c0c0);
+}
+
+.win98-statusbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 2px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.1;
+  color: var(--md-on-surface-variant, #404040);
+}
+
 /* UEC transfer follows the same HUD decoration as the other panels: scanlines
    and four corner brackets under Orbital (brackets4), two corners under
    angular custom themes (brackets2). */

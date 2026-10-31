@@ -1,5 +1,5 @@
 {
-  "sourceHash": "f41f3c8903c4353b",
+  "sourceHash": "e78534421d4694d4",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -1999,6 +1999,168 @@
         "perspective": 25
       }
     },
+    "win98-hourglass": {
+      "type": "win98-hourglass",
+      "label": "Песочные часы Windows 98",
+      "description": "Песочные часы с объёмной кромкой, появляются на алерте (только для темы Windows 98)",
+      "icon": "widgetWin98Hourglass",
+      "dimension": "3d",
+      "theme": "win98",
+      "role": "sign",
+      "defaultGeometry": {
+        "x": 38,
+        "y": 8,
+        "w": 22,
+        "h": 20
+      },
+      "minW": 10,
+      "minH": 8,
+      "defaultConfig": {
+        "perspective": 0
+      }
+    },
+    "win98-goal": {
+      "type": "win98-goal",
+      "label": "Цель Windows 98",
+      "description": "Донат-цель в окне с сегментной шкалой (только для темы Windows 98)",
+      "icon": "widgetWin98Goal",
+      "services": [
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "win98",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 83,
+        "w": 34,
+        "h": 9
+      },
+      "minW": 18,
+      "minH": 6,
+      "defaultConfig": {
+        "showPercentage": true,
+        "showBackground": true,
+        "perspective": 0,
+        "perspectiveDirection": "left"
+      }
+    },
+    "win98-chat": {
+      "type": "win98-chat",
+      "label": "Чат Windows 98",
+      "description": "Чат стрима в сером окне с вдавленными полями (только для темы Windows 98)",
+      "icon": "widgetWin98Chat",
+      "services": [
+        "twitchChat",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "win98",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 68,
+        "y": 6,
+        "w": 29,
+        "h": 48
+      },
+      "minW": 16,
+      "minH": 16,
+      "defaultConfig": {
+        "maxMessages": 50,
+        "perspective": 0
+      }
+    },
+    "win98-holo-alert": {
+      "type": "win98-holo-alert",
+      "label": "Алерт Windows 98",
+      "description": "Всплывающее окно события с синим заголовком (только для темы Windows 98)",
+      "icon": "widgetWin98HoloAlert",
+      "services": [
+        "twitchEvents",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "win98",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 38,
+        "y": 18,
+        "w": 26,
+        "h": 16
+      },
+      "minW": 16,
+      "minH": 10,
+      "defaultConfig": {}
+    },
+    "win98-recent": {
+      "type": "win98-recent",
+      "label": "События Windows 98",
+      "description": "3D-очередь событий с выездом слева (только для темы Windows 98)",
+      "icon": "widgetRecent",
+      "services": [
+        "twitchEvents",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "win98",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 24,
+        "w": 26,
+        "h": 30
+      },
+      "minW": 14,
+      "minH": 12,
+      "defaultConfig": {
+        "maxItems": 5,
+        "animationMs": 840
+      }
+    },
+    "win98-ticker": {
+      "type": "win98-ticker",
+      "label": "Лента Windows 98",
+      "description": "Бегущая строка событий в окне (только для темы Windows 98)",
+      "icon": "widgetTicker",
+      "services": [
+        "twitchEvents",
+        "twitchChat",
+        "donationAlerts",
+        "youtube"
+      ],
+      "dimension": "3d",
+      "theme": "win98",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 92,
+        "w": 94,
+        "h": 6
+      },
+      "minW": 30,
+      "minH": 4,
+      "defaultConfig": {
+        "speed": 80,
+        "direction": "left",
+        "label": "",
+        "showLabel": true,
+        "maxItems": 24,
+        "rewardsBreaking": true,
+        "sources": {
+          "donations": true,
+          "follows": true,
+          "subs": true,
+          "rewards": true,
+          "chat": false,
+          "goal": false,
+          "top": false
+        },
+        "perspective": 10
+      }
+    },
     "donatex-ai": {
       "type": "donatex-ai",
       "label": "ИИ-персонаж DonateX",
@@ -2094,6 +2256,8 @@
     "sf-goal",
     "sf-tachometer",
     "sf-ticker",
-    "sf-cube"
+    "sf-cube",
+    "win98-hourglass",
+    "win98-ticker"
   ]
 }

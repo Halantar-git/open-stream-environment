@@ -280,6 +280,10 @@
       "sf-chat": OW.WidgetSfChat,
       "sf-holo-alert": OW.WidgetSfHoloAlert,
       "sf-cube": OW.WidgetSfCube,
+      "win98-hourglass": OW.WidgetWin98Hourglass,
+      "win98-goal": OW.WidgetWin98Goal,
+      "win98-chat": OW.WidgetWin98Chat,
+      "win98-holo-alert": OW.WidgetWin98HoloAlert,
       "donatex-ai": OW.DonatexAiWidget,
       music: OW.MusicWidget,
     };

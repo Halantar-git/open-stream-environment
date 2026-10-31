@@ -308,7 +308,8 @@
     },
 
     // Windows 98 — светлый серый интерфейс с объёмными рамками, тёмно-синим
-    // заголовком окна и бирюзовым рабочим столом. Чистый 2D: у темы нет 3D-набора.
+    // заголовком окна и бирюзовым рабочим столом. 3D-набор собран из окон
+    // 98-й: песочные часы, цель, чат и алерт с бевелом и синим заголовком.
     win98: {
       id: "win98",
       name: "Windows 98",
@@ -316,6 +317,7 @@
       category: "system",
       dimension: "2d",
       family: "win98",
+      variant3d: "win98",
       borderRadius: "0px",
       tokens: {
         // Тёмно-синий заголовок активного окна (#000080) — основной акцент.
@@ -871,6 +873,7 @@
     { id: "wardogs", name: "Wardogs" },
     { id: "retrowave", name: "Retrowave" },
     { id: "sf", name: "Super Four" },
+    { id: "win98", name: "Windows 98" },
   ];
 
   const api = { BUILTIN_THEMES, THREE_D_STYLES };

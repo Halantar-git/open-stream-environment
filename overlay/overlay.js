@@ -476,6 +476,10 @@
   manager.register("sf-chat", OW.WidgetSfChat);
   manager.register("sf-holo-alert", OW.WidgetSfHoloAlert);
   manager.register("sf-cube", OW.WidgetSfCube);
+  manager.register("win98-hourglass", OW.WidgetWin98Hourglass);
+  manager.register("win98-goal", OW.WidgetWin98Goal);
+  manager.register("win98-chat", OW.WidgetWin98Chat);
+  manager.register("win98-holo-alert", OW.WidgetWin98HoloAlert);
   manager.register("donatex-ai", OW.DonatexAiWidget);
   manager.register("music", OW.MusicWidget);
 

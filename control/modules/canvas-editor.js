@@ -441,7 +441,8 @@ export function initCanvasEditor({
       case "md3-recent":
       case "pixel-recent":
       case "retrowave-recent":
-      case "sf-recent": {
+      case "sf-recent":
+      case "win98-recent": {
         const items = SAMPLE_RECENT.slice(0, Math.min(3, config.maxItems || 5))
           .map((e) => `<div class="widget-recent__item widget-recent3d__item"><span class="widget-recent__dot" data-kind="${escapeAttr(e.kind)}"></span><span class="widget-recent3d__text">${recentTextPreview(e)}</span></div>`)
           .join("");
@@ -1485,6 +1486,127 @@ export function initCanvasEditor({
             <rect x="43" y="69" width="14" height="1" fill="${escapeAttr(pink)}"/>
             <text x="50" y="75" fill="${escapeAttr(muted)}" font-family="'JetBrains Mono','Consolas',monospace" font-size="5" font-weight="700" text-anchor="middle">N</text>
           </svg>
+        </div>`;
+      }
+      case "win98-hourglass": {
+        const tokens = state.appearance.tokens || {};
+        const win = tokens["--win98-window"] || "#c0c0c0";
+        const light = tokens["--win98-light"] || "#ffffff";
+        const dark = tokens["--win98-shadow-dark"] || "#000000";
+        const sand = tokens["--md-primary"] || "#000080";
+        return `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 60 100" preserveAspectRatio="xMidYMid meet" style="width:54%;height:88%;overflow:visible;">
+            <rect x="6" y="4" width="48" height="8" fill="${escapeAttr(win)}" stroke="${escapeAttr(dark)}" stroke-width="1"/>
+            <rect x="6" y="5" width="48" height="1" fill="${escapeAttr(light)}"/>
+            <rect x="6" y="88" width="48" height="8" fill="${escapeAttr(win)}" stroke="${escapeAttr(dark)}" stroke-width="1"/>
+            <rect x="6" y="89" width="48" height="1" fill="${escapeAttr(light)}"/>
+            <path d="M12 12 L48 12 L33 48 L33 52 L48 88 L12 88 L27 52 L27 48 Z" fill="rgba(255,255,255,0.22)" stroke="${escapeAttr(light)}" stroke-width="1.2"/>
+            <path d="M12 12 L48 12 L33 48 L27 48 Z" fill="${escapeAttr(sand)}"/>
+            <path d="M27 60 L33 60 L48 88 L12 88 Z" fill="${escapeAttr(sand)}"/>
+            <line x1="30" y1="48" x2="30" y2="60" stroke="${escapeAttr(sand)}" stroke-width="1.6"/>
+          </svg>
+        </div>`;
+      }
+      case "win98-goal": {
+        const tokens = state.appearance.tokens || {};
+        const pct = state.goal && state.goal.target ? Math.min(100, Math.round((state.goal.current / state.goal.target) * 100)) : 0;
+        const bg = tokens["--panel-bg"] || "#c0c0c0";
+        const border = tokens["--panel-border"] || "1px solid #808080";
+        const glow = tokens["--panel-glow"] || "inset 1px 1px 0 #ffffff, inset -1px -1px 0 #000000";
+        const win = tokens["--win98-window"] || "#c0c0c0";
+        const light = tokens["--win98-light"] || "#ffffff";
+        const shadow = tokens["--win98-shadow"] || "#808080";
+        const dark = tokens["--win98-shadow-dark"] || "#000000";
+        const titleA = tokens["--win98-titlebar"] || "#000080";
+        const titleB = tokens["--win98-titlebar-end"] || "#1080d0";
+        const muted = tokens["--md-on-surface-variant"] || "#404040";
+        return `<div style="position:relative;height:100%;box-sizing:border-box;padding:3px;background:${escapeAttr(bg)};border:${escapeAttr(border)};box-shadow:${escapeAttr(glow)};">
+          <div style="display:flex;flex-direction:column;height:100%;box-sizing:border-box;">
+            <div style="display:flex;align-items:center;gap:6px;padding:1px 3px;background:linear-gradient(90deg,${escapeAttr(titleA)},${escapeAttr(titleB)});color:${escapeAttr(light)};font-family:var(--font-display);font-size:10px;font-weight:700;">
+              <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase;">${escapeHtml(state.goal.title || t("preview.goalTitle"))}</span>
+              <span style="font-family:var(--font-mono);font-size:12px;flex-shrink:0;">[${pct}%]</span>
+              <span style="display:inline-flex;gap:2px;flex-shrink:0;"><i style="display:inline-block;width:10px;height:9px;background:${escapeAttr(win)};box-shadow:inset 1px 1px 0 ${escapeAttr(light)}, inset -1px -1px 0 ${escapeAttr(dark)};"></i><i style="display:inline-block;width:10px;height:9px;background:${escapeAttr(win)};box-shadow:inset 1px 1px 0 ${escapeAttr(light)}, inset -1px -1px 0 ${escapeAttr(dark)};"></i></span>
+            </div>
+            <div style="flex:1;min-height:0;display:flex;align-items:center;padding:0 4px;box-sizing:border-box;">
+              <div style="position:relative;width:100%;height:10px;background:${escapeAttr(light)};box-shadow:inset 1px 1px 0 ${escapeAttr(shadow)}, inset -1px -1px 0 ${escapeAttr(light)};">
+                <div style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:repeating-linear-gradient(90deg,${escapeAttr(titleA)} 0 9px,transparent 9px 11px);"></div>
+              </div>
+            </div>
+            <div style="padding:0 4px 1px;font-family:var(--font-mono);font-size:11px;color:${escapeAttr(muted)};text-align:right;white-space:nowrap;">${formatMoney(state.goal.current)} / ${formatMoney(state.goal.target)}</div>
+          </div>
+        </div>`;
+      }
+      case "win98-chat": {
+        const tokens = state.appearance.tokens || {};
+        const bg = tokens["--panel-bg"] || "#c0c0c0";
+        const border = tokens["--panel-border"] || "1px solid #808080";
+        const glow = tokens["--panel-glow"] || "inset 1px 1px 0 #ffffff, inset -1px -1px 0 #000000";
+        const win = tokens["--win98-window"] || "#c0c0c0";
+        const light = tokens["--win98-light"] || "#ffffff";
+        const shadow = tokens["--win98-shadow"] || "#808080";
+        const dark = tokens["--win98-shadow-dark"] || "#000000";
+        const titleA = tokens["--win98-titlebar"] || "#000080";
+        const titleB = tokens["--win98-titlebar-end"] || "#1080d0";
+        const text = tokens["--md-on-surface"] || "#000000";
+        const muted = tokens["--md-on-surface-variant"] || "#404040";
+        const primary = tokens["--md-primary"] || "#000080";
+        const rows = [
+          { user: "nova_viewer", badges: ["moderator"], message: t("preview.chat1") },
+          { user: "star_gazer", badges: ["subscriber"], message: t("preview.chat2") },
+          { user: "orbit_fan", badges: ["vip"], message: t("preview.chat3") },
+        ]
+          .map(
+            (m) =>
+              `<div style="display:flex;gap:6px;padding:2px 3px;font-family:var(--font-body);font-size:11px;line-height:1.35;color:${escapeAttr(text)};border-bottom:1px dotted rgba(0,0,0,0.18);">
+                ${config.showTime === false ? "" : `<span style="color:${escapeAttr(muted)};font-family:var(--font-mono);font-size:12px;">[12:00]</span>`}
+                ${previewBadges(m.badges, primary)}
+                <span style="color:${escapeAttr(primary)};font-weight:700">${escapeHtml(m.user)}</span>
+                <span style="color:${escapeAttr(muted)}">:</span>
+                <span style="color:${escapeAttr(text)}">${escapeHtml(m.message)}</span>
+              </div>`
+          )
+          .join("");
+        const buttons = `<span style="display:inline-flex;gap:2px;flex-shrink:0;"><i style="display:inline-block;width:10px;height:9px;background:${escapeAttr(win)};box-shadow:inset 1px 1px 0 ${escapeAttr(light)}, inset -1px -1px 0 ${escapeAttr(dark)};"></i><i style="display:inline-block;width:10px;height:9px;background:${escapeAttr(win)};box-shadow:inset 1px 1px 0 ${escapeAttr(light)}, inset -1px -1px 0 ${escapeAttr(dark)};"></i></span>`;
+        return `<div style="position:relative;height:100%;box-sizing:border-box;padding:3px;background:${escapeAttr(bg)};border:${escapeAttr(border)};box-shadow:${escapeAttr(glow)};">
+          <div style="display:flex;flex-direction:column;height:100%;box-sizing:border-box;">
+            <div style="display:flex;align-items:center;gap:6px;padding:1px 3px;background:linear-gradient(90deg,${escapeAttr(titleA)},${escapeAttr(titleB)});color:${escapeAttr(light)};font-family:var(--font-display);font-size:10px;font-weight:700;">
+              <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase;">${escapeHtml(t("editor.chat"))}</span>${buttons}
+            </div>
+            <div style="flex:1;min-height:0;padding:3px;box-sizing:border-box;">
+              <div style="height:100%;overflow:hidden;background:${escapeAttr(light)};box-shadow:inset 1px 1px 0 ${escapeAttr(shadow)}, inset -1px -1px 0 ${escapeAttr(light)};padding:3px 5px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-end;">${rows}</div>
+            </div>
+          </div>
+        </div>`;
+      }
+      case "win98-holo-alert": {
+        const tokens = state.appearance.tokens || {};
+        const bg = tokens["--panel-bg"] || "#c0c0c0";
+        const border = tokens["--panel-border"] || "1px solid #808080";
+        const glow = tokens["--panel-glow"] || "inset 1px 1px 0 #ffffff, inset -1px -1px 0 #000000";
+        const win = tokens["--win98-window"] || "#c0c0c0";
+        const light = tokens["--win98-light"] || "#ffffff";
+        const shadow = tokens["--win98-shadow"] || "#808080";
+        const dark = tokens["--win98-shadow-dark"] || "#000000";
+        const titleA = tokens["--win98-titlebar"] || "#000080";
+        const titleB = tokens["--win98-titlebar-end"] || "#1080d0";
+        const text = tokens["--md-on-surface"] || "#000000";
+        const primary = tokens["--md-primary"] || "#000080";
+        return `<div style="position:relative;height:100%;box-sizing:border-box;padding:3px;background:${escapeAttr(bg)};border:${escapeAttr(border)};box-shadow:${escapeAttr(glow)};">
+          <div style="display:flex;flex-direction:column;height:100%;box-sizing:border-box;">
+            <div style="display:flex;align-items:center;gap:6px;padding:1px 3px;background:linear-gradient(90deg,${escapeAttr(titleA)},${escapeAttr(titleB)});color:${escapeAttr(light)};font-family:var(--font-display);font-size:10px;font-weight:700;">
+              <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase;">${escapeHtml(t("properties.testFollow"))}</span>
+              <span style="display:inline-flex;gap:2px;flex-shrink:0;"><i style="display:inline-block;width:10px;height:9px;background:${escapeAttr(win)};box-shadow:inset 1px 1px 0 ${escapeAttr(light)}, inset -1px -1px 0 ${escapeAttr(dark)};"></i><i style="display:inline-block;width:10px;height:9px;background:${escapeAttr(win)};box-shadow:inset 1px 1px 0 ${escapeAttr(light)}, inset -1px -1px 0 ${escapeAttr(dark)};"></i></span>
+            </div>
+            <div style="flex:1;min-height:0;display:flex;align-items:center;gap:9px;padding:6px 9px;box-sizing:border-box;">
+              <span style="display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:34px;height:34px;background:${escapeAttr(light)};color:${escapeAttr(primary)};box-shadow:inset 1px 1px 0 ${escapeAttr(shadow)}, inset -1px -1px 0 ${escapeAttr(light)};">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.2 3.1-5.4 7-5.4s7 2.2 7 5.4"/></svg>
+              </span>
+              <span style="min-width:0;display:flex;flex-direction:column;gap:1px;">
+                <span style="font-family:var(--font-display);font-size:14px;font-weight:700;color:${escapeAttr(text)};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">nova_viewer</span>
+                <span style="font-family:var(--font-mono);font-size:12px;color:${escapeAttr(primary)};">${formatMoney(500)} ${currencySymbol("RUB")}</span>
+              </span>
+            </div>
+          </div>
         </div>`;
       }
       default:
