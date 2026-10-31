@@ -54,6 +54,17 @@
     },
   };
 
+  // Призы рулетки по умолчанию: вес — не процент, проценты считаются от суммы
+  // весов. Категория задаёт цвет карточки в теме (common/rare/epic/legendary).
+  const ROULETTE_DEFAULT_ITEMS = [
+    { title: "Показать любимую игру", category: "common", weight: 40 },
+    { title: "Рассказать историю", category: "common", weight: 30 },
+    { title: "Спеть припев", category: "common", weight: 20 },
+    { title: "Сменить сцену", category: "rare", weight: 12 },
+    { title: "Ник на час", category: "epic", weight: 5 },
+    { title: "Костюм на стрим", category: "legendary", weight: 1 },
+  ];
+
   // 3D-вариант новостной ленты: один и тот же движок, отличается только
   // наклоном и привязкой к набору темы.
   function ticker3d(type, label, description, theme, perspective) {
@@ -1209,6 +1220,26 @@
       minW: 16,
       minH: 4,
       defaultConfig: { autoplay: true, queue: true, volume: 1, perspective: 0, perspectiveDirection: "left" },
+    },
+    // Рулетка: горизонтальная лента призов с весами, как у DonateX, но в
+    // оформлении активной темы. Донат от заданной суммы запускает спин.
+    roulette: {
+      type: "roulette",
+      label: "Рулетка донатов",
+      description: "Лента призов с весами: донат от заданной суммы запускает спин, оформление из активной темы",
+      icon: "widgetRoulette",
+      services: ["donationAlerts", "youtube", "donatex"],
+      defaultGeometry: { x: 10, y: 34, w: 80, h: 22 },
+      minW: 30,
+      minH: 12,
+      defaultConfig: {
+        items: ROULETTE_DEFAULT_ITEMS,
+        minAmount: 100,
+        spinMs: 4200,
+        showBackground: true,
+        perspective: 0,
+        perspectiveDirection: "left",
+      },
     },
 
   };

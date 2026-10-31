@@ -563,6 +563,23 @@ export function initCanvasEditor({
           ? `<div style="width:100%;height:100%;transform:${transform};transform-style:preserve-3d;">${html}</div>`
           : html;
       }
+      case "roulette": {
+        // Та же лента и те же карточки, что в эфире: так проценты, категории
+        // и декор темы видно ещё до включения виджета.
+        const items = Array.isArray(config.items) && config.items.length ? config.items : [];
+        const sample = items.length ? items.slice(0, 6) : [{ title: t("widgets.roulette"), category: "common" }];
+        const cards = sample
+          .map(
+            (item) =>
+              `<div class="roulette__card is-${escapeAttr(item.category || "common")}"><span class="roulette__card-title">${escapeHtml(item.title || "")}</span><span class="roulette__card-cat">${escapeHtml(t("roulette.category." + (item.category || "common")))}</span></div>`
+          )
+          .join("");
+        const html = `<div class="widget-roulette"><div class="roulette${config.showBackground === false ? " is-bare" : ""}"><div class="roulette__viewport"><div class="roulette__track">${cards}</div><div class="roulette__pointer"></div></div></div></div>`;
+        const transform = perspectiveStyle(config);
+        return transform
+          ? `<div style="width:100%;height:100%;transform:${transform};transform-style:preserve-3d;">${html}</div>`
+          : html;
+      }
       case "mic": {
         const themePrimary = (state.appearance.tokens && state.appearance.tokens["--md-primary"]) || "#0060A8";
         const color = config.color || state.micConfig.color || themePrimary;
