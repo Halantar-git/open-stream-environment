@@ -132,6 +132,8 @@
     _applySurface() {
       const read = this.context.readCssVar;
       const style = this.element.style;
+      // Панель растёт под текст плавно, а не скачком.
+      style.transition = "height 180ms ease-out";
 
       style.backgroundColor = (read && read("--panel-bg")) || DEFAULT_BG;
       style.backgroundImage = "none";
@@ -169,8 +171,23 @@
       this.element.style.opacity = "1";
       this._autoSize(card);
 
+      // Вспышка рамки при появлении: окно «включается», как терминал.
+      this.element.classList.remove("is-booting");
+      // Перезапуск CSS-анимации: без пересчёта класс не даёт нового цикла.
+      void this.element.offsetWidth;
+      this.element.classList.add("is-booting");
+      this.later(() => {
+        if (this.element) this.element.classList.remove("is-booting");
+      }, 450);
+
       if (card.animate) {
-        card.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 120, easing: "linear" });
+        card.animate(
+          [
+            { opacity: 0, transform: "translateY(6px)" },
+            { opacity: 1, transform: "translateY(0)" },
+          ],
+          { duration: 160, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" },
+        );
       }
 
       this._typeLines(card, () => {
@@ -355,6 +372,24 @@
 
       let rowIndex = 0;
       let charIndex = 0;
+      let textEl = null;
+
+      // Каретка печати — один блок на всё окно: пока строка печатается, она
+      // стоит в её конце; после последней строки остаётся мигать.
+      const caret = document.createElement("span");
+      caret.className = "terminal-type-caret";
+
+      const startRow = (row) => {
+        row.innerHTML = "";
+        if (caret.parentNode) caret.parentNode.removeChild(caret);
+        textEl = document.createElement("span");
+        textEl.style.color = this.textColor;
+        row.appendChild(textEl);
+        row.appendChild(caret);
+        charIndex = 0;
+      };
+
+      startRow(rows[0]);
 
       const step = () => {
         const row = rows[rowIndex];
@@ -365,8 +400,7 @@
         }
         const plain = row.dataset.plain || "";
         charIndex = Math.min(plain.length, charIndex + 2);
-        row.textContent = plain.slice(0, charIndex);
-        row.style.color = rowIndex === 0 ? this.textColor : "";
+        if (textEl) textEl.textContent = plain.slice(0, charIndex);
         if (charIndex >= plain.length) {
           // Строка допечатана — подменяем на цветную разметку и пересчитываем
           // высоту: длинное сообщение переносится и должно быть видно целиком.
@@ -374,16 +408,19 @@
           this._autoSize(card);
           rowIndex += 1;
           charIndex = 0;
+          if (rowIndex < rows.length) {
+            startRow(rows[rowIndex]);
+          } else {
+            // Каретка остаётся мигать в конце последней строки.
+            if (caret.parentNode) caret.parentNode.removeChild(caret);
+            row.appendChild(caret);
+            this._stopTyping();
+            done();
+          }
         }
       };
 
-      this.typeTimer = setInterval(() => {
-        step();
-        if (rowIndex >= rows.length) {
-          this._stopTyping();
-          done();
-        }
-      }, TYPE_MS);
+      this.typeTimer = setInterval(step, TYPE_MS);
     }
 
     _stopTyping() {

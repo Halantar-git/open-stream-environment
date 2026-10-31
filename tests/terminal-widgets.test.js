@@ -371,6 +371,33 @@ describe("WidgetTerminalHoloAlert", () => {
     widget.unmount();
   });
 
+  test("печатает строки и оставляет мигающую каретку", () => {
+    jest.useFakeTimers();
+    try {
+      const context = makeContext("terminal");
+      const widget = new WidgetTerminalHoloAlert(item("terminal-holo-alert"), context);
+      widget.mount(makeEl("div"));
+
+      context.bus.emit(EVENT_TYPES.ALERT, {
+        kind: "donation",
+        user: "bob",
+        amount: 500,
+        message: "привет",
+        durationMs: 5000,
+      });
+      jest.advanceTimersByTime(3000);
+
+      const card = widget.host.children[0];
+      const body = card.children[1];
+      const last = body.children[body.children.length - 1];
+      expect(last.children.some((child) => child.className === "terminal-type-caret")).toBe(true);
+
+      widget.unmount();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   test("не инициализируется на чужой теме", () => {
     const widget = new WidgetTerminalHoloAlert(item("terminal-holo-alert"), makeContext("sf"));
     widget.mount(makeEl("div"));
