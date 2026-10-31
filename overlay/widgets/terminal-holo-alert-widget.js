@@ -150,6 +150,8 @@
         return;
       }
       this.playing = true;
+      // Каждый алерт заново считает высоту: предыдущий мог растянуть панель.
+      this.element.style.height = this.geometry.h + "%";
 
       const card = this.buildCard(alert);
       this.host.appendChild(card);
@@ -380,18 +382,54 @@
       }
     }
 
-    // Панель растягивается под длинный текст доната: длинное сообщение
-    // должно быть видно целиком, но окно не должно закрыть пол-экрана.
+    // Панель растёт под сообщение, как в виджете UEC-перевода: сначала замер по
+    // содержимому, затем высота до нижней границы экрана, а если и так не
+    // влезает — уплотняем текст, а не режем его краем панели.
     _autoSize(card) {
-      if (!this.element) return;
-      const base = this.element.clientHeight || 100;
+      if (!this.element || !card) return;
       const viewport =
         typeof window !== "undefined" && Number(window.innerHeight) > 0
           ? Number(window.innerHeight)
           : 1080;
-      const cap = Math.max(360, viewport * 0.7);
-      const needed = (card ? card.scrollHeight || card.offsetHeight : 0) + 16;
-      this.element.style.height = Math.min(Math.max(base, needed), cap) + "px";
+      const top = (Number(this.geometry.y) / 100) * viewport;
+
+      // Базовая высота — из геометрии виджета: панель могла быть растянута
+      // под предыдущий длинный алерт.
+      this.element.style.height = this.geometry.h + "%";
+      const base = this.element.clientHeight || 100;
+      const maxHeight = Math.max(base, viewport - top - 8);
+
+      // Замер: у auto-высоты содержимое не поджимается flex-родителем.
+      const measure = () => {
+        const previous = this.element.style.height;
+        this.element.style.height = "auto";
+        const needed = card.scrollHeight || card.offsetHeight || 0;
+        this.element.style.height = previous;
+        return needed;
+      };
+
+      let needed = measure();
+      if (!needed) return;
+
+      // Не влезает до края экрана — сначала пробуем помельче, а не обрезать.
+      const dense = needed + 12 > maxHeight;
+      const rows = card._rows || [];
+      rows.forEach((row) => {
+        row.style.fontSize = dense ? "11px" : "12px";
+      });
+      if (dense) needed = measure();
+
+      this.element.style.height = Math.min(Math.max(base, needed + 12), maxHeight) + "px";
+
+      // Замер может недосчитать пару пикселей (переносы, отступы): растим по факту.
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const overflow = this.element.scrollHeight - this.element.clientHeight;
+        if (!Number.isFinite(overflow) || overflow <= 0) break;
+        const current = Number.parseFloat(this.element.style.height) || 0;
+        const next = Math.min(current + overflow + 2, maxHeight);
+        if (next <= current) break;
+        this.element.style.height = next + "px";
+      }
     }
   }
 
