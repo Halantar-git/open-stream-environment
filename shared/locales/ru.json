@@ -99,7 +99,6 @@
     "aspectRatio": "Соотношение",
     "layoutTarget": "Раскладка",
     "layoutMain": "Оверлей",
-    "lockLayout": "Блокировка",
     "lockLayoutHint": "Запретить перетаскивание, ресайз и удаление виджетов. Выбор и свойства остаются доступны.",
     "obsSource": "OBS Browser Source",
     "obsScenes": "Сцены",

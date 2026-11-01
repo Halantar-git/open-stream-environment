@@ -99,7 +99,6 @@
     "aspectRatio": "Aspect ratio",
     "layoutTarget": "Layout",
     "layoutMain": "Overlay",
-    "lockLayout": "Lock",
     "lockLayoutHint": "Prevent moving, resizing and deleting widgets. Selection and properties stay available.",
     "obsSource": "OBS Browser Source",
     "obsScenes": "Scenes",
