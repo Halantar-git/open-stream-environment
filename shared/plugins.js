@@ -23,14 +23,13 @@
 
     * карточки библиотеки (определения дописываются в `WidgetCatalog`);
     * темы (токены — в `BuiltinThemes`, CSS — отдельным `<link>`);
-    * классы виджетов: код пакета зовёт `OSE.defineWidget(id, cls)`.
+    * классы виджетов: для каждого пакета — прокси, который держит код пакета
+      в песочнице (`overlay/widgets/plugin-widget.js`).
 
-  Оверлей и сцены включают `load()`, панель — `load({ widgets: false })`:
-  панели нужны только карточки и темы, чужой код в ней не исполняется.
-
-  Пакет исполняется в той же странице, что и оверлей, поэтому ставить можно
-  только доверенный код; песочница — отдельный этап, как записано в
-  `docs/plugin-api.md`.
+  Код пакета в страницу не подключается: `widget.js` грузится внутри iframe,
+  а наружу уходят только настройки, тема и события, на которые виджет
+  подписался. Поэтому страница панели (`load({ widgets: false })`) не исполняет
+  чужой код вообще, а оверлей не даёт пакету доступа к своему DOM и сокету.
 */
 (function (root, factory) {
   const api = factory(root);
@@ -125,33 +124,6 @@
     (doc.head || doc.documentElement).appendChild(link);
   }
 
-  function addStyle(href, pluginId) {
-    addLink(href, `ose-plugin-style-${pluginId}-${href}`);
-  }
-
-  function loadScript(plugin) {
-    const doc = root.document;
-    const url = `${plugin.baseUrl}${plugin.entry}`;
-    if (!doc) return Promise.resolve();
-    // Плагины грузим по очереди: `defineWidget` понимает короткий id только
-    // для того пакета, который сейчас исполняется.
-    state.loading = plugin.id;
-    return new Promise((resolve) => {
-      const script = doc.createElement("script");
-      script.src = url;
-      script.async = false;
-      script.dataset.plugin = plugin.id;
-      script.onload = () => resolve();
-      script.onerror = () => {
-        state.errors.push({ dir: plugin.id, error: `не загрузился ${url}` });
-        resolve();
-      };
-      (doc.head || doc.documentElement).appendChild(script);
-    }).then(() => {
-      state.loading = "";
-    });
-  }
-
   async function fetchPlugins() {
     const doFetch = typeof root.fetch === "function" ? root.fetch : null;
     if (!doFetch) return { plugins: [], errors: [] };
@@ -186,7 +158,10 @@
     Прочитать пакеты и подключить их.
 
     Повторный вызов возвращает тот же промис: страница может спросить список
-    из нескольких мест, а порядок подключения важен (стили раньше кода).
+    из нескольких мест. Код пакетов здесь не исполняется: для каждого виджета
+    регистрируется прокси-класс, внутри которого будет своя рамка-песочница.
+    Фабрику даёт страница (`OSEWidgets.createPluginWidget`), панель её не
+    передаёт и остаётся без чужих классов.
   */
   function load(options) {
     if (state.ready) return state.ready;
@@ -200,17 +175,22 @@
         // Темы первыми: их CSS должен быть на месте к первому кадру.
         state.plugins.filter((item) => item.kind === "theme").forEach(addTheme);
 
-        const widgets = state.plugins.filter((item) => item.kind === "widget");
-        widgets.forEach((item) => {
-          addWidget(item);
-          (item.styles || []).forEach((style) => addStyle(`${item.baseUrl}${style}`, item.id));
-        });
-
-        if (opts.widgets !== false) {
-          for (const item of widgets) {
-            await loadScript(item);
-          }
-        }
+        const factory =
+          opts.widgets === false
+            ? null
+            : opts.sandbox || (root.OSEWidgets && root.OSEWidgets.createPluginWidget) || null;
+        state.plugins
+          .filter((item) => item.kind === "widget")
+          .forEach((item) => {
+            addWidget(item);
+            if (!factory) return;
+            const definitions = catalog() && catalog().WIDGET_TYPES;
+            try {
+              defineWidget(item.type, factory(item, (definitions && definitions[item.type]) || null));
+            } catch (error) {
+              state.errors.push({ dir: item.id, error: `не удалось подключить: ${error.message}` });
+            }
+          });
         return api;
       })
       // Сломанный пакет или нестандартный ответ не должны оставить страницу

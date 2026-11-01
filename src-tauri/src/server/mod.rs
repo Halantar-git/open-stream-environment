@@ -742,6 +742,13 @@ async fn no_store_static(mut request: Request, next: Next) -> Response {
     response
         .headers_mut()
         .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    // Статика открыта кросс-доменно намеренно: пакетные виджеты живут в рамке
+    // `sandbox="allow-scripts"` без `allow-same-origin`, то есть с opaque-origin,
+    // и без этого заголовка браузер не отдаст им шрифты и картинки.
+    response.headers_mut().insert(
+        header::ACCESS_CONTROL_ALLOW_ORIGIN,
+        HeaderValue::from_static("*"),
+    );
     response
 }
 

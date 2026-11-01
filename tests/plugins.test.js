@@ -17,27 +17,19 @@
 
 /*
   Клиент API пакетов: список с сервера превращается в карточки библиотеки,
-  темы и классы виджетов. Проверяем контракт, а не разметку оверлея: именно на
-  эти поля смотрят панель, менеджер виджетов и список тем.
+  темы и прокси-классы виджетов. Проверяем контракт, а не разметку оверлея:
+  именно на эти поля смотрят панель, менеджер виджетов и список тем.
+
+  Код пакета здесь не исполняется вообще — за него отвечает рамка-песочница
+  (`overlay/widgets/plugin-widget.js`), а этот модуль лишь просит у страницы
+  фабрику прокси и регистрирует получившийся класс.
 */
 
-function makeDocument({ runScript } = {}) {
+function makeDocument() {
   const head = {
     children: [],
     appendChild(element) {
       this.children.push(element);
-      if (element.tagName === "SCRIPT") {
-        // Скрипт пакета исполняется сразу после вставки, как в браузере;
-        // `load` ждёт onload, поэтому вызываем его в микрозадаче.
-        Promise.resolve().then(() => {
-          try {
-            if (runScript) runScript(element.src, element.dataset.plugin);
-            if (element.onload) element.onload();
-          } catch (_) {
-            if (element.onerror) element.onerror();
-          }
-        });
-      }
       return element;
     },
   };
@@ -56,11 +48,12 @@ function makeDocument({ runScript } = {}) {
   };
 }
 
-function loadPlugins({ payload, runScript, fetchError } = {}) {
+function loadPlugins({ payload, fetchError, sandbox } = {}) {
   jest.resetModules();
   global.WidgetCatalog = { WIDGET_TYPES: {} };
   global.BuiltinThemes = { BUILTIN_THEMES: {} };
-  global.document = makeDocument({ runScript });
+  global.document = makeDocument();
+  if (sandbox) global.OSEWidgets = { createPluginWidget: sandbox };
   global.fetch = jest.fn(() => {
     if (fetchError) return Promise.reject(new Error("сеть"));
     return Promise.resolve({
@@ -106,6 +99,7 @@ afterEach(() => {
   delete global.WidgetCatalog;
   delete global.BuiltinThemes;
   delete global.document;
+  delete global.OSEWidgets;
   delete global.fetch;
   delete global.OSE;
 });
@@ -125,12 +119,12 @@ describe("shared/plugins: каталог и темы", () => {
     expect(document.head.children.some((element) => element.tagName === "SCRIPT")).toBe(false);
   });
 
-  test("панель не исполняет код пакетов, но ставит их стили", async () => {
+  test("стили пакета не попадают в страницу: их грузит только рамка", async () => {
     const plugins = loadPlugins({ payload: { apiVersion: 1, plugins: [widget] } });
     await plugins.load({ widgets: false });
 
     const links = document.head.children.filter((element) => element.tagName === "LINK");
-    expect(links.map((link) => link.href)).toEqual(["/plugins/hello/widget.css"]);
+    expect(links).toEqual([]);
   });
 
   test("тема из пакета дописывается во встроенные и получает CSS", async () => {
@@ -174,20 +168,44 @@ describe("shared/plugins: каталог и темы", () => {
   });
 });
 
-describe("shared/plugins: классы виджетов", () => {
-  test("короткий id из манифеста становится типом plugin:<id>", async () => {
-    class Hello {}
+describe("shared/plugins: виджеты из пакетов", () => {
+  test("для каждого виджета регистрируется прокси из фабрики страницы", async () => {
+    const seen = [];
+    class ProxyWidget {}
     const plugins = loadPlugins({
       payload: { apiVersion: 1, plugins: [widget] },
-      runScript: (src, pluginId) => {
-        expect(src).toBe("/plugins/hello/widget.js");
-        expect(pluginId).toBe("hello");
-        plugins.defineWidget("hello", Hello);
+      sandbox: (item, def) => {
+        seen.push([item.id, def && def.label]);
+        return ProxyWidget;
       },
     });
-    // `loadPlugins` вернул модуль, а runScript ссылается на него же.
     await plugins.load();
-    expect(plugins.widgets["plugin:hello"]).toBe(Hello);
+
+    expect(seen).toEqual([["hello", "Привет"]]);
+    expect(plugins.widgets["plugin:hello"]).toBe(ProxyWidget);
+  });
+
+  test("без фабрики код пакета не подключается вовсе", async () => {
+    const plugins = loadPlugins({ payload: { apiVersion: 1, plugins: [widget] } });
+    await plugins.load();
+
+    expect(plugins.widgets["plugin:hello"]).toBeUndefined();
+    expect(document.head.children.filter((element) => element.tagName === "SCRIPT")).toEqual([]);
+  });
+
+  test("фабрика упала на одном пакете — остальные остаются", async () => {
+    const broken = { ...widget, id: "broken", type: "plugin:broken" };
+    const plugins = loadPlugins({
+      payload: { apiVersion: 1, plugins: [broken, widget] },
+      sandbox: (item) => {
+        if (item.id === "broken") throw new Error("нет кода");
+        return class {};
+      },
+    });
+    await expect(plugins.load()).resolves.toBeTruthy();
+
+    expect(plugins.widgets["plugin:hello"]).toBeTruthy();
+    expect(plugins.errors.some((error) => error.dir === "broken")).toBe(true);
   });
 
   test("onWidget отдаёт и уже определённые классы, и новые", async () => {
@@ -206,18 +224,6 @@ describe("shared/plugins: классы виджетов", () => {
       ["plugin:existing", Existing],
       ["plugin:later", Later],
     ]);
-  });
-
-  test("не сломанный пакет не роняет загрузку остальных", async () => {
-    const broken = { ...widget, id: "broken", type: "plugin:broken" };
-    const plugins = loadPlugins({
-      payload: { apiVersion: 1, plugins: [broken, widget] },
-      runScript: (src) => {
-        if (src.includes("broken")) throw new Error("нет кода");
-      },
-    });
-    await expect(plugins.load()).resolves.toBeTruthy();
-    expect(global.WidgetCatalog.WIDGET_TYPES["plugin:hello"]).toBeTruthy();
   });
 
   test("asset указывает на файл пакета", () => {

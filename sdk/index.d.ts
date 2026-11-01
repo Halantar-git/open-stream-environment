@@ -122,8 +122,11 @@ declare namespace Ose {
     readCssVar?: (name: string) => string;
     t?: (key: string, params?: Record<string, unknown>) => string;
     escapeHtml?: (text: string) => string;
+    escapeAttr?: (text: string) => string;
+    formatMoney?: (value: number) => string;
+    currencySymbol?: (code: string) => string;
     resolveMediaUrl?: (path: string) => string;
-    state?: Record<string, unknown>;
+    ICONS?: Record<string, string>;
     [key: string]: unknown;
   }
 

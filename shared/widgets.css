@@ -661,6 +661,22 @@
   container-type: inline-size;
   container-name: widget;
 }
+
+/*
+  Пакетный виджет: обёртка позиционируется по раскладке, а внутри — рамка с
+  кодом пакета. `pointer-events: none` — как у остальных виджетов оверлея:
+  клики и выбор в HUD-редакторе нужны обёртке, а не чужой странице.
+*/
+.widget-instance--plugin {
+  pointer-events: none;
+}
+.plugin-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+}
 .widget-alerts-host {
   width: 100%;
   height: 100%;
