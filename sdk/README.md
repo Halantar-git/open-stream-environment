@@ -7,31 +7,35 @@
 
 | Файл | Зачем |
 |---|---|
+| `bin/ose-plugin.mjs` | единая команда `npx ose-plugin create` / `npx ose-plugin check` |
 | `create.mjs` | создаёт рабочий пакет виджета или темы |
 | `validate.mjs` | проверяет пакет по тем же правилам, что `src-tauri/src/plugins.rs` |
 | `index.d.ts` | типы `window.OSE`, `BaseWidget`, событий и манифестов |
 | `schema/` | JSON-схемы `widget.json` и `theme.json` для редактора |
-| `templates/` | то, из чего `create.mjs` собирает пакет |
+| `templates/` | то, из чего `create` собирает пакет |
 
 Подробный формат пакета и таблица API — в
 [`docs/plugin-api.md`](../docs/plugin-api.md). Здесь — как этим пользоваться.
 
 ## Быстрый старт
 
-Нужен Node 22 (он уже нужен для `npm test`).
+Пакет SDK есть в npm как `ose-plugin-sdk` — репозиторий OSE клонировать не
+обязательно. Нужен Node 18+.
 
 ```sh
-# виджет ./hello — рядом с репозиторием или прямо в dev-каталоге пакетов
-node sdk/create.mjs hello
-node sdk/create.mjs hello --dir config/plugins
+# виджет ./hello
+npx ose-plugin create hello
 
 # тема
-node sdk/create.mjs plain --theme --name "Plain"
+npx ose-plugin create plain --theme --name "Plain"
 
 # проверить готовый пакет или весь каталог
-node sdk/validate.mjs hello
-node sdk/validate.mjs config/plugins
+npx ose-plugin check hello
+npx ose-plugin check config/plugins
 ```
+
+В репозитории OSE то же самое без сети: `node sdk/create.mjs` и
+`node sdk/validate.mjs`.
 
 Пакет сразу рабочий: скопируйте папку в каталог пакетов, перезапустите OSE и
 добавьте карточку из библиотеки.
@@ -174,12 +178,13 @@ plain/
 пакет примет, но обычно это опечатка.
 
 ```sh
-node sdk/validate.mjs <папка>        # один пакет
-node sdk/validate.mjs config/plugins # все пакеты каталога
-node sdk/validate.mjs <папка> --json # для скриптов и CI
+npx ose-plugin check <папка>        # один пакет
+npx ose-plugin check config/plugins # все пакеты каталога
+npx ose-plugin check <папка> --json # для скриптов и CI
 ```
 
-Код возврата 1 — есть ошибки.
+Код возврата 1 — есть ошибки. В репозитории OSE — `node sdk/validate.mjs` с
+теми же аргументами.
 
 ## Ограничения
 
@@ -187,3 +192,19 @@ node sdk/validate.mjs <папка> --json # для скриптов и CI
   доверенный код, песочницы пока нет.
 - Только 2D-виджеты; 3D-наборы и `threeDWidgets` у тем ещё не читаются.
 - Установка — папкой; zip, обновления и подписи — следующий этап.
+
+## Публикация в npm
+
+Пакет `ose-plugin-sdk` живёт в `sdk/`. Перед публикацией проверьте состав — в
+архив должны попасть `bin`, `templates`, `schema`, `index.d.ts` и `LICENSE`:
+
+```sh
+cd sdk
+npm pack --dry-run
+npm login
+npm publish
+```
+
+Версию поднимайте в `sdk/package.json` (semver), после — коммит в репозиторий.
+Версия SDK не связана с версией приложения: контракт пакетов держится на
+`apiVersion: 1`, а не на номере npm-пакета.

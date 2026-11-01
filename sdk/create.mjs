@@ -8,8 +8,8 @@
   остаётся переписать код, стили и схему настроек.
 
   Использование:
-    node sdk/create.mjs <id> [--theme] [--name «Имя»] [--description «Текст»]
-                             [--dir <каталог>] [--force]
+    npx ose-plugin create <id> [параметры]
+    node sdk/create.mjs <id> [параметры]   — в репозитории OSE
 
   Пакет создаётся в <каталог>/<id>, по умолчанию — в текущем каталоге.
 */
@@ -24,7 +24,8 @@ import { validId, validatePackage } from "./validate.mjs";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 const USAGE = [
-  "Использование: node sdk/create.mjs <id> [параметры]",
+  "Использование: ose-plugin create <id> [параметры]",
+  "   или: node sdk/create.mjs <id> [параметры] (в репозитории OSE)",
   "",
   "  --theme                 создать пакет темы (по умолчанию — виджет)",
   "  --name <текст>          имя для библиотеки (по умолчанию — id)",
@@ -34,9 +35,9 @@ const USAGE = [
   "  --help                  эта справка",
   "",
   "Примеры:",
-  "  node sdk/create.mjs hello",
-  "  node sdk/create.mjs hello --dir config/plugins",
-  "  node sdk/create.mjs plain --theme",
+  "  npx ose-plugin create hello",
+  "  npx ose-plugin create hello --dir config/plugins",
+  "  npx ose-plugin create plain --theme",
 ].join("\n");
 
 function fail(message) {
@@ -152,7 +153,11 @@ function main(argv) {
   console.log("Дальше:");
   console.log("  1. Скопируйте папку в config/plugins/ (разработка) или в каталог данных приложения.");
   console.log("  2. Перезапустите OSE — манифесты читаются при старте.");
-  console.log(`  3. Проверка после правок: node sdk/validate.mjs «${target}»`);
+  console.log(`  3. Проверка после правок: npx ose-plugin check «${target}»`);
 }
 
-main(process.argv.slice(2));
+export { main };
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main(process.argv.slice(2));
+}

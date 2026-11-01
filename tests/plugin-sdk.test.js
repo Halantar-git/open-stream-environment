@@ -193,6 +193,40 @@ describe("SDK пакетов", () => {
     expect(payload.packages.map((pkg) => pkg.dir).sort()).toEqual(["hello", "plain-theme"]);
   });
 
+  test("команда ose-plugin создаёт и проверяет пакет", () => {
+    const dir = tempDir();
+    const created = run("sdk/bin/ose-plugin.mjs", ["create", "demo", "--dir", dir]);
+    expect(created.code).toBe(0);
+    expect(fs.existsSync(path.join(dir, "demo", "widget.json"))).toBe(true);
+
+    const checked = run("sdk/bin/ose-plugin.mjs", ["check", path.join(dir, "demo")]);
+    expect(checked.code).toBe(0);
+    expect(checked.out).toContain("ошибок нет");
+  });
+
+  test("ose-plugin check без пути проверяет текущую папку", () => {
+    const dir = tempDir();
+    expect(create(["hello", "--dir", dir]).code).toBe(0);
+    const checked = run("sdk/bin/ose-plugin.mjs", ["check"], { cwd: path.join(dir, "hello") });
+    expect(checked.code).toBe(0);
+  });
+
+  test("npm-пакет содержит команду, шаблоны и лицензию", () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(SDK, "package.json"), "utf8"));
+    expect(pkg.name).toBe("ose-plugin-sdk");
+    expect(pkg.bin["ose-plugin"]).toBe("./bin/ose-plugin.mjs");
+    ["bin", "templates", "schema", "index.d.ts", "LICENSE"].forEach((entry) => {
+      expect(pkg.files).toContain(entry);
+    });
+    expect(fs.existsSync(path.join(SDK, "bin", "ose-plugin.mjs"))).toBe(true);
+    expect(fs.existsSync(path.join(SDK, "LICENSE"))).toBe(true);
+
+    const help = run("sdk/bin/ose-plugin.mjs", ["--help"]);
+    expect(help.code).toBe(0);
+    expect(help.out).toContain("create");
+    expect(help.out).toContain("check");
+  });
+
   test("типы настроек и версия API не расходятся с Rust-загрузчиком", () => {
     const rust = fs.readFileSync(path.join(ROOT, "src-tauri", "src", "plugins.rs"), "utf8");
     const apiVersion = Number((rust.match(/pub const API_VERSION: i64 = (\d+);/) || [])[1]);

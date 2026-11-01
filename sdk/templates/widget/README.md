@@ -22,11 +22,11 @@
 ## Проверка
 
 ```sh
-node sdk/validate.mjs .
+npx ose-plugin check .
 ```
 
-Из корня репозитория — `node sdk/validate.mjs config/plugins`, чтобы проверить
-сразу все установленные пакеты.
+В репозитории OSE то же самое делает `node sdk/validate.mjs .`; для всех
+пакетов сразу — `npx ose-plugin check config/plugins`.
 
 ## Лицензия
 

@@ -21,8 +21,10 @@
 ## Проверка
 
 ```sh
-node sdk/validate.mjs .
+npx ose-plugin check .
 ```
+
+В репозитории OSE — `node sdk/validate.mjs .`.
 
 ## Шрифты и картинки
 

@@ -1,0 +1,45 @@
+{
+  "name": "ose-plugin-sdk",
+  "version": "0.1.0",
+  "description": "Scaffold and validate Open Stream Environment widget and theme packages, with types for window.OSE.",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "bin": {
+    "ose-plugin": "./bin/ose-plugin.mjs"
+  },
+  "files": [
+    "bin",
+    "create.mjs",
+    "validate.mjs",
+    "index.d.ts",
+    "schema",
+    "templates",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "ose",
+    "open-stream-environment",
+    "obs",
+    "stream",
+    "overlay",
+    "widget",
+    "theme",
+    "plugin"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Halantar-git/open-stream-environment.git",
+    "directory": "sdk"
+  },
+  "homepage": "https://ose-overlay.ru",
+  "bugs": {
+    "url": "https://github.com/Halantar-git/open-stream-environment/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

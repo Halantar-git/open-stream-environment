@@ -8,7 +8,8 @@
   чем после перезапуска — с сообщением в терминале и пустой карточкой.
 
   Использование:
-    node sdk/validate.mjs <папка пакета | каталог пакетов> [--json]
+    npx ose-plugin check <папка пакета | каталог пакетов> [--json]
+    node sdk/validate.mjs <папка | каталог> [--json]   — в репозитории OSE
 
   Каталог без манифеста считается каталогом пакетов (как config/plugins):
   проверяются все подпапки. Код возврата 1 — есть ошибки.
@@ -293,11 +294,11 @@ function printReport(packages) {
 }
 
 function usage() {
-  console.log("Использование: node sdk/validate.mjs <папка пакета | каталог пакетов> [--json]");
+  console.log("Использование: ose-plugin check <папка пакета | каталог пакетов> [--json]");
   console.log("  --json  — вывод в JSON для скриптов");
 }
 
-function main(argv) {
+export function main(argv) {
   const json = argv.includes("--json");
   const rest = argv.filter((arg) => arg !== "--json");
   if (rest.length !== 1) {

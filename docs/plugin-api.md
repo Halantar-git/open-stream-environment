@@ -17,21 +17,24 @@
 
 ## Быстрый старт
 
-В репозитории есть SDK — `sdk/`; он ничего не собирает и не требует зависимостей,
-кроме Node для самих скриптов.
+Пакет SDK есть в npm (`ose-plugin-sdk`) и в репозитории (`sdk/`); он ничего не
+собирает и не требует зависимостей, кроме Node 18+.
 
 ```sh
-node sdk/create.mjs hello            # рабочий пакет виджета в ./hello
-node sdk/create.mjs hello --dir config/plugins  # сразу в dev-каталог
-node sdk/create.mjs plain --theme    # пакет темы
-node sdk/validate.mjs hello          # проверка до установки
-node sdk/validate.mjs config/plugins # проверить все установленные пакеты
+npx ose-plugin create hello            # рабочий пакет виджета в ./hello
+npx ose-plugin create hello --dir config/plugins  # сразу в dev-каталог
+npx ose-plugin create plain --theme    # пакет темы
+npx ose-plugin check hello             # проверка до установки
+npx ose-plugin check config/plugins    # проверить все установленные пакеты
 ```
 
-`validate.mjs` повторяет правила загрузчика из `src-tauri/src/plugins.rs`:
-ошибку видно сразу, а не после перезапуска приложения. В `sdk/index.d.ts`
-лежат типы `window.OSE` и `BaseWidget` для автодополнения, в `sdk/schema/` —
-JSON-схемы манифестов для редактора. Подробности — `sdk/README.md`.
+В репозитории те же действия делают `node sdk/create.mjs` и
+`node sdk/validate.mjs`.
+
+Проверка повторяет правила загрузчика из `src-tauri/src/plugins.rs`: ошибку
+видно сразу, а не после перезапуска приложения. В `sdk/index.d.ts` лежат типы
+`window.OSE` и `BaseWidget` для автодополнения, в `sdk/schema/` — JSON-схемы
+манифестов для редактора. Подробности — `sdk/README.md`.
 
 ## Виджет
 
