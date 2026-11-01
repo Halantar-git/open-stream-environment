@@ -1398,6 +1398,8 @@ themeeditor/               — окно редактора темы (вклад�
 csseditor/                 — стили CSS-панели (движок — control/modules/css-editor.js)
 remote/                    — мобильный веб-пульт (Web Remote / Stream Deck)
 streamdeck-plugin/         — плагин Elgato Stream Deck (переключение сцен)
+sdk/                       — SDK пакетов: заготовка (create.mjs), проверка (validate.mjs),
+                             типы OSE и JSON-схемы манифестов
 splash/                    — сплеш-скрин при запуске приложения
 shared/                    — общие MD3-токены, стили виджетов, иконки, каталог виджетов
   fonts.css                 — @font-face встроенных шрифтов тем (подключён из theme.css)
@@ -1437,6 +1439,8 @@ tests/                     — фронтовые Jest-тесты (бэкенд 
 - [OpenAPI](docs/openapi.json) — машиночитаемая схема HTTP-части (3.1).
 - [API пакетов](docs/plugin-api.md) — формат виджетов и тем, которые ставятся
   папкой в данные пользователя.
+- [SDK пакетов](sdk/README.md) — заготовка пакета, проверка манифеста до
+  установки и типы `window.OSE` для автодополнения.
 - [План API виджетов и тем](docs/plugin-api-plan.md) — этапы, песочница и
   открытые вопросы.
 

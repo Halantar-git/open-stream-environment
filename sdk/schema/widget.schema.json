@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ose-overlay.ru/schemas/widget.json",
+  "title": "Манифест пакета виджета OSE",
+  "description": "widget.json в папке пакета. Схема повторяет проверку src-tauri/src/plugins.rs; существование файлов entry и styles проверяет sdk/validate.mjs.",
+  "type": "object",
+  "required": ["apiVersion", "kind", "id", "name", "entry"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Ссылка на эту схему для автодополнения в редакторе."
+    },
+    "apiVersion": {
+      "const": 1,
+      "description": "Версия API пакетов. Сейчас поддерживается только 1."
+    },
+    "kind": {
+      "const": "widget"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^(?!.*\\.\\.)[a-z0-9][a-z0-9._-]{0,63}$",
+      "description": "Совпадает с именем папки: латиница в нижнем регистре, цифры, «.», «-», «_»."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Имя карточки в библиотеке виджетов."
+    },
+    "description": {
+      "type": "string",
+      "description": "Описание под именем карточки."
+    },
+    "version": {
+      "type": "string",
+      "description": "Версия пакета в semver."
+    },
+    "author": {
+      "type": "string"
+    },
+    "entry": {
+      "type": "string",
+      "pattern": "\\.js$",
+      "description": "JS-файл внутри пакета, который зовёт OSE.defineWidget."
+    },
+    "styles": {
+      "type": "array",
+      "description": "CSS-файлы внутри пакета. Подключаются до кода виджета.",
+      "items": {
+        "type": "string",
+        "pattern": "\\.css$"
+      }
+    },
+    "icon": {
+      "type": "string",
+      "description": "Ключ из shared/icons.js; неизвестный заменяется на widgetCustom."
+    },
+    "defaultGeometry": {
+      "type": "object",
+      "description": "Положение и размер в процентах холста (0–100).",
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "w": { "type": "number" },
+        "h": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "minW": {
+      "type": "number",
+      "minimum": 0.5,
+      "maximum": 100,
+      "description": "Минимальная ширина при растягивании, проценты холста."
+    },
+    "minH": {
+      "type": "number",
+      "minimum": 0.5,
+      "maximum": 100,
+      "description": "Минимальная высота при растягивании, проценты холста."
+    },
+    "settings": {
+      "type": "object",
+      "description": "Схема настроек: инспектор рисует поля сам, значения приходят в this.config.",
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9_-]{1,40}$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/setting"
+      }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "setting": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "enum": ["string", "text", "number", "range", "color", "boolean", "select"]
+        },
+        "label": {
+          "type": "string",
+          "description": "Подпись поля в инспекторе."
+        },
+        "default": {
+          "description": "Значение по умолчанию; у select должно быть из options."
+        },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "step": { "type": "number" },
+        "placeholder": { "type": "string" },
+        "options": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              { "type": "string" },
+              {
+                "type": "object",
+                "required": ["value"],
+                "properties": {
+                  "value": { "type": "string" },
+                  "label": { "type": "string" }
+                },
+                "additionalProperties": false
+              }
+            ]
+          }
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

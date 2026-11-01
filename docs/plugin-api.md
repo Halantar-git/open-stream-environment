@@ -15,6 +15,24 @@
 приложение нужно перезапустить: каталог и список тем читаются один раз при
 старте.
 
+## Быстрый старт
+
+В репозитории есть SDK — `sdk/`; он ничего не собирает и не требует зависимостей,
+кроме Node для самих скриптов.
+
+```sh
+node sdk/create.mjs hello            # рабочий пакет виджета в ./hello
+node sdk/create.mjs hello --dir config/plugins  # сразу в dev-каталог
+node sdk/create.mjs plain --theme    # пакет темы
+node sdk/validate.mjs hello          # проверка до установки
+node sdk/validate.mjs config/plugins # проверить все установленные пакеты
+```
+
+`validate.mjs` повторяет правила загрузчика из `src-tauri/src/plugins.rs`:
+ошибку видно сразу, а не после перезапуска приложения. В `sdk/index.d.ts`
+лежат типы `window.OSE` и `BaseWidget` для автодополнения, в `sdk/schema/` —
+JSON-схемы манифестов для редактора. Подробности — `sdk/README.md`.
+
 ## Виджет
 
 `widget.json`:
@@ -103,6 +121,10 @@
 | `OSE.asset("hello", "cover.png")` | адрес ресурса пакета |
 | `OSE.t("help.title")` | строка интерфейса на языке пользователя |
 | `OSE.cssVar("--md-primary")` | цвет темы для canvas |
+
+Типы этих полей и событий — в `sdk/index.d.ts`: добавьте в начало своего JS
+`/// <reference path="../sdk/index.d.ts" />` и `// @ts-check`, и редактор будет
+подсказывать `this.config` и нагрузку событий.
 
 События приходят те же, что у встроенных виджетов: `chat_message`, `alert`,
 `recent_event`, `goal_update`, `music_control` и остальные из
@@ -195,4 +217,5 @@
 - Песочницы нет: пакет — обычный скрипт страницы.
 - Перезапуск после установки и правки манифеста.
 
-Готовые примеры — в `docs/examples/plugins/`.
+Готовые примеры — в `docs/examples/plugins/`. Заготовки и проверка — в `sdk/`
+(`node sdk/create.mjs`, `node sdk/validate.mjs`).

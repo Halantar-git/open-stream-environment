@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ose-overlay.ru/schemas/theme.json",
+  "title": "Манифест пакета темы OSE",
+  "description": "theme.json в папке пакета. Тема появляется в списке как plugin:<id> и применяется на оверлее, сценах и заставке.",
+  "type": "object",
+  "required": ["apiVersion", "kind", "id", "name", "tokens"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Ссылка на эту схему для автодополнения в редакторе."
+    },
+    "apiVersion": {
+      "const": 1,
+      "description": "Версия API пакетов. Сейчас поддерживается только 1."
+    },
+    "kind": {
+      "const": "theme"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^(?!.*\\.\\.)[a-z0-9][a-z0-9._-]{0,63}$",
+      "description": "Совпадает с именем папки; в списке тем становится plugin:<id>."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Имя темы в «Настройки → Оформление»."
+    },
+    "description": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string",
+      "description": "Версия пакета в semver."
+    },
+    "author": {
+      "type": "string"
+    },
+    "tokens": {
+      "type": "object",
+      "description": "CSS-переменные темы: цвета --md-*, шрифты --font-*, панели --panel-*.",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^--"
+      },
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "css": {
+      "type": "string",
+      "pattern": "\\.css$",
+      "description": "CSS-файл внутри пакета; правила пишутся под [data-theme=\"plugin:<id>\"]."
+    }
+  },
+  "additionalProperties": true
+}
