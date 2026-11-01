@@ -50,6 +50,29 @@
   (пересборка сайта; нужен секрет `SITE_DISPATCH_TOKEN`). Публикация релиза
   остаётся ручной.
 
+## Публикация SDK в npm
+
+SDK пакетов — отдельный npm-пакет из `sdk/` (`ose-plugin`). Он не входит в
+релиз приложения и живёт по своим правилам:
+
+- Имя пакета в `sdk/package.json` и имя команды в `bin` совпадают: `npx`
+  первым словом ищет **пакет**, а не команду. `npx ose-plugin` работает только
+  у пакета `ose-plugin`; расхождение даёт 404 у каждого, кто скопировал
+  команду из README, `docs/plugin-api.md`, `sdk/README.md` или с сайта.
+- Версия в `sdk/package.json` равна последней опубликованной
+  (`npm view ose-plugin version`); новый номер ставят до публикации, а не
+  после.
+- Перед публикацией — `npm pack --dry-run`: в архив обязаны попасть `bin`,
+  `templates`, `schema`, `index.d.ts` и `LICENSE`.
+- Аккаунт с 2FA принимает публикацию только с `--otp=<код>` или
+  automation-токеном (`NODE_AUTH_TOKEN`); без них npm отвечает 409 «Cannot
+  publish over previously staged version». Токен в репозиторий не кладём.
+- Старое имя не оставляем живым: `npm deprecate <старое> "Переименован в …"`
+  или `npm unpublish` в первые 72 часа.
+- После публикации проверяем `npx --yes ose-plugin@latest --help` и что
+  `npx ose-plugin create` вместе с `npx ose-plugin check` проходят в чистой
+  папке.
+
 ## Справка
 
 Справка (`control/modules/help-panel.js` и ключи `help.*` в
