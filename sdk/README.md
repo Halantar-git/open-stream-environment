@@ -19,7 +19,7 @@
 
 ## Быстрый старт
 
-Пакет SDK есть в npm как `ose-plugin-sdk` — репозиторий OSE клонировать не
+Пакет SDK есть в npm как `ose-plugin` — репозиторий OSE клонировать не
 обязательно. Нужен Node 18+.
 
 ```sh
@@ -234,7 +234,7 @@ plain/
 ничего не нужно. Добавьте в начало своего JS:
 
 ```js
-/// <reference path="node_modules/ose-plugin-sdk/index.d.ts" />
+/// <reference path="node_modules/ose-plugin/index.d.ts" />
 // @ts-check
 ```
 
@@ -300,7 +300,7 @@ npx ose-plugin check <папка> --json # для скриптов и CI
 
 ## Публикация в npm
 
-Пакет `ose-plugin-sdk` живёт в `sdk/`. Перед публикацией проверьте состав — в
+Пакет `ose-plugin` живёт в `sdk/`. Перед публикацией проверьте состав — в
 архив должны попасть `bin`, `templates`, `schema`, `index.d.ts` и `LICENSE`:
 
 ```sh
