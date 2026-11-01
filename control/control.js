@@ -353,6 +353,9 @@ const { EVENT_TYPES } = window.SharedEvents;
   const supportBundleBtn = document.getElementById("supportBundleBtn");
   const resetDbBtn = document.getElementById("resetDbBtn");
   const dataStatusEl = document.getElementById("dataStatus");
+  const installPackageBtn = document.getElementById("installPackageBtn");
+  const installPackageFile = document.getElementById("installPackageFile");
+  const packagesStatusEl = document.getElementById("packagesStatus");
   const wheelPanelEl = document.getElementById("wheelPanel");
   const wheelPanelBody = document.getElementById("wheelPanelBody");
   const participantsPanelEl = document.getElementById("participantsPanel");
@@ -3261,6 +3264,47 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   if (openDataFolderBtn) {
     openDataFolderBtn.addEventListener("click", () => window.desktop?.db?.openDataFolder?.());
+  }
+
+  function showPackagesStatus(text, isError) {
+    if (!packagesStatusEl) return;
+    packagesStatusEl.hidden = false;
+    packagesStatusEl.textContent = text;
+    packagesStatusEl.style.color = isError ? "var(--md-error)" : "";
+  }
+
+  /*
+    Пакет ставится архивом: сервер сам распаковывает его в каталог пакетов и
+    проверяет манифест теми же правилами, что при чтении с диска, поэтому здесь
+    остаётся только отдать файл. Заголовок `x-ose-install` — требование сервера:
+    без него он отвечает 403, а посторонняя страница такой запрос не отправит.
+
+    После успеха страница перезагружается: библиотека и список тем собираются
+    при загрузке, и без перезагрузки карточка нового виджета не появится.
+  */
+  if (installPackageBtn && installPackageFile) {
+    installPackageBtn.addEventListener("click", () => installPackageFile.click());
+    installPackageFile.addEventListener("change", async () => {
+      const file = installPackageFile.files && installPackageFile.files[0];
+      installPackageFile.value = "";
+      if (!file) return;
+      showPackagesStatus(t("packages.installing", { name: file.name }), false);
+      try {
+        const response = await fetch("/api/plugins/install", {
+          method: "POST",
+          headers: { "Content-Type": "application/zip", "x-ose-install": "1" },
+          body: await file.arrayBuffer(),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.ok) {
+          throw new Error(payload.error || `HTTP ${response.status}`);
+        }
+        showPackagesStatus(t("packages.installed", { name: payload.installed.id }), false);
+        setTimeout(() => window.location.reload(), 600);
+      } catch (error) {
+        showPackagesStatus(t("packages.failed", { error: error.message }), true);
+      }
+    });
   }
 
   // Отчёт для поддержки собирается в главном процессе (там есть лог, пути и

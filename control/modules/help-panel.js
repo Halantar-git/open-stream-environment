@@ -158,6 +158,7 @@ const SECTIONS = [
       { type: "p", key: "help.packages.p1" },
       { type: "p", key: "help.packages.p2" },
       { type: "p", key: "help.packages.p3" },
+      { type: "p", key: "help.packages.p4" },
     ],
   },
   {

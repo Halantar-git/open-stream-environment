@@ -11,6 +11,7 @@
     "bin",
     "create.mjs",
     "validate.mjs",
+    "pack.mjs",
     "index.d.ts",
     "schema",
     "templates",

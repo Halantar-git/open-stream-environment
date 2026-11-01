@@ -7,9 +7,10 @@
 
 | Файл | Зачем |
 |---|---|
-| `bin/ose-plugin.mjs` | единая команда `npx ose-plugin create` / `npx ose-plugin check` |
+| `bin/ose-plugin.mjs` | единая команда `npx ose-plugin create` / `check` / `pack` |
 | `create.mjs` | создаёт рабочий пакет виджета или темы |
 | `validate.mjs` | проверяет пакет по тем же правилам, что `src-tauri/src/plugins.rs` |
+| `pack.mjs` | собирает пакет в zip для установки из панели |
 | `index.d.ts` | типы `window.OSE`, `BaseWidget`, событий и манифестов |
 | `schema/` | JSON-схемы `widget.json` и `theme.json` для редактора |
 | `templates/` | то, из чего `create` собирает пакет |
@@ -32,10 +33,13 @@ npx ose-plugin create plain --theme --name "Plain"
 # проверить готовый пакет или весь каталог
 npx ose-plugin check hello
 npx ose-plugin check config/plugins
+
+# собрать архив для установки из панели
+npx ose-plugin pack hello
 ```
 
-В репозитории OSE то же самое без сети: `node sdk/create.mjs` и
-`node sdk/validate.mjs`.
+В репозитории OSE то же самое без сети: `node sdk/create.mjs`,
+`node sdk/validate.mjs` и `node sdk/pack.mjs`.
 
 ### Команды
 
@@ -58,8 +62,19 @@ npx ose-plugin check config/plugins
 
 Код возврата `1` — есть ошибки; предупреждения его не меняют.
 
-Пакет сразу рабочий: скопируйте папку в каталог пакетов, обновите страницу
-панели (или источник в OBS) и добавьте карточку из библиотеки.
+`ose-plugin pack <папка>`:
+
+| Параметр | Что делает |
+|---|---|
+| `<папка>` | папка готового пакета; сначала прогоняется та же проверка, что у `check` |
+| `--out <файл>` | куда положить архив; по умолчанию `<id>.zip` в текущем каталоге |
+
+В архив не попадают `node_modules`, `.git` и служебные файлы Finder и Windows.
+Манифест лежит в корне архива.
+
+Пакет сразу рабочий: скопируйте папку в каталог пакетов или поставьте архив
+через «Настройки → Пакеты» → «Установить из ZIP», обновите страницу панели
+(или источник в OBS) и добавьте карточку из библиотеки.
 
 - разработка (`npm run tauri:dev`) — `config/plugins/<id>/`;
 - установленное приложение — каталог данных `com.openstreamenvironment.app`

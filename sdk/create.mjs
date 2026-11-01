@@ -155,6 +155,7 @@ function main(argv) {
   console.log("  2. Обновите страницу панели — манифесты перечитываются при загрузке.");
   console.log("     Оверлей в OBS обновите вручную, чтобы не рвать эфир.");
   console.log(`  3. Проверка после правок: npx ose-plugin check «${target}»`);
+  console.log(`  4. Архив для установки: npx ose-plugin pack «${target}»`);
 }
 
 export { main };

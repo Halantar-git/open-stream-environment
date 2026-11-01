@@ -21,9 +21,11 @@
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Mutex, OnceLock};
 
 use serde_json::{json, Map, Value};
+use zip::ZipArchive;
 
 /// Версия формата манифеста. Пакет с другой версией не загружается.
 pub const API_VERSION: i64 = 1;
@@ -63,6 +65,9 @@ impl Registry {
         let mut dirs: Vec<PathBuf> = entries
             .filter_map(Result::ok)
             .filter(|entry| entry.file_type().map(|kind| kind.is_dir()).unwrap_or(false))
+            // Скрытые каталоги — служебные: туда попадает распаковка архива и
+            // заменённый старый пакет, пока установка не закончилась.
+            .filter(|entry| !entry.file_name().to_string_lossy().starts_with('.'))
             .map(|entry| entry.path())
             .collect();
         dirs.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
@@ -542,6 +547,237 @@ fn relative_file(package: &Path, raw: &str) -> Option<PathBuf> {
     package.join(&relative).is_file().then_some(relative)
 }
 
+// ---- установка из архива ----
+
+/// Сколько принимается архив и сколько — распакованные файлы. Пакет — это код
+/// и картинки; всё, что больше, похоже на попытку забить диск, а не на виджет.
+pub(crate) const MAX_ARCHIVE_BYTES: usize = 8 * 1024 * 1024;
+const MAX_UNPACKED_BYTES: u64 = 32 * 1024 * 1024;
+/// Столько файлов в honest-пакете не бывает: ограничение режет архивы-бомбы.
+const MAX_ENTRIES: usize = 512;
+
+static INSTALL_SEQUENCE: AtomicUsize = AtomicUsize::new(0);
+
+/// Установка — это распаковка во временную папку и переименование. Два
+/// одновременных архива перемешали бы временные файлы, поэтому пускаем по одному.
+static INSTALLING: Mutex<()> = Mutex::new(());
+
+/// Установить пакет из zip-архива в каталог пакетов.
+///
+/// Архив — ровно один пакет: манифест в корне или в единственной папке. Пути
+/// проверяются до распаковки (никаких `..` и абсолютных путей), а манифест —
+/// теми же правилами, что и при чтении с диска: битый пакет на диск не ляжет.
+/// Пакет с тем же `id` заменяется в одном шаге, без ручного удаления папки.
+pub fn install_zip(dir: &Path, bytes: &[u8]) -> Result<Value, String> {
+    let _guard = INSTALLING.lock().unwrap_or_else(|error| error.into_inner());
+    if bytes.is_empty() {
+        return Err("архив пустой".to_string());
+    }
+    if bytes.len() > MAX_ARCHIVE_BYTES {
+        return Err(format!(
+            "архив больше {} МБ",
+            MAX_ARCHIVE_BYTES / (1024 * 1024)
+        ));
+    }
+    let mut archive = ZipArchive::new(std::io::Cursor::new(bytes))
+        .map_err(|error| format!("это не zip-архив: {error}"))?;
+    if archive.len() > MAX_ENTRIES {
+        return Err(format!("в архиве больше {MAX_ENTRIES} файлов"));
+    }
+
+    // Первый проход — только имена и размеры: путь проверяется до того, как хоть
+    // один файл ляжет на диск.
+    let mut entries: Vec<(usize, String, u64)> = Vec::new();
+    let mut declared = 0u64;
+    for index in 0..archive.len() {
+        let entry = archive
+            .by_index(index)
+            .map_err(|error| format!("архив повреждён: {error}"))?;
+        if entry.is_dir() {
+            continue;
+        }
+        if entry
+            .unix_mode()
+            .is_some_and(|mode| mode & 0o170000 == 0o120000)
+        {
+            return Err(format!(
+                "символические ссылки в архиве не поддерживаются: {}",
+                entry.name()
+            ));
+        }
+        let Some(relative) = safe_relative(entry.name()) else {
+            return Err(format!("недопустимый путь в архиве: {}", entry.name()));
+        };
+        let name = relative.to_string_lossy().replace('\\', "/");
+        if junk(&name) {
+            continue;
+        }
+        declared = declared.saturating_add(entry.size());
+        if declared > MAX_UNPACKED_BYTES {
+            return Err(format!(
+                "распакованный пакет больше {} МБ",
+                MAX_UNPACKED_BYTES / (1024 * 1024)
+            ));
+        }
+        entries.push((index, name, entry.size()));
+    }
+    if entries.is_empty() {
+        return Err("в архиве нет файлов".to_string());
+    }
+
+    let root = package_root(&entries)?;
+    let sequence = INSTALL_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+    let temp = dir.join(format!(".incoming-{}-{sequence}", std::process::id()));
+    fs::remove_dir_all(&temp).ok();
+    fs::create_dir_all(&temp).map_err(|error| format!("временный каталог: {error}"))?;
+
+    let result = extract_and_place(dir, &temp, &root, &mut archive, &entries);
+    fs::remove_dir_all(&temp).ok();
+    result
+}
+
+/// Служебные файлы Finder и Windows в пакете не нужны: из-за `__MACOSX` архив
+/// перестал бы выглядеть как «одна папка», и установка отвергла бы годный пакет.
+fn junk(name: &str) -> bool {
+    name.split('/').any(|part| {
+        part == "__MACOSX" || part == ".DS_Store" || part == "Thumbs.db" || part.starts_with("._")
+    })
+}
+
+/// Общая папка пакета внутри архива: пустая строка — манифест лежит в корне,
+/// иначе единственная папка, в которой он есть.
+fn package_root(entries: &[(usize, String, u64)]) -> Result<String, String> {
+    if entries
+        .iter()
+        .any(|(_, name, _)| name == WIDGET_FILE || name == THEME_FILE)
+    {
+        return Ok(String::new());
+    }
+    let mut roots: Vec<&str> = entries
+        .iter()
+        .filter_map(|(_, name, _)| name.split('/').next())
+        .collect();
+    roots.sort_unstable();
+    roots.dedup();
+    if roots.len() != 1 {
+        return Err(
+            "в архиве должно быть ровно одно: манифест в корне или одна папка с ним".to_string(),
+        );
+    }
+    let root = roots[0].to_string();
+    let widget = format!("{root}/{WIDGET_FILE}");
+    let theme = format!("{root}/{THEME_FILE}");
+    if !entries
+        .iter()
+        .any(|(_, name, _)| *name == widget || *name == theme)
+    {
+        return Err(format!(
+            "{WIDGET_FILE} или {THEME_FILE} должен лежать в корне архива или в единственной папке"
+        ));
+    }
+    Ok(root)
+}
+
+fn extract_and_place<R: std::io::Read + std::io::Seek>(
+    dir: &Path,
+    temp: &Path,
+    root: &str,
+    archive: &mut ZipArchive<R>,
+    entries: &[(usize, String, u64)],
+) -> Result<Value, String> {
+    let mut written = 0u64;
+    for (index, name, _) in entries {
+        let mut entry = archive
+            .by_index(*index)
+            .map_err(|error| format!("архив повреждён: {error}"))?;
+        let target = temp.join(name);
+        if let Some(parent) = target.parent() {
+            fs::create_dir_all(parent)
+                .map_err(|error| format!("каталог {}: {error}", parent.display()))?;
+        }
+        let mut file =
+            fs::File::create(&target).map_err(|error| format!("файл {name}: {error}"))?;
+        let copied = std::io::copy(&mut entry, &mut file)
+            .map_err(|error| format!("файл {name}: {error}"))?;
+        // Заявленный в заголовке размер может врать: считаем, сколько реально
+        // записали, и обрываем распаковку на пределе.
+        written = written.saturating_add(copied);
+        if written > MAX_UNPACKED_BYTES {
+            return Err(format!(
+                "распакованный пакет больше {} МБ",
+                MAX_UNPACKED_BYTES / (1024 * 1024)
+            ));
+        }
+    }
+
+    let package = if root.is_empty() {
+        temp.to_path_buf()
+    } else {
+        temp.join(root)
+    };
+    let widget = package.join(WIDGET_FILE).is_file();
+    let theme = package.join(THEME_FILE).is_file();
+    let manifest_file = match (widget, theme) {
+        (true, true) => {
+            return Err(format!(
+                "в пакете два манифеста: {WIDGET_FILE} и {THEME_FILE}"
+            ))
+        }
+        (true, false) => WIDGET_FILE,
+        (false, true) => THEME_FILE,
+        (false, false) => return Err(format!("нет ни {WIDGET_FILE}, ни {THEME_FILE}")),
+    };
+    let manifest = read_manifest(&package.join(manifest_file))?;
+    let id = text(&manifest, "id").unwrap_or_default();
+    if !valid_id(&id) {
+        return Err(
+            "id в манифесте должен быть латиницей в нижнем регистре: a-z, 0-9, «.», «-», «_»"
+                .to_string(),
+        );
+    }
+    if !root.is_empty() && root != id {
+        return Err(format!("папка «{root}» в архиве не совпадает с id «{id}»"));
+    }
+    // Тот же разбор, что и при чтении каталога: пакет с битым entry, стилями
+    // или настройкой не должен оказаться на диске.
+    let mut probe = Registry::default();
+    probe.read_package(&id, &package)?;
+
+    let target = dir.join(&id);
+    let replaced = target.exists();
+    let backup = if replaced {
+        let sequence = INSTALL_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+        let backup = dir.join(format!(".replaced-{}-{sequence}", std::process::id()));
+        fs::rename(&target, &backup)
+            .map_err(|error| format!("не удалось заменить «{id}»: {error}"))?;
+        Some(backup)
+    } else {
+        None
+    };
+    let placed = if root.is_empty() {
+        fs::rename(temp, &target)
+    } else {
+        fs::rename(&package, &target)
+    };
+    if let Err(error) = placed {
+        // Старый пакет возвращается на место: неудачная установка не должна
+        // оставить пользователя без работающего виджета.
+        if let Some(backup) = &backup {
+            fs::rename(backup, &target).ok();
+        }
+        return Err(format!("не удалось установить «{id}»: {error}"));
+    }
+    if let Some(backup) = backup {
+        fs::remove_dir_all(backup).ok();
+    }
+    refresh();
+    Ok(json!({
+        "id": id,
+        "kind": if widget { "widget" } else { "theme" },
+        "replaced": replaced,
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -863,5 +1099,132 @@ mod tests {
         fs::remove_dir_all(temp.0.join("hello")).expect("удаление пакета");
         plugins.refresh();
         assert!(plugins.widget_def("plugin:hello").is_none());
+    }
+
+    fn zip_bytes(files: &[(&str, &str)]) -> Vec<u8> {
+        use std::io::Write;
+        let mut writer = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+        for (name, body) in files {
+            writer
+                .start_file(*name, zip::write::SimpleFileOptions::default())
+                .expect("файл в архиве");
+            writer.write_all(body.as_bytes()).expect("тело файла");
+        }
+        writer.finish().expect("архив").into_inner()
+    }
+
+    /// Временные каталоги установки не должны оставаться рядом с пакетами:
+    /// `Registry::scan` их пропускает, но мусор в данных пользователя ни к чему.
+    fn hidden_leftovers(dir: &Path) -> Vec<String> {
+        fs::read_dir(dir)
+            .expect("каталог пакетов")
+            .filter_map(Result::ok)
+            .map(|entry| entry.file_name().to_string_lossy().to_string())
+            .filter(|name| name.starts_with('.'))
+            .collect()
+    }
+
+    #[test]
+    fn an_archive_installs_a_package_with_its_folder() {
+        let temp = TempDir::new("install");
+        let manifest = widget_manifest("");
+        let archive = zip_bytes(&[
+            ("hello/widget.json", manifest.as_str()),
+            ("hello/widget.js", "OSE.defineWidget('hello', class {});"),
+            ("hello/widget.css", ".x{}"),
+            // Служебная папка Finder не должна ломать «одну папку в архиве».
+            ("__MACOSX/hello/._widget.json", "junk"),
+        ]);
+
+        let installed = install_zip(&temp.0, &archive).expect("установка");
+        assert_eq!(installed["id"], json!("hello"));
+        assert_eq!(installed["kind"], json!("widget"));
+        assert_eq!(installed["replaced"], json!(false));
+        assert!(temp.0.join("hello/widget.js").is_file());
+        assert!(!temp.0.join("__MACOSX").exists());
+        assert!(hidden_leftovers(&temp.0).is_empty());
+    }
+
+    #[test]
+    fn a_flat_archive_takes_the_id_from_the_manifest() {
+        let temp = TempDir::new("flat");
+        let manifest = widget_manifest("");
+        let archive = zip_bytes(&[
+            ("widget.json", manifest.as_str()),
+            ("widget.js", ""),
+            ("widget.css", ".x{}"),
+        ]);
+
+        install_zip(&temp.0, &archive).expect("установка");
+        assert!(temp.0.join("hello/widget.json").is_file());
+    }
+
+    #[test]
+    fn a_path_outside_the_package_is_refused() {
+        let temp = TempDir::new("slip");
+        let manifest = widget_manifest("");
+        let archive = zip_bytes(&[
+            ("hello/widget.json", manifest.as_str()),
+            ("hello/widget.js", ""),
+            ("hello/../../evil.txt", "x"),
+        ]);
+
+        let error = install_zip(&temp.0, &archive).expect_err("путь вне пакета");
+        assert!(error.contains("недопустимый путь"), "{error}");
+        assert!(!temp.0.parent().unwrap().join("evil.txt").exists());
+        assert!(!temp.0.join("hello").exists());
+    }
+
+    #[test]
+    fn an_archive_folder_must_match_the_manifest_id() {
+        let temp = TempDir::new("mismatch");
+        let manifest = widget_manifest("");
+        let archive = zip_bytes(&[
+            ("other/widget.json", manifest.as_str()),
+            ("other/widget.js", ""),
+        ]);
+
+        let error = install_zip(&temp.0, &archive).expect_err("имя папки");
+        assert!(error.contains("не совпадает с id"), "{error}");
+        assert!(!temp.0.join("other").exists());
+        assert!(hidden_leftovers(&temp.0).is_empty());
+    }
+
+    #[test]
+    fn a_broken_package_is_not_left_on_disk() {
+        let temp = TempDir::new("broken-zip");
+        let archive = zip_bytes(&[
+            ("hello/widget.json", "{\"apiVersion\": 1}"),
+            ("hello/widget.js", ""),
+        ]);
+
+        assert!(install_zip(&temp.0, &archive).is_err());
+        assert!(!temp.0.join("hello").exists());
+        assert!(hidden_leftovers(&temp.0).is_empty());
+    }
+
+    #[test]
+    fn installing_the_same_id_replaces_the_package() {
+        let temp = TempDir::new("replace");
+        let manifest = widget_manifest("");
+        let first = zip_bytes(&[
+            ("hello/widget.json", manifest.as_str()),
+            ("hello/widget.js", "first"),
+            ("hello/widget.css", ".x{}"),
+        ]);
+        install_zip(&temp.0, &first).expect("первая установка");
+
+        let second = zip_bytes(&[
+            ("hello/widget.json", manifest.as_str()),
+            ("hello/widget.js", "second"),
+            ("hello/widget.css", ".x{}"),
+        ]);
+        let installed = install_zip(&temp.0, &second).expect("замена");
+        assert_eq!(installed["replaced"], json!(true));
+        assert_eq!(
+            fs::read_to_string(temp.0.join("hello/widget.js")).unwrap(),
+            "second"
+        );
+        assert!(hidden_leftovers(&temp.0).is_empty());
     }
 }

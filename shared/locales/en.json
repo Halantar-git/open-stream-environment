@@ -1494,6 +1494,15 @@
     "empty": "No messages yet",
     "disabled": "Chat history is disabled. Enable it in the “Data & storage” section."
   },
+  "packages": {
+    "title": "Widget and theme packages",
+    "desc": "Widgets and themes from a folder: drop a package into the data directory or install it from an archive. A new package appears in the library without restarting the app.",
+    "install": "Install from ZIP",
+    "hint": "One package per archive: widget.json or theme.json at the root or inside a single folder, and the manifest id matches the folder name. A package with the same id is replaced. Package code runs in the overlay with full permissions — install only what you trust.",
+    "installing": "Installing “{{name}}”…",
+    "installed": "Package “{{name}}” installed — the page will reload now.",
+    "failed": "Could not install: {{error}}"
+  },
   "data": {
     "title": "Data & storage",
     "desc": "Local database: layout, sessions and event/chat history. Files live next to the app settings.",
@@ -1753,7 +1762,8 @@
       "title": "Widget and theme packages",
       "p1": "A widget or theme can be installed as a folder in the packages directory: %APPDATA%\\com.openstreamenvironment.app\\plugins\\<id>\\ (in development — config/plugins/<id>/). No restart is needed: manifests are re-read when a page loads, so returning to the panel is enough — it reloads itself once it sees the new list. Refresh the OBS overlay source manually so the stream is not interrupted.",
       "p2": "A widget is described by widget.json — name, code file, styles, default size and a settings schema. It appears as its own card in the library, and the inspector renders fields from the schema. A theme is described by theme.json — a token set and optional CSS; it appears in the theme list as plugin:<id>.",
-      "p3": "Package code runs in the overlay page with full permissions, so install only trusted packages. See docs/plugin-api.md and docs/examples/plugins/ for the manifest format and examples."
+      "p3": "Package code runs in the overlay page with full permissions, so install only trusted packages. See docs/plugin-api.md and docs/examples/plugins/ for the manifest format and examples.",
+      "p4": "A ready archive is installed from Settings → Packages with the Install from ZIP button: one package per archive (manifest at the root or inside a single folder), and a package with the same id is replaced. The server checks the manifest and files before installing, then the page reloads itself — the library and themes already include the new package. Installation works only from this machine: the phone remote and third-party pages cannot send this request."
     },
     "themes": {
       "title": "Themes",
@@ -1931,7 +1941,7 @@
       "p2": "Click Update to open a small menu with Later or Update. Update downloads and installs the new version; Later closes the menu. You can also press Check for updates in Settings → Application: if an update is found, the same button becomes Update and restart, and if not, it shows No updates available next to it. In dev mode (npm start) auto-update is unavailable and only works in packaged builds."
     },
     "data": {
-      "title": "Data and backups",
+      "title": "Data & backups",
       "p1": "Exporting settings saves the full config.json plus all files from the media folder (sounds, images, GIFs) in a single file.",
       "p2": "On import, media files are automatically restored into the media folder.",
       "p3": "The media cleanup command in the terminal removes unused media files. Window sizes and positions are remembered, and server logs are written to the logs folder.",

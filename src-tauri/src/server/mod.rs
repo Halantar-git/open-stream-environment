@@ -30,12 +30,13 @@ use std::net::{Ipv4Addr, SocketAddr, TcpListener};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
+use axum::body::Bytes;
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
-use axum::extract::{ConnectInfo, Query, RawQuery, Request, State};
+use axum::extract::{ConnectInfo, DefaultBodyLimit, Query, RawQuery, Request, State};
 use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, get_service};
+use axum::routing::{get, get_service, post};
 use axum::{Json, Router};
 use chrono::Utc;
 use serde_json::{json, Map, Value};
@@ -776,7 +777,7 @@ fn diagnostics_routes(diagnostics: Arc<Diagnostics>) -> Router {
         .with_state(Routes { diagnostics })
 }
 
-/// Пакеты виджетов и тем: список и файлы.
+/// Пакеты виджетов и тем: список, установка и файлы.
 ///
 /// `/api/plugins` читают панель, оверлей и сцены при загрузке страницы: по нему
 /// они узнают, какие виджеты добавить в библиотеку, а какие темы подключить.
@@ -786,8 +787,19 @@ fn diagnostics_routes(diagnostics: Arc<Diagnostics>) -> Router {
 fn plugins_routes(plugins_dir: PathBuf) -> Router {
     Router::new()
         .route("/api/plugins", get(plugins_api))
-        .nest_service("/plugins", ServeDir::new(plugins_dir))
+        .route(
+            "/api/plugins/install",
+            post(plugins_install).layer(DefaultBodyLimit::max(crate::plugins::MAX_ARCHIVE_BYTES)),
+        )
+        .nest_service("/plugins", ServeDir::new(plugins_dir.clone()))
+        .with_state(PluginRoutes { dir: plugins_dir })
         .layer(middleware::from_fn(no_cache))
+}
+
+/// Каталог, в который ставится пакет из архива.
+#[derive(Clone)]
+struct PluginRoutes {
+    dir: PathBuf,
 }
 
 async fn plugins_api() -> Response {
@@ -796,6 +808,39 @@ async fn plugins_api() -> Response {
     // — новый виджет появляется без перезапуска, достаточно обновить страницу.
     crate::plugins::refresh();
     let mut response = Json(crate::plugins::api_payload()).into_response();
+    no_store(&mut response);
+    response
+}
+
+/// Установка пакета из zip-архива.
+///
+/// Меняет данные пользователя, поэтому принимается только с этой машины и
+/// только с заголовком `x-ose-install`: страница чужого сайта такой запрос без
+/// CORS-предпроверки не отправит, а её ответ всё равно не прочитает.
+async fn plugins_install(
+    State(routes): State<PluginRoutes>,
+    ConnectInfo(address): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    if !access::is_loopback_addr(&address.ip()) || !headers.contains_key("x-ose-install") {
+        return (
+            StatusCode::FORBIDDEN,
+            "403: установка пакета доступна только с этой машины",
+        )
+            .into_response();
+    }
+    let mut response = match crate::plugins::install_zip(&routes.dir, &body) {
+        Ok(installed) => Json(json!({ "ok": true, "installed": installed })).into_response(),
+        Err(error) => {
+            eprintln!("[ose] установка пакета: {error}");
+            (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "ok": false, "error": error })),
+            )
+                .into_response()
+        }
+    };
     no_store(&mut response);
     response
 }
@@ -1517,6 +1562,58 @@ mod tests {
         assert_eq!(report["apiVersion"], json!(crate::plugins::API_VERSION));
         assert!(report["plugins"].is_array());
         assert!(report["errors"].is_array());
+    }
+
+    /// Запрос установки пакета: `ConnectInfo` подставляет адрес, как настоящий
+    /// сервер, а заголовок `x-ose-install` отправляет панель.
+    fn install_request(address: [u8; 4], body: Vec<u8>, marked: bool) -> Request<Body> {
+        let mut builder = Request::builder()
+            .method("POST")
+            .uri("/api/plugins/install")
+            .header(header::CONTENT_TYPE, "application/zip")
+            .extension(ConnectInfo(SocketAddr::from((address, 1234))));
+        if marked {
+            builder = builder.header("x-ose-install", "1");
+        }
+        builder.body(Body::from(body)).unwrap()
+    }
+
+    #[tokio::test]
+    async fn a_package_install_needs_this_machine_and_a_marked_request() {
+        let fixture = Fixture::new();
+
+        // Без заголовка — отказ: такую форму чужой сайт отправить не может.
+        let response = fixture
+            .app()
+            .oneshot(install_request([127, 0, 0, 1], Vec::new(), false))
+            .await
+            .expect("запрос должен дойти до сервера");
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        // Из локальной сети — тоже отказ: установка меняет данные пользователя.
+        let response = fixture
+            .app()
+            .oneshot(install_request([192, 168, 1, 5], Vec::new(), true))
+            .await
+            .expect("запрос должен дойти до сервера");
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        // С этой машины и с заголовком — доходит до распаковки и отвечает JSON.
+        let response = fixture
+            .app()
+            .oneshot(install_request([127, 0, 0, 1], Vec::new(), true))
+            .await
+            .expect("запрос должен дойти до сервера");
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let report: serde_json::Value =
+            serde_json::from_slice(&body).expect("ответ должен быть JSON");
+        assert_eq!(report["ok"], json!(false));
+        assert!(report["error"]
+            .as_str()
+            .unwrap_or_default()
+            .contains("пустой"));
     }
 
     #[tokio::test]

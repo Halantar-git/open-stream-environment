@@ -26,6 +26,7 @@
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const zlib = require("zlib");
 const { execFileSync } = require("child_process");
 
 const ROOT = path.join(__dirname, "..");
@@ -88,6 +89,28 @@ function manifestOf(folder, file) {
 
 function report(out) {
   return JSON.parse(out);
+}
+
+/*
+  Минимальная распаковка для проверки `pack`: читаем локальные заголовки по
+  порядку и разворачиваем deflate. Этого достаточно, чтобы убедиться, что
+  смещения, размеры и CRC посчитаны правильно.
+*/
+function unzip(buffer) {
+  const entries = {};
+  let offset = 0;
+  while (offset + 4 <= buffer.length && buffer.readUInt32LE(offset) === 0x04034b50) {
+    const method = buffer.readUInt16LE(offset + 8);
+    const size = buffer.readUInt32LE(offset + 18);
+    const nameLength = buffer.readUInt16LE(offset + 26);
+    const extraLength = buffer.readUInt16LE(offset + 28);
+    const name = buffer.toString("utf8", offset + 30, offset + 30 + nameLength);
+    const start = offset + 30 + nameLength + extraLength;
+    const body = buffer.subarray(start, start + size);
+    entries[name] = method === 8 ? zlib.inflateRawSync(body) : body;
+    offset = start + size;
+  }
+  return entries;
 }
 
 describe("SDK пакетов", () => {
@@ -211,11 +234,43 @@ describe("SDK пакетов", () => {
     expect(checked.code).toBe(0);
   });
 
+  test("ose-plugin pack собирает архив без мусора", () => {
+    const dir = tempDir();
+    expect(create(["hello", "--dir", dir]).code).toBe(0);
+    const folder = path.join(dir, "hello");
+    // Мусор, который не должен уехать в архив: зависимости и файлы Finder.
+    fs.mkdirSync(path.join(folder, "node_modules", "junk"), { recursive: true });
+    fs.writeFileSync(path.join(folder, "node_modules", "junk", "index.js"), "x", "utf8");
+    fs.writeFileSync(path.join(folder, ".DS_Store"), "x", "utf8");
+
+    const out = path.join(dir, "hello.zip");
+    const packed = run("sdk/bin/ose-plugin.mjs", ["pack", folder, "--out", out]);
+    expect(packed.code).toBe(0);
+    expect(packed.out).toContain("Архив готов");
+
+    const archive = unzip(fs.readFileSync(out));
+    expect(Object.keys(archive).sort()).toEqual(["README.md", "widget.css", "widget.js", "widget.json"]);
+    // Содержимое совпадает с файлами папки: смещения и deflate не сдвинуты.
+    expect(archive["widget.js"].toString("utf8")).toBe(
+      fs.readFileSync(path.join(folder, "widget.js"), "utf8")
+    );
+    expect(JSON.parse(archive["widget.json"].toString("utf8")).id).toBe("hello");
+  });
+
+  test("pack не собирает битый пакет", () => {
+    const dir = tempDir();
+    const folder = writePackage(dir, "demo", "widget.json", JSON.stringify({ apiVersion: 1 }, null, 2));
+    const packed = run("sdk/bin/ose-plugin.mjs", ["pack", folder, "--out", path.join(dir, "demo.zip")]);
+    expect(packed.code).toBe(1);
+    expect(packed.out).toContain("ошибка");
+    expect(fs.existsSync(path.join(dir, "demo.zip"))).toBe(false);
+  });
+
   test("npm-пакет содержит команду, шаблоны и лицензию", () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(SDK, "package.json"), "utf8"));
     expect(pkg.name).toBe("ose-plugin");
     expect(pkg.bin["ose-plugin"]).toBe("bin/ose-plugin.mjs");
-    ["bin", "templates", "schema", "index.d.ts", "LICENSE"].forEach((entry) => {
+    ["bin", "templates", "schema", "index.d.ts", "LICENSE", "pack.mjs"].forEach((entry) => {
       expect(pkg.files).toContain(entry);
     });
     expect(fs.existsSync(path.join(SDK, "bin", "ose-plugin.mjs"))).toBe(true);
@@ -225,6 +280,7 @@ describe("SDK пакетов", () => {
     expect(help.code).toBe(0);
     expect(help.out).toContain("create");
     expect(help.out).toContain("check");
+    expect(help.out).toContain("pack");
   });
 
   test("типы настроек и версия API не расходятся с Rust-загрузчиком", () => {

@@ -70,6 +70,7 @@ describe("docs/openapi.json", () => {
       "/healthz",
       "/support-bundle",
       "/api/plugins",
+      "/api/plugins/install",
       "/plugins/{id}/{file}",
       "/media/{file}",
       "/oauth/twitch/callback",

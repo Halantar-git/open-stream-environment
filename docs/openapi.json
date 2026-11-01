@@ -155,6 +155,71 @@
         }
       }
     },
+    "/api/plugins/install": {
+      "post": {
+        "tags": ["plugins"],
+        "operationId": "installPlugin",
+        "summary": "Установить пакет из zip-архива",
+        "description": "Тело — сам архив. Принимается только с этой машины и только с заголовком `x-ose-install`: такую форму чужая страница не отправит. В архиве — один пакет: манифест в корне или в единственной папке. Пакет с тем же `id` заменяется, а битый на диск не попадает.",
+        "parameters": [
+          {
+            "name": "x-ose-install",
+            "in": "header",
+            "required": true,
+            "description": "Метка панели: без неё сервер отвечает 403.",
+            "schema": { "type": "string", "enum": ["1"] }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/zip": {
+              "schema": { "type": "string", "format": "binary" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Пакет установлен",
+            "headers": {
+              "Cache-Control": {
+                "schema": { "type": "string", "const": "no-store" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PluginInstalled" },
+                "examples": {
+                  "widget": {
+                    "summary": "Новый виджет",
+                    "value": {
+                      "ok": true,
+                      "installed": { "id": "hello", "kind": "widget", "replaced": false }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Архив не подошёл",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PluginInstallError" }
+              }
+            }
+          },
+          "403": {
+            "description": "Запрос не с этой машины или без заголовка",
+            "content": {
+              "text/plain": {
+                "schema": { "type": "string", "example": "403: установка пакета доступна только с этой машины" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/plugins/{id}/{file}": {
       "get": {
         "tags": ["plugins"],
@@ -336,6 +401,36 @@
           }
         },
         "additionalProperties": true
+      },
+      "PluginInstalled": {
+        "type": "object",
+        "required": ["ok", "installed"],
+        "properties": {
+          "ok": { "type": "boolean", "const": true },
+          "installed": {
+            "type": "object",
+            "required": ["id", "kind", "replaced"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+              "kind": { "type": "string", "enum": ["widget", "theme"] },
+              "replaced": {
+                "type": "boolean",
+                "description": "Пакет с этим id уже стоял и был заменён"
+              }
+            }
+          }
+        }
+      },
+      "PluginInstallError": {
+        "type": "object",
+        "required": ["ok", "error"],
+        "properties": {
+          "ok": { "type": "boolean", "const": false },
+          "error": {
+            "type": "string",
+            "example": "это не zip-архив: invalid Zip archive: Could not find central directory end"
+          }
+        }
       },
       "PluginsResponse": {
         "type": "object",
