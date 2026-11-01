@@ -96,10 +96,11 @@ pub fn catalog() -> &'static Catalog {
 /// Сначала встроенный каталог, затем пакеты из данных пользователя: тип
 /// `plugin:<id>` живёт только в реестре пакетов, но проходит через те же
 /// правила (геометрия, минимальные размеры, настройки по умолчанию).
-pub fn def(kind: &str) -> Option<&'static Value> {
+pub fn def(kind: &str) -> Option<Value> {
     catalog()
         .widget_types()
         .get(kind)
+        .cloned()
         .or_else(|| crate::plugins::widget_def(kind))
 }
 
@@ -124,15 +125,14 @@ pub fn min_size(kind: &str) -> Option<(f64, f64)> {
 }
 
 /// Геометрия по умолчанию: где виджет появляется, когда его только добавили.
-pub fn default_geometry(kind: &str) -> Option<&'static Value> {
-    def(kind)?.get("defaultGeometry")
+pub fn default_geometry(kind: &str) -> Option<Value> {
+    def(kind)?.get("defaultGeometry").cloned()
 }
 
 /// Настройки по умолчанию; у незнакомого вида — пустой объект.
 pub fn default_config(kind: &str) -> Value {
     def(kind)
-        .and_then(|def| def.get("defaultConfig"))
-        .cloned()
+        .and_then(|def| def.get("defaultConfig").cloned())
         .unwrap_or_else(|| json!({}))
 }
 
@@ -230,10 +230,7 @@ pub fn widget_role(kind: &str) -> Option<String> {
     if let Some(replaced) = replaced_by_3d(kind) {
         return Some(replaced.to_string());
     }
-    def(kind)
-        .and_then(|def| def.get("role"))
-        .and_then(Value::as_str)
-        .map(str::to_string)
+    def(kind).and_then(|def| def.get("role").and_then(Value::as_str).map(str::to_string))
 }
 
 /// Вид виджета, который представляет роль в явном наборе.
@@ -631,34 +628,34 @@ mod tests {
         ]);
 
         assert!(theme_allows_widget(
-            timer,
+            &timer,
             &json!({ "activeThemeId": "orbital", "themes": themes })
         ));
         assert!(theme_allows_widget(
-            timer,
+            &timer,
             &json!({ "activeThemeId": "custom-1", "themes": themes })
         ));
         assert!(!theme_allows_widget(
-            timer,
+            &timer,
             &json!({ "activeThemeId": "nebula", "themes": themes })
         ));
         assert!(!theme_allows_widget(
-            timer,
+            &timer,
             &json!({ "activeThemeId": "pixel", "themes": themes })
         ));
         // Своя тема не подтверждена списком — считаем встроенной.
         assert!(!theme_allows_widget(
-            timer,
+            &timer,
             &json!({ "activeThemeId": "custom-1" })
         ));
 
         // Виджеты без привязки доступны в любой теме.
         let chat = def("chat").expect("чат");
         assert!(theme_allows_widget(
-            chat,
+            &chat,
             &json!({ "activeThemeId": "nebula", "themes": themes })
         ));
-        assert!(theme_allows_widget(chat, &Value::Null));
+        assert!(theme_allows_widget(&chat, &Value::Null));
         assert!(theme_allows_widget(
             &Value::Null,
             &json!({ "activeThemeId": "orbital" })

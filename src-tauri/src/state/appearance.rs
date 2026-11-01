@@ -162,7 +162,7 @@ pub fn resolve_theme(config: &ConfigFile, id: &str) -> Option<Value> {
     // Тема из пакета уже лежит готовым набором токенов: семена для неё не
     // нужны, название и цвета берутся из манифеста.
     if let Some(theme) = crate::plugins::theme(id) {
-        return Some(theme.clone());
+        return Some(theme);
     }
     let custom = find_custom_theme(config, id)?;
     let seeds = custom.get("seeds");
@@ -742,7 +742,8 @@ fn base_2d(id: &str) -> Option<String> {
 
 /// 3D-виджет ли это — по каталогу, а не по имени.
 fn is_three_d_widget(kind: &str) -> bool {
-    catalog::def(kind)
+    let def = catalog::def(kind);
+    def.as_ref()
         .and_then(|def| def.get("dimension"))
         .and_then(Value::as_str)
         == Some("3d")

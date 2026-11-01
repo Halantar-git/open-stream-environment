@@ -157,6 +157,21 @@ describe("shared/plugins: каталог и темы", () => {
     expect(plugins.plugins).toEqual([]);
     expect(plugins.errors).toEqual([]);
   });
+
+  test("изменение списка пакетов видно без повторной загрузки", async () => {
+    const plugins = loadPlugins({ payload: { apiVersion: 1, plugins: [widget] } });
+    await plugins.load({ widgets: false });
+
+    // Тот же список — панели незачем перезагружаться.
+    expect(await plugins.reloadIfChanged()).toBe(false);
+
+    global.fetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, json: () => Promise.resolve({ apiVersion: 1, plugins: [] }) })
+    );
+    expect(await plugins.reloadIfChanged()).toBe(true);
+    // Подпись обновилась: повторный опрос того же ответа — уже без изменений.
+    expect(await plugins.reloadIfChanged()).toBe(false);
+  });
 });
 
 describe("shared/plugins: классы виджетов", () => {

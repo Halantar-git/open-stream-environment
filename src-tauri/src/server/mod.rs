@@ -372,6 +372,10 @@ async fn handle_socket(
     // Первыми кадрами — словари и состояние: без них клиент остался бы с пустым
     // интерфейсом (панель ждёт `state`, оверлей — тему и раскладку).
     if guest_slot.is_none() {
+        // Страница только подключилась: перечитываем пакеты, чтобы первый же
+        // снимок состояния и список тем уже видели новые папки — так обновление
+        // страницы заменяет перезапуск приложения.
+        crate::plugins::refresh();
         if let Some(locales) = &bus.locales {
             send_frame(
                 &mut socket,
@@ -787,6 +791,10 @@ fn plugins_routes(plugins_dir: PathBuf) -> Router {
 }
 
 async fn plugins_api() -> Response {
+    // Пакеты могли добавить или удалить, пока приложение работает: страница
+    // загружает этот список при открытии, поэтому перечитываем манифесты здесь
+    // — новый виджет появляется без перезапуска, достаточно обновить страницу.
+    crate::plugins::refresh();
     let mut response = Json(crate::plugins::api_payload()).into_response();
     no_store(&mut response);
     response

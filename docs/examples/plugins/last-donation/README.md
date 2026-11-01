@@ -27,7 +27,8 @@
 
 ## Установка
 
-Скопируйте папку `last-donation` в каталог пакетов и перезапустите OSE:
+Скопируйте папку `last-donation` в каталог пакетов — перезапуск не нужен,
+достаточно обновить страницу:
 
 - разработка (`npm run tauri:dev`) — `config/plugins/`;
 - установленное приложение — `%APPDATA%\com.openstreamenvironment.app\plugins\`.

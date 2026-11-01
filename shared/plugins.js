@@ -50,6 +50,9 @@
     widgets: {},
     listeners: [],
     loading: "",
+    // Подпись загруженного списка: панель сравнивает её при возврате фокуса и
+    // перезагружает страницу, если пакеты добавили или убрали.
+    signature: "",
   };
 
   function catalog() {
@@ -162,6 +165,23 @@
     }
   }
 
+  /* Подпись списка: порядок и содержимое важны, поэтому сравниваем JSON целиком.
+     Это дешёвый способ заметить новую папку, не перестраивая каталог на лету. */
+  function signatureOf(payload) {
+    return JSON.stringify({ plugins: payload.plugins || [], errors: payload.errors || [] });
+  }
+
+  /* Перечитать список и сказать, отличается ли он от загруженного.
+     Панель по `true` перезагружает страницу — так новый пакет появляется без
+     перезапуска приложения. Оверлей в OBS обновляют вручную. */
+  async function reloadIfChanged() {
+    const payload = await fetchPlugins();
+    const signature = signatureOf(payload);
+    if (signature === state.signature) return false;
+    state.signature = signature;
+    return true;
+  }
+
   /*
     Прочитать пакеты и подключить их.
 
@@ -173,6 +193,7 @@
     const opts = options || {};
     state.ready = fetchPlugins()
       .then(async (payload) => {
+        state.signature = signatureOf(payload);
         state.plugins = Array.isArray(payload.plugins) ? payload.plugins : [];
         state.errors = state.errors.concat(Array.isArray(payload.errors) ? payload.errors : []);
 
@@ -272,6 +293,7 @@
     cssVar,
     t,
     load,
+    reloadIfChanged,
   };
 
   return api;

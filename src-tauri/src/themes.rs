@@ -185,8 +185,7 @@ mod tests {
             .iter()
             .filter_map(|kind| catalog::def(kind))
             .filter(|def| def["dimension"] == serde_json::json!("3d"))
-            .filter_map(|def| def["theme"].as_str())
-            .map(str::to_string)
+            .filter_map(|def| def["theme"].as_str().map(str::to_string))
             .collect();
 
         assert_eq!(

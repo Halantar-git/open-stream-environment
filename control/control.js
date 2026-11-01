@@ -5434,5 +5434,23 @@ if (window.OSE) {
   window.OSE.load({ widgets: false }).then(() => {
     renderLibrary();
     renderThemeGrid();
+
+    /*
+      Пакет могли добавить или убрать при работающем приложении: при возврате
+      фокуса сравниваем список с загруженным и перезагружаем страницу — так
+      библиотека и темы соберутся заново без перезапуска. Оверлей в OBS так не
+      делает: его обновляют вручную, чтобы не рвать эфир.
+    */
+    let lastCheck = 0;
+    window.addEventListener("focus", () => {
+      const now = Date.now();
+      if (now - lastCheck < 2000) return;
+      lastCheck = now;
+      window.OSE.reloadIfChanged()
+        .then((changed) => {
+          if (changed) window.location.reload();
+        })
+        .catch(() => {});
+    });
   });
 }

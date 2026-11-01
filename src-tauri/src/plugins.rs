@@ -8,8 +8,10 @@
 //! Зачем реестр, а не чтение на каждый запрос: виджет из пакета должен попасть
 //! в каталог (`catalog::def`) и пережить чистку раскладки, а тема — в список
 //! тем и в `resolve_theme`. Оба живут в горячем пути снимка состояния, поэтому
-//! манифесты разбираются один раз. Установка и удаление пакета требуют
-//! перезапуска — в API это описано.
+//! готовые определения хранятся в памяти. Манифесты перечитываются по запросу
+//! `/api/plugins`: панель и оверлей спрашивают его при загрузке страницы,
+//! поэтому новый пакет виден без перезапуска приложения — хватает обновить
+//! страницу или источник в OBS.
 //!
 //! Безопасность: путь `entry`/`styles`/`css` не может выйти за каталог пакета
 //! (никаких `..` и абсолютных путей), идентификатор совпадает с именем папки.
@@ -19,7 +21,7 @@
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 
 use serde_json::{json, Map, Value};
 
@@ -42,9 +44,9 @@ const SETTING_TYPES: &[&str] = &[
 #[derive(Debug, Default)]
 pub struct Registry {
     /// Тип виджета (`plugin:<id>`) -> определение для каталога.
-    widgets: BTreeMap<String, &'static Value>,
+    widgets: BTreeMap<String, Value>,
     /// Идентификатор темы (`plugin:<id>`) -> тема в форме `themes.js`.
-    themes: BTreeMap<String, &'static Value>,
+    themes: BTreeMap<String, Value>,
     /// Список для `/api/plugins`.
     list: Vec<Value>,
     /// Пакеты, которые не удалось прочитать: `{ dir, error }`.
@@ -144,7 +146,7 @@ impl Registry {
             "defaultConfig": Value::Object(defaults),
             "settings": settings.clone(),
         });
-        self.widgets.insert(plugin_type.clone(), leak(def));
+        self.widgets.insert(plugin_type.clone(), def);
 
         self.list.push(json!({
             "kind": "widget",
@@ -211,7 +213,7 @@ impl Registry {
             "dimension": "2d",
             "tokens": Value::Object(tokens.clone()),
         });
-        self.themes.insert(id.clone(), leak(theme));
+        self.themes.insert(id.clone(), theme);
 
         self.list.push(json!({
             "kind": "theme",
@@ -238,56 +240,101 @@ impl Registry {
     }
 }
 
-/// Реестр на весь процесс: ставится один раз при старте сервера.
-static INSTALLED: OnceLock<Registry> = OnceLock::new();
+/// Реестр на весь процесс вместе с каталогом, который он читает.
+pub struct Plugins {
+    dir: PathBuf,
+    registry: Mutex<Registry>,
+}
 
-/// Прочитать пакеты и запомнить их. Повторный вызов возвращает первый реестр:
-/// манифесты меняются только вместе с перезапуском приложения.
-pub fn install(dir: &Path) -> &'static Registry {
-    INSTALLED.get_or_init(|| {
+static INSTALLED: OnceLock<Plugins> = OnceLock::new();
+
+impl Plugins {
+    fn new(dir: &Path) -> Plugins {
         // Пустой каталог создаём: так пользователь видит, куда класть пакет.
         fs::create_dir_all(dir).ok();
         let registry = Registry::scan(dir);
-        for error in &registry.errors {
-            eprintln!(
-                "[ose] пакет {}: {}",
-                error.get("dir").and_then(Value::as_str).unwrap_or_default(),
-                error
-                    .get("error")
-                    .and_then(Value::as_str)
-                    .unwrap_or_default()
-            );
+        report_errors(&registry);
+        Plugins {
+            dir: dir.to_path_buf(),
+            registry: Mutex::new(registry),
         }
-        registry
-    })
+    }
+
+    /// Перечитать манифесты. Ошибка одного пакета не мешает остальным: новый
+    /// реестр заменяет старый целиком, поэтому удалённые пакеты тоже исчезают.
+    pub fn refresh(&self) {
+        let registry = Registry::scan(&self.dir);
+        report_errors(&registry);
+        *self.lock() = registry;
+    }
+
+    fn lock(&self) -> std::sync::MutexGuard<'_, Registry> {
+        self.registry
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+    }
+
+    fn payload(&self) -> Value {
+        self.lock().payload()
+    }
+
+    fn widget_def(&self, kind: &str) -> Option<Value> {
+        self.lock().widgets.get(kind).cloned()
+    }
+
+    fn theme(&self, id: &str) -> Option<Value> {
+        self.lock().themes.get(id).cloned()
+    }
+
+    fn themes(&self) -> Vec<Value> {
+        self.lock().themes.values().cloned().collect()
+    }
 }
 
-/// Реестр, если он уже поставлен (в тестах и до старта — пусто).
-pub fn installed() -> Option<&'static Registry> {
-    INSTALLED.get()
+fn report_errors(registry: &Registry) {
+    for error in &registry.errors {
+        eprintln!(
+            "[ose] пакет {}: {}",
+            error.get("dir").and_then(Value::as_str).unwrap_or_default(),
+            error
+                .get("error")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+        );
+    }
+}
+
+/// Поставить реестр на весь процесс. Повторный вызов возвращает первый.
+pub fn install(dir: &Path) -> &'static Plugins {
+    INSTALLED.get_or_init(|| Plugins::new(dir))
+}
+
+/// Перечитать пакеты из каталога, если реестр уже поставлен.
+pub fn refresh() {
+    if let Some(plugins) = INSTALLED.get() {
+        plugins.refresh();
+    }
 }
 
 /// Определение виджета из пакета.
-pub fn widget_def(kind: &str) -> Option<&'static Value> {
-    installed()?.widgets.get(kind).copied()
+pub fn widget_def(kind: &str) -> Option<Value> {
+    INSTALLED.get()?.widget_def(kind)
 }
 
 /// Тема из пакета.
-pub fn theme(id: &str) -> Option<&'static Value> {
-    installed()?.themes.get(id).copied()
+pub fn theme(id: &str) -> Option<Value> {
+    INSTALLED.get()?.theme(id)
 }
 
 /// Темы пакетов в порядке имени папки.
-pub fn themes() -> Vec<&'static Value> {
-    installed()
-        .map(|registry| registry.themes.values().copied().collect())
-        .unwrap_or_default()
+pub fn themes() -> Vec<Value> {
+    INSTALLED.get().map(Plugins::themes).unwrap_or_default()
 }
 
 /// Ответ `/api/plugins` из установленного реестра.
 pub fn api_payload() -> Value {
-    match installed() {
-        Some(registry) => registry.payload(),
+    match INSTALLED.get() {
+        Some(plugins) => plugins.payload(),
         None => json!({ "apiVersion": API_VERSION, "plugins": [], "errors": [] }),
     }
 }
@@ -493,12 +540,6 @@ fn safe_relative(raw: &str) -> Option<PathBuf> {
 fn relative_file(package: &Path, raw: &str) -> Option<PathBuf> {
     let relative = safe_relative(raw)?;
     package.join(&relative).is_file().then_some(relative)
-}
-
-/// Определения живут столько же, сколько процесс: каталог и темы читаются из
-/// горячего пути снимка состояния и не должны аллоцироваться на каждый кадр.
-fn leak(value: Value) -> &'static Value {
-    Box::leak(Box::new(value))
 }
 
 #[cfg(test)]
@@ -797,5 +838,30 @@ mod tests {
         assert!(registry.widgets.contains_key("plugin:last-donation"));
         assert!(registry.widgets.contains_key("plugin:hello"));
         assert!(registry.themes.contains_key("plugin:plain-theme"));
+    }
+
+    /// Новый пакет виден после перечитывания, а удалённый — исчезает: именно это
+    /// делает `/api/plugins`, когда страница панели или оверлея открывается.
+    #[test]
+    fn a_package_appears_and_disappears_without_a_restart() {
+        let temp = TempDir::new("refresh");
+        let plugins = Plugins::new(&temp.0);
+        assert!(plugins.widget_def("plugin:hello").is_none());
+
+        let manifest = widget_manifest("");
+        temp.package(
+            "hello",
+            &[
+                ("widget.json", manifest.as_str()),
+                ("widget.js", ""),
+                ("widget.css", ".x{}"),
+            ],
+        );
+        plugins.refresh();
+        assert!(plugins.widget_def("plugin:hello").is_some());
+
+        fs::remove_dir_all(temp.0.join("hello")).expect("удаление пакета");
+        plugins.refresh();
+        assert!(plugins.widget_def("plugin:hello").is_none());
     }
 }

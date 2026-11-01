@@ -1751,7 +1751,7 @@
     },
     "packages": {
       "title": "Widget and theme packages",
-      "p1": "A widget or theme can be installed as a folder in the packages directory: %APPDATA%\\com.openstreamenvironment.app\\plugins\\<id>\\ (in development — config/plugins/<id>/). Restart the app after installing: manifests are read at startup.",
+      "p1": "A widget or theme can be installed as a folder in the packages directory: %APPDATA%\\com.openstreamenvironment.app\\plugins\\<id>\\ (in development — config/plugins/<id>/). No restart is needed: manifests are re-read when a page loads, so returning to the panel is enough — it reloads itself once it sees the new list. Refresh the OBS overlay source manually so the stream is not interrupted.",
       "p2": "A widget is described by widget.json — name, code file, styles, default size and a settings schema. It appears as its own card in the library, and the inspector renders fields from the schema. A theme is described by theme.json — a token set and optional CSS; it appears in the theme list as plugin:<id>.",
       "p3": "Package code runs in the overlay page with full permissions, so install only trusted packages. See docs/plugin-api.md and docs/examples/plugins/ for the manifest format and examples."
     },

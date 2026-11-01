@@ -487,7 +487,7 @@ pub fn delete_layout_preset(db: &Database, id: &str) -> Option<Vec<Value>> {
 // ---- вспомогательное ----
 
 /// `WIDGET_TYPES[w.type]`: тип виджета по имени.
-fn catalog_def(kind: &str) -> Option<&'static Value> {
+fn catalog_def(kind: &str) -> Option<Value> {
     catalog::def(kind)
 }
 
