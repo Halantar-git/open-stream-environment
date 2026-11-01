@@ -1,0 +1,28 @@
+{
+  "apiVersion": 1,
+  "kind": "widget",
+  "id": "last-donation",
+  "name": "Последний донат",
+  "description": "Сумма, ник и сообщение последнего доната — обновляется по событию алерта",
+  "version": "1.0.0",
+  "author": "Open Stream Environment",
+  "entry": "widget.js",
+  "styles": ["widget.css"],
+  "icon": "widgetCustom",
+  "defaultGeometry": { "x": 36, "y": 40, "w": 28, "h": 12 },
+  "minW": 12,
+  "minH": 6,
+  "settings": {
+    "title": { "type": "string", "label": "Заголовок", "default": "Последний донат" },
+    "amountSize": {
+      "type": "range",
+      "label": "Размер суммы",
+      "min": 16,
+      "max": 72,
+      "step": 1,
+      "default": 36
+    },
+    "accent": { "type": "color", "label": "Цвет суммы", "default": "#7ee0d6" },
+    "showMessage": { "type": "boolean", "label": "Показывать сообщение", "default": true }
+  }
+}

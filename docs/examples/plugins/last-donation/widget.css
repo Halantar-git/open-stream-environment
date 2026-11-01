@@ -1,0 +1,45 @@
+/*
+  Стили пакета действуют на всю страницу оверлея, поэтому ограничены типом
+  виджета. Цвета берутся из токенов активной темы с запасными значениями.
+*/
+.widget-instance[data-type="plugin:last-donation"] {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px 20px;
+  border: 1px solid var(--md-outline, rgba(255, 255, 255, 0.2));
+  border-radius: var(--md-shape-large, 16px);
+  background: var(--md-surface-container, rgba(17, 19, 24, 0.9));
+  color: var(--md-on-surface, #e6e1e5);
+  font-family: var(--font-body, "Segoe UI", sans-serif);
+  text-align: center;
+  overflow: hidden;
+}
+
+.ose-last-donation__title {
+  color: var(--md-on-surface-variant, #c4c7c5);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ose-last-donation__amount {
+  font-family: var(--font-display, var(--font-body, "Segoe UI", sans-serif));
+  font-weight: 700;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.ose-last-donation__user {
+  color: var(--md-secondary, #7ee0d6);
+  font-weight: 600;
+}
+
+.ose-last-donation__message {
+  color: var(--md-on-surface-variant, #c4c7c5);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

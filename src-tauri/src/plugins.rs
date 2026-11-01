@@ -785,4 +785,17 @@ mod tests {
         assert_eq!(def["defaultGeometry"]["x"], json!(70.0));
         assert_eq!(def["defaultGeometry"]["w"], json!(30.0));
     }
+
+    /// Примеры из репозитория проходят тот же разбор, что и установленные
+    /// пакеты: иначе документация обещает рабочий пример, а загрузчик его
+    /// отвергает — и узнаётся это только у пользователя.
+    #[test]
+    fn the_repository_examples_are_valid_packages() {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../docs/examples/plugins");
+        let registry = Registry::scan(&dir);
+        assert!(registry.errors.is_empty(), "{:?}", registry.errors);
+        assert!(registry.widgets.contains_key("plugin:last-donation"));
+        assert!(registry.widgets.contains_key("plugin:hello"));
+        assert!(registry.themes.contains_key("plugin:plain-theme"));
+    }
 }

@@ -190,7 +190,7 @@ describe("SDK пакетов", () => {
     const checked = run("sdk/validate.mjs", ["--json", "docs/examples/plugins"]);
     const payload = report(checked.out);
     expect(checked.code).toBe(0);
-    expect(payload.packages.map((pkg) => pkg.dir).sort()).toEqual(["hello", "plain-theme"]);
+    expect(payload.packages.map((pkg) => pkg.dir).sort()).toEqual(["hello", "last-donation", "plain-theme"]);
   });
 
   test("команда ose-plugin создаёт и проверяет пакет", () => {
