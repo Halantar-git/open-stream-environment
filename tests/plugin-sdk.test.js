@@ -214,7 +214,7 @@ describe("SDK пакетов", () => {
   test("npm-пакет содержит команду, шаблоны и лицензию", () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(SDK, "package.json"), "utf8"));
     expect(pkg.name).toBe("ose-plugin-sdk");
-    expect(pkg.bin["ose-plugin"]).toBe("./bin/ose-plugin.mjs");
+    expect(pkg.bin["ose-plugin"]).toBe("bin/ose-plugin.mjs");
     ["bin", "templates", "schema", "index.d.ts", "LICENSE"].forEach((entry) => {
       expect(pkg.files).toContain(entry);
     });
