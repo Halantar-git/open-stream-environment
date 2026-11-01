@@ -46,7 +46,7 @@
     CONNECTION_STATUS: "connection_status", // { service, status }
     THEME_UPDATE: "theme_update", // { activeThemeId, enable3d, activeThemeId3d, tokens, themes }
     THEME_DRAFT_PREVIEW: "theme_draft_preview", // { tokens, customCss, themeId, name, clear? } — live draft for the theme preview window
-    EDITOR_PREFS_UPDATE: "editor_prefs_update", // { gridSize, snapEnabled }
+    EDITOR_PREFS_UPDATE: "editor_prefs_update", // { gridSize, snapEnabled, aspectRatio, layoutLocked }
     SCENES_UPDATE: "scenes_update", // { start, brb, end }
     TOP_DONATION_UPDATE: "top_donation_update", // { user, amount, currency }
     STAT_UPDATE: "stat_update", // { followerCount, subscriberCount }
@@ -142,7 +142,7 @@
     CMD_DUPLICATE_CUSTOM_THEME: "cmd_duplicate_custom_theme", // { id }
     CMD_IMPORT_CUSTOM_THEME: "cmd_import_custom_theme", // { name, seeds }
     CMD_PREVIEW_THEME_DRAFT: "cmd_preview_theme_draft", // { tokens, customCss, themeId, name, clear? }
-    CMD_SET_EDITOR_PREFS: "cmd_set_editor_prefs", // { gridSize?, snapEnabled? }
+    CMD_SET_EDITOR_PREFS: "cmd_set_editor_prefs", // { gridSize?, snapEnabled?, aspectRatio?, layoutLocked? }
     CMD_SET_SCENE_CONFIG: "cmd_set_scene_config", // { sceneId, patch }
     CMD_SET_SPLASH_CONFIG: "cmd_set_splash_config", // { config: { file } } — global fallback splash media
     VIDEO_SPLASH_ENDED: "video_splash_ended", // overlay -> server: splash video finished/error — advance to pending scene

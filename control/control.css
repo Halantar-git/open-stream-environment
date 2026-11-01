@@ -1763,28 +1763,6 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   margin: 0;
 }
 
-.streamdeck-icons {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.streamdeck-icons .md-field {
-  margin: 0;
-}
-
-.streamdeck-icons input {
-  min-width: 0;
-  padding: 8px 10px;
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--shape-sm);
-  background: var(--md-surface-container-low);
-  color: var(--md-on-surface);
-  font: inherit;
-  font-size: 12px;
-}
-
 .settings__subhead {
   margin-top: 18px;
   margin-bottom: 4px;

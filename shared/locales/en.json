@@ -411,20 +411,6 @@
     "ttsVoiceAuto": "Auto",
     "ttsTest": "Test voice",
     "ttsTestPhrase": "Hi! This is a donation voice-over test.",
-    "streamdeck": "Stream Deck",
-    "streamdeckDesc": "Custom icons for the Elgato Stream Deck plugin buttons. The file (PNG/JPG/GIF/WebP) is copied to media/ and applied over the default plugin icon.",
-    "streamdeckIconScene": "Scene icon",
-    "streamdeckIconSoundboard": "Soundboard icon",
-    "streamdeckIconCounter": "Counter icon",
-    "streamdeckIconWheel": "Wheel icon",
-    "streamdeckIconGuests": "Guests icon",
-    "streamdeckIconPoll": "Poll icon",
-    "streamdeckIconStart": "Start icon",
-    "streamdeckIconBrb": "BRB icon",
-    "streamdeckIconTalk": "Talk icon",
-    "streamdeckIconMain": "Main icon",
-    "streamdeckIconEnd": "End icon",
-    "streamdeckIconPause": "Pause icon",
     "chooseFile": "Choose file",
     "run": "Run",
     "test": "Test",
@@ -1703,7 +1689,7 @@
       "p2": "Select a widget to edit its properties on the right. Drag to move it, use the corner handle to resize.",
       "p3": "The Layers panel controls z-order; the Grid toggle helps with alignment. The “Set up scenes in OBS” button creates the sources for you; this URL is for adding a Browser Source by hand:",
       "p4": "Widget icons appear on the canvas next to the label on hover or selection, so widgets are easier to tell apart.",
-      "p5": "The Lock button in the toolbar below the canvas prevents dragging, resizing, deleting, adding and reordering widgets. Selection and property editing stay available — handy for avoiding an accidental layout shift during a live stream.",
+      "p5": "The lock button in the toolbar below the canvas prevents dragging, resizing, deleting, adding and reordering widgets. Selection and property editing stay available — handy for avoiding an accidental layout shift during a live stream. The lock state is saved in settings and survives an app restart.",
       "p6": "For a 3D widget with an Angle slider the whole tile rotates on the canvas — frame, label and resize handles. Drag a handle along the widget's axes: width and height are measured in its rotated coordinate system, not on screen."
     },
     "hud": {
@@ -1860,11 +1846,6 @@
       "title": "Clip & stream marker",
       "p1": "The Clip and Marker buttons live in the app header — they create a Twitch clip and marker via the Helix API in one click.",
       "p2": "A clip needs the clips:edit scope, a marker needs channel:manage:broadcast. If the buttons report an error, reconnect Twitch in Settings — the old token doesn't include the new scopes."
-    },
-    "streamdeck": {
-      "title": "Stream Deck",
-      "p1": "The Elgato plugin switches the same scenes as the web remote: Main, Start, BRB, Talk, Guests, End, Wheel, Poll and Pause.",
-      "p2": "Set custom per-scene icons in Settings → Stream Deck."
     },
     "remote": {
       "title": "Web Remote",

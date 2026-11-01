@@ -262,14 +262,6 @@ const SECTIONS = [
     ],
   },
   {
-    id: "streamdeck",
-    title: "help.streamdeck.title",
-    blocks: [
-      { type: "p", key: "help.streamdeck.p1" },
-      { type: "p", key: "help.streamdeck.p2" },
-    ],
-  },
-  {
     id: "remote",
     title: "help.remote.title",
     blocks: [

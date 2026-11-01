@@ -1807,8 +1807,13 @@ export function initCanvasEditor({
 
   if (layoutLockBtn) {
     layoutLockBtn.addEventListener("click", () => {
-      state.layoutLocked = !state.layoutLocked;
+      const locked = !state.layoutLocked;
+      state.layoutLocked = locked;
+      state.editorPrefs = { ...state.editorPrefs, layoutLocked: locked };
       applyLayoutLock();
+      // Флаг живёт в настройках редактора: после перезапуска приложения
+      // предохранитель остаётся включённым.
+      send(EVENT_TYPES.CMD_SET_EDITOR_PREFS, { layoutLocked: locked });
     });
   }
   applyLayoutLock(false);
@@ -2069,5 +2074,5 @@ export function initCanvasEditor({
     true
   );
 
-  return { addWidget, renderCanvas, renderLayers, applyThemeToCanvas, applyCustomCssToCanvas, applyGridToCanvas, applyCanvasRatio };
+  return { addWidget, renderCanvas, renderLayers, applyThemeToCanvas, applyCustomCssToCanvas, applyGridToCanvas, applyCanvasRatio, applyLayoutLock };
 }

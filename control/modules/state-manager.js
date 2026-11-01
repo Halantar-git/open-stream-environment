@@ -60,9 +60,9 @@ export function createStateManager() {
     selectedId: null,
     pendingAdd: null,
     appearance: { activeThemeId: "nebula", enable3d: false, activeThemeId3d: "", active3dWidgets: [], enabled3d: {}, tokens: {}, customCss: "", themes: [] },
-    editorPrefs: { gridSize: 5, snapEnabled: true, aspectRatio: "16:9" },
-    // Не сохраняется в настройках: это сессионный предохранитель против
-    // случайного сдвига виджетов во время эфира.
+    editorPrefs: { gridSize: 5, snapEnabled: true, aspectRatio: "16:9", layoutLocked: false },
+    // Дублирует `editorPrefs.layoutLocked` для мест, которые читают флаг без
+    // вложенности; значение живёт в настройках и переживает перезапуск.
     layoutLocked: false,
     hudEditHotkey: "Control+Shift+H",
     hudDisplayId: null,
@@ -174,6 +174,9 @@ export function createStateManager() {
     state.streamdeck = payload.streamdeck || state.streamdeck;
     state.appearance = payload.appearance || state.appearance;
     state.editorPrefs = payload.editor || state.editorPrefs;
+    // Блокировка раскладки хранится в настройках редактора: после перезапуска
+    // предохранитель должен быть там же, где его оставили.
+    if (payload.editor) state.layoutLocked = !!payload.editor.layoutLocked;
     state.hudEditHotkey = payload.hud_edit_hotkey || state.hudEditHotkey;
     state.hudDisplayId = payload.hud_display_id != null ? payload.hud_display_id : null;
     state.chatHudHotkey = payload.chat_hud_hotkey || state.chatHudHotkey;

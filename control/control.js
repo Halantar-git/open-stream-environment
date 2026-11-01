@@ -286,15 +286,6 @@ const { EVENT_TYPES } = window.SharedEvents;
   const moderationMaxEmotes = document.getElementById("moderationMaxEmotes");
   const moderationMaxWarns = document.getElementById("moderationMaxWarns");
   const moderationWarnTimeoutSec = document.getElementById("moderationWarnTimeoutSec");
-  const streamdeckIconStart = document.getElementById("streamdeckIconStart");
-  const streamdeckIconBrb = document.getElementById("streamdeckIconBrb");
-  const streamdeckIconWheel = document.getElementById("streamdeckIconWheel");
-  const streamdeckIconTalk = document.getElementById("streamdeckIconTalk");
-  const streamdeckIconGuests = document.getElementById("streamdeckIconGuests");
-  const streamdeckIconMain = document.getElementById("streamdeckIconMain");
-  const streamdeckIconEnd = document.getElementById("streamdeckIconEnd");
-  const streamdeckIconPoll = document.getElementById("streamdeckIconPoll");
-  const streamdeckIconPause = document.getElementById("streamdeckIconPause");
   const appPortInput = document.getElementById("appPort");
   const appBaseCurrencyInput = document.getElementById("appBaseCurrency");
   const savePortBtn = document.getElementById("savePortBtn");
@@ -681,7 +672,6 @@ const { EVENT_TYPES } = window.SharedEvents;
       if (notificationVolumeValue) notificationVolumeValue.textContent = `${vol}%`;
     }
     if (notificationRepeats) notificationRepeats.value = String(state.notificationRepeats ?? 1);
-    renderStreamDeckIcons();
     renderSplashSettings();
     appPortInput.value = port;
     appOverlayUrlInput.value = overlayUrl;
@@ -1481,31 +1471,6 @@ const { EVENT_TYPES } = window.SharedEvents;
       ttsVoices = [];
     }
     renderTtsVoices();
-  }
-
-  function sendStreamDeckConfig(patch) {
-    send(EVENT_TYPES.CMD_SET_STREAMDECK_CONFIG, { config: patch });
-  }
-
-  function makeStreamDeckIconField(container, key, placeholder) {
-    const icons = (state.streamdeck && state.streamdeck.icons) || {};
-    const field = makeSoundFileInput(icons[key] || "", placeholder, "image", (v) => {
-      sendStreamDeckConfig({ icons: { [key]: v } });
-    });
-    container.innerHTML = "";
-    container.appendChild(field);
-  }
-
-  function renderStreamDeckIcons() {
-    makeStreamDeckIconField(streamdeckIconMain, "main", "media/...png");
-    makeStreamDeckIconField(streamdeckIconStart, "start", "media/...png");
-    makeStreamDeckIconField(streamdeckIconBrb, "brb", "media/...png");
-    makeStreamDeckIconField(streamdeckIconTalk, "talk", "media/...png");
-    makeStreamDeckIconField(streamdeckIconGuests, "guests", "media/...png");
-    makeStreamDeckIconField(streamdeckIconEnd, "end", "media/...png");
-    makeStreamDeckIconField(streamdeckIconWheel, "wheel", "media/...png");
-    makeStreamDeckIconField(streamdeckIconPoll, "poll", "media/...png");
-    makeStreamDeckIconField(streamdeckIconPause, "pause", "media/...png");
   }
 
   function durationSelectHtml(id, value) {
@@ -4254,6 +4219,9 @@ const { EVENT_TYPES } = window.SharedEvents;
         aspectRatioSelect.value = state.editorPrefs.aspectRatio || "16:9";
         canvasEditor.applyThemeToCanvas(state.appearance.tokens, state.appearance.activeThemeId, state.appearance.customCss || "");
         canvasEditor.applyCanvasRatio();
+        // Флаг блокировки пришёл в снимке: кнопка и классы холста должны
+        // совпадать с сохранённым состоянием, а не со стартовым умолчанием.
+        canvasEditor.applyLayoutLock(false);
         renderThemeGrid();
         renderLayoutPresets();
         renderLibrary();
@@ -4322,9 +4290,12 @@ const { EVENT_TYPES } = window.SharedEvents;
         break;
       case EVENT_TYPES.EDITOR_PREFS_UPDATE:
         state.editorPrefs = msg.payload;
+        state.layoutLocked = !!msg.payload.layoutLocked;
         gridSizeSelect.value = String(state.editorPrefs.gridSize || 0);
         aspectRatioSelect.value = state.editorPrefs.aspectRatio || "16:9";
         canvasEditor.applyCanvasRatio();
+        // Тот же флаг мог прийти и с пульта: кнопка должна это показать.
+        canvasEditor.applyLayoutLock();
         break;
       case EVENT_TYPES.HUD_HOTKEY_UPDATE:
         state.hudEditHotkey = (msg.payload && msg.payload.hotkey) || state.hudEditHotkey;

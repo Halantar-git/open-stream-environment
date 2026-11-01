@@ -1024,6 +1024,11 @@ pub fn normalize_config(config: &mut ConfigFile) {
     {
         editor.insert("aspectRatio".to_string(), Value::from("16:9"));
     }
+    // Старый config.json мог не знать про блокировку: доливаем умолчание, уже
+    // записанное значение не трогаем.
+    if !editor.contains_key("layoutLocked") {
+        editor.insert("layoutLocked".to_string(), Value::Bool(false));
+    }
     config.set("editor", Value::Object(editor));
 
     // HUD.

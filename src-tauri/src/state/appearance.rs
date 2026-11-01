@@ -41,10 +41,18 @@ pub(crate) fn default_appearance() -> Map<String, Value> {
 
 /// Внешний вид по умолчанию для редактора — как `defaultEditor()`.
 pub(crate) fn default_editor() -> Map<String, Value> {
-    json!({ "gridSize": 5, "snapEnabled": true, "aspectRatio": "16:9" })
-        .as_object()
-        .cloned()
-        .expect("объект")
+    json!({
+        "gridSize": 5,
+        "snapEnabled": true,
+        "aspectRatio": "16:9",
+        // Блокировка раскладки переживает перезапуск: это предохранитель на
+        // время эфира, и включать его заново после каждого старта — лишний
+        // повод случайно сдвинуть виджеты.
+        "layoutLocked": false,
+    })
+    .as_object()
+    .cloned()
+    .expect("объект")
 }
 
 /// Нормализованный внешний вид: сюда же сводятся старые формы.
@@ -595,6 +603,9 @@ pub fn set_editor_prefs(config: &mut ConfigFile, patch: &Value) -> Value {
         if EDITOR_ASPECT_RATIOS.contains(&ratio) {
             editor.insert("aspectRatio".to_string(), Value::from(ratio));
         }
+    }
+    if let Some(locked) = patch.get("layoutLocked").and_then(Value::as_bool) {
+        editor.insert("layoutLocked".to_string(), Value::Bool(locked));
     }
 
     let editor = Value::Object(editor);
@@ -1304,15 +1315,23 @@ mod tests {
 
         let editor = set_editor_prefs(
             &mut config,
-            &json!({ "gridSize": 999, "snapEnabled": false, "aspectRatio": "21:9" }),
+            &json!({
+                "gridSize": 999,
+                "snapEnabled": false,
+                "aspectRatio": "21:9",
+                "layoutLocked": true
+            }),
         );
         assert_eq!(editor["gridSize"], json!(25));
         assert_eq!(editor["snapEnabled"], json!(false));
         assert_eq!(editor["aspectRatio"], json!("21:9"));
+        // Блокировка раскладки переживает перезапуск: она лежит в настройках.
+        assert_eq!(editor["layoutLocked"], json!(true));
 
         // Неизвестная пропорция не заменяет сохранённую.
         let editor = set_editor_prefs(&mut config, &json!({ "aspectRatio": "5:4" }));
         assert_eq!(editor["aspectRatio"], json!("21:9"));
+        assert_eq!(editor["layoutLocked"], json!(true));
     }
 
     #[test]
