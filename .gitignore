@@ -17,6 +17,10 @@ config/*.corrupt-*
 config/logs/
 config/.*.tmp
 config/media/
+# Пакеты, которые разработчик ставит в dev-каталог, — его личные данные: примеры
+# лежат в docs/examples/plugins/, а release.bat делает git add . и затянул бы папку
+# в релизный коммит.
+config/plugins/
 *.log
 .DS_Store
 Thumbs.db
