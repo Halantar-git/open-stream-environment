@@ -365,14 +365,26 @@
     el.style.top = layer.y + "%";
     el.style.width = layer.w + "%";
     el.style.height = layer.h + "%";
+    // Шрифт задан в `cqw` при создании слоя; при растягивании рамки его
+    // нужно обновить тем же выражением, иначе текст отстаёт от рамки.
+    if (layer.type === "text") {
+      const text = el.children && el.children[0];
+      if (text) text.style.fontSize = "calc(" + layer.size + "cqw * var(--la-text-scale, 1))";
+    }
   }
 
   function syncGeometryFields(layer) {
     const values = { fX: layer.x, fY: layer.y, fW: layer.w, fH: layer.h };
-    Object.keys(values).forEach((id) => {
-      const field = inspector.querySelector("#" + id);
-      if (field) field.value = String(round1(values[id]));
+    Object.keys(values).forEach((key) => {
+      const field = document.getElementById(key);
+      if (field) field.value = String(round1(values[key]));
     });
+    if (layer.type === "text") {
+      const size = document.getElementById("fSize");
+      if (size) size.value = String(layer.size);
+      const label = document.getElementById("fSizeValue");
+      if (label) label.textContent = round1(layer.size);
+    }
   }
 
   function bindPreviewLayers() {
@@ -1452,7 +1464,7 @@
       startY: event.clientY,
       width: rect.width,
       height: rect.height,
-      orig: { x: layer.x, y: layer.y, w: layer.w, h: layer.h },
+      orig: { x: layer.x, y: layer.y, w: layer.w, h: layer.h, size: layer.size },
     };
     document.addEventListener("pointermove", onPreviewDragMove);
     document.addEventListener("pointerup", onPreviewDragEnd, { once: true });
@@ -1477,6 +1489,12 @@
     layer.y = next.y;
     layer.w = next.w;
     layer.h = next.h;
+
+    // Текстовый слой тянется вместе с рамкой: иначе после каждого изменения
+    // её высоты приходилось бы подкручивать «Размер» вручную.
+    if (layer.type === "text" && Number.isFinite(drag.orig.size) && drag.orig.h > 0) {
+      layer.size = clamp((drag.orig.size * next.h) / drag.orig.h, 0.5, 30);
+    }
 
     updatePreviewLayer(layer);
     renderSelection();
