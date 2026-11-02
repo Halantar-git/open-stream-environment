@@ -4035,3 +4035,54 @@
   letter-spacing: 0.08em;
   text-shadow: none;
 }
+
+/* ---------- Alert composition (layer-alert): timeline-driven alert ---------- */
+/*
+  Рамка виджета — контейнер для `cqw`: текст слоя задаётся в процентах ширины
+  рамки, поэтому композиция одинаково масштабируется в эфире и в превью.
+*/
+.widget-layer-alert-host {
+  position: absolute;
+  inset: 0;
+  container-type: size;
+  overflow: hidden;
+}
+
+.la-composition {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.la-layer {
+  position: absolute;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  will-change: transform, opacity;
+}
+
+.la-layer[hidden] {
+  display: none;
+}
+
+.la-text {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.22;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+
+.la-media {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: transparent;
+}

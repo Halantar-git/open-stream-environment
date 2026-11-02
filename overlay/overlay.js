@@ -399,6 +399,7 @@
   });
 
   manager.register("alerts", OW.AlertsWidget);
+  manager.register("layer-alert", OW.LayerAlertWidget);
   manager.register("goal", OW.GoalWidget);
   manager.register("chat", OW.ChatWidget);
   manager.register("recent", OW.RecentWidget);

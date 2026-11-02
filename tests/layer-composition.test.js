@@ -1,0 +1,335 @@
+/*
+ * Copyright (C) 2026  Halantar
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://gnu.org>.
+ */
+
+const EventBus = require("../overlay/event-bus");
+const { EVENT_TYPES } = require("../shared/events");
+const LayerComposition = require("../shared/layer-composition");
+const LayerAlertWidget = require("../overlay/widgets/layer-alert-widget");
+
+// ---- minimal DOM mock ----
+
+function makeElement(tag) {
+  const children = [];
+  const classes = new Set();
+  const el = {
+    tagName: String(tag || "div").toUpperCase(),
+    className: "",
+    style: {},
+    dataset: {},
+    children,
+    hidden: false,
+    parentNode: null,
+    classList: {
+      add: (...names) => names.forEach((name) => classes.add(name)),
+      remove: (...names) => names.forEach((name) => classes.delete(name)),
+      contains: (name) => classes.has(name),
+    },
+    appendChild(child) {
+      child.parentNode = el;
+      children.push(child);
+      return child;
+    },
+    removeChild(child) {
+      const index = children.indexOf(child);
+      if (index >= 0) children.splice(index, 1);
+      child.parentNode = null;
+      return child;
+    },
+    set innerHTML(value) {
+      children.forEach((child) => {
+        child.parentNode = null;
+      });
+      children.length = 0;
+      el._html = String(value);
+    },
+    get innerHTML() {
+      return el._html || "";
+    },
+  };
+  return el;
+}
+
+function makeDocument() {
+  const doc = {
+    createElement: (tag) => {
+      const el = makeElement(tag);
+      el.ownerDocument = doc;
+      return el;
+    },
+  };
+  return doc;
+}
+
+// ---- model ----
+
+describe("layer-composition: модель", () => {
+  test("normalizeConfig заполняет умолчания и разводит одинаковые id", () => {
+    const config = LayerComposition.normalizeConfig({
+      eventKinds: ["donation", "donation", ""],
+      layers: [
+        { id: "same", text: "a", start: -100, duration: 0 },
+        { id: "same", type: "image", opacity: 5 },
+        { type: "видео" },
+      ],
+    });
+
+    expect(config.eventKinds).toEqual(["donation"]);
+    expect(config.layers).toHaveLength(3);
+    expect(config.layers[0].id).toBe("same");
+    expect(config.layers[1].id).toBe("same-2");
+    expect(config.layers[0].start).toBe(0);
+    expect(config.layers[0].duration).toBe(LayerComposition.MIN_LAYER_MS);
+    expect(config.layers[1].opacity).toBe(1);
+    // Неизвестный тип не роняет слой: он становится текстовым.
+    expect(config.layers[2].type).toBe("text");
+  });
+
+  test("compositionDuration учитывает самый поздний слой", () => {
+    expect(
+      LayerComposition.compositionDuration({
+        durationMs: 3000,
+        layers: [{ start: 1000, duration: 5000 }],
+      })
+    ).toBe(6000);
+    expect(LayerComposition.compositionDuration({ durationMs: 8000, layers: [] })).toBe(8000);
+  });
+
+  test("matchesEvent: пустой список — все события", () => {
+    expect(LayerComposition.matchesEvent({}, { kind: "follow" })).toBe(true);
+    expect(LayerComposition.matchesEvent({ eventKinds: [] }, { kind: "follow" })).toBe(true);
+    expect(
+      LayerComposition.matchesEvent({ eventKinds: ["donation"] }, { kind: "follow" })
+    ).toBe(false);
+    expect(
+      LayerComposition.matchesEvent({ eventKinds: ["donation"] }, { kind: "donation" })
+    ).toBe(true);
+  });
+
+  test("fillText подставляет событие и не оставляет неизвестных ключей", () => {
+    const text = LayerComposition.fillText(
+      "{{user}} — {{amount}} {{currency}}: {{message}} {{nope}}",
+      { user: "Stargazer", amount: 1500, currency: "RUB", message: "Привет" },
+      { formatMoney: (value) => String(value).replace(/\B(?=(\d{3})+(?!\d))/g, " "), currencySymbol: () => "₽" }
+    );
+    expect(text).toBe("Stargazer — 1 500 ₽: Привет ");
+  });
+});
+
+// ---- static render ----
+
+describe("layer-composition: статичная раскладка", () => {
+  test("рисует текстовый слой с координатами и подставленным текстом", () => {
+    const doc = makeDocument();
+    const host = doc.createElement("div");
+    LayerComposition.renderStatic(
+      host,
+      {
+        layers: [
+          {
+            id: "t",
+            type: "text",
+            text: "{{user}}",
+            x: 12,
+            y: 34,
+            w: 50,
+            h: 20,
+            opacity: 0.5,
+            size: 7,
+            color: "#00ff66",
+            align: "right",
+            weight: 700,
+            fit: null,
+            in: "none",
+            out: "none",
+          },
+        ],
+      },
+      { user: "Pilot" },
+      {}
+    );
+
+    expect(host.children).toHaveLength(1);
+    const root = host.children[0];
+    expect(root.className).toBe("la-composition");
+    const layer = root.children[0];
+    expect(layer.style.left).toBe("12%");
+    expect(layer.style.top).toBe("34%");
+    expect(layer.style.width).toBe("50%");
+    expect(layer.style.opacity).toBe("0.5");
+    const text = layer.children[0];
+    expect(text.textContent).toBe("Pilot");
+    expect(text.style.fontSize).toBe("7cqw");
+    expect(text.style.color).toBe("#00ff66");
+    expect(text.style.textAlign).toBe("right");
+  });
+});
+
+// ---- player ----
+
+describe("layer-composition: проигрыватель", () => {
+  let realDocument;
+  let realRaf;
+  let realCancel;
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    realDocument = global.document;
+    realRaf = global.requestAnimationFrame;
+    realCancel = global.cancelAnimationFrame;
+    global.document = makeDocument();
+    global.requestAnimationFrame = (fn) => setTimeout(fn, 16);
+    global.cancelAnimationFrame = (id) => clearTimeout(id);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    global.document = realDocument;
+    global.requestAnimationFrame = realRaf;
+    global.cancelAnimationFrame = realCancel;
+  });
+
+  test("зовёт onDone по времени композиции и пережидает паузу между слоями", () => {
+    const host = global.document.createElement("div");
+    const player = LayerComposition.createPlayer(host, {});
+    const done = jest.fn();
+
+    const total = player.play(
+      {
+        durationMs: 2000,
+        layers: [{ type: "text", text: "a", start: 0, duration: 800, in: "none", out: "none" }],
+      },
+      {},
+      done
+    );
+
+    expect(total).toBe(2000);
+    jest.advanceTimersByTime(1999);
+    expect(done).not.toHaveBeenCalled();
+    jest.advanceTimersByTime(1);
+    expect(done).toHaveBeenCalledTimes(1);
+  });
+
+  test("stop отменяет проигрывание и не зовёт onDone", () => {
+    const host = global.document.createElement("div");
+    const player = LayerComposition.createPlayer(host, {});
+    const done = jest.fn();
+
+    player.play(
+      {
+        durationMs: 1000,
+        layers: [{ type: "text", text: "a", start: 0, duration: 500, in: "none", out: "none" }],
+      },
+      {},
+      done
+    );
+    player.stop();
+    jest.advanceTimersByTime(5000);
+    expect(done).not.toHaveBeenCalled();
+    expect(host.children).toHaveLength(0);
+  });
+});
+
+// ---- widget ----
+
+describe("layer-alert: виджет", () => {
+  let realDocument;
+  let realRaf;
+  let realCancel;
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    realDocument = global.document;
+    realRaf = global.requestAnimationFrame;
+    realCancel = global.cancelAnimationFrame;
+    global.document = makeDocument();
+    global.requestAnimationFrame = (fn) => setTimeout(fn, 16);
+    global.cancelAnimationFrame = (id) => clearTimeout(id);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    global.document = realDocument;
+    global.requestAnimationFrame = realRaf;
+    global.cancelAnimationFrame = realCancel;
+  });
+
+  function mountWidget() {
+    const bus = new EventBus();
+    const context = {
+      bus,
+      EVENT_TYPES,
+      formatMoney: (value) => String(value),
+      currencySymbol: (value) => value,
+      resolveMediaUrl: (value) => value,
+    };
+    const widget = new LayerAlertWidget(
+      {
+        id: "w1",
+        type: "layer-alert",
+        x: 0,
+        y: 0,
+        w: 40,
+        h: 20,
+        z: 0,
+        visible: true,
+        config: {
+          eventKinds: ["donation"],
+          durationMs: 1000,
+          layers: [
+            {
+              id: "t",
+              type: "text",
+              text: "{{user}}",
+              start: 0,
+              duration: 900,
+              in: "none",
+              out: "none",
+            },
+          ],
+        },
+      },
+      context
+    );
+    const parent = global.document.createElement("div");
+    widget.mount(parent);
+    return { bus, widget };
+  }
+
+  test("игнорирует события не из своего списка и играет подходящие по очереди", () => {
+    const { bus, widget } = mountWidget();
+
+    bus.emit(EVENT_TYPES.ALERT, { kind: "follow", user: "A" });
+    expect(widget.host.children).toHaveLength(0);
+
+    bus.emit(EVENT_TYPES.ALERT, { kind: "donation", user: "First" });
+    expect(widget.host.children).toHaveLength(1);
+    const first = widget.host.children[0];
+    expect(first.children[0].children[0].textContent).toBe("First");
+
+    // Второй донат ждёт, пока не доиграет первый: одновременно их не бывает.
+    bus.emit(EVENT_TYPES.ALERT, { kind: "donation", user: "Second" });
+    expect(widget.host.children).toHaveLength(1);
+
+    jest.advanceTimersByTime(1000);
+    expect(widget.host.children).toHaveLength(1);
+    const second = widget.host.children[0];
+    expect(second.children[0].children[0].textContent).toBe("Second");
+
+    jest.advanceTimersByTime(1000);
+    expect(widget.host.children).toHaveLength(0);
+  });
+});
