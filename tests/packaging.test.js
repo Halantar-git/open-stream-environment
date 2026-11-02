@@ -71,7 +71,7 @@ function isShipped(relativePath) {
   return resourceSources.some((entry) => target === entry || target.startsWith(`${entry}/`));
 }
 
-const PAGE_DIRS = ["control", "chatwindow", "themeeditor", "widgeteditor", "overlay", "remote", "splash", "csseditor"];
+const PAGE_DIRS = ["control", "chatwindow", "themeeditor", "widgeteditor", "timelineeditor", "overlay", "remote", "splash", "csseditor"];
 
 // Страницы приложения: их сервер отдаёт в окна и в OBS Browser Source.
 function pageFiles() {
@@ -307,6 +307,7 @@ describe("поставка: конфигурация Tauri", () => {
       "chatwindow",
       "splash",
       "widgeteditor",
+      "timelineeditor",
       "themeeditor",
       "csseditor",
       "shared",

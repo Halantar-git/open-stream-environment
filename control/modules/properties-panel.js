@@ -790,6 +790,12 @@ export function initPropertiesPanel({
           </select>
         </div>
         <div id="pCustomFields"></div>`;
+    } else if (inst.type === "layer-alert") {
+      const count = Array.isArray(config.layers) ? config.layers.length : 0;
+      extraHtml = `
+        <p class="properties__hint">${t("properties.layerAlertHint")}</p>
+        <p class="properties__hint">${t("properties.layerAlertLayers", { count })}</p>
+        <button class="md-button md-button--filled" id="pOpenTimeline" style="width:100%;justify-content:center;">${t("properties.layerAlertOpen")}</button>`;
     } else if (inst.type === "donatex-ai") {
       extraHtml = `
         <p class="properties__hint">${t("properties.donatexBridgeHint")}</p>
@@ -1293,6 +1299,11 @@ export function initPropertiesPanel({
       document.getElementById("pCustomMode").addEventListener("change", (e) => {
         send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { mode: e.target.value } } });
       });
+    } else if (inst.type === "layer-alert") {
+      const openTimeline = propertiesEl.querySelector("#pOpenTimeline");
+      if (openTimeline) {
+        openTimeline.addEventListener("click", () => window.desktop?.openTimelineEditor(inst.id));
+      }
     } else if (inst.type === "donatex-ai") {
       propertiesEl.querySelector("#pDonatexName").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { characterName: e.target.value.trim() } } }));
       propertiesEl.querySelector("#pDonatexAvatar").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { avatarUrl: e.target.value.trim() } } }));

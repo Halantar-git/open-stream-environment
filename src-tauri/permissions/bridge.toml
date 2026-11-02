@@ -30,6 +30,7 @@ commands.allow = [
   "open_chat_window",
   "change_language",
   "open_widget_editor",
+  "open_timeline_editor",
   "open_theme_preview",
   "open_theme_samples",
   "open_theme_editor",

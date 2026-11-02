@@ -132,6 +132,7 @@ pub fn run() {
             desktop::db_reset_all,
             desktop::open_chat_window,
             desktop::open_widget_editor,
+            desktop::open_timeline_editor,
             desktop::open_theme_preview,
             desktop::open_theme_samples,
             desktop::open_theme_editor,

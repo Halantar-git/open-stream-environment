@@ -672,6 +672,7 @@ pub const SERVED_DIRS: &[&str] = &[
     "chatwindow",
     "splash",
     "widgeteditor",
+    "timelineeditor",
     "themeeditor",
     "csseditor",
     "shared",

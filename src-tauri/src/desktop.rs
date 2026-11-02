@@ -264,6 +264,35 @@ pub fn open_widget_editor(
     )
 }
 
+/// `app:open-timeline-editor` — окно монтажа алерта-композиции.
+#[tauri::command]
+pub fn open_timeline_editor(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, DesktopState>,
+    widget_id: Value,
+) -> Value {
+    let id = widget_id.as_str().unwrap_or_default();
+    let label = format!("timeline-editor-{}", sanitize_label(id));
+    if focus_existing(&app, &label) {
+        return json!({ "ok": true });
+    }
+    let port = state.diagnostics.port().to_string();
+    open_window(
+        app,
+        &label,
+        "Монтаж алерта — Open Stream Environment",
+        page_url(
+            state.diagnostics.port(),
+            "/timelineeditor/timeline-editor.html",
+            &[("port", &port), ("widgetId", id)],
+        ),
+        (1240.0, 840.0),
+        (900.0, 600.0),
+        false,
+        false,
+    )
+}
+
 /// `app:open-theme-preview` — живой оверлей с черновиком темы.
 #[tauri::command]
 pub fn open_theme_preview(app: tauri::AppHandle, state: tauri::State<'_, DesktopState>) -> Value {

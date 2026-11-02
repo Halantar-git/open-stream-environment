@@ -30,6 +30,7 @@
       "../chatwindow": "chatwindow",
       "../splash": "splash",
       "../widgeteditor": "widgeteditor",
+      "../timelineeditor": "timelineeditor",
       "../themeeditor": "themeeditor",
       "../csseditor": "csseditor",
       "../shared": "shared",

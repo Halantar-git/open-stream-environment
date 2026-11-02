@@ -31,6 +31,7 @@
     openChatWindow: () => invoke("open_chat_window"),
     changeLanguage: (lang) => invoke("change_language", { lang }),
     openWidgetEditor: (widgetId) => invoke("open_widget_editor", { widgetId }),
+    openTimelineEditor: (widgetId) => invoke("open_timeline_editor", { widgetId }),
     openThemePreview: () => invoke("open_theme_preview"),
     openThemeSamples: () => invoke("open_theme_samples"),
     openThemeEditor: (init) => invoke("open_theme_editor", { init: init ?? null }),

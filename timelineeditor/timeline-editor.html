@@ -1,0 +1,93 @@
+<!--
+  Copyright (C) 2026  Halantar
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <https://gnu.org>.
+-->
+
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Монтаж алерта — Open Stream Environment</title>
+  <link rel="stylesheet" href="../shared/theme.css" />
+  <link rel="stylesheet" href="../shared/widgets.css" />
+  <link rel="stylesheet" href="timeline-editor.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="te-header">
+      <span class="te-header__title" data-i18n="timelineEditor.title">Монтаж алерта</span>
+      <span class="te-header__status" id="statusLabel"></span>
+      <button class="md-button md-button--tonal" id="testBtn" type="button" data-i18n="timelineEditor.test">Тест</button>
+      <button class="md-button md-button--filled" id="saveBtn" type="button" data-i18n="timelineEditor.save">Сохранить</button>
+    </header>
+
+    <main class="te-body">
+      <section class="te-left">
+        <div class="te-preview">
+          <div class="te-preview__label">
+            <span data-i18n="timelineEditor.preview">Превью</span>
+            <span class="te-preview__hint" data-i18n="timelineEditor.previewHint"></span>
+          </div>
+          <div class="te-preview__box" id="previewBox">
+            <div class="te-stage widget-layer-alert-host" id="stage"></div>
+          </div>
+        </div>
+
+        <div class="te-timeline">
+          <div class="te-timeline__toolbar">
+            <span class="te-timeline__title" data-i18n="timelineEditor.timeline">Таймлайн</span>
+            <div class="te-timeline__actions">
+              <button class="md-button md-button--tonal" id="addText" type="button">+ <span data-i18n="timelineEditor.addText">Текст</span></button>
+              <button class="md-button md-button--tonal" id="addImage" type="button">+ <span data-i18n="timelineEditor.addImage">Картинка</span></button>
+              <button class="md-button md-button--tonal" id="addVideo" type="button">+ <span data-i18n="timelineEditor.addVideo">Видео</span></button>
+            </div>
+          </div>
+
+          <div class="te-ruler">
+            <span class="te-ruler__spacer" aria-hidden="true"></span>
+            <div class="te-ruler__track" id="rulerTrack"></div>
+          </div>
+
+          <div class="te-rows" id="rows">
+            <div class="te-playhead" id="playhead" hidden></div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="te-side">
+        <section class="te-panel">
+          <h3 class="te-panel__title" data-i18n="timelineEditor.layers">Слои</h3>
+          <div class="te-layer-list" id="layerList"></div>
+        </section>
+
+        <section class="te-panel">
+          <h3 class="te-panel__title" data-i18n="timelineEditor.layer">Слой</h3>
+          <div id="inspector"></div>
+        </section>
+
+        <section class="te-panel">
+          <h3 class="te-panel__title" data-i18n="timelineEditor.composition">Композиция</h3>
+          <div id="composition"></div>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <script src="../shared/events.js"></script>
+  <script src="../shared/i18n.js"></script>
+  <script src="../shared/layer-composition.js"></script>
+  <script src="timeline-editor.js"></script>
+</body>
+</html>

@@ -109,6 +109,16 @@ const SECTIONS = [
     ],
   },
   {
+    id: "alert-layers",
+    title: "help.alertLayers.title",
+    blocks: [
+      { type: "p", key: "help.alertLayers.p1" },
+      { type: "p", key: "help.alertLayers.p2" },
+      { type: "p", key: "help.alertLayers.p3" },
+      { type: "p", key: "help.alertLayers.p4" },
+    ],
+  },
+  {
     id: "guests",
     title: "help.guests.title",
     blocks: [
