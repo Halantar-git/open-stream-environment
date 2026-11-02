@@ -347,6 +347,8 @@ const { EVENT_TYPES } = window.SharedEvents;
   const installPackageBtn = document.getElementById("installPackageBtn");
   const installPackageFile = document.getElementById("installPackageFile");
   const packagesStatusEl = document.getElementById("packagesStatus");
+  const pluginListEl = document.getElementById("pluginList");
+  const packagesErrorsEl = document.getElementById("packagesErrors");
   const wheelPanelEl = document.getElementById("wheelPanel");
   const wheelPanelBody = document.getElementById("wheelPanelBody");
   const participantsPanelEl = document.getElementById("participantsPanel");
@@ -3239,6 +3241,76 @@ const { EVENT_TYPES } = window.SharedEvents;
   }
 
   /*
+    Список установленных пакетов: имя, тип, id и описание из манифеста.
+    Данные уже пришли в `OSE.plugins` при загрузке страницы — отдельный запрос не
+    нужен. Пакеты, которые не удалось разобрать, показываем одной строкой ниже:
+    молча пропавший пакет ищут потом вручную в каталоге.
+  */
+  function renderPluginList() {
+    if (!pluginListEl) return;
+    const items = window.OSE && Array.isArray(window.OSE.plugins) ? window.OSE.plugins : [];
+    const errors =
+      window.OSE && Array.isArray(window.OSE.errors) ? window.OSE.errors : [];
+
+    pluginListEl.innerHTML = "";
+    if (!items.length) {
+      const empty = document.createElement("p");
+      empty.className = "plugin-list__empty";
+      empty.textContent = t("packages.empty");
+      pluginListEl.appendChild(empty);
+    }
+
+    items.forEach((item) => {
+      const card = document.createElement("div");
+      card.className = "plugin-item";
+
+      const head = document.createElement("div");
+      head.className = "plugin-item__head";
+      const name = document.createElement("span");
+      name.className = "plugin-item__name";
+      name.textContent = String(item.name || item.id || "");
+      const kind = document.createElement("span");
+      kind.className = "plugin-item__kind";
+      kind.textContent = item.kind === "theme" ? t("packages.kindTheme") : t("packages.kindWidget");
+      const id = document.createElement("code");
+      id.className = "plugin-item__id";
+      id.textContent = String(item.id || "");
+      head.appendChild(name);
+      head.appendChild(kind);
+      head.appendChild(id);
+      card.appendChild(head);
+
+      if (item.description) {
+        const desc = document.createElement("p");
+        desc.className = "plugin-item__desc";
+        desc.textContent = String(item.description);
+        card.appendChild(desc);
+      }
+
+      const meta = [item.version ? `v${item.version}` : "", item.author || ""]
+        .filter(Boolean)
+        .join(" · ");
+      if (meta) {
+        const line = document.createElement("div");
+        line.className = "plugin-item__meta";
+        line.textContent = meta;
+        card.appendChild(line);
+      }
+
+      pluginListEl.appendChild(card);
+    });
+
+    if (packagesErrorsEl) {
+      const text = errors
+        .map((error) => `${error && error.dir ? error.dir : "?"}: ${error && error.error ? error.error : ""}`)
+        .join("; ");
+      packagesErrorsEl.hidden = !text;
+      packagesErrorsEl.textContent = text ? t("packages.errors", { list: text }) : "";
+      packagesErrorsEl.style.color = text ? "var(--md-error)" : "";
+    }
+  }
+
+  /*
     Пакет ставится архивом: сервер сам распаковывает его в каталог пакетов и
     проверяет манифест теми же правилами, что при чтении с диска, поэтому здесь
     остаётся только отдать файл. Заголовок `x-ose-install` — требование сервера:
@@ -5449,6 +5521,7 @@ if (window.OSE) {
   window.OSE.load({ widgets: false }).then(() => {
     renderLibrary();
     renderThemeGrid();
+    renderPluginList();
 
     /*
       Пакет могли добавить или убрать при работающем приложении: при возврате

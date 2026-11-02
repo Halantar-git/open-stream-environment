@@ -1486,6 +1486,11 @@
     "hint": "One package per archive: widget.json or theme.json at the root or inside a single folder, and the manifest id matches the folder name. A package with the same id is replaced. Package code runs in its own sandboxed frame, but the network stays reachable — install only what you trust.",
     "installing": "Installing “{{name}}”…",
     "installed": "Package “{{name}}” installed — the page will reload now.",
+    "installedTitle": "Installed packages",
+    "empty": "No packages yet — install an archive or drop a folder into the packages directory.",
+    "kindWidget": "widget",
+    "kindTheme": "theme",
+    "errors": "Could not read: {{list}}",
     "failed": "Could not install: {{error}}"
   },
   "data": {
@@ -1748,7 +1753,7 @@
       "p1": "A widget or theme can be installed as a folder in the packages directory: %APPDATA%\\com.openstreamenvironment.app\\plugins\\<id>\\ (in development — config/plugins/<id>/). No restart is needed: manifests are re-read when a page loads, so returning to the panel is enough — it reloads itself once it sees the new list. Refresh the OBS overlay source manually so the stream is not interrupted.",
       "p2": "A widget is described by widget.json — name, code file, styles, default size and a settings schema. It appears as its own card in the library, and the inspector renders fields from the schema. A theme is described by theme.json — a token set and optional CSS; it appears in the theme list as plugin:<id>. A 3D widget also has renderType (canvas or 3d-webgl) and theme — the theme family; the theme lists such types in threeDWidgets, and a 3D toggle appears on its card.",
       "p3": "Package code does not run in the overlay page: it gets its own sandboxed frame (an iframe without access to the interface or app data), and only settings, theme and the events the widget subscribed to cross the boundary. The network stays reachable inside the frame, so install only trusted packages. See docs/plugin-api.md and docs/examples/plugins/ for the manifest format and examples.",
-      "p4": "A ready archive is installed from Settings → Packages with the Install from ZIP button: one package per archive (manifest at the root or inside a single folder), and a package with the same id is replaced. The server checks the manifest and files before installing, then the page reloads itself — the library and themes already include the new package. Installation works only from this machine: the phone remote and third-party pages cannot send this request."
+      "p4": "A ready archive is installed from Settings → Packages with the Install from ZIP button: one package per archive (manifest at the root or inside a single folder), and a package with the same id is replaced. The server checks the manifest and files before installing, then the page reloads itself — the library and themes already include the new package. Installation works only from this machine: the phone remote and third-party pages cannot send this request. The same card lists the installed packages — name, kind, id and the description from the manifest; packages that failed to parse are shown below as a separate line."
     },
     "themes": {
       "title": "Themes",

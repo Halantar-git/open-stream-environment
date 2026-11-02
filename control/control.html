@@ -659,11 +659,14 @@
         <div class="settings__card md-card" id="settingsCardPackages">
           <h2 data-i18n="packages.title">Пакеты виджетов и тем</h2>
           <p class="settings__desc" data-i18n="packages.desc">Виджеты и темы из папки: пакет можно положить в каталог данных или установить архивом. Новый пакет появляется в библиотеке без перезапуска приложения.</p>
+          <div class="settings__subhead" data-i18n="packages.installedTitle">Установленные пакеты</div>
+          <div class="plugin-list" id="pluginList"></div>
+          <div class="settings__hint" id="packagesErrors" hidden></div>
           <div class="settings__actions">
             <input type="file" id="installPackageFile" accept=".zip,application/zip" hidden />
             <button class="md-button md-button--tonal" id="installPackageBtn" data-i18n="packages.install">Установить из ZIP</button>
           </div>
-          <span class="md-field__hint" data-i18n="packages.hint">В архиве — один пакет: widget.json или theme.json в корне либо в единственной папке, а id в манифесте совпадает с именем папки. Пакет с тем же id заменяется. Код пакета исполняется в оверлее с полными правами — ставьте только то, чему доверяете.</span>
+          <span class="md-field__hint" data-i18n="packages.hint">В архиве — один пакет: widget.json или theme.json в корне либо в единственной папке, а id в манифесте совпадает с именем папки. Пакет с тем же id заменяется. Код пакета исполняется в отдельной рамке-песочнице, но сеть ему доступна — ставьте только то, чему доверяете.</span>
           <div class="settings__hint" id="packagesStatus" hidden></div>
         </div>
 

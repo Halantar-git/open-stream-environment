@@ -1763,6 +1763,64 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   margin: 0;
 }
 
+.plugin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+
+.plugin-item {
+  padding: 10px 12px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-sm);
+  background: var(--md-surface-container-low);
+}
+
+.plugin-item__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.plugin-item__name {
+  font-weight: 600;
+  color: var(--md-on-surface);
+}
+
+.plugin-item__kind {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--md-primary);
+}
+
+.plugin-item__id {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--md-on-surface-variant);
+}
+
+.plugin-item__desc {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--md-on-surface-variant);
+}
+
+.plugin-item__meta {
+  margin-top: 4px;
+  font-size: 11px;
+  opacity: 0.85;
+  color: var(--md-on-surface-variant);
+}
+
+.plugin-list__empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--md-on-surface-variant);
+}
+
 .settings__subhead {
   margin-top: 18px;
   margin-bottom: 4px;
