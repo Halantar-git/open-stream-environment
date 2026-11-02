@@ -234,6 +234,15 @@
     return Math.max(4000, Math.ceil(total / 1000) * 1000);
   }
 
+  // Сколько времени занимает ширина дорожки. При приближении дорожка растёт
+  // по CSS (--te-zoom), и в неё по-прежнему влезает только видимая часть.
+  // При отдалении дорожка остаётся во всю ширину, а шкала продолжается
+  // вправо: композиция занимает левую часть, дальше — пустое время.
+  function timelineSpan() {
+    const total = timelineTotal();
+    return state.zoom < 1 ? total / state.zoom : total;
+  }
+
   function sampleAlert() {
     // Если у выбранного слоя задано событие, превью показывает именно его:
     // иначе слой, привязанный к фолловерам, исчезал бы при выборе.
@@ -413,8 +422,13 @@
           timelineScroll.scrollWidth
         : 0;
     state.zoom = next;
-    timelineEl.style.setProperty("--te-zoom", String(next));
+    // Дорожки не бывают уже видимой части: отдаление расширяет шкалу, а не
+    // сжимает её — иначе на узком окне подписи слипаются в кашу.
+    timelineEl.style.setProperty("--te-zoom", String(Math.max(next, 1)));
     updateZoomUi();
+    // При отдалении меняется не ширина дорожки, а сколько времени в неё
+    // влезает, поэтому клипы нужно пересчитать заново.
+    renderRows();
     renderRuler();
     requestAnimationFrame(() => {
       timelineScroll.scrollLeft = Math.max(
@@ -443,15 +457,16 @@
   }
 
   function renderRuler() {
-    const total = timelineTotal();
-    // Шаг делений зависит от масштаба: в приближении нужны мелкие линии, иначе
-    // на экран попадали бы две-три подписи.
-    const visible = total / state.zoom;
+    const span = timelineSpan();
+    // Шаг подбираем по фактической ширине дорожки: при фиксированном числе
+    // делений в узком окне подписи наезжали бы друг на друга.
+    const track = Math.max(1, rows.clientWidth - LABEL_WIDTH);
+    const target = span / Math.max(1, Math.floor(track / 48));
     const LADDER = [100, 200, 250, 500, 1000, 2000, 5000, 10000, 20000];
-    const step = LADDER.find((value) => value >= visible / 12) || LADDER[LADDER.length - 1];
+    const step = LADDER.find((value) => value >= target) || LADDER[LADDER.length - 1];
     const parts = [];
-    for (let ms = 0; ms <= total; ms += step) {
-      const percent = (ms / total) * 100;
+    for (let ms = 0; ms <= span; ms += step) {
+      const percent = (ms / span) * 100;
       parts.push(
         '<span class="te-tick" style="left:' +
           percent +
@@ -461,23 +476,23 @@
       );
     }
     rulerTrack.innerHTML = parts.join("");
-    rows.style.setProperty("--te-tick-step", (step / total) * 100 + "%");
+    rows.style.setProperty("--te-tick-step", (step / span) * 100 + "%");
     // Мелкие линии сетки — пятикратное дробление шага шкалы.
-    rows.style.setProperty("--te-minor-step", (step / 5 / total) * 100 + "%");
+    rows.style.setProperty("--te-minor-step", (step / 5 / span) * 100 + "%");
   }
 
   function updateClipVisual(layer) {
-    const total = state.drag ? state.drag.total : timelineTotal();
+    const span = state.drag ? state.drag.total : timelineSpan();
     const clip = Array.from(rows.querySelectorAll(".te-clip")).find(
       (node) => node.dataset.id === layer.id
     );
     if (!clip) return;
-    clip.style.left = (layer.start / total) * 100 + "%";
-    clip.style.width = Math.max(1, (layer.duration / total) * 100) + "%";
+    clip.style.left = (layer.start / span) * 100 + "%";
+    clip.style.width = Math.max(1, (layer.duration / span) * 100) + "%";
   }
 
   function renderRows() {
-    const total = timelineTotal();
+    const span = timelineSpan();
     rows.innerHTML = "";
     // Сетка живёт в дорожках, а `innerHTML = ""` её стирает — создаём заново.
     const grid = document.createElement("div");
@@ -505,8 +520,8 @@
       clip.className =
         "te-clip te-clip--" + layer.type + (layer.id === state.selectedId ? " is-selected" : "");
       clip.dataset.id = layer.id;
-      clip.style.left = (layer.start / total) * 100 + "%";
-      clip.style.width = Math.max(1, (layer.duration / total) * 100) + "%";
+      clip.style.left = (layer.start / span) * 100 + "%";
+      clip.style.width = Math.max(1, (layer.duration / span) * 100) + "%";
       clip.innerHTML =
         '<span class="te-clip__handle te-clip__handle--start"></span><span class="te-clip__label">' +
         escapeHtml(clipLabel(layer)) +
@@ -1380,7 +1395,7 @@
       mode,
       startX: event.clientX,
       width,
-      total: timelineTotal(),
+      total: timelineSpan(),
       origStart: liveLayer.start,
       origDuration: liveLayer.duration,
     };
@@ -1486,12 +1501,15 @@
 
   // ---- playback ----
 
-  function updatePlayhead(progress) {
+  function updatePlayhead(progress, total) {
     const label = rows.querySelector(".te-row__label");
     const offset = label ? label.offsetWidth : LABEL_WIDTH;
     const trackWidth = Math.max(1, rows.clientWidth - offset);
+    // При отдалении композиция занимает только левую часть дорожки — бегунок
+    // должен остановиться на её конце, а не уехать за пустое время.
+    const fraction = clamp((progress * total) / timelineSpan(), 0, 1);
     playhead.hidden = false;
-    playhead.style.left = offset + trackWidth * progress + "px";
+    playhead.style.left = offset + trackWidth * fraction + "px";
   }
 
   function startProgress(total) {
@@ -1499,7 +1517,7 @@
     const step = () => {
       if (!state.playing) return;
       const progress = Math.min(1, (performance.now() - started) / total);
-      updatePlayhead(progress);
+      updatePlayhead(progress, total);
       if (progress < 1) progressRaf = requestAnimationFrame(step);
     };
     progressRaf = requestAnimationFrame(step);
