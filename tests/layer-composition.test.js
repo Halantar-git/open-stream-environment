@@ -393,6 +393,26 @@ describe("layer-composition: статичная раскладка", () => {
     expect(host.children[0].children[0].children[0].style.fontStyle).toBe("italic");
   });
 
+  test("слой с чужим событием не рисуется", () => {
+    const doc = makeDocument();
+    const host = doc.createElement("div");
+    LayerComposition.renderStatic(
+      host,
+      {
+        layers: [
+          { type: "text", text: "all", start: 0 },
+          { type: "text", text: "follow only", kinds: ["follow"], start: 0 },
+        ],
+      },
+      { kind: "donation" },
+      {}
+    );
+
+    const root = host.children[0];
+    expect(root.children).toHaveLength(1);
+    expect(root.children[0].children[0].textContent).toBe("all");
+  });
+
   test("рисует плашку градиентом", () => {
     const doc = makeDocument();
     const host = doc.createElement("div");
@@ -500,6 +520,27 @@ describe("layer-composition: проигрыватель", () => {
     jest.advanceTimersByTime(5000);
     expect(done).not.toHaveBeenCalled();
     expect(host.children).toHaveLength(0);
+  });
+
+  test("время композиции считают только слои своего события", () => {
+    const host = global.document.createElement("div");
+    const player = LayerComposition.createPlayer(host, {});
+
+    const total = player.play(
+      {
+        durationMs: 100,
+        layers: [
+          { type: "text", text: "a", start: 0, duration: 300 },
+          { type: "text", text: "b", start: 0, duration: 5000, kinds: ["sub"] },
+        ],
+      },
+      { kind: "donation" },
+      () => {}
+    );
+
+    expect(total).toBe(300);
+    // Слой другой категории не создаётся вовсе.
+    expect(host.children[0].children).toHaveLength(1);
   });
 
   test("звук играет в окне слоя и останавливается в конце", () => {

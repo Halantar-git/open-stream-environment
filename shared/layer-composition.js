@@ -135,6 +135,10 @@
       volume: clamp(toNumber(layer.volume, 0.8), 0, 1),
       textAnim: oneOf(layer.textAnim, TEXT_ANIMS, "none"),
       typeMs: clamp(toNumber(layer.typeMs, DEFAULT_TYPE_MS), MIN_TYPE_MS, MAX_TYPE_MS),
+      // Событие слоя: пусто — слой входит в каждую композицию, иначе он
+      // появляется только для своей категории. Так в одной композиции можно
+      // держать разные видео и тексты без копирования всей раскладки.
+      kinds: normalizeKinds(layer.kinds),
       in: oneOf(layer.in, ANIMATIONS, "fade"),
       out: oneOf(layer.out, ANIMATIONS, "fade"),
       inMs: clamp(toNumber(layer.inMs, 300), 0, 5000),
@@ -306,6 +310,18 @@
     const kinds = normalizeKinds(config && config.eventKinds);
     if (!kinds.length) return true;
     return kinds.indexOf(String((alert && alert.kind) || "")) >= 0;
+  }
+
+  // Слой без списка событий участвует всегда; со списком — только для своей
+  // категории.
+  function layerMatchesAlert(layer, alert) {
+    const kinds = normalizeKinds(layer && layer.kinds);
+    if (!kinds.length) return true;
+    return kinds.indexOf(String((alert && alert.kind) || "")) >= 0;
+  }
+
+  function layersForAlert(layers, alert) {
+    return (layers || []).filter((layer) => layerMatchesAlert(layer, alert));
   }
 
   /*
@@ -727,7 +743,7 @@
     const normalized = normalizeComposition(config);
     const root = doc.createElement("div");
     root.className = "la-composition";
-    normalized.layers.forEach((layer) => {
+    layersForAlert(normalized.layers, alert).forEach((layer) => {
       const node = createLayerNode(doc, layer, alert, options);
       node.el.style.opacity = String(layer.opacity);
       root.appendChild(node.el);
@@ -834,7 +850,10 @@
       const root = doc.createElement("div");
       root.className = "la-composition";
 
-      normalized.layers.forEach((layer) => {
+      // Слой с чужим событием в этой композиции не участвует — ни по слоям,
+      // ни по времени: иначе пустая пауза держала бы эфир.
+      const layers = layersForAlert(normalized.layers, alert);
+      layers.forEach((layer) => {
         const node = createLayerNode(doc, layer, alert, opts);
         nodes.push(node);
         root.appendChild(node.el);
@@ -850,7 +869,7 @@
 
       host.appendChild(root);
 
-      const total = compositionDuration(normalized);
+      const total = compositionDuration(Object.assign({}, normalized, { layers }));
       later(() => {
         const callback = finished;
         finished = null;

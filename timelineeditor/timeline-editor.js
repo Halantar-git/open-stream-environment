@@ -218,7 +218,11 @@
   }
 
   function sampleAlert() {
-    const kind = state.scope || state.config.eventKinds[0] || "donation";
+    // Если у выбранного слоя задано событие, превью показывает именно его:
+    // иначе слой, привязанный к фолловерам, исчезал бы при выборе.
+    const selected = findLayer(state.selectedId);
+    const layerKind = selected && Array.isArray(selected.kinds) && selected.kinds.length ? selected.kinds[0] : "";
+    const kind = layerKind || state.scope || state.config.eventKinds[0] || "donation";
     return {
       kind,
       user: "Stargazer",
@@ -643,9 +647,27 @@
         escapeHtml(t("timelineEditor.textAnim." + name)) +
         "</option>"
     ).join("");
+    // Событие слоя: пусто — слой в каждой реакции, иначе только для своей.
+    const layerKind = Array.isArray(layer.kinds) && layer.kinds.length ? layer.kinds[0] : "";
+    const layerKindOptions =
+      '<option value=""' +
+      (layerKind ? "" : " selected") +
+      ">" +
+      escapeHtml(t("timelineEditor.allEvents")) +
+      "</option>" +
+      LC.EVENT_KINDS.map(
+        (name) =>
+          '<option value="' +
+          name +
+          '"' +
+          (layerKind === name ? " selected" : "") +
+          ">" +
+          escapeHtml(kindLabel(name)) +
+          "</option>"
+      ).join("");
 
     inspector.innerHTML =
-      '<div class="te-inspector__title"><span>' +
+      '<div class="te-inspector__title"><span>' + +
       escapeHtml(layerTitle(layer, index)) +
       '</span><button class="md-button md-button--text" id="delLayer" type="button">' +
       escapeHtml(t("timelineEditor.deleteLayer")) +
@@ -720,6 +742,11 @@
           : isShape
             ? shapeInspector(layer)
             : mediaInspector(layer, fitOptions)) +
+      '<div class="te-field"><label>' +
+      escapeHtml(t("timelineEditor.layerEvent")) +
+      '</label><select id="fLayerKind">' +
+      layerKindOptions +
+      "</select></div>" +
       (isAudio
         ? ""
         : '<div class="te-section">' +
@@ -809,6 +836,9 @@
     };
 
     bind("delLayer", "click", () => deleteSelected());
+    bind("fLayerKind", "change", (event) => {
+      patchLayer({ kinds: event.target.value ? [event.target.value] : [] });
+    });
 
     if (layer.type === "text") {
       bind("fText", "input", (event) => patchLayer({ text: event.target.value }));
