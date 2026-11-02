@@ -315,8 +315,8 @@
     const composition = active();
     stage.innerHTML = "";
     if (composition.stack) {
-      // В режиме списка редактор показывает одну строку: остальные обозначены
-      // пунктиром, чтобы было видно, сколько событий поместится в рамку.
+      // В режиме списка редактор показывает верхнюю строку в её реальной
+      // высоте. Рамку вокруг неё не рисуем — канвас остаётся целым.
       const slot = stackSlot(composition);
       const slotBox = document.createElement("div");
       slotBox.className = "te-slot";

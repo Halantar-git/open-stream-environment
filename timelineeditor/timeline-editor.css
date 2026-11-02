@@ -166,13 +166,12 @@ html, body {
   -webkit-user-drag: none;
 }
 
-/* Одна строка списка, которую рисуем в превью. */
+/* Одна строка списка, которую рисуем в превью. Рамку вокруг неё не рисуем:
+   канвас должен выглядеть целым, а не разрезанным на строки. */
 .te-slot {
   position: absolute;
   left: 0;
   width: 100%;
-  outline: 1px dashed color-mix(in srgb, var(--md-primary) 35%, transparent);
-  outline-offset: -1px;
 }
 
 .te-selection {
