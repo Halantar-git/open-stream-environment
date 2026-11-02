@@ -174,23 +174,6 @@ html, body {
   outline: 1px dashed color-mix(in srgb, var(--md-primary) 35%, transparent);
   outline-offset: -1px;
 }
-.te-slot-guide {
-  position: absolute;
-  left: 0;
-  width: 100%;
-  border-top: 1px dashed color-mix(in srgb, var(--md-outline-variant) 75%, transparent);
-  pointer-events: none;
-  color: var(--md-on-surface-variant);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  opacity: 0.45;
-}
-.te-slot-guide::before {
-  content: attr(data-index);
-  position: absolute;
-  top: 2px;
-  left: 4px;
-}
 
 .te-selection {
   position: absolute;

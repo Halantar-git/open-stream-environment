@@ -314,14 +314,6 @@
       slotBox.style.setProperty("--la-text-scale", String(slot.height / 100));
       stage.appendChild(slotBox);
       LC.renderStatic(slotBox, composition, sampleAlert(), previewOptions);
-      for (let index = 1; index < composition.stackMax; index += 1) {
-        const guide = document.createElement("div");
-        guide.className = "te-slot-guide";
-        guide.dataset.index = String(index + 1);
-        guide.style.top = index * (slot.height + slot.gap) + "%";
-        guide.style.height = slot.height + "%";
-        stage.appendChild(guide);
-      }
     } else {
       LC.renderStatic(stage, composition, sampleAlert(), previewOptions);
     }

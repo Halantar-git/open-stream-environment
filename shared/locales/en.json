@@ -1692,7 +1692,7 @@
     "stackSeveral": "Show several",
     "stackMax": "At once",
     "stackGap": "Gap between rows, %",
-    "stackHint": "A new event appears on top and older rows slide down, like Recent events. Design the layers in the top row — the dashed guides show how many rows fit. “Gap” leaves breathing room between rows: the rows share what is left after the gaps.",
+    "stackHint": "A new event appears on top and older rows slide down, like Recent events. Design the layers in the top row. “Gap” leaves breathing room between rows: the rows share what is left after the gaps.",
     "persistent": "Stay on screen",
     "persistentHint": "Rows do not expire by timer: a new event pushes out the oldest one. An empty widget draws nothing — the first row appears with the first event.",
     "eventKinds": "Widget events",
