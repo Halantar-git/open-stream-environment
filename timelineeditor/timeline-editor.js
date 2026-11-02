@@ -314,36 +314,12 @@
     }
     const composition = active();
     stage.innerHTML = "";
-    if (composition.stack) {
-      // В режиме списка редактор показывает верхнюю строку в её реальной
-      // высоте. Рамку вокруг неё не рисуем — канвас остаётся целым.
-      const slot = stackSlot(composition);
-      const slotBox = document.createElement("div");
-      slotBox.className = "te-slot";
-      slotBox.style.top = "0%";
-      slotBox.style.height = slot.height + "%";
-      slotBox.style.setProperty("--la-text-scale", String(slot.height / 100));
-      stage.appendChild(slotBox);
-      LC.renderStatic(slotBox, composition, sampleAlert(), previewOptions);
-    } else {
-      LC.renderStatic(stage, composition, sampleAlert(), previewOptions);
-    }
+    // В режиме списка композиция — это одна строка, но редактор рисует её на
+    // всём канвасе: так слой можно поставить по центру и тащить без скачков.
+    // В эфире та же раскладка занимает свою долю высоты рамки.
+    LC.renderStatic(stage, composition, sampleAlert(), previewOptions);
     bindPreviewLayers();
     renderSelection();
-  }
-
-  // Высота одной строки списка и просвет в процентах рамки. Порядок счёта тот
-  // же, что в `createStack`: строки делят остаток после зазоров.
-  function stackSlot(composition) {
-    if (!composition.stack) return { height: 100, gap: 0 };
-    const max = Math.max(1, composition.stackMax);
-    const gap = composition.stackGap || 0;
-    return { height: Math.max(5, (100 - gap * (max - 1)) / max), gap };
-  }
-
-  // Высота одной строки списка в процентах рамки: 100 — обычный режим.
-  function slotScale() {
-    return stackSlot(active()).height;
   }
 
   function findPreviewLayer(id) {
@@ -360,12 +336,11 @@
       selection.hidden = true;
       return;
     }
-    const scale = slotScale();
     selection.hidden = false;
     selection.style.left = layer.x + "%";
-    selection.style.top = (layer.y * scale) / 100 + "%";
+    selection.style.top = layer.y + "%";
     selection.style.width = layer.w + "%";
-    selection.style.height = (layer.h * scale) / 100 + "%";
+    selection.style.height = layer.h + "%";
   }
 
   function updatePreviewLayer(layer) {
@@ -1451,7 +1426,6 @@
     if (layer.type === "audio") return;
     const rect = stage.getBoundingClientRect();
     if (!(rect.width > 0 && rect.height > 0)) return;
-    const scale = stackSlot(composition).height;
 
     state.previewDrag = {
       id: layer.id,
@@ -1459,7 +1433,7 @@
       startX: event.clientX,
       startY: event.clientY,
       width: rect.width,
-      height: (rect.height * scale) / 100,
+      height: rect.height,
       orig: { x: layer.x, y: layer.y, w: layer.w, h: layer.h },
     };
     document.addEventListener("pointermove", onPreviewDragMove);
