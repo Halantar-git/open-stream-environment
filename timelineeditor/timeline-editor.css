@@ -430,35 +430,6 @@ html, body {
   display: none;
 }
 
-/* Зона «до алерта»: появляется, когда слой уведён в минус. Затенение
-   отделяет время до события, а линия на нуле видна и с выключенной сеткой. */
-.te-past {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: var(--te-label, 132px);
-  right: 0;
-  pointer-events: none;
-  z-index: 0;
-  background: linear-gradient(
-    to right,
-    color-mix(in srgb, var(--md-primary) 7%, transparent) 0 var(--te-zero, 0%),
-    transparent var(--te-zero, 0%)
-  );
-}
-.te-past::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: var(--te-zero, 0%);
-  width: 1px;
-  background: color-mix(in srgb, var(--md-primary) 55%, transparent);
-}
-.te-tick--zero {
-  color: var(--md-primary);
-}
-
 .te-clip {
   position: absolute;
   top: 6px;

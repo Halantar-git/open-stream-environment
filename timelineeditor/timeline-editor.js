@@ -37,8 +37,6 @@
   const LABEL_WIDTH = 132;
   const MIN_DURATION = 100;
   const MAX_TIME = 600000;
-  // Слой можно начать до события: такой слой к первому кадру уже в кадре.
-  const MIN_TIME = -MAX_TIME;
   // Масштаб таймлайна: каждая ступень — своя ширина дорожек в долях видимой
   // части. Больше восьми не даём — клип становится шире экрана целиком.
   const ZOOM_STEPS = [1, 1.5, 2, 3, 4, 6, 8];
@@ -232,53 +230,6 @@
   function timelineTotal() {
     const total = LC.compositionDuration(active());
     return Math.max(4000, Math.ceil(total / 1000) * 1000);
-  }
-
-  // Шаг делений шкалы: в приближении нужны мелкие линии, иначе на экран
-  // попадали бы две-три подписи.
-  const TICK_LADDER = [100, 200, 250, 500, 1000, 2000, 5000, 10000, 20000];
-
-  function tickStep(span) {
-    const visible = span / state.zoom;
-    return (
-      TICK_LADDER.find((value) => value >= visible / 12) || TICK_LADDER[TICK_LADDER.length - 1]
-    );
-  }
-
-  /*
-    Видимая часть таймлайна. Ноль — момент события. Если слой уведён в минус,
-    слева появляется зона «до алерта»: без неё клип уехал бы под подписи и
-    вернуть его мышью было бы нельзя. Левую границу округляем по шагу шкалы,
-    чтобы линии сетки совпадали с подписями, а не съезжали на полшага.
-  */
-  function timelineRange() {
-    let from = 0;
-    let to = timelineTotal();
-    activeLayers().forEach((layer) => {
-      from = Math.min(from, layer.start);
-      to = Math.max(to, layer.start + layer.duration);
-    });
-    to = Math.ceil(to / 1000) * 1000;
-    // Шаг зависит от ширины диапазона, а диапазон — от шага: округление
-    // только расширяет границу влево, поэтому цикл быстро сходится.
-    let step = tickStep(to - from);
-    while (from < 0) {
-      const next = -Math.ceil(-from / step) * step;
-      if (next === from) break;
-      from = next;
-      step = tickStep(to - from);
-    }
-    return { from, to, span: to - from, step };
-  }
-
-  function timePercent(ms, range) {
-    return ((ms - range.from) / range.span) * 100;
-  }
-
-  function formatTick(ms) {
-    // Минус — зона «до алерта»; у самого нуля знак не нужен.
-    const seconds = ms === 0 ? 0 : ms / 1000;
-    return seconds + "s";
   }
 
   function sampleAlert() {
@@ -490,56 +441,46 @@
   }
 
   function renderRuler() {
-    const range = timelineRange();
-    // Деления идут по абсолютному времени от левой границы диапазона: при
-    // отрицательном начале в шкале появляются значения «до алерта».
-    const first = Math.ceil(range.from / range.step) * range.step;
+    const total = timelineTotal();
+    // Шаг делений зависит от масштаба: в приближении нужны мелкие линии, иначе
+    // на экран попадали бы две-три подписи.
+    const visible = total / state.zoom;
+    const LADDER = [100, 200, 250, 500, 1000, 2000, 5000, 10000, 20000];
+    const step = LADDER.find((value) => value >= visible / 12) || LADDER[LADDER.length - 1];
     const parts = [];
-    for (let ms = first; ms <= range.to; ms += range.step) {
-      const zero = ms === 0;
+    for (let ms = 0; ms <= total; ms += step) {
+      const percent = (ms / total) * 100;
       parts.push(
-        '<span class="te-tick' +
-          (zero ? " te-tick--zero" : "") +
-          '" style="left:' +
-          timePercent(ms, range) +
+        '<span class="te-tick" style="left:' +
+          percent +
           '%"><i></i><b>' +
-          formatTick(ms) +
-          "</b></span>"
+          ms / 1000 +
+          "s</b></span>"
       );
     }
     rulerTrack.innerHTML = parts.join("");
-    rows.style.setProperty("--te-tick-step", (range.step / range.span) * 100 + "%");
+    rows.style.setProperty("--te-tick-step", (step / total) * 100 + "%");
     // Мелкие линии сетки — пятикратное дробление шага шкалы.
-    rows.style.setProperty("--te-minor-step", (range.step / 5 / range.span) * 100 + "%");
+    rows.style.setProperty("--te-minor-step", (step / 5 / total) * 100 + "%");
   }
 
   function updateClipVisual(layer) {
-    const range = state.drag
-      ? { from: state.drag.from, span: state.drag.span }
-      : timelineRange();
+    const total = state.drag ? state.drag.total : timelineTotal();
     const clip = Array.from(rows.querySelectorAll(".te-clip")).find(
       (node) => node.dataset.id === layer.id
     );
     if (!clip) return;
-    clip.style.left = timePercent(layer.start, range) + "%";
-    clip.style.width = Math.max(1, (layer.duration / range.span) * 100) + "%";
+    clip.style.left = (layer.start / total) * 100 + "%";
+    clip.style.width = Math.max(1, (layer.duration / total) * 100) + "%";
   }
 
   function renderRows() {
-    const range = timelineRange();
+    const total = timelineTotal();
     rows.innerHTML = "";
     // Сетка живёт в дорожках, а `innerHTML = ""` её стирает — создаём заново.
     const grid = document.createElement("div");
     grid.className = "te-grid";
     rows.appendChild(grid);
-    // Зона «до алерта»: от левого края до нуля. Штриховка на нуле видна, даже
-    // когда сетка выключена, — по ней понятно, где начинается событие.
-    if (range.from < 0) {
-      const past = document.createElement("div");
-      past.className = "te-past";
-      past.style.setProperty("--te-zero", timePercent(0, range) + "%");
-      rows.appendChild(past);
-    }
     activeLayers().forEach((layer, index) => {
       const row = document.createElement("div");
       row.className = "te-row" + (layer.id === state.selectedId ? " is-selected" : "");
@@ -562,8 +503,8 @@
       clip.className =
         "te-clip te-clip--" + layer.type + (layer.id === state.selectedId ? " is-selected" : "");
       clip.dataset.id = layer.id;
-      clip.style.left = timePercent(layer.start, range) + "%";
-      clip.style.width = Math.max(1, (layer.duration / range.span) * 100) + "%";
+      clip.style.left = (layer.start / total) * 100 + "%";
+      clip.style.width = Math.max(1, (layer.duration / total) * 100) + "%";
       clip.innerHTML =
         '<span class="te-clip__handle te-clip__handle--start"></span><span class="te-clip__label">' +
         escapeHtml(clipLabel(layer)) +
@@ -909,9 +850,7 @@
       '<div class="te-row2">' +
       '<div class="te-field"><label>' +
       escapeHtml(t("timelineEditor.start")) +
-      '</label><input type="number" id="fStart" min="' +
-      MIN_TIME +
-      '" step="50" value="' +
+      '</label><input type="number" id="fStart" min="0" step="50" value="' +
       Math.round(layer.start) +
       '"></div>' +
       '<div class="te-field"><label>' +
@@ -1040,7 +979,7 @@
     number("fY", (value) => patchLayer({ y: value }), -100, 200);
     number("fW", (value) => patchLayer({ w: value }), 1, 200);
     number("fH", (value) => patchLayer({ h: value }), 1, 200);
-    number("fStart", (value) => patchLayer({ start: value }, true), MIN_TIME, MAX_TIME);
+    number("fStart", (value) => patchLayer({ start: value }, true), 0, MAX_TIME);
     number("fDuration", (value) => patchLayer({ duration: value }, true), MIN_DURATION, MAX_TIME);
     number("fZ", (value) => patchLayer({ z: Math.round(value) }), 0, 100);
     number("fInMs", (value) => patchLayer({ inMs: value }), 0, 5000);
@@ -1434,15 +1373,12 @@
     const width = track.getBoundingClientRect().width;
     if (!(width > 0)) return;
 
-    const range = timelineRange();
     state.drag = {
       id: liveLayer.id,
       mode,
       startX: event.clientX,
       width,
-      from: range.from,
-      to: range.to,
-      span: range.span,
+      total: timelineTotal(),
       origStart: liveLayer.start,
       origDuration: liveLayer.duration,
     };
@@ -1456,34 +1392,17 @@
     if (!drag) return;
     const layer = findLayer(drag.id);
     if (!layer) return;
-    const delta = Math.round(((event.clientX - drag.startX) / drag.width) * drag.span / 50) * 50;
+    const delta = Math.round(((event.clientX - drag.startX) / drag.width) * drag.total / 50) * 50;
 
     if (drag.mode === "move") {
-      layer.start = clamp(drag.origStart + delta, MIN_TIME, MAX_TIME - layer.duration);
+      layer.start = clamp(drag.origStart + delta, 0, MAX_TIME - layer.duration);
     } else if (drag.mode === "end") {
-      // Отрицательное начало не должно позволять растянуть клип за общий предел.
-      const maxDuration = clamp(MAX_TIME - layer.start, MIN_DURATION, MAX_TIME);
-      layer.duration = clamp(drag.origDuration + delta, MIN_DURATION, maxDuration);
+      layer.duration = clamp(drag.origDuration + delta, MIN_DURATION, MAX_TIME - layer.start);
     } else {
       const maxStart = drag.origStart + drag.origDuration - MIN_DURATION;
-      const nextStart = clamp(drag.origStart + delta, MIN_TIME, maxStart);
+      const nextStart = clamp(drag.origStart + delta, 0, maxStart);
       layer.start = nextStart;
       layer.duration = drag.origDuration + (drag.origStart - nextStart);
-    }
-
-    // Клип ушёл за край видимой части — расширяем диапазон и заново привязываем
-    // указатель к времени: иначе клип уехал бы под подписи и встал.
-    const end = layer.start + layer.duration;
-    if (layer.start < drag.from || end > drag.to) {
-      renderRows();
-      renderRuler();
-      const next = timelineRange();
-      drag.from = next.from;
-      drag.to = next.to;
-      drag.span = next.span;
-      drag.startX = event.clientX;
-      drag.origStart = layer.start;
-      drag.origDuration = layer.duration;
     }
 
     updateClipVisual(layer);
@@ -1565,17 +1484,12 @@
 
   // ---- playback ----
 
-  function updatePlayhead(progress, total) {
-    const range = timelineRange();
+  function updatePlayhead(progress) {
     const label = rows.querySelector(".te-row__label");
     const offset = label ? label.offsetWidth : LABEL_WIDTH;
     const trackWidth = Math.max(1, rows.clientWidth - offset);
     playhead.hidden = false;
-    // Проигрывание идёт от нуля, а нуль теперь не у левого края: широкий
-    // таймлайн перед ним — это зона «до алерта».
-    const time = progress * total;
-    const fraction = clamp((time - range.from) / range.span, 0, 1);
-    playhead.style.left = offset + trackWidth * fraction + "px";
+    playhead.style.left = offset + trackWidth * progress + "px";
   }
 
   function startProgress(total) {
@@ -1583,7 +1497,7 @@
     const step = () => {
       if (!state.playing) return;
       const progress = Math.min(1, (performance.now() - started) / total);
-      updatePlayhead(progress, total);
+      updatePlayhead(progress);
       if (progress < 1) progressRaf = requestAnimationFrame(step);
     };
     progressRaf = requestAnimationFrame(step);
