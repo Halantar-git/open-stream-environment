@@ -1,5 +1,5 @@
 {
-  "sourceHash": "1ea801d1d65ecd1b",
+  "sourceHash": "231ae07478b61fdf",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -42,6 +42,8 @@
       "defaultConfig": {
         "eventKinds": [],
         "durationMs": 6000,
+        "stack": false,
+        "stackMax": 3,
         "reactions": {},
         "layers": [
           {

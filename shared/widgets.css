@@ -4055,6 +4055,27 @@
   pointer-events: none;
 }
 
+/* Список одновременных алертов: строка на событие, новое сверху. */
+.la-stack {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.la-stack__item {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  overflow: hidden;
+  transition: top 320ms ease, opacity 240ms ease, transform 240ms ease;
+  will-change: top, opacity, transform;
+}
+.la-queue {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
 .la-layer {
   position: absolute;
   display: flex;

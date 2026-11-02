@@ -164,6 +164,9 @@
         MIN_LAYER_MS,
         MAX_TIME_MS
       ),
+      // Режим списка: новое событие сверху, старые строки уезжают вниз.
+      stack: config.stack === true,
+      stackMax: clamp(Math.round(toNumber(config.stackMax, 3)), 2, 6),
       layers: normalizeLayers(config.layers),
     };
   }
@@ -188,6 +191,8 @@
     return {
       eventKinds: normalizeKinds(source.eventKinds),
       durationMs: composition.durationMs,
+      stack: composition.stack,
+      stackMax: composition.stackMax,
       layers: composition.layers,
       reactions: normalizeReactions(source.reactions),
     };
@@ -200,7 +205,12 @@
     const normalized = normalizeConfig(config);
     const own = kind ? normalized.reactions[String(kind)] : null;
     if (own) return own;
-    return { durationMs: normalized.durationMs, layers: normalized.layers };
+    return {
+      durationMs: normalized.durationMs,
+      stack: normalized.stack,
+      stackMax: normalized.stackMax,
+      layers: normalized.layers,
+    };
   }
 
   // Сколько длится композиция: минимальная длительность из настроек или
@@ -364,7 +374,9 @@
     if (layer.type === "text") {
       const text = doc.createElement("div");
       text.className = "la-text";
-      text.style.fontSize = layer.size + "cqw";
+      // В списке строка занимает часть рамки: `--la-text-scale` уменьшает шрифт
+      // вместе с ней, иначе текст одной строки был бы выше самой строки.
+      text.style.fontSize = "calc(" + layer.size + "cqw * var(--la-text-scale, 1))";
       text.style.color = layer.color;
       text.style.textAlign = layer.align;
       text.style.fontWeight = String(layer.weight);
@@ -549,6 +561,109 @@
     return { play, stop };
   }
 
+  /*
+    Список одновременных алертов: новое событие ставится в верхнюю строку,
+    остальные сдвигаются вниз. Высота строки — `100 / stackMax` рамки, поэтому
+    одну строку и рисуют в редакторе. Старые строки уходят сами по времени
+    композиции; при переполнении снимается самая нижняя.
+  */
+  function createStack(host, options) {
+    const opts = options || {};
+    const items = [];
+    let slotHeight = 100;
+    let emptyHandler = null;
+
+    function layout() {
+      items.forEach((item, index) => {
+        item.el.style.top = index * slotHeight + "%";
+        item.el.style.height = slotHeight + "%";
+        item.el.style.setProperty("--la-text-scale", String(slotHeight / 100));
+      });
+    }
+
+    function notifyEmpty() {
+      if (!items.length && emptyHandler) emptyHandler();
+    }
+
+    function removeItem(item, animated) {
+      const index = items.indexOf(item);
+      if (index >= 0) items.splice(index, 1);
+      if (item.player) item.player.stop();
+      layout();
+
+      const detach = () => {
+        if (item.el.parentNode) item.el.parentNode.removeChild(item.el);
+        notifyEmpty();
+      };
+      if (animated) {
+        item.el.style.opacity = "0";
+        item.el.style.transform = "translateY(-8px)";
+        setTimeout(detach, 220);
+      } else {
+        detach();
+      }
+    }
+
+    function push(composition, alert) {
+      const normalized = normalizeComposition(composition);
+      const max = normalized.stackMax;
+      slotHeight = 100 / max;
+      while (items.length >= max) {
+        // Снимаем самую нижнюю (самую старую) строку, чтобы не вылезать за рамку.
+        removeItem(items[items.length - 1], true);
+      }
+
+      const doc = host.ownerDocument || (typeof document !== "undefined" ? document : null);
+      if (!doc) return null;
+      const el = doc.createElement("div");
+      el.className = "la-stack__item";
+      el.style.top = "0%";
+      el.style.width = "100%";
+      el.style.height = slotHeight + "%";
+      el.style.setProperty("--la-text-scale", String(slotHeight / 100));
+      el.style.opacity = "0";
+      el.style.transform = "translateY(-8px)";
+      host.appendChild(el);
+
+      const item = { el, player: null };
+      items.unshift(item);
+      layout();
+
+      requestFrame(() => {
+        el.style.opacity = "1";
+        el.style.transform = "none";
+      });
+
+      const player = createPlayer(el, opts);
+      item.player = player;
+      player.play(normalized, alert, () => removeItem(item, true));
+      return item;
+    }
+
+    function clear() {
+      while (items.length) {
+        const item = items.pop();
+        if (item.player) item.player.stop();
+        if (item.el.parentNode) item.el.parentNode.removeChild(item.el);
+      }
+      slotHeight = 100;
+    }
+
+    function requestFrame(fn) {
+      if (typeof requestAnimationFrame === "function") return requestAnimationFrame(fn);
+      return setTimeout(fn, 16);
+    }
+
+    return {
+      push,
+      clear,
+      size: () => items.length,
+      onEmpty: (handler) => {
+        emptyHandler = typeof handler === "function" ? handler : null;
+      },
+    };
+  }
+
   return {
     LAYER_TYPES,
     ANIMATIONS,
@@ -570,5 +685,6 @@
     resolveMedia,
     renderStatic,
     createPlayer,
+    createStack,
   };
 });

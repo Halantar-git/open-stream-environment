@@ -124,6 +124,8 @@
       defaultConfig: {
         eventKinds: [],
         durationMs: 6000,
+        stack: false,
+        stackMax: 3,
         reactions: {},
         layers: [
           {

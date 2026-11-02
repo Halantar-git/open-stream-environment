@@ -95,6 +95,9 @@
   };
 
   const player = LC.createPlayer(stage, previewOptions);
+  const stackPlayer = LC.createStack(stage, previewOptions);
+  let testTimer = 0;
+  let testTimers = [];
 
   // ---- utils ----
 
@@ -142,6 +145,8 @@
   function cloneComposition(composition) {
     return {
       durationMs: composition.durationMs,
+      stack: composition.stack === true,
+      stackMax: composition.stackMax,
       layers: composition.layers.map((layer) => Object.assign({}, layer)),
     };
   }
@@ -263,9 +268,38 @@
       renderSelection();
       return;
     }
-    LC.renderStatic(stage, active(), sampleAlert(), previewOptions);
+    const composition = active();
+    stage.innerHTML = "";
+    if (composition.stack) {
+      // В режиме списка редактор показывает одну строку: остальные обозначены
+      // пунктиром, чтобы было видно, сколько событий поместится в рамку.
+      const slotHeight = 100 / composition.stackMax;
+      const slot = document.createElement("div");
+      slot.className = "te-slot";
+      slot.style.top = "0%";
+      slot.style.height = slotHeight + "%";
+      slot.style.setProperty("--la-text-scale", String(1 / composition.stackMax));
+      stage.appendChild(slot);
+      LC.renderStatic(slot, composition, sampleAlert(), previewOptions);
+      for (let index = 1; index < composition.stackMax; index += 1) {
+        const guide = document.createElement("div");
+        guide.className = "te-slot-guide";
+        guide.dataset.index = String(index + 1);
+        guide.style.top = index * slotHeight + "%";
+        guide.style.height = slotHeight + "%";
+        stage.appendChild(guide);
+      }
+    } else {
+      LC.renderStatic(stage, composition, sampleAlert(), previewOptions);
+    }
     bindPreviewLayers();
     renderSelection();
+  }
+
+  // Высота одной строки списка в процентах рамки: 100 — обычный режим.
+  function slotScale() {
+    const composition = active();
+    return composition.stack ? 100 / composition.stackMax : 100;
   }
 
   function findPreviewLayer(id) {
@@ -282,11 +316,12 @@
       selection.hidden = true;
       return;
     }
+    const scale = slotScale();
     selection.hidden = false;
     selection.style.left = layer.x + "%";
-    selection.style.top = layer.y + "%";
+    selection.style.top = (layer.y * scale) / 100 + "%";
     selection.style.width = layer.w + "%";
-    selection.style.height = layer.h + "%";
+    selection.style.height = (layer.h * scale) / 100 + "%";
   }
 
   function updatePreviewLayer(layer) {
@@ -759,10 +794,28 @@
       '<p class="te-hint">' +
       escapeHtml(t("timelineEditor.durationHint")) +
       "</p>" +
+      '<div class="te-row2">' +
+      '<label class="te-check"><input type="checkbox" id="compStack"' +
+      (active().stack ? " checked" : "") +
+      ">" +
+      escapeHtml(t("timelineEditor.stackSeveral")) +
+      "</label>" +
+      '<div class="te-field"><label>' +
+      escapeHtml(t("timelineEditor.stackMax")) +
+      '</label><input type="number" id="compStackMax" min="2" max="6" step="1" value="' +
+      active().stackMax +
+      '"' +
+      (active().stack ? "" : " disabled") +
+      "></div></div>" +
+      '<p class="te-hint">' +
+      escapeHtml(t("timelineEditor.stackHint")) +
+      "</p>" +
       '<div class="te-section">' +
       escapeHtml(t("timelineEditor.eventKinds")) +
       "</div>" +
+      '<div id="eventKinds">' +
       checks +
+      "</div>" +
       '<p class="te-hint">' +
       escapeHtml(t("timelineEditor.eventKindsHint")) +
       "</p>";
@@ -780,14 +833,35 @@
       schedulePreview();
     });
 
-    composition.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+    composition.querySelectorAll('#eventKinds input[type="checkbox"]').forEach((input) => {
       input.addEventListener("change", () => {
         state.config.eventKinds = Array.from(
-          composition.querySelectorAll('input[type="checkbox"]:checked')
+          composition.querySelectorAll('#eventKinds input[type="checkbox"]:checked')
         ).map((el) => el.value);
         schedulePreview();
       });
     });
+
+    const stackInput = composition.querySelector("#compStack");
+    stackInput.addEventListener("change", (event) => {
+      const target = ensureActive();
+      target.stack = event.target.checked;
+      const maxInput = composition.querySelector("#compStackMax");
+      if (maxInput) maxInput.disabled = !target.stack;
+      schedulePreview(0);
+      renderSelection();
+    });
+
+    const stackMaxInput = composition.querySelector("#compStackMax");
+    stackMaxInput.addEventListener("input", (event) => {
+      const value = Number(event.target.value);
+      if (!Number.isFinite(value)) return;
+      const target = ensureActive();
+      target.stackMax = clamp(Math.round(value), 2, 6);
+      schedulePreview(0);
+      renderSelection();
+    });
+
     updateActualDuration();
   }
 
@@ -1016,6 +1090,7 @@
     if (!layer) return;
     const rect = stage.getBoundingClientRect();
     if (!(rect.width > 0 && rect.height > 0)) return;
+    const scale = composition.stack ? 100 / composition.stackMax : 100;
 
     state.previewDrag = {
       id: layer.id,
@@ -1023,7 +1098,7 @@
       startX: event.clientX,
       startY: event.clientY,
       width: rect.width,
-      height: rect.height,
+      height: (rect.height * scale) / 100,
       orig: { x: layer.x, y: layer.y, w: layer.w, h: layer.h },
     };
     document.addEventListener("pointermove", onPreviewDragMove);
@@ -1082,8 +1157,13 @@
 
   function stopPlayback() {
     state.playing = false;
+    clearTimeout(testTimer);
+    testTimer = 0;
+    testTimers.forEach((id) => clearTimeout(id));
+    testTimers = [];
     cancelAnimationFrame(progressRaf);
     playhead.hidden = true;
+    stackPlayer.clear();
     player.stop();
   }
 
@@ -1093,6 +1173,33 @@
     stopPlayback();
     state.playing = true;
     renderSelection();
+
+    if (composition.stack) {
+      // Список проверяем сразу тремя событиями: так видно сдвиг строк вниз.
+      const alerts = [
+        sampleAlert(),
+        Object.assign(sampleAlert(), { user: "Nova" }),
+        Object.assign(sampleAlert(), { user: "Pilot" }),
+      ].slice(0, composition.stackMax);
+      alerts.forEach((alert, index) => {
+        testTimers.push(
+          setTimeout(() => {
+            if (state.playing) stackPlayer.push(composition, alert);
+          }, index * 350)
+        );
+      });
+      const total = LC.compositionDuration(composition) + alerts.length * 350 + 500;
+      testTimer = setTimeout(() => {
+        if (!state.playing) return;
+        state.playing = false;
+        playhead.hidden = true;
+        stackPlayer.clear();
+        renderPreview();
+      }, total);
+      startProgress(total);
+      return;
+    }
+
     const total = player.play(composition, sampleAlert(), () => {
       state.playing = false;
       playhead.hidden = true;
@@ -1128,6 +1235,8 @@
     state.config = LC.normalizeConfig({
       eventKinds: config.eventKinds,
       durationMs: config.durationMs,
+      stack: config.stack,
+      stackMax: config.stackMax,
       layers: config.layers,
       reactions: config.reactions,
     });
@@ -1166,12 +1275,16 @@
       const composition = state.config.reactions[kind];
       reactions[kind] = {
         durationMs: composition.durationMs,
+        stack: composition.stack === true,
+        stackMax: composition.stackMax,
         layers: composition.layers.map((layer) => Object.assign({}, layer)),
       };
     });
     const config = {
       eventKinds: state.config.eventKinds.slice(),
       durationMs: state.config.durationMs,
+      stack: state.config.stack === true,
+      stackMax: state.config.stackMax,
       layers: state.config.layers.map((layer) => Object.assign({}, layer)),
       reactions,
     };

@@ -50,13 +50,27 @@
       this.host.className = "widget-layer-alert-host";
       this.element.appendChild(this.host);
       this.queue = [];
+      this.pendingStack = [];
       this.playing = false;
       this._compositionKey = this._key();
-      this.player = LayerComposition.createPlayer(this.host, {
+
+      const options = {
         formatMoney: this.context.formatMoney,
         currencySymbol: this.context.currencySymbol,
         resolveMediaUrl: this.context.resolveMediaUrl,
-      });
+      };
+      // Список и одиночные алерты живут в разных слоях: список не должен
+      // стираться, когда одиночная композиция доиграла.
+      this.stackHost = document.createElement("div");
+      this.stackHost.className = "la-stack";
+      this.host.appendChild(this.stackHost);
+      this.queueHost = document.createElement("div");
+      this.queueHost.className = "la-queue";
+      this.host.appendChild(this.queueHost);
+
+      this.stack = LayerComposition.createStack(this.stackHost, options);
+      this.stack.onEmpty(() => this.drain());
+      this.player = LayerComposition.createPlayer(this.queueHost, options);
       this.subscribe(this.context.EVENT_TYPES.ALERT, (alert) => this.queueAlert(alert));
     }
 
@@ -67,12 +81,15 @@
       if (key === this._compositionKey) return;
       this._compositionKey = key;
       this.queue = [];
+      this.pendingStack = [];
       this._stopCurrent();
     }
 
     onUnmount() {
       this.queue = [];
+      this.pendingStack = [];
       this._stopCurrent();
+      this.stack = null;
       this.player = null;
     }
 
@@ -81,6 +98,8 @@
       return JSON.stringify([
         config.eventKinds,
         config.durationMs,
+        config.stack,
+        config.stackMax,
         config.layers,
         config.reactions,
       ]);
@@ -88,24 +107,56 @@
 
     _stopCurrent() {
       this.playing = false;
+      if (this.stack) this.stack.clear();
       if (this.player) this.player.stop();
-      else if (this.host) this.host.innerHTML = "";
+      else if (this.queueHost) this.queueHost.innerHTML = "";
     }
 
     queueAlert(alert) {
       if (!alert || !LayerComposition.matchesEvent(this.config, alert)) return;
+      const composition = LayerComposition.compositionForEvent(this.config, alert.kind);
+      // Категория без слоёв — осознанное «молчать»: событие не занимает эфир.
+      if (!composition.layers.length) return;
+      if (composition.stack) {
+        // Пока играет одиночный алерт, список ждёт своей очереди, чтобы два
+        // разных поведения не наложились друг на друга.
+        if (this.playing) this.pendingStack.push(alert);
+        else this.stack.push(composition, alert);
+        return;
+      }
       this.queue.push(alert);
-      if (!this.playing) this.drain();
+      this.drain();
     }
 
     drain() {
-      // Категория без слоёв — осознанное «молчать»: пропускаем её, не занимая
-      // эфир пустой композицией. Цикл вместо рекурсии: очередь может быть
-      // длинной, а тишина не должна упираться в стек.
+      if (!this.player || !this.stack) return;
+      if (this.playing) return;
+      // Пока список на экране, одиночные алерты ждут: они занимают всю рамку
+      // и перекрыли бы строки списка.
+      if (this.stack.size() > 0) return;
+
+      if (this.pendingStack.length) {
+        const pending = this.pendingStack;
+        this.pendingStack = [];
+        pending.forEach((alert) => {
+          const composition = LayerComposition.compositionForEvent(this.config, alert.kind);
+          if (!composition.layers.length) return;
+          if (composition.stack) this.stack.push(composition, alert);
+          else this.queue.push(alert);
+        });
+        if (this.stack.size() > 0) return;
+      }
+
+      // Категория без слоёв пропускается, не занимая эфир пустой композицией.
+      // Цикл вместо рекурсии: очередь может быть длинной.
       let alert = this.queue.shift();
       while (alert) {
         const composition = LayerComposition.compositionForEvent(this.config, alert.kind);
         if (composition.layers.length) {
+          if (composition.stack) {
+            this.stack.push(composition, alert);
+            return;
+          }
           this.playing = true;
           this.player.play(composition, alert, () => {
             this.playing = false;
@@ -116,7 +167,7 @@
         alert = this.queue.shift();
       }
       this.playing = false;
-      if (this.host) this.host.innerHTML = "";
+      if (this.queueHost) this.queueHost.innerHTML = "";
     }
 
     render() {}

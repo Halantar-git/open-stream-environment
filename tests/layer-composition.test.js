@@ -28,7 +28,11 @@ function makeElement(tag) {
   const el = {
     tagName: String(tag || "div").toUpperCase(),
     className: "",
-    style: {},
+    style: {
+      setProperty(key, value) {
+        this[key] = value;
+      },
+    },
     dataset: {},
     children,
     hidden: false,
@@ -206,6 +210,31 @@ describe("layer-composition: модель", () => {
       h: 40,
     });
   });
+
+  test("normalizeComposition знает режим списка", () => {
+    const plain = LayerComposition.normalizeComposition({});
+    expect(plain.stack).toBe(false);
+    expect(plain.stackMax).toBe(3);
+
+    expect(LayerComposition.normalizeComposition({ stack: true, stackMax: 9 }).stackMax).toBe(6);
+    expect(LayerComposition.normalizeComposition({ stack: true, stackMax: 0 }).stackMax).toBe(2);
+  });
+
+  test("compositionForEvent переносит настройки списка", () => {
+    const config = {
+      stack: true,
+      stackMax: 4,
+      layers: [{ text: "default" }],
+      reactions: {
+        follow: { stack: false, stackMax: 2, layers: [{ text: "follow" }] },
+      },
+    };
+
+    const inherited = LayerComposition.compositionForEvent(config, "donation");
+    expect(inherited.stack).toBe(true);
+    expect(inherited.stackMax).toBe(4);
+    expect(LayerComposition.compositionForEvent(config, "follow").stack).toBe(false);
+  });
 });
 
 // ---- static render ----
@@ -251,7 +280,7 @@ describe("layer-composition: статичная раскладка", () => {
     expect(layer.style.opacity).toBe("0.5");
     const text = layer.children[0];
     expect(text.textContent).toBe("Pilot");
-    expect(text.style.fontSize).toBe("7cqw");
+    expect(text.style.fontSize).toBe("calc(7cqw * var(--la-text-scale, 1))");
     expect(text.style.color).toBe("#00ff66");
     expect(text.style.textAlign).toBe("right");
   });
@@ -324,6 +353,104 @@ describe("layer-composition: проигрыватель", () => {
 
 // ---- widget ----
 
+describe("layer-composition: список", () => {
+  let realDocument;
+  let realRaf;
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    realDocument = global.document;
+    realRaf = global.requestAnimationFrame;
+    global.document = makeDocument();
+    global.requestAnimationFrame = (fn) => setTimeout(fn, 16);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    global.document = realDocument;
+    global.requestAnimationFrame = realRaf;
+  });
+
+  function textOf(item) {
+    return item.children[0].children[0].children[0].textContent;
+  }
+
+  // Строки позиционируются абсолютно, поэтому порядок в DOM не совпадает с
+  // визуальным: ищем по `top`, как его видит зритель.
+  function atTop(host) {
+    return Array.from(host.children).find((child) => child.style.top === "0%");
+  }
+
+  function atSecond(host) {
+    return Array.from(host.children).find((child) => child.style.top === "50%");
+  }
+
+  function pushText(stack, text, duration, max) {
+    stack.push(
+      {
+        durationMs: duration || 1000,
+        stack: true,
+        stackMax: max || 2,
+        layers: [
+          {
+            id: text,
+            type: "text",
+            text,
+            start: 0,
+            duration: (duration || 1000) - 100,
+            in: "none",
+            out: "none",
+          },
+        ],
+      },
+      {}
+    );
+  }
+
+  test("новое событие сверху, старое сдвигается вниз", () => {
+    const host = global.document.createElement("div");
+    const stack = LayerComposition.createStack(host, {});
+
+    pushText(stack, "Vasya");
+    expect(stack.size()).toBe(1);
+    expect(textOf(atTop(host))).toBe("Vasya");
+
+    pushText(stack, "Petya");
+    expect(stack.size()).toBe(2);
+    expect(textOf(atTop(host))).toBe("Petya");
+    expect(textOf(atSecond(host))).toBe("Vasya");
+  });
+
+  test("при переполнении уходит самая старая строка", () => {
+    const host = global.document.createElement("div");
+    const stack = LayerComposition.createStack(host, {});
+
+    pushText(stack, "Vasya");
+    pushText(stack, "Petya");
+    pushText(stack, "Ivan");
+    expect(stack.size()).toBe(2);
+
+    jest.advanceTimersByTime(300);
+    expect(host.children).toHaveLength(2);
+    expect(textOf(atTop(host))).toBe("Ivan");
+    expect(textOf(atSecond(host))).toBe("Petya");
+  });
+
+  test("после последней строки зовёт onEmpty", () => {
+    const host = global.document.createElement("div");
+    const stack = LayerComposition.createStack(host, {});
+    const empty = jest.fn();
+    stack.onEmpty(empty);
+
+    pushText(stack, "Vasya", 500);
+    expect(empty).not.toHaveBeenCalled();
+    jest.advanceTimersByTime(800);
+
+    expect(stack.size()).toBe(0);
+    expect(empty).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("layer-alert: виджет", () => {
   let realDocument;
   let realRaf;
@@ -392,24 +519,24 @@ describe("layer-alert: виджет", () => {
     const { bus, widget } = mountWidget();
 
     bus.emit(EVENT_TYPES.ALERT, { kind: "follow", user: "A" });
-    expect(widget.host.children).toHaveLength(0);
+    expect(widget.queueHost.children).toHaveLength(0);
 
     bus.emit(EVENT_TYPES.ALERT, { kind: "donation", user: "First" });
-    expect(widget.host.children).toHaveLength(1);
-    const first = widget.host.children[0];
+    expect(widget.queueHost.children).toHaveLength(1);
+    const first = widget.queueHost.children[0];
     expect(first.children[0].children[0].textContent).toBe("First");
 
     // Второй донат ждёт, пока не доиграет первый: одновременно их не бывает.
     bus.emit(EVENT_TYPES.ALERT, { kind: "donation", user: "Second" });
-    expect(widget.host.children).toHaveLength(1);
+    expect(widget.queueHost.children).toHaveLength(1);
 
     jest.advanceTimersByTime(1000);
-    expect(widget.host.children).toHaveLength(1);
-    const second = widget.host.children[0];
+    expect(widget.queueHost.children).toHaveLength(1);
+    const second = widget.queueHost.children[0];
     expect(second.children[0].children[0].textContent).toBe("Second");
 
     jest.advanceTimersByTime(1000);
-    expect(widget.host.children).toHaveLength(0);
+    expect(widget.queueHost.children).toHaveLength(0);
   });
 
   test("играет свою реакцию категории вместо общей", () => {
@@ -426,7 +553,7 @@ describe("layer-alert: виджет", () => {
     });
 
     bus.emit(EVENT_TYPES.ALERT, { kind: "donation" });
-    expect(widget.host.children[0].children[0].children[0].textContent).toBe("donation!");
+    expect(widget.queueHost.children[0].children[0].children[0].textContent).toBe("donation!");
   });
 
   test("пустая реакция категории молчит, не занимая эфир", () => {
@@ -438,10 +565,72 @@ describe("layer-alert: виджет", () => {
     });
 
     bus.emit(EVENT_TYPES.ALERT, { kind: "donation" });
-    expect(widget.host.children).toHaveLength(0);
+    expect(widget.queueHost.children).toHaveLength(0);
 
     // Остальные категории по-прежнему идут по общей композиции.
     bus.emit(EVENT_TYPES.ALERT, { kind: "follow" });
-    expect(widget.host.children[0].children[0].children[0].textContent).toBe("common");
+    expect(widget.queueHost.children[0].children[0].children[0].textContent).toBe("common");
+  });
+
+  test("в режиме списка показывает несколько событий и сдвигает старые", () => {
+    const { bus, widget } = mountWidget({
+      eventKinds: [],
+      durationMs: 1000,
+      stack: true,
+      stackMax: 2,
+      layers: [
+        { id: "row", type: "text", text: "{{user}}", start: 0, duration: 900, in: "none", out: "none" },
+      ],
+    });
+
+    bus.emit(EVENT_TYPES.ALERT, { kind: "follow", user: "Vasya" });
+    expect(widget.stack.size()).toBe(1);
+    const rowAt = (top) =>
+      Array.from(widget.stackHost.children).find((el) => el.style.top === top);
+    const textOfRow = (el) => el.children[0].children[0].children[0].textContent;
+    expect(textOfRow(rowAt("0%"))).toBe("Vasya");
+
+    bus.emit(EVENT_TYPES.ALERT, { kind: "follow", user: "Petya" });
+    expect(widget.stack.size()).toBe(2);
+    expect(textOfRow(rowAt("0%"))).toBe("Petya");
+    expect(textOfRow(rowAt("50%"))).toBe("Vasya");
+
+    // Третья строка вытесняет самую старую.
+    bus.emit(EVENT_TYPES.ALERT, { kind: "follow", user: "Ivan" });
+    expect(widget.stack.size()).toBe(2);
+    jest.advanceTimersByTime(300);
+    expect(widget.stackHost.children).toHaveLength(2);
+    expect(textOfRow(rowAt("0%"))).toBe("Ivan");
+    expect(textOfRow(rowAt("50%"))).toBe("Petya");
+  });
+
+  test("одиночный алерт ждёт, пока список освободит рамку", () => {
+    const { bus, widget } = mountWidget({
+      eventKinds: [],
+      durationMs: 1000,
+      layers: [{ id: "base", type: "text", text: "common", start: 0, duration: 900, in: "none", out: "none" }],
+      reactions: {
+        follow: {
+          durationMs: 1000,
+          stack: true,
+          stackMax: 2,
+          layers: [
+            { id: "row", type: "text", text: "{{user}}", start: 0, duration: 900, in: "none", out: "none" },
+          ],
+        },
+      },
+    });
+
+    bus.emit(EVENT_TYPES.ALERT, { kind: "follow", user: "Vasya" });
+    expect(widget.stack.size()).toBe(1);
+
+    // Донат не накладывается на список: ждёт, пока строки уйдут.
+    bus.emit(EVENT_TYPES.ALERT, { kind: "donation" });
+    expect(widget.playing).toBe(false);
+    expect(widget.queueHost.children).toHaveLength(0);
+
+    jest.advanceTimersByTime(1300);
+    expect(widget.stack.size()).toBe(0);
+    expect(widget.queueHost.children[0].children[0].children[0].textContent).toBe("common");
   });
 });
