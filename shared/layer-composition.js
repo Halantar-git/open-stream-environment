@@ -191,6 +191,9 @@
       // Режим списка: новое событие сверху, старые строки уезжают вниз.
       stack: config.stack === true,
       stackMax: clamp(Math.round(toNumber(config.stackMax, 3)), 2, 6),
+      // Просвет между строками списка — в процентах высоты рамки. Прижимать
+      // строки друг к другу не обязательно: в HUD-списках между ними есть люфт.
+      stackGap: clamp(toNumber(config.stackGap, 0), 0, 30),
       // Настройка «висеть постоянно»: строки списка не исчезают по таймеру, их
       // вытесняет только новое событие. Так счётчик фолловеров висит в эфире.
       persistent: config.persistent === true,
@@ -225,6 +228,7 @@
       durationMs: composition.durationMs,
       stack: composition.stack,
       stackMax: composition.stackMax,
+      stackGap: composition.stackGap,
       persistent: composition.persistent,
       minAmount: composition.minAmount,
       layers: composition.layers,
@@ -243,6 +247,7 @@
       durationMs: normalized.durationMs,
       stack: normalized.stack,
       stackMax: normalized.stackMax,
+      stackGap: normalized.stackGap,
       persistent: normalized.persistent,
       minAmount: normalized.minAmount,
       layers: normalized.layers,
@@ -895,11 +900,21 @@
     const opts = options || {};
     const items = [];
     let slotHeight = 100;
+    let slotGap = 0;
     let emptyHandler = null;
+
+    // Высота строки и просвет в процентах рамки. Строки делят то, что осталось
+    // после просветов, поэтому при stackMax 5 и зазоре 3% каждая занимает
+    // (100 - 12) / 5 = 17.6%.
+    function metrics(normalized) {
+      const max = Math.max(1, normalized.stackMax);
+      slotGap = normalized.stackGap || 0;
+      slotHeight = Math.max(5, (100 - slotGap * (max - 1)) / max);
+    }
 
     function layout() {
       items.forEach((item, index) => {
-        item.el.style.top = index * slotHeight + "%";
+        item.el.style.top = index * (slotHeight + slotGap) + "%";
         item.el.style.height = slotHeight + "%";
         item.el.style.setProperty("--la-text-scale", String(slotHeight / 100));
       });
@@ -931,7 +946,7 @@
     function push(composition, alert) {
       const normalized = normalizeComposition(composition);
       const max = normalized.stackMax;
-      slotHeight = 100 / max;
+      metrics(normalized);
       while (items.length >= max) {
         // Снимаем самую нижнюю (самую старую) строку, чтобы не вылезать за рамку.
         removeItem(items[items.length - 1], true);
@@ -974,6 +989,7 @@
         if (item.el.parentNode) item.el.parentNode.removeChild(item.el);
       }
       slotHeight = 100;
+      slotGap = 0;
     }
 
     function requestFrame(fn) {

@@ -795,6 +795,14 @@ describe("layer-composition: список", () => {
     expect(textOf(atSecond(host))).toBe("Petya");
   });
 
+  test("нормализация хранит просвет между строками", () => {
+    expect(LayerComposition.normalizeComposition({ stackGap: 4 }).stackGap).toBe(4);
+    // Отрицательное и запредельное — приводим к допустимому.
+    expect(LayerComposition.normalizeComposition({ stackGap: -5 }).stackGap).toBe(0);
+    expect(LayerComposition.normalizeComposition({ stackGap: 99 }).stackGap).toBe(30);
+    expect(LayerComposition.normalizeComposition({}).stackGap).toBe(0);
+  });
+
   test("постоянные строки не исчезают по таймеру", () => {
     const host = global.document.createElement("div");
     const stack = LayerComposition.createStack(host, {});
@@ -819,6 +827,28 @@ describe("layer-composition: список", () => {
     expect(stack.size()).toBe(2);
     expect(textOf(atTop(host))).toBe("Ivan");
     expect(textOf(atSecond(host))).toBe("Petya");
+  });
+
+  test("просвет между строками учитывается в раскладке", () => {
+    const host = global.document.createElement("div");
+    const stack = LayerComposition.createStack(host, {});
+    const composition = {
+      durationMs: 1000,
+      stack: true,
+      stackMax: 3,
+      stackGap: 5,
+      persistent: true,
+      layers: [{ id: "t", type: "text", text: "x", start: 0, duration: 900, in: "none", out: "none" }],
+    };
+
+    stack.push(composition, {});
+    stack.push(composition, {});
+    stack.push(composition, {});
+
+    // (100 - 5 * 2) / 3 = 30% на строку, шаг между ними — 35%.
+    const tops = host.children.map((child) => child.style.top).sort();
+    expect(tops).toEqual(["0%", "35%", "70%"]);
+    host.children.forEach((child) => expect(child.style.height).toBe("30%"));
   });
 
   test("после последней строки зовёт onEmpty", () => {

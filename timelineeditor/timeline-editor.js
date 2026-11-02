@@ -160,6 +160,7 @@
       durationMs: composition.durationMs,
       stack: composition.stack === true,
       stackMax: composition.stackMax,
+      stackGap: composition.stackGap,
       persistent: composition.persistent === true,
       minAmount: composition.minAmount,
       layers: composition.layers.map((layer) => Object.assign({}, layer)),
@@ -302,20 +303,20 @@
     if (composition.stack) {
       // В режиме списка редактор показывает одну строку: остальные обозначены
       // пунктиром, чтобы было видно, сколько событий поместится в рамку.
-      const slotHeight = 100 / composition.stackMax;
-      const slot = document.createElement("div");
-      slot.className = "te-slot";
-      slot.style.top = "0%";
-      slot.style.height = slotHeight + "%";
-      slot.style.setProperty("--la-text-scale", String(1 / composition.stackMax));
-      stage.appendChild(slot);
-      LC.renderStatic(slot, composition, sampleAlert(), previewOptions);
+      const slot = stackSlot(composition);
+      const slotBox = document.createElement("div");
+      slotBox.className = "te-slot";
+      slotBox.style.top = "0%";
+      slotBox.style.height = slot.height + "%";
+      slotBox.style.setProperty("--la-text-scale", String(slot.height / 100));
+      stage.appendChild(slotBox);
+      LC.renderStatic(slotBox, composition, sampleAlert(), previewOptions);
       for (let index = 1; index < composition.stackMax; index += 1) {
         const guide = document.createElement("div");
         guide.className = "te-slot-guide";
         guide.dataset.index = String(index + 1);
-        guide.style.top = index * slotHeight + "%";
-        guide.style.height = slotHeight + "%";
+        guide.style.top = index * (slot.height + slot.gap) + "%";
+        guide.style.height = slot.height + "%";
         stage.appendChild(guide);
       }
     } else {
@@ -325,10 +326,18 @@
     renderSelection();
   }
 
+  // Высота одной строки списка и просвет в процентах рамки. Порядок счёта тот
+  // же, что в `createStack`: строки делят остаток после зазоров.
+  function stackSlot(composition) {
+    if (!composition.stack) return { height: 100, gap: 0 };
+    const max = Math.max(1, composition.stackMax);
+    const gap = composition.stackGap || 0;
+    return { height: Math.max(5, (100 - gap * (max - 1)) / max), gap };
+  }
+
   // Высота одной строки списка в процентах рамки: 100 — обычный режим.
   function slotScale() {
-    const composition = active();
-    return composition.stack ? 100 / composition.stackMax : 100;
+    return stackSlot(active()).height;
   }
 
   function findPreviewLayer(id) {
@@ -1076,6 +1085,13 @@
       '<p class="te-hint">' +
       escapeHtml(t("timelineEditor.stackHint")) +
       "</p>" +
+      '<div class="te-field"><label>' +
+      escapeHtml(t("timelineEditor.stackGap")) +
+      '</label><input type="number" id="compStackGap" min="0" max="30" step="0.5" value="' +
+      active().stackGap +
+      '"' +
+      (active().stack ? "" : " disabled") +
+      "></div>" +
       '<label class="te-check"><input type="checkbox" id="compPersistent"' +
       (active().persistent ? " checked" : "") +
       (active().stack ? "" : " disabled") +
@@ -1129,6 +1145,15 @@
       ensureActive().persistent = event.target.checked;
     });
 
+    const gapInput = composition.querySelector("#compStackGap");
+    gapInput.addEventListener("input", (event) => {
+      const value = Number(event.target.value);
+      if (!Number.isFinite(value)) return;
+      ensureActive().stackGap = clamp(value, 0, 30);
+      schedulePreview(0);
+      renderSelection();
+    });
+
     const stackInput = composition.querySelector("#compStack");
     stackInput.addEventListener("change", (event) => {
       const target = ensureActive();
@@ -1137,6 +1162,8 @@
       if (maxInput) maxInput.disabled = !target.stack;
       const persistentInput = composition.querySelector("#compPersistent");
       if (persistentInput) persistentInput.disabled = !target.stack;
+      const gapInput = composition.querySelector("#compStackGap");
+      if (gapInput) gapInput.disabled = !target.stack;
       schedulePreview(0);
       renderSelection();
     });
@@ -1402,7 +1429,7 @@
     if (layer.type === "audio") return;
     const rect = stage.getBoundingClientRect();
     if (!(rect.width > 0 && rect.height > 0)) return;
-    const scale = composition.stack ? 100 / composition.stackMax : 100;
+    const scale = stackSlot(composition).height;
 
     state.previewDrag = {
       id: layer.id,
@@ -1550,6 +1577,7 @@
       durationMs: config.durationMs,
       stack: config.stack,
       stackMax: config.stackMax,
+      stackGap: config.stackGap,
       persistent: config.persistent,
       minAmount: config.minAmount,
       layers: config.layers,
@@ -1592,6 +1620,7 @@
         durationMs: composition.durationMs,
         stack: composition.stack === true,
         stackMax: composition.stackMax,
+        stackGap: composition.stackGap,
         persistent: composition.persistent === true,
         minAmount: composition.minAmount,
         layers: composition.layers.map((layer) => Object.assign({}, layer)),
@@ -1603,6 +1632,7 @@
       durationMs: state.config.durationMs,
       stack: state.config.stack === true,
       stackMax: state.config.stackMax,
+      stackGap: state.config.stackGap,
       persistent: state.config.persistent === true,
       minAmount: state.config.minAmount,
       layers: state.config.layers.map((layer) => Object.assign({}, layer)),

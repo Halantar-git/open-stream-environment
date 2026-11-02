@@ -104,6 +104,7 @@
         config.durationMs,
         config.stack,
         config.stackMax,
+        config.stackGap,
         config.persistent,
         config.minAmount,
         config.layers,
