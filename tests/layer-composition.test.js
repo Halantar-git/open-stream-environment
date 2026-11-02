@@ -114,6 +114,13 @@ describe("layer-composition: модель", () => {
     expect(LayerComposition.passesAmount(min, { kind: "donation" })).toBe(true);
   });
 
+  test("знает способы появления текста", () => {
+    expect(LayerComposition.TEXT_ANIMS).toEqual(["none", "type", "words", "letters", "scramble"]);
+    expect(LayerComposition.normalizeLayer({ textAnim: "words" }, 0).textAnim).toBe("words");
+    // Неизвестное значение не ломает слой: показываем сразу.
+    expect(LayerComposition.normalizeLayer({ textAnim: "shimmer" }, 0).textAnim).toBe("none");
+  });
+
   test("compositionForEvent переносит порог суммы реакции", () => {
     const composition = LayerComposition.compositionForEvent(
       { minAmount: 100, reactions: { donation: { minAmount: 500, layers: [] } } },
@@ -445,6 +452,77 @@ describe("layer-composition: проигрыватель", () => {
 
     jest.advanceTimersByTime(500);
     expect(audio.pause).toHaveBeenCalled();
+  });
+
+  test("текст появляется по словам и по буквам", () => {
+    const host = global.document.createElement("div");
+    const player = LayerComposition.createPlayer(host, {});
+
+    player.play(
+      {
+        durationMs: 2000,
+        layers: [
+          {
+            type: "text",
+            text: "Привет мир",
+            textAnim: "words",
+            typeMs: 10,
+            start: 0,
+            duration: 1900,
+            in: "none",
+            out: "none",
+          },
+        ],
+      },
+      {},
+      () => {}
+    );
+
+    jest.advanceTimersByTime(0);
+    const holder = host.children[0].children[0].children[0].children[0];
+    const chunks = holder.children.filter((child) => child.className === "la-text__chunk");
+    expect(chunks).toHaveLength(2);
+    expect(chunks[0].style.opacity).toBe("0");
+
+    // Шаг для слов вчетверо больше шага буквы.
+    jest.advanceTimersByTime(40);
+    expect(chunks[0].style.opacity).toBe("1");
+    expect(chunks[1].style.opacity).toBe("0");
+    jest.advanceTimersByTime(40);
+    expect(chunks[1].style.opacity).toBe("1");
+  });
+
+  test("дешифровка заканчивается исходным текстом", () => {
+    const host = global.document.createElement("div");
+    const player = LayerComposition.createPlayer(host, {});
+
+    player.play(
+      {
+        durationMs: 1000,
+        layers: [
+          {
+            type: "text",
+            text: "Код",
+            textAnim: "scramble",
+            typeMs: 10,
+            start: 0,
+            duration: 900,
+            in: "none",
+            out: "none",
+          },
+        ],
+      },
+      {},
+      () => {}
+    );
+
+    jest.advanceTimersByTime(0);
+    const textNode = host.children[0].children[0].children[0].children[0];
+    expect(textNode.nodeValue).toBe("");
+    jest.advanceTimersByTime(10);
+    expect(Array.from(textNode.nodeValue)).toHaveLength(1);
+    jest.advanceTimersByTime(100);
+    expect(textNode.nodeValue).toBe("Код");
   });
 
   test("текст с печатью раскрывается по символам и держит каретку", () => {

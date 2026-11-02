@@ -661,7 +661,7 @@
           '</label><input type="number" id="fTypeMs" min="4" max="120" step="1" value="' +
           Math.round(layer.typeMs) +
           '"' +
-          (layer.textAnim === "type" ? "" : " disabled") +
+          (layer.textAnim === "none" ? " disabled" : "") +
           "></div></div>"
         : isAudio
           ? audioInspector(layer)
@@ -769,9 +769,9 @@
       bind("fAlign", "change", (event) => patchLayer({ align: event.target.value }));
       bind("fFont", "change", (event) => patchLayer({ font: event.target.value }));
       bind("fTextAnim", "change", (event) => {
-        // Скорость нужна только печати — без неё поле выглядит как мёртвое.
+        // Скорость нужна только появлению — без него поле выглядит как мёртвое.
         const speed = field("fTypeMs");
-        if (speed) speed.disabled = event.target.value !== "type";
+        if (speed) speed.disabled = event.target.value === "none";
         patchLayer({ textAnim: event.target.value });
       });
       bind("fTypeMs", "change", (event) => {

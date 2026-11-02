@@ -45,9 +45,12 @@
   const ALIGNS = ["left", "center", "right"];
   const FONTS = ["body", "display", "mono"];
   const FITS = ["contain", "cover"];
-  // Как текст слоя появляется на экране: сразу или посимвольно, как в теме
-  // Terminal.
-  const TEXT_ANIMS = ["none", "type"];
+  // Как текст слоя появляется на экране: сразу, посимвольно как в теме Terminal,
+  // по словам, по буквам или дешифровкой.
+  const TEXT_ANIMS = ["none", "type", "words", "letters", "scramble"];
+  // Из чего собираются случайные буквы дешифровки: латиница и цифры читаются
+  // как шум, а кириллица в наборе делала бы подмену незаметной.
+  const SCRAMBLE_GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&@*<>|/";
   // События, на которые имеет смысл вешать композицию. Список совпадает с
   // `kind` из ALERT, кроме служебных wheel_*: у колеса своя сцена.
   const EVENT_KINDS = [
@@ -544,6 +547,122 @@
     if (caret && caret.parentNode && keepCaret !== true) caret.parentNode.removeChild(caret);
   }
 
+  /*
+    Появление кусками: слово или буква проявляются и чуть поднимаются. Буквы
+    группируются по словам — иначе строка ломалась бы посреди слова, ведь
+    каждая буква — отдельный inline-block.
+  */
+  function startChunks(node, layer, unit) {
+    const el = node.text;
+    const doc = el && el.ownerDocument;
+    if (!doc || typeof doc.createTextNode !== "function" || typeof doc.createElement !== "function") {
+      return;
+    }
+    const text = String(el.textContent == null ? "" : el.textContent);
+    if (!text.trim() || reduceMotion()) return;
+    stopTyping(node);
+
+    const holder = doc.createElement("span");
+    holder.className = "la-text__typed";
+    const chunks = [];
+    const addChunk = (value, parent) => {
+      const span = doc.createElement("span");
+      span.className = "la-text__chunk";
+      span.textContent = value;
+      span.style.display = "inline-block";
+      span.style.opacity = "0";
+      span.style.transform = "translateY(0.3em)";
+      span.style.transition = "opacity 220ms ease, transform 220ms ease";
+      parent.appendChild(span);
+      chunks.push(span);
+    };
+
+    text.split(/(\s+)/).forEach((part) => {
+      if (!part) return;
+      if (/^\s+$/.test(part)) {
+        holder.appendChild(doc.createTextNode(part));
+        return;
+      }
+      if (unit === "words") {
+        addChunk(part, holder);
+        return;
+      }
+      const word = doc.createElement("span");
+      word.className = "la-text__word";
+      word.style.display = "inline-block";
+      holder.appendChild(word);
+      Array.from(part).forEach((ch) => addChunk(ch, word));
+    });
+
+    el.textContent = "";
+    el.appendChild(holder);
+
+    const base = clamp(toNumber(layer.typeMs, DEFAULT_TYPE_MS), MIN_TYPE_MS, MAX_TYPE_MS);
+    // Слово — крупнее буквы, поэтому ровно тот же шаг читался бы как вспышка.
+    const step = unit === "words" ? base * 4 : base;
+    let index = 0;
+    node.typing = setInterval(() => {
+      const chunk = chunks[index];
+      if (!chunk) {
+        stopTyping(node);
+        return;
+      }
+      chunk.style.opacity = "1";
+      chunk.style.transform = "none";
+      index += 1;
+      if (index >= chunks.length) stopTyping(node);
+    }, step);
+  }
+
+  /*
+    Дешифровка: текст раскрывается по символу, а последние два ещё «шумят»
+    случайными знаками, прежде чем встать на место. Ширина строки при этом
+    не дёргается — число символов сразу окончательное.
+  */
+  function startScramble(node, layer) {
+    const el = node.text;
+    const doc = el && el.ownerDocument;
+    if (!doc || typeof doc.createTextNode !== "function") return;
+    const glyphs = Array.from(String(el.textContent == null ? "" : el.textContent));
+    if (!glyphs.length || reduceMotion()) return;
+    stopTyping(node);
+
+    const textNode = doc.createTextNode("");
+    el.textContent = "";
+    el.appendChild(textNode);
+
+    const step = clamp(toNumber(layer.typeMs, DEFAULT_TYPE_MS), MIN_TYPE_MS, MAX_TYPE_MS);
+    let shown = 0;
+    const render = (settled) => {
+      let out = "";
+      for (let i = 0; i < shown; i += 1) {
+        const ch = glyphs[i];
+        out +=
+          i < settled || /\s/.test(ch)
+            ? ch
+            : SCRAMBLE_GLYPHS.charAt(Math.floor(Math.random() * SCRAMBLE_GLYPHS.length));
+      }
+      textNode.nodeValue = out;
+    };
+
+    node.typing = setInterval(() => {
+      if (shown < glyphs.length) {
+        shown += 1;
+        render(shown - 2);
+        return;
+      }
+      render(glyphs.length);
+      stopTyping(node);
+    }, step);
+  }
+
+  function startTextReveal(node, layer) {
+    if (layer.textAnim === "type") startTyping(node, layer);
+    else if (layer.textAnim === "words" || layer.textAnim === "letters") {
+      startChunks(node, layer, layer.textAnim);
+    } else if (layer.textAnim === "scramble") startScramble(node, layer);
+  }
+
   // Статичная раскладка всех слоёв сразу: по ней в редакторе видно, где что
   // стоит, не дожидаясь начала проигрывания.
   function renderStatic(host, config, alert, options) {
@@ -623,8 +742,9 @@
       }
       if (node.video) playVideo(node.video);
       if (node.audio) playAudio(node.audio);
-      // Печать идёт поверх входа: слой может одновременно выезжать и печатать.
-      if (node.text && layer.textAnim === "type") startTyping(node, layer);
+      // Появление текста идёт поверх входа: слой может одновременно выезжать
+      // и печатать или проявляться по словам.
+      if (node.text) startTextReveal(node, layer);
     }
 
     function exitLayer(node, layer) {
