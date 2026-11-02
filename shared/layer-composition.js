@@ -40,7 +40,7 @@
 })(typeof window !== "undefined" ? window : globalThis, function () {
   "use strict";
 
-  const LAYER_TYPES = ["text", "image", "video"];
+  const LAYER_TYPES = ["text", "image", "video", "audio"];
   const ANIMATIONS = ["none", "fade", "slide-left", "slide-right", "slide-up", "slide-down", "zoom"];
   const ALIGNS = ["left", "center", "right"];
   const FONTS = ["body", "display", "mono"];
@@ -115,6 +115,7 @@
       font: oneOf(layer.font, FONTS, "body"),
       fit: oneOf(layer.fit, FITS, "contain"),
       loop: layer.loop !== false,
+      volume: clamp(toNumber(layer.volume, 0.8), 0, 1),
       in: oneOf(layer.in, ANIMATIONS, "fade"),
       out: oneOf(layer.out, ANIMATIONS, "fade"),
       inMs: clamp(toNumber(layer.inMs, 300), 0, 5000),
@@ -371,6 +372,7 @@
     el.style.opacity = "0";
 
     let video = null;
+    let audio = null;
     if (layer.type === "text") {
       const text = doc.createElement("div");
       text.className = "la-text";
@@ -406,25 +408,53 @@
       const src = resolveMedia(layer.src, options);
       if (src) video.src = src;
       el.appendChild(video);
+    } else if (layer.type === "audio") {
+      // Звук — невидимый слой: координаты ему не нужны, но окно времени
+      // (`start`/`duration`) общее с остальными, поэтому он живёт в той же
+      // дорожке таймлайна.
+      audio = doc.createElement("audio");
+      audio.className = "la-audio";
+      audio.preload = "auto";
+      audio.loop = layer.loop !== false;
+      audio.volume = clamp(layer.volume, 0, 1);
+      const src = resolveMedia(layer.src, options);
+      if (src) audio.src = src;
+      el.appendChild(audio);
     }
-    return { el, video };
+    return { el, video, audio };
   }
 
-  function playVideo(video) {
+  function playMedia(media) {
     try {
-      const attempt = video.play();
+      const attempt = media.play();
       if (attempt && typeof attempt.catch === "function") attempt.catch(() => {});
     } catch (_) {
-      /* видео без источника — не повод ломать алерт */
+      /* нет источника или автозапуск запрещён — не повод ломать алерт */
     }
   }
 
-  function pauseVideo(video) {
+  function pauseMedia(media) {
     try {
-      video.pause();
+      media.pause();
     } catch (_) {
       /* проигрыватель мог быть уже уничтожен */
     }
+  }
+
+  function playVideo(video) {
+    playMedia(video);
+  }
+
+  function pauseVideo(video) {
+    pauseMedia(video);
+  }
+
+  function playAudio(audio) {
+    playMedia(audio);
+  }
+
+  function pauseAudio(audio) {
+    pauseMedia(audio);
   }
 
   // Статичная раскладка всех слоёв сразу: по ней в редакторе видно, где что
@@ -476,6 +506,7 @@
       clearTimers();
       nodes.forEach((node) => {
         if (node.video) pauseVideo(node.video);
+        if (node.audio) pauseAudio(node.audio);
       });
       nodes = [];
       if (clear && host) host.innerHTML = "";
@@ -503,6 +534,7 @@
         });
       }
       if (node.video) playVideo(node.video);
+      if (node.audio) playAudio(node.audio);
     }
 
     function exitLayer(node, layer) {
@@ -513,6 +545,7 @@
     function hideLayer(node) {
       node.el.hidden = true;
       if (node.video) pauseVideo(node.video);
+      if (node.audio) pauseAudio(node.audio);
     }
 
     /*

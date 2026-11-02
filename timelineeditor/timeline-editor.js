@@ -168,7 +168,15 @@
   function layerKindLabel(type) {
     if (type === "image") return t("timelineEditor.layerImage");
     if (type === "video") return t("timelineEditor.layerVideo");
+    if (type === "audio") return t("timelineEditor.layerAudio");
     return t("timelineEditor.layerText");
+  }
+
+  function typeMark(type) {
+    if (type === "image") return "IMG";
+    if (type === "video") return "VID";
+    if (type === "audio") return "AUD";
+    return "T";
   }
 
   function layerTitle(layer, index) {
@@ -312,7 +320,7 @@
   // очищает сцену, и рамка исчезала бы при каждом обновлении превью.
   function renderSelection() {
     const layer = findLayer(state.selectedId);
-    if (!layer || state.playing) {
+    if (!layer || state.playing || layer.type === "audio") {
       selection.hidden = true;
       return;
     }
@@ -343,6 +351,7 @@
 
   function bindPreviewLayers() {
     stage.querySelectorAll(".la-layer").forEach((el) => {
+      if (el.classList.contains("la-layer--audio")) return;
       el.addEventListener("pointerdown", (event) => {
         if (event.button !== 0) return;
         const id = el.dataset.layerId;
@@ -401,7 +410,7 @@
       label.className = "te-row__label";
       label.innerHTML =
         '<span class="te-row__kind">' +
-        escapeHtml(layer.type === "text" ? "T" : layer.type === "image" ? "IMG" : "VID") +
+        escapeHtml(typeMark(layer.type)) +
         '</span><span class="te-row__name">' +
         escapeHtml(layerTitle(layer, index)) +
         "</span>";
@@ -445,7 +454,7 @@
       item.className = "te-layer-item" + (layer.id === state.selectedId ? " is-selected" : "");
       item.innerHTML =
         '<span class="te-layer-item__kind">' +
-        escapeHtml(layer.type === "text" ? "T" : layer.type === "image" ? "IMG" : "VID") +
+        escapeHtml(typeMark(layer.type)) +
         '</span><span class="te-layer-item__name">' +
         escapeHtml(layerTitle(layer, index)) +
         '</span><span class="te-layer-item__time">' +
@@ -456,6 +465,66 @@
     });
   }
 
+  // Общий кусок инспектора для звука и медиа: путь к файлу и кнопка выбора.
+  function sourceField(layer) {
+    return (
+      '<div class="te-field"><label>' +
+      escapeHtml(t("timelineEditor.fieldSrc")) +
+      '</label><div class="te-file"><input type="text" id="fSrc" value="' +
+      escapeHtml(layer.src) +
+      '"><button class="md-button md-button--tonal" id="pickFile" type="button">' +
+      escapeHtml(t("timelineEditor.chooseFile")) +
+      "</button></div></div>"
+    );
+  }
+
+  function loopCheck(layer) {
+    return (
+      '<label class="te-check"><input type="checkbox" id="fLoop"' +
+      (layer.loop ? " checked" : "") +
+      ">" +
+      escapeHtml(t("timelineEditor.loop")) +
+      "</label>"
+    );
+  }
+
+  // Звук не видно на сцене, поэтому вместо координат и прозрачности у него
+  // громкость: без неё музыка в эфире звучала бы в полную силу, а тише её
+  // сделать из приложения было бы негде.
+  function audioInspector(layer) {
+    const volume = Math.round(layer.volume * 100);
+    return (
+      sourceField(layer) +
+      '<p class="te-hint">' +
+      escapeHtml(t("timelineEditor.audioHint")) +
+      "</p>" +
+      '<div class="te-row2">' +
+      '<div class="te-field"><label>' +
+      escapeHtml(t("timelineEditor.audioVolume")) +
+      ': <span id="fVolumeValue">' +
+      volume +
+      '</span></label><input type="range" id="fVolume" min="0" max="100" step="1" value="' +
+      volume +
+      '"></div>' +
+      loopCheck(layer) +
+      "</div>"
+    );
+  }
+
+  function mediaInspector(layer, fitOptions) {
+    return (
+      sourceField(layer) +
+      '<div class="te-row2">' +
+      '<div class="te-field"><label>' +
+      escapeHtml(t("timelineEditor.fitLabel")) +
+      '</label><select id="fFit">' +
+      fitOptions +
+      "</select></div>" +
+      (layer.type === "video" ? loopCheck(layer) : "") +
+      "</div>"
+    );
+  }
+
   function renderInspector() {
     const layer = findLayer(state.selectedId);
     if (!layer) {
@@ -464,7 +533,7 @@
     }
     const index = activeLayers().indexOf(layer);
     const isText = layer.type === "text";
-    const isVideo = layer.type === "video";
+    const isAudio = layer.type === "audio";
 
     const animationOptions = LC.ANIMATIONS.map(
       (name) =>
@@ -570,51 +639,35 @@
           '</label><select id="fFont">' +
           fontOptions +
           "</select></div></div>"
-        : '<div class="te-field"><label>' +
-          escapeHtml(t("timelineEditor.fieldSrc")) +
-          '</label><div class="te-file"><input type="text" id="fSrc" value="' +
-          escapeHtml(layer.src) +
-          '"><button class="md-button md-button--tonal" id="pickFile" type="button">' +
-          escapeHtml(t("timelineEditor.chooseFile")) +
-          "</button></div></div>" +
-          '<div class="te-row2">' +
+        : isAudio
+          ? audioInspector(layer)
+          : mediaInspector(layer, fitOptions)) +
+      (isAudio
+        ? ""
+        : '<div class="te-section">' +
+          escapeHtml(t("timelineEditor.position")) +
+          "</div>" +
+          '<div class="te-row4">' +
           '<div class="te-field"><label>' +
-          escapeHtml(t("timelineEditor.fitLabel")) +
-          '</label><select id="fFit">' +
-          fitOptions +
-          "</select></div>" +
-          (isVideo
-            ? '<label class="te-check"><input type="checkbox" id="fLoop"' +
-              (layer.loop ? " checked" : "") +
-              ">" +
-              escapeHtml(t("timelineEditor.loop")) +
-              "</label>"
-            : "") +
-          "</div>") +
-      '<div class="te-section">' +
-      escapeHtml(t("timelineEditor.position")) +
-      "</div>" +
-      '<div class="te-row4">' +
-      '<div class="te-field"><label>' +
-      escapeHtml(t("timelineEditor.x")) +
-      '</label><input type="number" id="fX" step="0.5" value="' +
-      round1(layer.x) +
-      '"></div>' +
-      '<div class="te-field"><label>' +
-      escapeHtml(t("timelineEditor.y")) +
-      '</label><input type="number" id="fY" step="0.5" value="' +
-      round1(layer.y) +
-      '"></div>' +
-      '<div class="te-field"><label>' +
-      escapeHtml(t("timelineEditor.w")) +
-      '</label><input type="number" id="fW" step="0.5" value="' +
-      round1(layer.w) +
-      '"></div>' +
-      '<div class="te-field"><label>' +
-      escapeHtml(t("timelineEditor.h")) +
-      '</label><input type="number" id="fH" step="0.5" value="' +
-      round1(layer.h) +
-      '"></div></div>' +
+          escapeHtml(t("timelineEditor.x")) +
+          '</label><input type="number" id="fX" step="0.5" value="' +
+          round1(layer.x) +
+          '"></div>' +
+          '<div class="te-field"><label>' +
+          escapeHtml(t("timelineEditor.y")) +
+          '</label><input type="number" id="fY" step="0.5" value="' +
+          round1(layer.y) +
+          '"></div>' +
+          '<div class="te-field"><label>' +
+          escapeHtml(t("timelineEditor.w")) +
+          '</label><input type="number" id="fW" step="0.5" value="' +
+          round1(layer.w) +
+          '"></div>' +
+          '<div class="te-field"><label>' +
+          escapeHtml(t("timelineEditor.h")) +
+          '</label><input type="number" id="fH" step="0.5" value="' +
+          round1(layer.h) +
+          '"></div></div>') +
       '<div class="te-section">' +
       escapeHtml(t("timelineEditor.timing")) +
       "</div>" +
@@ -629,41 +682,43 @@
       '</label><input type="number" id="fDuration" min="100" step="50" value="' +
       Math.round(layer.duration) +
       '"></div></div>' +
-      '<div class="te-row2">' +
-      '<div class="te-field"><label>' +
-      escapeHtml(t("timelineEditor.opacity")) +
-      ': <span id="fOpacityValue">' +
-      Math.round(layer.opacity * 100) +
-      '</span></label><input type="range" id="fOpacity" min="0" max="100" step="1" value="' +
-      Math.round(layer.opacity * 100) +
-      '"></div>' +
-      '<div class="te-field"><label>' +
-      escapeHtml(t("timelineEditor.z")) +
-      '</label><input type="number" id="fZ" min="0" max="100" step="1" value="' +
-      layer.z +
-      '"></div></div>' +
-      '<div class="te-row2">' +
-      '<div class="te-field"><label>' +
-      escapeHtml(t("timelineEditor.animationIn")) +
-      '</label><select id="fIn">' +
-      animationOptions +
-      "</select></div>" +
-      '<div class="te-field"><label>' +
-      escapeHtml(t("timelineEditor.animationOut")) +
-      '</label><select id="fOut">' +
-      outOptions +
-      "</select></div></div>" +
-      '<div class="te-row2">' +
-      '<div class="te-field"><label>' +
-      escapeHtml(t("timelineEditor.animationInMs")) +
-      '</label><input type="number" id="fInMs" min="0" max="5000" step="50" value="' +
-      Math.round(layer.inMs) +
-      '"></div>' +
-      '<div class="te-field"><label>' +
-      escapeHtml(t("timelineEditor.animationOutMs")) +
-      '</label><input type="number" id="fOutMs" min="0" max="5000" step="50" value="' +
-      Math.round(layer.outMs) +
-      '"></div></div>';
+      (isAudio
+        ? ""
+        : '<div class="te-row2">' +
+          '<div class="te-field"><label>' +
+          escapeHtml(t("timelineEditor.opacity")) +
+          ': <span id="fOpacityValue">' +
+          Math.round(layer.opacity * 100) +
+          '</span></label><input type="range" id="fOpacity" min="0" max="100" step="1" value="' +
+          Math.round(layer.opacity * 100) +
+          '"></div>' +
+          '<div class="te-field"><label>' +
+          escapeHtml(t("timelineEditor.z")) +
+          '</label><input type="number" id="fZ" min="0" max="100" step="1" value="' +
+          layer.z +
+          '"></div></div>' +
+          '<div class="te-row2">' +
+          '<div class="te-field"><label>' +
+          escapeHtml(t("timelineEditor.animationIn")) +
+          '</label><select id="fIn">' +
+          animationOptions +
+          "</select></div>" +
+          '<div class="te-field"><label>' +
+          escapeHtml(t("timelineEditor.animationOut")) +
+          '</label><select id="fOut">' +
+          outOptions +
+          "</select></div></div>" +
+          '<div class="te-row2">' +
+          '<div class="te-field"><label>' +
+          escapeHtml(t("timelineEditor.animationInMs")) +
+          '</label><input type="number" id="fInMs" min="0" max="5000" step="50" value="' +
+          Math.round(layer.inMs) +
+          '"></div>' +
+          '<div class="te-field"><label>' +
+          escapeHtml(t("timelineEditor.animationOutMs")) +
+          '</label><input type="number" id="fOutMs" min="0" max="5000" step="50" value="' +
+          Math.round(layer.outMs) +
+          '"></div></div>');
 
     bindInspector(layer);
   }
@@ -689,6 +744,16 @@
       bind("fWeight", "change", (event) => patchLayer({ weight: Number(event.target.value) }));
       bind("fAlign", "change", (event) => patchLayer({ align: event.target.value }));
       bind("fFont", "change", (event) => patchLayer({ font: event.target.value }));
+    } else if (layer.type === "audio") {
+      bind("fSrc", "change", (event) => patchLayer({ src: event.target.value.trim() }));
+      bind("pickFile", "click", () => pickFile(layer));
+      bind("fLoop", "change", (event) => patchLayer({ loop: event.target.checked }));
+      bind("fVolume", "input", (event) => {
+        const value = Number(event.target.value);
+        const label = field("fVolumeValue");
+        if (label) label.textContent = String(Math.round(value));
+        patchLayer({ volume: value / 100 });
+      });
     } else {
       bind("fSrc", "change", (event) => patchLayer({ src: event.target.value.trim() }));
       bind("pickFile", "click", () => pickFile(layer));
@@ -962,6 +1027,7 @@
         return null;
       }
     }
+    const isAudio = type === "audio";
     const composition = ensureActive();
     const maxZ = composition.layers.reduce((max, layer) => Math.max(max, layer.z), 0);
     const first = composition.layers.length === 0;
@@ -971,10 +1037,10 @@
         type,
         text: type === "text" ? (first ? "{{user}}" : "{{message}}") : "",
         src: src || "",
-        x: 10,
-        y: type === "text" ? 30 : 10,
-        w: 80,
-        h: type === "text" ? 20 : 80,
+        x: isAudio ? 0 : 10,
+        y: isAudio ? 0 : type === "text" ? 30 : 10,
+        w: isAudio ? 100 : 80,
+        h: isAudio ? 100 : type === "text" ? 20 : 80,
         start: 0,
         duration: 5000,
         z: maxZ + 1,
@@ -986,6 +1052,7 @@
         font: "body",
         fit: "contain",
         loop: true,
+        volume: isAudio ? 0.8 : undefined,
         in: "fade",
         out: "fade",
         inMs: 300,
@@ -1001,7 +1068,7 @@
 
   async function pickFile(layer) {
     if (!window.desktop || typeof window.desktop.pickSoundFile !== "function") return;
-    const kind = layer.type === "video" ? "video" : "image";
+    const kind = layer.type === "video" ? "video" : layer.type === "audio" ? "audio" : "image";
     const result = await window.desktop.pickSoundFile(kind);
     if (!result || !result.ok || !result.relativePath) return;
     patchLayer({ src: result.relativePath });
@@ -1088,6 +1155,7 @@
     const composition = ensureActive();
     const layer = composition.layers.find((item) => item.id === id);
     if (!layer) return;
+    if (layer.type === "audio") return;
     const rect = stage.getBoundingClientRect();
     if (!(rect.width > 0 && rect.height > 0)) return;
     const scale = composition.stack ? 100 / composition.stackMax : 100;
@@ -1323,6 +1391,10 @@
   });
   document.getElementById("addVideo").addEventListener("click", async () => {
     const layer = addLayer("video");
+    if (layer) await pickFile(layer);
+  });
+  document.getElementById("addAudio").addEventListener("click", async () => {
+    const layer = addLayer("audio");
     if (layer) await pickFile(layer);
   });
 

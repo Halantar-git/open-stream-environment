@@ -1256,7 +1256,7 @@
     "modeVideo": "Video",
     "modeHtml": "Custom HTML",
     "modeEmbed": "Embed (iframe)",
-    "layerAlertHint": "The composition is assembled in a separate editing window: video, image and text layers are laid out in time like on a video timeline.",
+    "layerAlertHint": "The composition is assembled in a separate editing window: video, image, text and audio layers are laid out in time like on a video timeline.",
     "layerAlertLayers": "Layers: {{count}}",
     "layerAlertOpen": "Open composition",
     "visibility": "Visibility",
@@ -1599,6 +1599,7 @@
     "addText": "Text",
     "addImage": "Image",
     "addVideo": "Video",
+    "addAudio": "Audio",
     "layers": "Layers",
     "layer": "Layer",
     "composition": "Composition",
@@ -1609,14 +1610,17 @@
     "layerText": "Text",
     "layerImage": "Image",
     "layerVideo": "Video",
+    "layerAudio": "Audio",
     "fieldText": "Layer text",
     "placeholders": "Placeholders: {{user}} — username, {{amount}} — amount, {{currency}} — currency, {{message}} — message, {{count}} — count, {{months}} — months, {{title}} — reward title.",
     "fieldSrc": "File or link",
+    "audioVolume": "Volume",
+    "audioHint": "Sound or music plays from the layer start to its end. The file goes to the media folder.",
     "chooseFile": "Choose file",
     "fitLabel": "Fit",
     "fitContain": "Fit inside",
     "fitCover": "Fill the box",
-    "loop": "Loop video",
+    "loop": "Loop",
     "videoLimit": "More than four videos in one composition may be too much for OBS — remove extra layers.",
     "textStyle": "Text",
     "fontSize": "Size",
@@ -1828,7 +1832,8 @@
       "p3": "The Layers panel controls z-order; the Grid toggle helps with alignment. The “Set up scenes in OBS” button creates the sources for you; this URL is for adding a Browser Source by hand:",
       "p4": "Widget icons appear on the canvas next to the label on hover or selection, so widgets are easier to tell apart.",
       "p5": "The lock button in the toolbar below the canvas prevents dragging, resizing, deleting, adding and reordering widgets. Selection and property editing stay available — handy for avoiding an accidental layout shift during a live stream. The lock state is saved in settings and survives an app restart.",
-      "p6": "For a 3D widget with an Angle slider the whole tile rotates on the canvas — frame, label and resize handles. Drag a handle along the widget's axes: width and height are measured in its rotated coordinate system, not on screen."
+      "p6": "For a 3D widget with an Angle slider the whole tile rotates on the canvas — frame, label and resize handles. Drag a handle along the widget's axes: width and height are measured in its rotated coordinate system, not on screen.",
+      "p7": "Double-clicking a widget opens its editor: the montage window for Alert composition, the code editor for Custom widget in HTML mode. Editor windows open maximized."
     },
     "hud": {
       "title": "Overlays over the game (HUD)",
@@ -1860,10 +1865,10 @@
     },
     "alertLayers": {
       "title": "Alert composition",
-      "p1": "An alert composition is made of layers: video, images and text. Each layer lives in its own time window, so a background, name, amount and message can appear together or one after another, like on an editing timeline.",
-      "p2": "Open the composition with the “Open composition” button in the inspector. On the left are the widget preview and the tracks: drag a clip to move it in time, drag its edges to change start and end. In the preview, drag the layer itself to move it, and use the eight handles on its frame to resize — just like in OBS. Above the tracks you pick the reaction: the default one or a category-specific one — followers, donations, subs and so on. Until a category has its own, the default is shown, and the first edit creates a separate copy. On the right are the layer properties and the event list. The selected layer is deleted with the Delete key.",
+      "p1": "An alert composition is made of layers: video, images, text and sound. Each layer lives in its own time window, so a background, name, amount and message can appear together or one after another, like on an editing timeline.",
+      "p2": "Open the composition with the “Open composition” button in the inspector, or by double-clicking the widget on the canvas. On the left are the widget preview and the tracks: drag a clip to move it in time, drag its edges to change start and end. In the preview, drag the layer itself to move it, and use the eight handles on its frame to resize — just like in OBS. Above the tracks you pick the reaction: the default one or a category-specific one — followers, donations, subs and so on. Until a category has its own, the default is shown, and the first edit creates a separate copy. On the right are the layer properties and the event list. The selected layer is deleted with the Delete key.",
       "p3": "Text layers support placeholders: {{user}} — username, {{amount}} — amount, {{currency}} — currency, {{message}} — message, {{count}} — gifted sub count, {{months}} — months, {{title}} — reward title. Text size is set as a percentage of the widget width, so the composition scales with the widget.",
-      "p4": "The “Preview” button plays the composition with a sample event of the selected category. In the stream alerts play in a queue, so two compositions never overlap. The “Widget events” list keeps only the checked categories; an empty list means every event. Deleting all layers of a category silences it — that is how one alert type can be turned off without touching the rest. For categories with “Show several”, a new event appears on top and older rows slide down, like in Recent events; design the layers of such a composition in the top row. Video autoplays muted in OBS, so a transparent WebM works best; keep no more than three or four videos at once."
+      "p4": "The “Preview” button plays the composition with a sample event of the selected category. In the stream alerts play in a queue, so two compositions never overlap. The “Widget events” list keeps only the checked categories; an empty list means every event. Deleting all layers of a category silences it — that is how one alert type can be turned off without touching the rest. For categories with “Show several”, a new event appears on top and older rows slide down, like in Recent events; design the layers of such a composition in the top row. Sound is an ordinary layer: it plays from its start to its end, with volume and loop set in the properties; in a list every alert plays its own sound. Video autoplays muted in OBS, so a transparent WebM works best; keep no more than three or four videos at once."
     },
     "guests": {
       "title": "Guest cameras",

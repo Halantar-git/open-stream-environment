@@ -63,6 +63,8 @@ function makeElement(tag) {
     get innerHTML() {
       return el._html || "";
     },
+    play: jest.fn(() => Promise.resolve()),
+    pause: jest.fn(),
   };
   return el;
 }
@@ -163,6 +165,15 @@ describe("layer-composition: модель", () => {
     expect(LayerComposition.compositionForEvent(config, "sub").layers[0].text).toBe("default");
     // Пустая своя реакция — осмысленное «молчать», а не откат к общей.
     expect(LayerComposition.compositionForEvent(config, "follow").layers).toEqual([]);
+  });
+
+  test("audio-слой хранит громкость и повтор", () => {
+    const config = LayerComposition.normalizeConfig({
+      layers: [{ type: "audio", src: "media/theme.mp3", volume: 2, loop: false }],
+    });
+    expect(config.layers[0].type).toBe("audio");
+    expect(config.layers[0].volume).toBe(1);
+    expect(config.layers[0].loop).toBe(false);
   });
 
   test("applyLayerDrag переносит и растягивает слой как в OBS", () => {
@@ -284,6 +295,24 @@ describe("layer-composition: статичная раскладка", () => {
     expect(text.style.color).toBe("#00ff66");
     expect(text.style.textAlign).toBe("right");
   });
+
+  test("статичная раскладка создаёт звук, но не запускает его", () => {
+    const doc = makeDocument();
+    const host = doc.createElement("div");
+    LayerComposition.renderStatic(
+      host,
+      { layers: [{ type: "audio", src: "media/theme.mp3", volume: 0.5, loop: true }] },
+      {},
+      {}
+    );
+
+    const audio = host.children[0].children[0].children[0];
+    expect(audio.tagName).toBe("AUDIO");
+    expect(audio.src).toContain("media/theme.mp3");
+    expect(audio.volume).toBe(0.5);
+    expect(audio.loop).toBe(true);
+    expect(audio.play).not.toHaveBeenCalled();
+  });
 });
 
 // ---- player ----
@@ -348,6 +377,35 @@ describe("layer-composition: проигрыватель", () => {
     jest.advanceTimersByTime(5000);
     expect(done).not.toHaveBeenCalled();
     expect(host.children).toHaveLength(0);
+  });
+
+  test("звук играет в окне слоя и останавливается в конце", () => {
+    const host = global.document.createElement("div");
+    const player = LayerComposition.createPlayer(host, {});
+
+    player.play(
+      {
+        durationMs: 1000,
+        layers: [
+          {
+            type: "audio",
+            src: "media/theme.mp3",
+            start: 0,
+            duration: 500,
+            in: "none",
+            out: "none",
+          },
+        ],
+      },
+      {},
+      () => {}
+    );
+    jest.advanceTimersByTime(0);
+    const audio = host.children[0].children[0].children[0];
+    expect(audio.play).toHaveBeenCalled();
+
+    jest.advanceTimersByTime(500);
+    expect(audio.pause).toHaveBeenCalled();
   });
 });
 

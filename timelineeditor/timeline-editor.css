@@ -383,6 +383,13 @@ html, body {
   background: color-mix(in srgb, var(--md-secondary) 30%, var(--md-surface-container));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--md-secondary) 50%, transparent);
 }
+
+/* Звук не видно на сцене, поэтому его клип нейтральный, а не цветной: цвет
+   здесь ничего не добавляет, а серый сразу говорит «в кадре от слоя ничего». */
+.te-clip--audio {
+  background: color-mix(in srgb, var(--md-on-surface-variant) 24%, var(--md-surface-container));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--md-on-surface-variant) 42%, transparent);
+}
 .te-clip.is-selected {
   box-shadow: inset 0 0 0 2px var(--md-primary);
 }

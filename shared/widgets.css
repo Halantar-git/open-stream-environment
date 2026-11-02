@@ -4088,6 +4088,11 @@
   display: none;
 }
 
+/* Звук не рисуется и не должен перехватывать мышь в редакторе. */
+.la-layer--audio {
+  pointer-events: none;
+}
+
 .la-text {
   width: 100%;
   height: 100%;

@@ -235,7 +235,7 @@ pub fn open_chat_window(app: tauri::AppHandle, state: tauri::State<'_, DesktopSt
     )
 }
 
-/// `app:open-widget-editor` — отдельное окно на виджет.
+/// `app:open-widget-editor` — отдельное окно на виджет (открывается развёрнутым).
 #[tauri::command]
 pub fn open_widget_editor(
     app: tauri::AppHandle,
@@ -260,11 +260,11 @@ pub fn open_widget_editor(
         (900.0, 680.0),
         (640.0, 480.0),
         false,
-        false,
+        true,
     )
 }
 
-/// `app:open-timeline-editor` — окно монтажа алерта-композиции.
+/// `app:open-timeline-editor` — окно монтажа алерта-композиции (открывается развёрнутым).
 #[tauri::command]
 pub fn open_timeline_editor(
     app: tauri::AppHandle,
@@ -289,7 +289,7 @@ pub fn open_timeline_editor(
         (1240.0, 840.0),
         (900.0, 600.0),
         false,
-        false,
+        true,
     )
 }
 

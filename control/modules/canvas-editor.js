@@ -1824,7 +1824,27 @@ export function initCanvasEditor({
   }
   applyLayoutLock(false);
 
+  // Двойной клик открывает то, что у виджета есть вместо настроек: у
+  // алерт-композиции — монтаж, у своего HTML-виджета — редактор кода.
+  // Остальным хватает инспектора справа, и отдельное окно им не нужно.
+  function openWidgetEditor(inst) {
+    if (!window.desktop) return;
+    if (inst.type === "layer-alert") {
+      window.desktop.openTimelineEditor(inst.id);
+      return;
+    }
+    const config = inst.config || {};
+    if (inst.type === "custom" && (config.mode || "text") === "html") {
+      window.desktop.openWidgetEditor(inst.id);
+    }
+  }
+
   function attachDragHandlers(boxEl, inst) {
+    boxEl.addEventListener("dblclick", (e) => {
+      if (e.target.closest(".resize-handle")) return;
+      selectWidget(inst.id);
+      openWidgetEditor(inst);
+    });
     boxEl.addEventListener("pointerdown", (e) => {
       if (e.target.closest(".resize-handle")) return;
       // В режиме блокировки виджет всё ещё можно выбрать и настроить,
