@@ -37,6 +37,9 @@
   const LABEL_WIDTH = 132;
   const MIN_DURATION = 100;
   const MAX_TIME = 600000;
+  // Масштаб таймлайна: каждая ступень — своя ширина дорожек в долях видимой
+  // части. Больше восьми не даём — клип становится шире экрана целиком.
+  const ZOOM_STEPS = [1, 1.5, 2, 3, 4, 6, 8];
 
   const statusLabel = document.getElementById("statusLabel");
   const editorTitle = document.getElementById("editorTitle");
@@ -53,6 +56,12 @@
   const inspector = document.getElementById("inspector");
   const composition = document.getElementById("composition");
   const playhead = document.getElementById("playhead");
+  const timelineEl = document.querySelector(".te-timeline");
+  const timelineScroll = document.getElementById("timelineScroll");
+  const zoomInBtn = document.getElementById("zoomInBtn");
+  const zoomOutBtn = document.getElementById("zoomOutBtn");
+  const zoomResetBtn = document.getElementById("zoomResetBtn");
+  const toggleGridBtn = document.getElementById("toggleGridBtn");
 
   let ws;
   let loaded = false;
@@ -76,6 +85,8 @@
     playing: false,
     drag: null,
     previewDrag: null,
+    zoom: 1,
+    grid: true,
   };
 
   const CURRENCY_SYMBOLS = { RUB: "₽", USD: "$", EUR: "€", UAH: "₴", KZT: "₸", GBP: "£" };
@@ -379,9 +390,49 @@
     previewTimer = setTimeout(renderPreview, delay == null ? 120 : delay);
   }
 
+  // ---- масштаб и сетка ----
+
+  function updateZoomUi() {
+    if (zoomResetBtn) zoomResetBtn.textContent = state.zoom + "×";
+  }
+
+  function setZoom(value) {
+    const next = clamp(value, ZOOM_STEPS[0], ZOOM_STEPS[ZOOM_STEPS.length - 1]);
+    if (next === state.zoom) return;
+    // Держим середину видимой части на месте: иначе при приближении теряется
+    // место, где работал пользователь.
+    const ratio =
+      timelineScroll.scrollWidth > 0
+        ? (timelineScroll.scrollLeft + timelineScroll.clientWidth / 2) /
+          timelineScroll.scrollWidth
+        : 0;
+    state.zoom = next;
+    timelineEl.style.setProperty("--te-zoom", String(next));
+    updateZoomUi();
+    renderRuler();
+    requestAnimationFrame(() => {
+      timelineScroll.scrollLeft = Math.max(
+        0,
+        ratio * timelineScroll.scrollWidth - timelineScroll.clientWidth / 2
+      );
+    });
+  }
+
+  function setGrid(on) {
+    state.grid = on;
+    timelineEl.classList.toggle("is-grid-off", !on);
+    if (!toggleGridBtn) return;
+    toggleGridBtn.classList.toggle("is-on", on);
+    toggleGridBtn.setAttribute("aria-pressed", on ? "true" : "false");
+  }
+
   function renderRuler() {
     const total = timelineTotal();
-    const step = total <= 8000 ? 1000 : total <= 20000 ? 2000 : 5000;
+    // Шаг делений зависит от масштаба: в приближении нужны мелкие линии, иначе
+    // на экран попадали бы две-три подписи.
+    const visible = total / state.zoom;
+    const LADDER = [100, 200, 250, 500, 1000, 2000, 5000, 10000, 20000];
+    const step = LADDER.find((value) => value >= visible / 12) || LADDER[LADDER.length - 1];
     const parts = [];
     for (let ms = 0; ms <= total; ms += step) {
       const percent = (ms / total) * 100;
@@ -395,6 +446,8 @@
     }
     rulerTrack.innerHTML = parts.join("");
     rows.style.setProperty("--te-tick-step", (step / total) * 100 + "%");
+    // Мелкие линии сетки — пятикратное дробление шага шкалы.
+    rows.style.setProperty("--te-minor-step", (step / 5 / total) * 100 + "%");
   }
 
   function updateClipVisual(layer) {
@@ -410,6 +463,10 @@
   function renderRows() {
     const total = timelineTotal();
     rows.innerHTML = "";
+    // Сетка живёт в дорожках, а `innerHTML = ""` её стирает — создаём заново.
+    const grid = document.createElement("div");
+    grid.className = "te-grid";
+    rows.appendChild(grid);
     activeLayers().forEach((layer, index) => {
       const row = document.createElement("div");
       row.className = "te-row" + (layer.id === state.selectedId ? " is-selected" : "");
@@ -1595,6 +1652,25 @@
   document.getElementById("addShape").addEventListener("click", () => {
     addLayer("shape");
   });
+
+  if (zoomInBtn) {
+    zoomInBtn.addEventListener("click", () => {
+      const next = ZOOM_STEPS.find((step) => step > state.zoom);
+      if (next) setZoom(next);
+    });
+  }
+  if (zoomOutBtn) {
+    zoomOutBtn.addEventListener("click", () => {
+      const previous = ZOOM_STEPS.slice()
+        .reverse()
+        .find((step) => step < state.zoom);
+      if (previous) setZoom(previous);
+    });
+  }
+  if (zoomResetBtn) zoomResetBtn.addEventListener("click", () => setZoom(1));
+  if (toggleGridBtn) toggleGridBtn.addEventListener("click", () => setGrid(!state.grid));
+  updateZoomUi();
+  setGrid(true);
 
   function isEditableTarget(target) {
     if (!target || target.nodeType !== 1) return false;

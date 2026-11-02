@@ -264,16 +264,65 @@ html, body {
   padding: 0 10px;
   font-size: 12px;
 }
+.te-zoom {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.te-zoom__btn {
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0 8px;
+  font-size: 14px;
+  line-height: 1;
+}
+.te-zoom__btn.is-on {
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+}
+.te-zoom__value {
+  min-width: 42px;
+  min-height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-sm);
+  background: var(--md-surface-container);
+  color: var(--md-on-surface-variant);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+.te-zoom__value:hover {
+  color: var(--md-on-surface);
+  border-color: var(--md-primary);
+}
+
+/* Горизонтальная прокрутка одна на шкалу и дорожки: иначе при масштабе они
+   разъехались бы, а подписи слоёв должны оставаться на месте. */
+.te-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  position: relative;
+}
 
 .te-ruler {
-  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 3;
   display: flex;
   height: 22px;
+  width: calc(100% * var(--te-zoom, 1));
+  background: var(--md-surface-dim);
   border-bottom: 1px solid var(--md-outline-variant);
 }
 .te-ruler__spacer {
+  position: sticky;
+  left: 0;
+  z-index: 1;
   width: var(--te-label, 132px);
   flex-shrink: 0;
+  background: var(--md-surface-dim);
 }
 .te-ruler__track {
   position: relative;
@@ -304,10 +353,7 @@ html, body {
 
 .te-rows {
   position: relative;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  width: calc(100% * var(--te-zoom, 1));
 }
 .te-row {
   display: flex;
@@ -316,6 +362,9 @@ html, body {
   border-bottom: 1px solid color-mix(in srgb, var(--md-outline-variant) 55%, transparent);
 }
 .te-row__label {
+  position: sticky;
+  left: 0;
+  z-index: 2;
   width: var(--te-label, 132px);
   flex-shrink: 0;
   display: flex;
@@ -323,7 +372,7 @@ html, body {
   gap: 7px;
   padding: 0 8px;
   border: none;
-  background: transparent;
+  background: var(--md-surface-dim);
   color: var(--md-on-surface-variant);
   font-family: var(--font-body);
   font-size: 12px;
@@ -349,11 +398,33 @@ html, body {
   position: relative;
   flex: 1;
   min-width: 0;
-  background-image: repeating-linear-gradient(
-    to right,
-    color-mix(in srgb, var(--md-outline-variant) 45%, transparent) 0 1px,
-    transparent 1px var(--te-tick-step, 10%)
-  );
+}
+
+/* Сетка — отдельный слой, а не фон дорожки: так она непрерывна между
+   строками и её можно выключить кнопкой. Крупные линии совпадают с
+   делениями шкалы, мелкие делят шаг на пять частей. */
+.te-grid {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--te-label, 132px);
+  right: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      color-mix(in srgb, var(--md-outline-variant) 42%, transparent) 0 1px,
+      transparent 1px var(--te-minor-step, 2%)
+    ),
+    repeating-linear-gradient(
+      to right,
+      color-mix(in srgb, var(--md-outline) 55%, transparent) 0 1px,
+      transparent 1px var(--te-tick-step, 10%)
+    );
+}
+.is-grid-off .te-grid {
+  display: none;
 }
 
 .te-clip {
@@ -437,7 +508,7 @@ html, body {
   background: var(--md-error, #ff5a5a);
   box-shadow: 0 0 8px var(--md-error, #ff5a5a);
   pointer-events: none;
-  z-index: 5;
+  z-index: 2;
 }
 
 /* ---------- side panels ---------- */

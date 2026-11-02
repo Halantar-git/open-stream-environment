@@ -73,15 +73,23 @@
               <button class="md-button md-button--tonal" id="addAudio" type="button">+ <span data-i18n="timelineEditor.addAudio">Звук</span></button>
               <button class="md-button md-button--tonal" id="addShape" type="button">+ <span data-i18n="timelineEditor.addShape">Плашка</span></button>
             </div>
+            <div class="te-zoom">
+              <button class="md-button md-button--tonal te-zoom__btn is-on" id="toggleGridBtn" type="button" data-i18n-title="timelineEditor.grid" aria-pressed="true">▦</button>
+              <button class="md-button md-button--tonal te-zoom__btn" id="zoomOutBtn" type="button" data-i18n-title="timelineEditor.zoomOut">−</button>
+              <button class="te-zoom__value" id="zoomResetBtn" type="button" data-i18n-title="timelineEditor.zoomReset">1×</button>
+              <button class="md-button md-button--tonal te-zoom__btn" id="zoomInBtn" type="button" data-i18n-title="timelineEditor.zoomIn">+</button>
+            </div>
           </div>
 
-          <div class="te-ruler">
-            <span class="te-ruler__spacer" aria-hidden="true"></span>
-            <div class="te-ruler__track" id="rulerTrack"></div>
-          </div>
+          <div class="te-scroll" id="timelineScroll">
+            <div class="te-ruler">
+              <span class="te-ruler__spacer" aria-hidden="true"></span>
+              <div class="te-ruler__track" id="rulerTrack"></div>
+            </div>
 
-          <div class="te-rows" id="rows">
-            <div class="te-playhead" id="playhead" hidden></div>
+            <div class="te-rows" id="rows">
+              <div class="te-playhead" id="playhead" hidden></div>
+            </div>
           </div>
         </div>
       </section>
