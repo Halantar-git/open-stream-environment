@@ -129,6 +129,7 @@
       align: oneOf(layer.align, ALIGNS, "center"),
       weight: clamp(Math.round(toNumber(layer.weight, 600)), 100, 900),
       font: oneOf(layer.font, FONTS, "body"),
+      italic: layer.italic === true,
       fit: oneOf(layer.fit, FITS, "contain"),
       loop: layer.loop !== false,
       volume: clamp(toNumber(layer.volume, 0.8), 0, 1),
@@ -437,6 +438,7 @@
       text.style.color = layer.color;
       text.style.textAlign = layer.align;
       text.style.fontWeight = String(layer.weight);
+      text.style.fontStyle = layer.italic ? "italic" : "normal";
       text.style.fontFamily = FONT_VARS[layer.font] || FONT_VARS.body;
       text.style.alignItems =
         layer.align === "left" ? "flex-start" : layer.align === "right" ? "flex-end" : "center";

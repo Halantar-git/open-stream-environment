@@ -683,7 +683,12 @@
           (layer.weight === 700 ? " selected" : "") +
           '>700</option><option value="800"' +
           (layer.weight === 800 ? " selected" : "") +
-          ">800</option></select></div></div>" +
+          '>800</option></select></div></div>' +
+          '<label class="te-check"><input type="checkbox" id="fItalic"' +
+          (layer.italic ? " checked" : "") +
+          ">" +
+          escapeHtml(t("timelineEditor.italic")) +
+          "</label>" +
           '<div class="te-row2">' +
           '<div class="te-field"><label>' +
           escapeHtml(t("timelineEditor.alignLabel")) +
@@ -813,6 +818,7 @@
       });
       bind("fColor", "input", (event) => patchLayer({ color: event.target.value }));
       bind("fWeight", "change", (event) => patchLayer({ weight: Number(event.target.value) }));
+      bind("fItalic", "change", (event) => patchLayer({ italic: event.target.checked }));
       bind("fAlign", "change", (event) => patchLayer({ align: event.target.value }));
       bind("fFont", "change", (event) => patchLayer({ font: event.target.value }));
       bind("fTextAnim", "change", (event) => {
@@ -1184,6 +1190,7 @@
         align: "center",
         weight: type === "text" ? 700 : undefined,
         font: "body",
+        italic: false,
         fit: "contain",
         loop: true,
         volume: isAudio ? 0.8 : undefined,

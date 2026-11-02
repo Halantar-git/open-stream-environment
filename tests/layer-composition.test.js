@@ -366,6 +366,18 @@ describe("layer-composition: статичная раскладка", () => {
     expect(text.style.textAlign).toBe("right");
   });
 
+  test("курсивный текст наклоняется", () => {
+    const doc = makeDocument();
+    const host = doc.createElement("div");
+    LayerComposition.renderStatic(
+      host,
+      { layers: [{ type: "text", text: "Follower", italic: true }] },
+      {},
+      {}
+    );
+    expect(host.children[0].children[0].children[0].style.fontStyle).toBe("italic");
+  });
+
   test("рисует плашку градиентом", () => {
     const doc = makeDocument();
     const host = doc.createElement("div");
