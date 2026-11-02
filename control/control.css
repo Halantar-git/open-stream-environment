@@ -352,6 +352,11 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   border-color: transparent;
 }
 .settings__hint code { font-family: var(--font-mono); color: var(--md-on-surface); }
+/* Неприменённая правка видна и на самом поле, и строкой ниже: иначе легко
+   уйти со страницы, не отправив выбранную категорию. */
+.md-field.is-changed > label { color: var(--md-primary); }
+.md-field.is-changed input[type="text"] { border-color: var(--md-primary); }
+.md-field.is-changed #streamInfoDescription { border-color: var(--md-primary); }
 .settings__actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
 .settings__statuses { display: flex; gap: 8px; margin-top: 2px; }
 .settings__links { display: flex; flex-wrap: wrap; gap: 12px; margin: 2px 0; }

@@ -209,6 +209,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const streamInfoYoutubeCategoryInput = document.getElementById("streamInfoYoutubeCategory");
   const streamInfoDescriptionInput = document.getElementById("streamInfoDescription");
   const streamInfoStatusEl = document.getElementById("streamInfoStatus");
+  const streamInfoChangesEl = document.getElementById("streamInfoChanges");
   const streamInfoLoadBtn = document.getElementById("streamInfoLoadBtn");
   const streamInfoApplyBtn = document.getElementById("streamInfoApplyBtn");
   const openStreamInfoBtn = document.getElementById("openStreamInfoBtn");
@@ -1962,6 +1963,73 @@ const { EVENT_TYPES } = window.SharedEvents;
     }
   }
 
+  const STREAM_INFO_KEYS = ["title", "description", "twitchCategory", "youtubeCategory"];
+  const STREAM_INFO_LABELS = {
+    title: "settings.streamInfoTitle",
+    description: "settings.streamInfoDescription",
+    twitchCategory: "settings.streamInfoTwitchCategory",
+    youtubeCategory: "settings.streamInfoYoutubeCategory",
+  };
+
+  // Что уже уехало на сервисы. `null` — неизвестно: тогда точкой отсчёта
+  // становится то, что было в полях до начала правки.
+  let streamInfoApplied = null;
+  // Последнее отправленное: по нему видно, какие поля считаются применёнными.
+  let streamInfoSent = null;
+
+  function streamInfoFields() {
+    return [
+      ["title", streamInfoTitleInput],
+      ["description", streamInfoDescriptionInput],
+      ["twitchCategory", streamInfoTwitchCategoryInput],
+      ["youtubeCategory", streamInfoYoutubeCategoryInput],
+    ];
+  }
+
+  function streamInfoValues() {
+    const values = {};
+    streamInfoFields().forEach(([key, input]) => {
+      values[key] = input ? (key === "description" ? input.value : input.value.trim()) : "";
+    });
+    return values;
+  }
+
+  /*
+    Пометка неприменённой правки: без неё легко уйти со страницы, не отправив
+    выбранную категорию. Сравниваем с тем, что уже на сервисах, а если это
+    неизвестно — с тем, что было в поле до ввода.
+  */
+  function renderStreamInfoChanges() {
+    const values = streamInfoValues();
+    const changed = streamInfoApplied
+      ? STREAM_INFO_KEYS.filter((key) => {
+          // Пустые название и категория для сервисов — «не менять», это не правка.
+          if (key !== "description" && values[key] === "") return false;
+          return values[key] !== streamInfoApplied[key];
+        })
+      : [];
+    streamInfoFields().forEach(([key, input]) => {
+      const field = input && input.closest(".md-field");
+      if (field) field.classList.toggle("is-changed", changed.indexOf(key) !== -1);
+    });
+    if (!streamInfoChangesEl) return;
+    streamInfoChangesEl.hidden = !changed.length;
+    streamInfoChangesEl.textContent = changed.length
+      ? t("settings.streamInfoPending", {
+          fields: changed.map((key) => t(STREAM_INFO_LABELS[key])).join(", "),
+        })
+      : "";
+  }
+
+  streamInfoFields().forEach(([, input]) => {
+    if (!input) return;
+    input.addEventListener("focus", () => {
+      if (!streamInfoApplied) streamInfoApplied = streamInfoValues();
+    });
+    input.addEventListener("input", renderStreamInfoChanges);
+    input.addEventListener("change", renderStreamInfoChanges);
+  });
+
   function streamInfoServiceText(label, result, mode) {
     const value = result || {};
     if (value.ok) {
@@ -2002,6 +2070,27 @@ const { EVENT_TYPES } = window.SharedEvents;
       if (youtube.ok && typeof youtube.description === "string" && streamInfoDescriptionInput) {
         streamInfoDescriptionInput.value = youtube.description;
       }
+      // После чтения точно знаем, что сейчас на сервисах.
+      streamInfoApplied = streamInfoValues();
+      renderStreamInfoChanges();
+    }
+
+    if (action === "apply") {
+      const sent = streamInfoSent || {};
+      if (!streamInfoApplied && twitch.ok && youtube.ok) streamInfoApplied = streamInfoValues();
+      if (streamInfoApplied) {
+        // Неудачный сервис ничего не поменял — его поля остаются помеченными.
+        if (twitch.ok) {
+          if (sent.title) streamInfoApplied.title = sent.title;
+          if (sent.twitchCategory) streamInfoApplied.twitchCategory = sent.twitchCategory;
+        }
+        if (youtube.ok) {
+          if (sent.title) streamInfoApplied.title = sent.title;
+          if (sent.youtubeCategory) streamInfoApplied.youtubeCategory = sent.youtubeCategory;
+          if (typeof sent.description === "string") streamInfoApplied.description = sent.description;
+        }
+        renderStreamInfoChanges();
+      }
     }
 
     const text = [
@@ -2021,14 +2110,10 @@ const { EVENT_TYPES } = window.SharedEvents;
   }
   if (streamInfoApplyBtn) {
     streamInfoApplyBtn.addEventListener("click", () => {
+      streamInfoSent = streamInfoValues();
       setStreamInfoStatus(t("settings.streamInfoApplying"), false);
       setStreamInfoBusy(true);
-      send(EVENT_TYPES.CMD_UPDATE_STREAM_INFO, {
-        title: streamInfoTitleInput ? streamInfoTitleInput.value : "",
-        description: streamInfoDescriptionInput ? streamInfoDescriptionInput.value : "",
-        twitchCategory: streamInfoTwitchCategoryInput ? streamInfoTwitchCategoryInput.value : "",
-        youtubeCategory: streamInfoYoutubeCategoryInput ? streamInfoYoutubeCategoryInput.value : "",
-      });
+      send(EVENT_TYPES.CMD_UPDATE_STREAM_INFO, streamInfoSent);
     });
   }
 
@@ -4895,6 +4980,7 @@ const { EVENT_TYPES } = window.SharedEvents;
     const boostyBtn = document.getElementById("openBoostyBtn");
     if (boostyBtn) boostyBtn.innerHTML = `${ICONS.heart} ${t("boosty.support")}`;
     renderCredits();
+    renderStreamInfoChanges();
   }
 
   // Диагностика «бюджета сцены»: сколько анимированных 3D-виджетов (у каждого

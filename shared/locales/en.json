@@ -294,6 +294,7 @@
     "streamInfoDescriptionHint": "Twitch has no stream description — only a title and category.",
     "streamInfoCategoryHint": "Twitch categories are games, YouTube categories are sections. That is why the fields are separate and the Apply button is one. Suggestions are fetched as you type — pick the right one from the list.",
     "streamInfoScopeHint": "To change YouTube, reconnect it once: the old token was read-only.",
+    "streamInfoPending": "Not applied yet: {{fields}}",
     "streamInfoLoad": "Load current",
     "streamInfoApply": "Apply",
     "streamInfoLoading": "Loading current data…",
@@ -1950,7 +1951,7 @@
       "p2": "Categories differ between services: Twitch looks up a game by name, YouTube looks up a section by name. That is why the fields are separate and the Apply button is one. “Load current” fills them from the active live stream.",
       "p3": "Twitch has no stream description. Changing YouTube requires write access: reconnect YouTube once, the old token was read-only.",
       "p4": "If YouTube is not live, there is nothing to rename or describe — the card reports it. Twitch updates even outside a live stream.",
-      "p5": "Category names are suggested as you type: Twitch searches games, YouTube lists the region's sections (Russian and English titles are found alike). A suggestion is not mandatory — you can type a category by hand. The “Stream info” button next to the Settings tab opens this card right away."
+      "p5": "Category names are suggested as you type: Twitch searches games, YouTube lists the region's sections (Russian and English titles are found alike). A suggestion is not mandatory — you can type a category by hand. Until the change is sent, the field is highlighted and a “Not applied yet: …” line appears under the card; after a successful Apply the mark clears itself. Switching the language retranslates that line too. The “Stream info” button next to the Settings tab opens this card right away."
     },
     "chatbot": {
       "title": "Chat bot and moderation",
