@@ -1466,7 +1466,11 @@
 
     const dx = ((event.clientX - drag.startX) / drag.width) * 100;
     const dy = ((event.clientY - drag.startY) / drag.height) * 100;
-    const next = LC.applyLayerDrag(drag.orig, drag.dir, dx, dy);
+    const dragged = LC.applyLayerDrag(drag.orig, drag.dir, dx, dy);
+    // Сетка включена — края «щёлкают» по её линиям; Alt отпускает слой.
+    const next = event.altKey
+      ? dragged
+      : LC.snapToGrid(dragged, drag.dir, state.previewGrid ? state.gridSize : 0);
 
     layer.x = next.x;
     layer.y = next.y;

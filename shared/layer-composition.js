@@ -266,6 +266,45 @@
   }
 
   /*
+    Привязка слоя к сетке: снапим только те края, которые двигает ручка, —
+    иначе противоположный край уезжал бы вместе с движущимся. `dir` — та же
+    сторона, что в `applyLayerDrag` («move», «n», «ne» и т.д.), `size` — шаг
+    сетки в процентах кадра.
+  */
+  function snapToGrid(rect, dir, size) {
+    const source = rect || {};
+    const x = toNumber(source.x, 0);
+    const y = toNumber(source.y, 0);
+    const w = toNumber(source.w, 1);
+    const h = toNumber(source.h, 1);
+    const step = toNumber(size, 0);
+    if (!(step > 0)) return { x, y, w, h };
+
+    const snap = (value) => Math.round(value / step) * step;
+    if (dir === "move") return { x: snap(x), y: snap(y), w, h };
+
+    let left = x;
+    let top = y;
+    let right = x + w;
+    let bottom = y + h;
+    const side = String(dir || "");
+    if (side.indexOf("w") >= 0) left = snap(left);
+    if (side.indexOf("e") >= 0) right = snap(right);
+    if (side.indexOf("n") >= 0) top = snap(top);
+    if (side.indexOf("s") >= 0) bottom = snap(bottom);
+    // Сетка крупнее самого слоя — не схлопываем его в ноль.
+    if (right - left < 1) {
+      left = x;
+      right = x + w;
+    }
+    if (bottom - top < 1) {
+      top = y;
+      bottom = y + h;
+    }
+    return { x: left, y: top, w: right - left, h: bottom - top };
+  }
+
+  /*
     Прямое управление слоем в превью — как в OBS. `dir` — сторона или угол
     (`n`, `se`, `move` и т.д.), смещение — в процентах рамки. Минимальный размер
     не даёт рамке перевернуться: при пересечении тянем противоположный край.
@@ -1030,6 +1069,7 @@
     compositionForEvent,
     compositionDuration,
     applyLayerDrag,
+    snapToGrid,
     matchesEvent,
     passesAmount,
     fillText,

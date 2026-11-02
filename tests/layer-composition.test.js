@@ -150,6 +150,41 @@ describe("layer-composition: модель", () => {
     expect(layer.fade).toBe(true);
   });
 
+  test("слой прилипает к сетке", () => {
+    // Перенос двигает обе координаты, размер не трогает.
+    expect(LayerComposition.snapToGrid({ x: 12, y: 8, w: 30, h: 20 }, "move", 5)).toEqual({
+      x: 10,
+      y: 10,
+      w: 30,
+      h: 20,
+    });
+    // Правый край тянется — снапится только он.
+    expect(LayerComposition.snapToGrid({ x: 10, y: 10, w: 33, h: 20 }, "e", 5)).toEqual({
+      x: 10,
+      y: 10,
+      w: 35,
+      h: 20,
+    });
+    // Левый — только он, правый остаётся на месте.
+    expect(LayerComposition.snapToGrid({ x: 13, y: 10, w: 27, h: 20 }, "w", 5)).toEqual({
+      x: 15,
+      y: 10,
+      w: 25,
+      h: 20,
+    });
+    // Сетка выключена — геометрия как была.
+    expect(LayerComposition.snapToGrid({ x: 12, y: 8, w: 30, h: 20 }, "move", 0)).toEqual({
+      x: 12,
+      y: 8,
+      w: 30,
+      h: 20,
+    });
+    // Сетка крупнее слоя не схлопывает его в ноль.
+    const tiny = LayerComposition.snapToGrid({ x: 21, y: 21, w: 2, h: 2 }, "ne", 10);
+    expect(tiny.w).toBeGreaterThanOrEqual(1);
+    expect(tiny.h).toBeGreaterThanOrEqual(1);
+  });
+
   test("compositionForEvent переносит порог суммы реакции", () => {
     const composition = LayerComposition.compositionForEvent(
       { minAmount: 100, reactions: { donation: { minAmount: 500, layers: [] } } },
