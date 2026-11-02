@@ -62,6 +62,7 @@
   const zoomOutBtn = document.getElementById("zoomOutBtn");
   const zoomResetBtn = document.getElementById("zoomResetBtn");
   const toggleGridBtn = document.getElementById("toggleGridBtn");
+  const togglePreviewGridBtn = document.getElementById("togglePreviewGrid");
 
   let ws;
   let loaded = false;
@@ -87,6 +88,8 @@
     previewDrag: null,
     zoom: 1,
     grid: true,
+    previewGrid: true,
+    gridSize: 10,
   };
 
   const CURRENCY_SYMBOLS = { RUB: "₽", USD: "$", EUR: "€", UAH: "₴", KZT: "₸", GBP: "£" };
@@ -433,6 +436,16 @@
     if (!toggleGridBtn) return;
     toggleGridBtn.classList.toggle("is-on", on);
     toggleGridBtn.setAttribute("aria-pressed", on ? "true" : "false");
+  }
+
+  // Сетка превью: линии идут по кратным `gridSize` процентам кадра, как на
+  // канвасе панели, только без привязки перетаскивания — слои ставятся свободно.
+  function applyPreviewGrid() {
+    stage.classList.toggle("show-grid", state.previewGrid);
+    stage.style.setProperty("--te-grid-step", state.gridSize + "%");
+    if (!togglePreviewGridBtn) return;
+    togglePreviewGridBtn.classList.toggle("is-on", state.previewGrid);
+    togglePreviewGridBtn.setAttribute("aria-pressed", state.previewGrid ? "true" : "false");
   }
 
   function renderRuler() {
@@ -1590,7 +1603,13 @@
 
   function handleMessage(message) {
     if (message.type === EVENT_TYPES.STATE) {
-      const layout = (message.payload && message.payload.layout) || [];
+      const payload = message.payload || {};
+      // Шаг сетки превью берём из настроек редактора — тот же, что на канвасе.
+      const editor = payload.editor || {};
+      const gridSize = Number(editor.gridSize);
+      if (Number.isFinite(gridSize) && gridSize > 0) state.gridSize = gridSize;
+      applyPreviewGrid();
+      const layout = payload.layout || [];
       const widget = layout.find((item) => item.id === widgetId);
       if (widget) populateFrom(widget);
       else markRemoved();
@@ -1699,8 +1718,15 @@
   }
   if (zoomResetBtn) zoomResetBtn.addEventListener("click", () => setZoom(1));
   if (toggleGridBtn) toggleGridBtn.addEventListener("click", () => setGrid(!state.grid));
+  if (togglePreviewGridBtn) {
+    togglePreviewGridBtn.addEventListener("click", () => {
+      state.previewGrid = !state.previewGrid;
+      applyPreviewGrid();
+    });
+  }
   updateZoomUi();
   setGrid(true);
+  applyPreviewGrid();
 
   function isEditableTarget(target) {
     if (!target || target.nodeType !== 1) return false;
