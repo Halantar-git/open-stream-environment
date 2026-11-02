@@ -491,6 +491,9 @@ const { EVENT_TYPES } = window.SharedEvents;
   }
 
   // ---- tabs ----
+  const VIEW_KEY = "ose.control.view";
+  const VIEW_CARD_KEY = "ose.control.card";
+
   function setActiveTab(view) {
     tabsEl.querySelectorAll(".topbar__tab").forEach((b) => {
       b.classList.toggle("is-active", b.dataset.view === view);
@@ -511,11 +514,40 @@ const { EVENT_TYPES } = window.SharedEvents;
     }
     if (isWheel) selectScene("wheel");
     if (targetView === "settings") renderStreamEvents();
+    // Панель перезагружается после установки и удаления пакета, поэтому
+    // запоминаем раздел: без этого после перезагрузки открывался бы «Редактор».
+    try {
+      sessionStorage.setItem(VIEW_KEY, targetView);
+    } catch {
+      /* без хранилища просто вернёмся на «Редактор» */
+    }
+  }
+
+  /*
+    Вернуть раздел и карточку, где пользователь был до перезагрузки. Карточку
+    запоминают установка и удаление пакета: после обновления страницы список
+    пакетов оказывается ниже первого экрана.
+  */
+  function restoreView() {
+    let view;
+    let card;
+    try {
+      view = sessionStorage.getItem(VIEW_KEY);
+      card = sessionStorage.getItem(VIEW_CARD_KEY);
+      sessionStorage.removeItem(VIEW_CARD_KEY);
+    } catch {
+      return;
+    }
+    if (view === "settings" || view === "scenes" || view === "splashes") switchView(view);
+    const el = card && document.getElementById(card);
+    if (el) requestAnimationFrame(() => el.scrollIntoView({ block: "start" }));
   }
 
   tabsEl.querySelectorAll(".topbar__tab").forEach((btn) => {
     btn.addEventListener("click", () => switchView(btn.dataset.view));
   });
+
+  restoreView();
 
   // ---- status FAB → jump to the matching settings card ----
   function onStatusClick(service) {
@@ -3335,6 +3367,19 @@ const { EVENT_TYPES } = window.SharedEvents;
     openDataFolderBtn.addEventListener("click", () => window.desktop?.db?.openDataFolder?.());
   }
 
+  /*
+    Пакеты меняются только перезагрузкой страницы: библиотека и сетка тем
+    собираются при загрузке. Чтобы вернуться к этому же месту, запоминаем
+    карточку — раздел панель помнит сама (см. `switchView`).
+  */
+  function rememberCard(id) {
+    try {
+      sessionStorage.setItem(VIEW_CARD_KEY, id);
+    } catch {
+      /* без хранилища перезагрузка вернёт в начало раздела */
+    }
+  }
+
   function showPackagesStatus(text, isError) {
     if (!packagesStatusEl) return;
     packagesStatusEl.hidden = false;
@@ -3442,6 +3487,7 @@ const { EVENT_TYPES } = window.SharedEvents;
         throw new Error(payload.error || `HTTP ${response.status}`);
       }
       showPackagesStatus(t("packages.removed", { name }), false);
+      rememberCard("settingsCardPackages");
       setTimeout(() => window.location.reload(), 500);
     } catch (error) {
       showPackagesStatus(t("packages.removeFailed", { error: error.message }), true);
@@ -3475,6 +3521,7 @@ const { EVENT_TYPES } = window.SharedEvents;
           throw new Error(payload.error || `HTTP ${response.status}`);
         }
         showPackagesStatus(t("packages.installed", { name: payload.installed.id }), false);
+        rememberCard("settingsCardPackages");
         setTimeout(() => window.location.reload(), 600);
       } catch (error) {
         showPackagesStatus(t("packages.failed", { error: error.message }), true);
