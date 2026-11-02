@@ -117,6 +117,7 @@ const SECTIONS = [
       { type: "p", key: "help.alertLayers.p2" },
       { type: "p", key: "help.alertLayers.p3" },
       { type: "p", key: "help.alertLayers.p4" },
+      { type: "p", key: "help.alertLayers.p5" },
     ],
   },
   {

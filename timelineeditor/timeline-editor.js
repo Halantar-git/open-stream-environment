@@ -147,6 +147,7 @@
       durationMs: composition.durationMs,
       stack: composition.stack === true,
       stackMax: composition.stackMax,
+      minAmount: composition.minAmount,
       layers: composition.layers.map((layer) => Object.assign({}, layer)),
     };
   }
@@ -585,6 +586,16 @@
         escapeHtml(t("timelineEditor.fit" + (name === "cover" ? "Cover" : "Contain"))) +
         "</option>"
     ).join("");
+    const textAnimOptions = LC.TEXT_ANIMS.map(
+      (name) =>
+        '<option value="' +
+        name +
+        '"' +
+        (layer.textAnim === name ? " selected" : "") +
+        ">" +
+        escapeHtml(t("timelineEditor.textAnim." + name)) +
+        "</option>"
+    ).join("");
 
     inspector.innerHTML =
       '<div class="te-inspector__title"><span>' +
@@ -638,7 +649,20 @@
           escapeHtml(t("timelineEditor.fontLabel")) +
           '</label><select id="fFont">' +
           fontOptions +
-          "</select></div></div>"
+          "</select></div></div>" +
+          '<div class="te-row2">' +
+          '<div class="te-field"><label>' +
+          escapeHtml(t("timelineEditor.textAnimLabel")) +
+          '</label><select id="fTextAnim">' +
+          textAnimOptions +
+          "</select></div>" +
+          '<div class="te-field"><label>' +
+          escapeHtml(t("timelineEditor.typeSpeed")) +
+          '</label><input type="number" id="fTypeMs" min="4" max="120" step="1" value="' +
+          Math.round(layer.typeMs) +
+          '"' +
+          (layer.textAnim === "type" ? "" : " disabled") +
+          "></div></div>"
         : isAudio
           ? audioInspector(layer)
           : mediaInspector(layer, fitOptions)) +
@@ -744,6 +768,16 @@
       bind("fWeight", "change", (event) => patchLayer({ weight: Number(event.target.value) }));
       bind("fAlign", "change", (event) => patchLayer({ align: event.target.value }));
       bind("fFont", "change", (event) => patchLayer({ font: event.target.value }));
+      bind("fTextAnim", "change", (event) => {
+        // Скорость нужна только печати — без неё поле выглядит как мёртвое.
+        const speed = field("fTypeMs");
+        if (speed) speed.disabled = event.target.value !== "type";
+        patchLayer({ textAnim: event.target.value });
+      });
+      bind("fTypeMs", "change", (event) => {
+        const value = Number(event.target.value);
+        if (Number.isFinite(value)) patchLayer({ typeMs: clamp(Math.round(value), 4, 120) });
+      });
     } else if (layer.type === "audio") {
       bind("fSrc", "change", (event) => patchLayer({ src: event.target.value.trim() }));
       bind("pickFile", "click", () => pickFile(layer));
@@ -859,6 +893,14 @@
       '<p class="te-hint">' +
       escapeHtml(t("timelineEditor.durationHint")) +
       "</p>" +
+      '<div class="te-field"><label>' +
+      escapeHtml(t("timelineEditor.minAmount")) +
+      '</label><input type="number" id="compMinAmount" min="0" step="1" value="' +
+      Math.round(active().minAmount) +
+      '"></div>' +
+      '<p class="te-hint">' +
+      escapeHtml(t("timelineEditor.minAmountHint")) +
+      "</p>" +
       '<div class="te-row2">' +
       '<label class="te-check"><input type="checkbox" id="compStack"' +
       (active().stack ? " checked" : "") +
@@ -905,6 +947,13 @@
         ).map((el) => el.value);
         schedulePreview();
       });
+    });
+
+    const minAmountInput = composition.querySelector("#compMinAmount");
+    minAmountInput.addEventListener("input", (event) => {
+      const value = Number(event.target.value);
+      if (!Number.isFinite(value)) return;
+      ensureActive().minAmount = Math.max(0, Math.round(value));
     });
 
     const stackInput = composition.querySelector("#compStack");
@@ -1053,6 +1102,8 @@
         fit: "contain",
         loop: true,
         volume: isAudio ? 0.8 : undefined,
+        textAnim: "none",
+        typeMs: 16,
         in: "fade",
         out: "fade",
         inMs: 300,
@@ -1305,6 +1356,7 @@
       durationMs: config.durationMs,
       stack: config.stack,
       stackMax: config.stackMax,
+      minAmount: config.minAmount,
       layers: config.layers,
       reactions: config.reactions,
     });
@@ -1345,6 +1397,7 @@
         durationMs: composition.durationMs,
         stack: composition.stack === true,
         stackMax: composition.stackMax,
+        minAmount: composition.minAmount,
         layers: composition.layers.map((layer) => Object.assign({}, layer)),
       };
     });
@@ -1353,6 +1406,7 @@
       durationMs: state.config.durationMs,
       stack: state.config.stack === true,
       stackMax: state.config.stackMax,
+      minAmount: state.config.minAmount,
       layers: state.config.layers.map((layer) => Object.assign({}, layer)),
       reactions,
     };

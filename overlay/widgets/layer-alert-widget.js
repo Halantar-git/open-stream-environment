@@ -100,6 +100,7 @@
         config.durationMs,
         config.stack,
         config.stackMax,
+        config.minAmount,
         config.layers,
         config.reactions,
       ]);
@@ -115,6 +116,9 @@
     queueAlert(alert) {
       if (!alert || !LayerComposition.matchesEvent(this.config, alert)) return;
       const composition = LayerComposition.compositionForEvent(this.config, alert.kind);
+      // Порог суммы — часть композиции категории, поэтому проверяем его после
+      // выбора реакции, а не до.
+      if (!LayerComposition.passesAmount(composition, alert)) return;
       // Категория без слоёв — осознанное «молчать»: событие не занимает эфир.
       if (!composition.layers.length) return;
       if (composition.stack) {

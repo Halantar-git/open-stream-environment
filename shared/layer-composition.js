@@ -45,6 +45,9 @@
   const ALIGNS = ["left", "center", "right"];
   const FONTS = ["body", "display", "mono"];
   const FITS = ["contain", "cover"];
+  // Как текст слоя появляется на экране: сразу или посимвольно, как в теме
+  // Terminal.
+  const TEXT_ANIMS = ["none", "type"];
   // События, на которые имеет смысл вешать композицию. Список совпадает с
   // `kind` из ALERT, кроме служебных wheel_*: у колеса своя сцена.
   const EVENT_KINDS = [
@@ -63,6 +66,11 @@
   const MIN_LAYER_MS = 100;
   const MAX_TIME_MS = 600000;
   const DEFAULT_TEXT_SIZE = 8;
+  // Скорость печати — миллисекунды на символ. 16 мс читается спокойнее, чем
+  // терминальные два символа за такт, но не тормозит длинное сообщение.
+  const DEFAULT_TYPE_MS = 16;
+  const MIN_TYPE_MS = 4;
+  const MAX_TYPE_MS = 120;
 
   const FONT_VARS = {
     body: "var(--font-body, sans-serif)",
@@ -116,6 +124,8 @@
       fit: oneOf(layer.fit, FITS, "contain"),
       loop: layer.loop !== false,
       volume: clamp(toNumber(layer.volume, 0.8), 0, 1),
+      textAnim: oneOf(layer.textAnim, TEXT_ANIMS, "none"),
+      typeMs: clamp(toNumber(layer.typeMs, DEFAULT_TYPE_MS), MIN_TYPE_MS, MAX_TYPE_MS),
       in: oneOf(layer.in, ANIMATIONS, "fade"),
       out: oneOf(layer.out, ANIMATIONS, "fade"),
       inMs: clamp(toNumber(layer.inMs, 300), 0, 5000),
@@ -168,6 +178,8 @@
       // Режим списка: новое событие сверху, старые строки уезжают вниз.
       stack: config.stack === true,
       stackMax: clamp(Math.round(toNumber(config.stackMax, 3)), 2, 6),
+      // Порог доната: ниже этой суммы композиция молчит. Ноль — показывать все.
+      minAmount: clamp(toNumber(config.minAmount, 0), 0, 1000000000),
       layers: normalizeLayers(config.layers),
     };
   }
@@ -194,6 +206,7 @@
       durationMs: composition.durationMs,
       stack: composition.stack,
       stackMax: composition.stackMax,
+      minAmount: composition.minAmount,
       layers: composition.layers,
       reactions: normalizeReactions(source.reactions),
     };
@@ -210,6 +223,7 @@
       durationMs: normalized.durationMs,
       stack: normalized.stack,
       stackMax: normalized.stackMax,
+      minAmount: normalized.minAmount,
       layers: normalized.layers,
     };
   }
@@ -275,6 +289,22 @@
     const kinds = normalizeKinds(config && config.eventKinds);
     if (!kinds.length) return true;
     return kinds.indexOf(String((alert && alert.kind) || "")) >= 0;
+  }
+
+  /*
+    Порог суммы: донат ниже него композиция не играет. Проверяем только
+    донаты — остальные события денег не несут, а тестовый алерт должен играть
+    всегда, иначе кнопку «Тест» нечем проверить. Так же считает и общая
+    очередь алертов на сервере.
+  */
+  function passesAmount(composition, alert) {
+    const min = toNumber(composition && composition.minAmount, 0);
+    if (min <= 0) return true;
+    const event = alert || {};
+    if (event.isTest) return true;
+    if (String(event.kind || "") !== "donation") return true;
+    const amount = Number(event.amount);
+    return Number.isFinite(amount) ? amount >= min : true;
   }
 
   /*
@@ -373,8 +403,10 @@
 
     let video = null;
     let audio = null;
+    let textEl = null;
     if (layer.type === "text") {
       const text = doc.createElement("div");
+      textEl = text;
       text.className = "la-text";
       // В списке строка занимает часть рамки: `--la-text-scale` уменьшает шрифт
       // вместе с ней, иначе текст одной строки был бы выше самой строки.
@@ -421,7 +453,7 @@
       if (src) audio.src = src;
       el.appendChild(audio);
     }
-    return { el, video, audio };
+    return { el, video, audio, text: textEl };
   }
 
   function playMedia(media) {
@@ -455,6 +487,61 @@
 
   function pauseAudio(audio) {
     pauseMedia(audio);
+  }
+
+  // ---- печать текста ----
+
+  function reduceMotion() {
+    return (
+      typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
+  }
+
+  /*
+    Посимвольная печать — тот же приём, что в теме Terminal: текст раскрывается
+    по одному символу, в конце мигает каретка. Режем по code point'ам, иначе
+    эмодзи на одном такте разваливается на половинки суррогатной пары.
+
+    Полный текст заменяется текстовым узлом, который дописываем: так каретка
+    стоит ровно в конце набранного, а не после всего абзаца.
+  */
+  function startTyping(node, layer) {
+    const el = node.text;
+    const doc = el && el.ownerDocument;
+    if (!doc || typeof doc.createTextNode !== "function") return;
+    const glyphs = Array.from(String(el.textContent == null ? "" : el.textContent));
+    if (!glyphs.length || reduceMotion()) return;
+    stopTyping(node);
+    // `.la-text` — flex-колонка: текст и каретка отдельными элементами встали
+    // бы друг под другом. Поэтому печатаем внутри блока на всю ширину — там
+    // каретка идёт сразу за последней буквой, как в терминале.
+    const holder = doc.createElement("span");
+    holder.className = "la-text__typed";
+    const textNode = doc.createTextNode("");
+    const caret = doc.createElement("span");
+    caret.className = "type-caret";
+    el.textContent = "";
+    el.appendChild(holder);
+    holder.appendChild(textNode);
+    holder.appendChild(caret);
+    const step = clamp(toNumber(layer.typeMs, DEFAULT_TYPE_MS), MIN_TYPE_MS, MAX_TYPE_MS);
+    let shown = 0;
+    node.typing = setInterval(() => {
+      shown += 1;
+      textNode.nodeValue = glyphs.slice(0, shown).join("");
+      // Каретка остаётся мигать и после последнего символа — как в терминале.
+      if (shown >= glyphs.length) stopTyping(node, true);
+    }, step);
+  }
+
+  function stopTyping(node, keepCaret) {
+    if (node.typing) {
+      clearInterval(node.typing);
+      node.typing = null;
+    }
+    const el = node.text;
+    const caret = el && typeof el.querySelector === "function" ? el.querySelector(".type-caret") : null;
+    if (caret && caret.parentNode && keepCaret !== true) caret.parentNode.removeChild(caret);
   }
 
   // Статичная раскладка всех слоёв сразу: по ней в редакторе видно, где что
@@ -505,6 +592,7 @@
     function reset(clear) {
       clearTimers();
       nodes.forEach((node) => {
+        stopTyping(node);
         if (node.video) pauseVideo(node.video);
         if (node.audio) pauseAudio(node.audio);
       });
@@ -535,6 +623,8 @@
       }
       if (node.video) playVideo(node.video);
       if (node.audio) playAudio(node.audio);
+      // Печать идёт поверх входа: слой может одновременно выезжать и печатать.
+      if (node.text && layer.textAnim === "type") startTyping(node, layer);
     }
 
     function exitLayer(node, layer) {
@@ -544,6 +634,7 @@
 
     function hideLayer(node) {
       node.el.hidden = true;
+      stopTyping(node);
       if (node.video) pauseVideo(node.video);
       if (node.audio) pauseAudio(node.audio);
     }
@@ -703,9 +794,13 @@
     ALIGNS,
     FONTS,
     FITS,
+    TEXT_ANIMS,
     EVENT_KINDS,
     DEFAULT_DURATION_MS,
     MIN_LAYER_MS,
+    DEFAULT_TYPE_MS,
+    MIN_TYPE_MS,
+    MAX_TYPE_MS,
     normalizeLayer,
     normalizeLayers,
     normalizeComposition,
@@ -714,6 +809,7 @@
     compositionDuration,
     applyLayerDrag,
     matchesEvent,
+    passesAmount,
     fillText,
     resolveMedia,
     renderStatic,

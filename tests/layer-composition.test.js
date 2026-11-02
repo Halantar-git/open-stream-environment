@@ -76,6 +76,7 @@ function makeDocument() {
       el.ownerDocument = doc;
       return el;
     },
+    createTextNode: (value) => ({ nodeType: 3, nodeValue: String(value), parentNode: null }),
   };
   return doc;
 }
@@ -83,6 +84,44 @@ function makeDocument() {
 // ---- model ----
 
 describe("layer-composition: модель", () => {
+  test("normalizeConfig хранит порог суммы и печать текста", () => {
+    const config = LayerComposition.normalizeConfig({
+      minAmount: 500.5,
+      layers: [{ text: "hi", textAnim: "type", typeMs: 10 }],
+      reactions: { donation: { minAmount: 1000, layers: [] } },
+    });
+    expect(config.minAmount).toBe(500.5);
+    expect(config.layers[0].textAnim).toBe("type");
+    expect(config.layers[0].typeMs).toBe(10);
+    expect(config.reactions.donation.minAmount).toBe(1000);
+
+    // Умолчания: без порога и без печати — как раньше.
+    const plain = LayerComposition.normalizeConfig({ layers: [{ text: "hi" }] });
+    expect(plain.minAmount).toBe(0);
+    expect(plain.layers[0].textAnim).toBe("none");
+  });
+
+  test("порог суммы отсекает только мелкие донаты", () => {
+    const min = { minAmount: 500 };
+    expect(LayerComposition.passesAmount({ minAmount: 0 }, { kind: "donation", amount: 1 })).toBe(true);
+    expect(LayerComposition.passesAmount(min, { kind: "donation", amount: 499 })).toBe(false);
+    expect(LayerComposition.passesAmount(min, { kind: "donation", amount: 500 })).toBe(true);
+    // Другие события порог не проверяют.
+    expect(LayerComposition.passesAmount(min, { kind: "follow" })).toBe(true);
+    // Тестовый алерт играет всегда, иначе кнопку «Тест» нечем проверить.
+    expect(LayerComposition.passesAmount(min, { kind: "donation", amount: 10, isTest: true })).toBe(true);
+    // Без суммы сравнивать нечего — как и в очереди на сервере.
+    expect(LayerComposition.passesAmount(min, { kind: "donation" })).toBe(true);
+  });
+
+  test("compositionForEvent переносит порог суммы реакции", () => {
+    const composition = LayerComposition.compositionForEvent(
+      { minAmount: 100, reactions: { donation: { minAmount: 500, layers: [] } } },
+      "donation"
+    );
+    expect(composition.minAmount).toBe(500);
+  });
+
   test("normalizeConfig заполняет умолчания и разводит одинаковые id", () => {
     const config = LayerComposition.normalizeConfig({
       eventKinds: ["donation", "donation", ""],
@@ -407,6 +446,49 @@ describe("layer-composition: проигрыватель", () => {
     jest.advanceTimersByTime(500);
     expect(audio.pause).toHaveBeenCalled();
   });
+
+  test("текст с печатью раскрывается по символам и держит каретку", () => {
+    const host = global.document.createElement("div");
+    const player = LayerComposition.createPlayer(host, {});
+
+    player.play(
+      {
+        durationMs: 1000,
+        layers: [
+          {
+            type: "text",
+            text: "Привет",
+            textAnim: "type",
+            typeMs: 10,
+            start: 0,
+            duration: 900,
+            in: "none",
+            out: "none",
+          },
+        ],
+      },
+      {},
+      () => {}
+    );
+
+    jest.advanceTimersByTime(0);
+    const textEl = host.children[0].children[0].children[0];
+    const holder = textEl.children[0];
+    const textNode = holder.children[0];
+    const caret = holder.children[1];
+    expect(holder.className).toBe("la-text__typed");
+    expect(textNode.nodeValue).toBe("");
+    expect(caret.className).toBe("type-caret");
+
+    jest.advanceTimersByTime(10);
+    expect(textNode.nodeValue).toBe("П");
+    jest.advanceTimersByTime(40);
+    expect(textNode.nodeValue).toBe("Приве");
+    jest.advanceTimersByTime(100);
+    expect(textNode.nodeValue).toBe("Привет");
+    // Каретка остаётся мигать в конце — как в терминале.
+    expect(holder.children[1]).toBe(caret);
+  });
 });
 
 // ---- widget ----
@@ -595,6 +677,37 @@ describe("layer-alert: виджет", () => {
 
     jest.advanceTimersByTime(1000);
     expect(widget.queueHost.children).toHaveLength(0);
+  });
+
+  test("донат ниже порога не занимает эфир", () => {
+    const { bus, widget } = mountWidget({
+      eventKinds: ["donation"],
+      durationMs: 1000,
+      minAmount: 500,
+      layers: [{ id: "t", type: "text", text: "{{amount}}", start: 0, duration: 900, in: "none", out: "none" }],
+    });
+
+    bus.emit(EVENT_TYPES.ALERT, { kind: "donation", user: "Tiny", amount: 100 });
+    expect(widget.queueHost.children).toHaveLength(0);
+
+    bus.emit(EVENT_TYPES.ALERT, { kind: "donation", user: "Big", amount: 500 });
+    expect(widget.queueHost.children).toHaveLength(1);
+  });
+
+  test("порог не трогает тестовые алерты и события без суммы", () => {
+    const { bus, widget } = mountWidget({
+      eventKinds: [],
+      durationMs: 1000,
+      minAmount: 500,
+      layers: [{ id: "t", type: "text", text: "{{user}}", start: 0, duration: 900, in: "none", out: "none" }],
+    });
+
+    bus.emit(EVENT_TYPES.ALERT, { kind: "donation", user: "Test", amount: 10, isTest: true });
+    expect(widget.queueHost.children).toHaveLength(1);
+
+    jest.advanceTimersByTime(1000);
+    bus.emit(EVENT_TYPES.ALERT, { kind: "follow", user: "Fan" });
+    expect(widget.queueHost.children).toHaveLength(1);
   });
 
   test("играет свою реакцию категории вместо общей", () => {
