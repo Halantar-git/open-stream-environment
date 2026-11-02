@@ -121,13 +121,64 @@ html, body {
   background: repeating-conic-gradient(var(--md-surface-container-lowest) 0% 25%, var(--md-surface-dim) 0% 50%) 50% / 20px 20px;
   box-shadow: inset 0 0 0 1px var(--md-outline-variant);
 }
-.te-stage {
+.te-stage-wrap {
   position: relative;
+  touch-action: none;
+}
+.te-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   /* Светлый контур, чтобы прозрачная композиция не терялась на шахматке. */
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14);
   border-radius: 4px;
 }
+/* В редакторе слои ловят мышь, в эфире — нет: композиция там только картинка. */
+.te-stage .la-layer {
+  pointer-events: auto;
+  cursor: move;
+}
+.te-stage .la-media {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.te-selection {
+  position: absolute;
+  z-index: 1000;
+  border: 1px dashed var(--md-primary, #c6b8ff);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+.te-selection__move {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  cursor: move;
+  touch-action: none;
+}
+.te-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 2px;
+  background: var(--md-primary, #c6b8ff);
+  box-shadow: 0 0 0 1px var(--md-surface, #14161a);
+  pointer-events: auto;
+  touch-action: none;
+}
+.te-handle[data-dir="nw"] { left: 0; top: 0; cursor: nwse-resize; }
+.te-handle[data-dir="n"] { left: 50%; top: 0; cursor: ns-resize; }
+.te-handle[data-dir="ne"] { left: 100%; top: 0; cursor: nesw-resize; }
+.te-handle[data-dir="e"] { left: 100%; top: 50%; cursor: ew-resize; }
+.te-handle[data-dir="se"] { left: 100%; top: 100%; cursor: nwse-resize; }
+.te-handle[data-dir="s"] { left: 50%; top: 100%; cursor: ns-resize; }
+.te-handle[data-dir="sw"] { left: 0; top: 100%; cursor: nesw-resize; }
+.te-handle[data-dir="w"] { left: 0; top: 50%; cursor: ew-resize; }
 
 /* ---------- timeline ---------- */
 .te-timeline {

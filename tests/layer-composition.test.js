@@ -160,6 +160,52 @@ describe("layer-composition: модель", () => {
     // Пустая своя реакция — осмысленное «молчать», а не откат к общей.
     expect(LayerComposition.compositionForEvent(config, "follow").layers).toEqual([]);
   });
+
+  test("applyLayerDrag переносит и растягивает слой как в OBS", () => {
+    const rect = { x: 10, y: 20, w: 30, h: 40 };
+
+    expect(LayerComposition.applyLayerDrag(rect, "move", 5, -5)).toEqual({
+      x: 15,
+      y: 15,
+      w: 30,
+      h: 40,
+    });
+    // Восточная сторона тянет только ширину.
+    expect(LayerComposition.applyLayerDrag(rect, "e", 10, 0)).toEqual({
+      x: 10,
+      y: 20,
+      w: 40,
+      h: 40,
+    });
+    // Западная — двигает левый край, сохраняя правый на месте.
+    expect(LayerComposition.applyLayerDrag(rect, "w", 10, 0)).toEqual({
+      x: 20,
+      y: 20,
+      w: 20,
+      h: 40,
+    });
+    // Юго-восточный угол тянет оба размера.
+    expect(LayerComposition.applyLayerDrag(rect, "se", 10, 10)).toEqual({
+      x: 10,
+      y: 20,
+      w: 40,
+      h: 50,
+    });
+    // Северо-западный — оба края и оба размера.
+    expect(LayerComposition.applyLayerDrag(rect, "nw", 10, 10)).toEqual({
+      x: 20,
+      y: 30,
+      w: 20,
+      h: 30,
+    });
+    // За минимальный размер рамка не переворачивается.
+    expect(LayerComposition.applyLayerDrag(rect, "w", 100, 0)).toEqual({
+      x: 39,
+      y: 20,
+      w: 1,
+      h: 40,
+    });
+  });
 });
 
 // ---- static render ----

@@ -42,7 +42,9 @@
   const saveBtn = document.getElementById("saveBtn");
   const testBtn = document.getElementById("testBtn");
   const previewBox = document.getElementById("previewBox");
+  const stageWrap = document.getElementById("stageWrap");
   const stage = document.getElementById("stage");
+  const selection = document.getElementById("selection");
   const scopeSelect = document.getElementById("scopeSelect");
   const rows = document.getElementById("rows");
   const rulerTrack = document.getElementById("rulerTrack");
@@ -72,6 +74,7 @@
     selectedId: null,
     playing: false,
     drag: null,
+    previewDrag: null,
   };
 
   const CURRENCY_SYMBOLS = { RUB: "₽", USD: "$", EUR: "€", UAH: "₴", KZT: "₸", GBP: "£" };
@@ -238,7 +241,7 @@
   }
 
   function updateStageSize() {
-    if (!previewBox || !stage) return;
+    if (!previewBox || !stageWrap) return;
     const rect = previewBox.getBoundingClientRect();
     const availW = Math.max(40, rect.width - 8);
     const availH = Math.max(30, rect.height - 8);
@@ -251,13 +254,70 @@
       stageH = availH;
       stageW = stageH * aspect;
     }
-    stage.style.width = Math.round(stageW) + "px";
-    stage.style.height = Math.round(stageH) + "px";
+    stageWrap.style.width = Math.round(stageW) + "px";
+    stageWrap.style.height = Math.round(stageH) + "px";
   }
 
   function renderPreview() {
-    if (state.playing) return;
+    if (state.playing) {
+      renderSelection();
+      return;
+    }
     LC.renderStatic(stage, active(), sampleAlert(), previewOptions);
+    bindPreviewLayers();
+    renderSelection();
+  }
+
+  function findPreviewLayer(id) {
+    return (
+      Array.from(stage.querySelectorAll(".la-layer")).find((el) => el.dataset.layerId === id) || null
+    );
+  }
+
+  // Рамка выделения живёт рядом со сценой, а не внутри неё: `renderStatic`
+  // очищает сцену, и рамка исчезала бы при каждом обновлении превью.
+  function renderSelection() {
+    const layer = findLayer(state.selectedId);
+    if (!layer || state.playing) {
+      selection.hidden = true;
+      return;
+    }
+    selection.hidden = false;
+    selection.style.left = layer.x + "%";
+    selection.style.top = layer.y + "%";
+    selection.style.width = layer.w + "%";
+    selection.style.height = layer.h + "%";
+  }
+
+  function updatePreviewLayer(layer) {
+    const el = findPreviewLayer(layer.id);
+    if (!el) return;
+    el.style.left = layer.x + "%";
+    el.style.top = layer.y + "%";
+    el.style.width = layer.w + "%";
+    el.style.height = layer.h + "%";
+  }
+
+  function syncGeometryFields(layer) {
+    const values = { fX: layer.x, fY: layer.y, fW: layer.w, fH: layer.h };
+    Object.keys(values).forEach((id) => {
+      const field = inspector.querySelector("#" + id);
+      if (field) field.value = String(round1(values[id]));
+    });
+  }
+
+  function bindPreviewLayers() {
+    stage.querySelectorAll(".la-layer").forEach((el) => {
+      el.addEventListener("pointerdown", (event) => {
+        if (event.button !== 0) return;
+        const id = el.dataset.layerId;
+        if (!id) return;
+        event.preventDefault();
+        event.stopPropagation();
+        selectLayer(id);
+        startPreviewDrag(event, "move", id);
+      });
+    });
   }
 
   function schedulePreview(delay) {
@@ -769,11 +829,15 @@
   }
 
   function selectLayer(id) {
-    if (state.selectedId === id) return;
+    if (state.selectedId === id) {
+      renderSelection();
+      return;
+    }
     state.selectedId = id;
     renderRows();
     renderLayerList();
     renderInspector();
+    renderSelection();
   }
 
   function setScope(scope) {
@@ -942,7 +1006,57 @@
     renderRuler();
     renderLayerList();
     renderInspector();
-    schedulePreview();
+  }
+
+  // ---- preview drag (как в OBS: тянем сам слой за рамку) ----
+
+  function startPreviewDrag(event, dir, id) {
+    const composition = ensureActive();
+    const layer = composition.layers.find((item) => item.id === id);
+    if (!layer) return;
+    const rect = stage.getBoundingClientRect();
+    if (!(rect.width > 0 && rect.height > 0)) return;
+
+    state.previewDrag = {
+      id: layer.id,
+      dir,
+      startX: event.clientX,
+      startY: event.clientY,
+      width: rect.width,
+      height: rect.height,
+      orig: { x: layer.x, y: layer.y, w: layer.w, h: layer.h },
+    };
+    document.addEventListener("pointermove", onPreviewDragMove);
+    document.addEventListener("pointerup", onPreviewDragEnd, { once: true });
+    document.addEventListener("pointercancel", onPreviewDragEnd, { once: true });
+  }
+
+  function onPreviewDragMove(event) {
+    const drag = state.previewDrag;
+    if (!drag) return;
+    const layer = findLayer(drag.id);
+    if (!layer) return;
+
+    const dx = ((event.clientX - drag.startX) / drag.width) * 100;
+    const dy = ((event.clientY - drag.startY) / drag.height) * 100;
+    const next = LC.applyLayerDrag(drag.orig, drag.dir, dx, dy);
+
+    layer.x = next.x;
+    layer.y = next.y;
+    layer.w = next.w;
+    layer.h = next.h;
+
+    updatePreviewLayer(layer);
+    renderSelection();
+    syncGeometryFields(layer);
+  }
+
+  function onPreviewDragEnd() {
+    document.removeEventListener("pointermove", onPreviewDragMove);
+    document.removeEventListener("pointerup", onPreviewDragEnd);
+    document.removeEventListener("pointercancel", onPreviewDragEnd);
+    state.previewDrag = null;
+    renderSelection();
   }
 
   // ---- playback ----
@@ -978,6 +1092,7 @@
     if (!composition.layers.length) return;
     stopPlayback();
     state.playing = true;
+    renderSelection();
     const total = player.play(composition, sampleAlert(), () => {
       state.playing = false;
       playhead.hidden = true;
@@ -1072,6 +1187,22 @@
   if (scopeSelect) {
     scopeSelect.addEventListener("change", () => setScope(scopeSelect.value));
   }
+
+  // Рамка выделения: ручки меняют размер, внутренняя область — положение.
+  selection.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const dir = (event.target && event.target.dataset && event.target.dataset.dir) || "move";
+    startPreviewDrag(event, dir, state.selectedId);
+  });
+  // Клик по пустому месту сцены снимает выделение.
+  stage.addEventListener("pointerdown", (event) => {
+    const target = event.target;
+    if (target && typeof target.closest === "function" && target.closest(".la-layer")) return;
+    selectLayer(null);
+  });
+  stage.addEventListener("dragstart", (event) => event.preventDefault());
   document.getElementById("addText").addEventListener("click", () => addLayer("text"));
   document.getElementById("addImage").addEventListener("click", async () => {
     const layer = addLayer("image");

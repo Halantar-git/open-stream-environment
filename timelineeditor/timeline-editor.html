@@ -41,7 +41,20 @@
             <span class="te-preview__hint" data-i18n="timelineEditor.previewHint"></span>
           </div>
           <div class="te-preview__box" id="previewBox">
-            <div class="te-stage widget-layer-alert-host" id="stage"></div>
+            <div class="te-stage-wrap" id="stageWrap">
+              <div class="te-stage widget-layer-alert-host" id="stage"></div>
+              <div class="te-selection" id="selection" hidden>
+                <div class="te-selection__move" data-dir="move"></div>
+                <span class="te-handle" data-dir="nw"></span>
+                <span class="te-handle" data-dir="n"></span>
+                <span class="te-handle" data-dir="ne"></span>
+                <span class="te-handle" data-dir="e"></span>
+                <span class="te-handle" data-dir="se"></span>
+                <span class="te-handle" data-dir="s"></span>
+                <span class="te-handle" data-dir="sw"></span>
+                <span class="te-handle" data-dir="w"></span>
+              </div>
+            </div>
           </div>
         </div>
 

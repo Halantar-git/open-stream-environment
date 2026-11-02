@@ -214,6 +214,52 @@
     return Math.max(MIN_LAYER_MS, end);
   }
 
+  /*
+    Прямое управление слоем в превью — как в OBS. `dir` — сторона или угол
+    (`n`, `se`, `move` и т.д.), смещение — в процентах рамки. Минимальный размер
+    не даёт рамке перевернуться: при пересечении тянем противоположный край.
+  */
+  function applyLayerDrag(rect, dir, dx, dy) {
+    const source = rect || {};
+    const ow = toNumber(source.w, 1);
+    const oh = toNumber(source.h, 1);
+    let x = toNumber(source.x, 0);
+    let y = toNumber(source.y, 0);
+    let w = ow;
+    let h = oh;
+
+    if (dir === "move") {
+      x += dx;
+      y += dy;
+    } else {
+      if (dir.indexOf("e") >= 0) w = ow + dx;
+      if (dir.indexOf("s") >= 0) h = oh + dy;
+      if (dir.indexOf("w") >= 0) {
+        w = ow - dx;
+        x = toNumber(source.x, 0) + dx;
+      }
+      if (dir.indexOf("n") >= 0) {
+        h = oh - dy;
+        y = toNumber(source.y, 0) + dy;
+      }
+      if (w < 1) {
+        if (dir.indexOf("w") >= 0) x = toNumber(source.x, 0) + ow - 1;
+        w = 1;
+      }
+      if (h < 1) {
+        if (dir.indexOf("n") >= 0) y = toNumber(source.y, 0) + oh - 1;
+        h = 1;
+      }
+    }
+
+    return {
+      x: clamp(x, -100, 200),
+      y: clamp(y, -100, 200),
+      w: clamp(w, 1, 200),
+      h: clamp(h, 1, 200),
+    };
+  }
+
   function matchesEvent(config, alert) {
     const kinds = normalizeKinds(config && config.eventKinds);
     if (!kinds.length) return true;
@@ -306,6 +352,7 @@
   function createLayerNode(doc, layer, alert, options) {
     const el = doc.createElement("div");
     el.className = "la-layer la-layer--" + layer.type;
+    el.dataset.layerId = layer.id;
     el.style.left = layer.x + "%";
     el.style.top = layer.y + "%";
     el.style.width = layer.w + "%";
@@ -517,6 +564,7 @@
     normalizeConfig,
     compositionForEvent,
     compositionDuration,
+    applyLayerDrag,
     matchesEvent,
     fillText,
     resolveMedia,
