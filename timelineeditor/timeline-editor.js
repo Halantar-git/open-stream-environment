@@ -1119,7 +1119,8 @@
 
   async function pickFile(layer) {
     if (!window.desktop || typeof window.desktop.pickSoundFile !== "function") return;
-    const kind = layer.type === "video" ? "video" : layer.type === "audio" ? "audio" : "image";
+    const kind =
+      layer.type === "video" ? "video" : layer.type === "audio" ? "sound" : "image";
     const result = await window.desktop.pickSoundFile(kind);
     if (!result || !result.ok || !result.relativePath) return;
     patchLayer({ src: result.relativePath });
