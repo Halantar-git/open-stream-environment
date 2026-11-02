@@ -171,6 +171,7 @@
     if (type === "image") return t("timelineEditor.layerImage");
     if (type === "video") return t("timelineEditor.layerVideo");
     if (type === "audio") return t("timelineEditor.layerAudio");
+    if (type === "shape") return t("timelineEditor.layerShape");
     return t("timelineEditor.layerText");
   }
 
@@ -178,6 +179,7 @@
     if (type === "image") return "IMG";
     if (type === "video") return "VID";
     if (type === "audio") return "AUD";
+    if (type === "shape") return "PLT";
     return "T";
   }
 
@@ -527,6 +529,47 @@
     );
   }
 
+  // Плашка — градиент без файла: полоса под именем в списке событий и т.п.
+  function shapeInspector(layer) {
+    return (
+      '<div class="te-section">' +
+      escapeHtml(t("timelineEditor.shapeStyle")) +
+      "</div>" +
+      '<div class="te-row2">' +
+      '<div class="te-field"><label>' +
+      escapeHtml(t("timelineEditor.shapeFrom")) +
+      '</label><input type="color" id="fColor" value="' +
+      escapeHtml(layer.color) +
+      '"></div>' +
+      '<div class="te-field"><label>' +
+      escapeHtml(t("timelineEditor.shapeTo")) +
+      '</label><input type="color" id="fColor2" value="' +
+      escapeHtml(layer.color2) +
+      '"' +
+      (layer.fade ? " disabled" : "") +
+      "></div></div>" +
+      '<div class="te-row2">' +
+      '<div class="te-field"><label>' +
+      escapeHtml(t("timelineEditor.shapeAngle")) +
+      '</label><input type="number" id="fAngle" min="0" max="360" step="15" value="' +
+      Math.round(layer.angle) +
+      '"></div>' +
+      '<div class="te-field"><label>' +
+      escapeHtml(t("timelineEditor.shapeRadius")) +
+      '</label><input type="number" id="fRadius" min="0" max="50" step="0.5" value="' +
+      round1(layer.radius) +
+      '"></div></div>' +
+      '<label class="te-check"><input type="checkbox" id="fFade"' +
+      (layer.fade ? " checked" : "") +
+      ">" +
+      escapeHtml(t("timelineEditor.shapeFade")) +
+      "</label>" +
+      '<p class="te-hint">' +
+      escapeHtml(t("timelineEditor.shapeHint")) +
+      "</p>"
+    );
+  }
+
   function renderInspector() {
     const layer = findLayer(state.selectedId);
     if (!layer) {
@@ -536,6 +579,7 @@
     const index = activeLayers().indexOf(layer);
     const isText = layer.type === "text";
     const isAudio = layer.type === "audio";
+    const isShape = layer.type === "shape";
 
     const animationOptions = LC.ANIMATIONS.map(
       (name) =>
@@ -666,7 +710,9 @@
           "></div></div>"
         : isAudio
           ? audioInspector(layer)
-          : mediaInspector(layer, fitOptions)) +
+          : isShape
+            ? shapeInspector(layer)
+            : mediaInspector(layer, fitOptions)) +
       (isAudio
         ? ""
         : '<div class="te-section">' +
@@ -788,6 +834,23 @@
         const label = field("fVolumeValue");
         if (label) label.textContent = String(Math.round(value));
         patchLayer({ volume: value / 100 });
+      });
+    } else if (layer.type === "shape") {
+      bind("fColor", "input", (event) => patchLayer({ color: event.target.value }));
+      bind("fColor2", "input", (event) => patchLayer({ color2: event.target.value }));
+      bind("fAngle", "change", (event) => {
+        const value = Number(event.target.value);
+        if (Number.isFinite(value)) patchLayer({ angle: clamp(Math.round(value), 0, 360) });
+      });
+      bind("fRadius", "change", (event) => {
+        const value = Number(event.target.value);
+        if (Number.isFinite(value)) patchLayer({ radius: clamp(value, 0, 50) });
+      });
+      bind("fFade", "change", (event) => {
+        // Второй цвет не нужен, когда правый край растворяется в прозрачность.
+        const to = field("fColor2");
+        if (to) to.disabled = event.target.checked;
+        patchLayer({ fade: event.target.checked });
       });
     } else {
       bind("fSrc", "change", (event) => patchLayer({ src: event.target.value.trim() }));
@@ -1094,6 +1157,7 @@
       }
     }
     const isAudio = type === "audio";
+    const isShape = type === "shape";
     const composition = ensureActive();
     const maxZ = composition.layers.reduce((max, layer) => Math.max(max, layer.z), 0);
     const first = composition.layers.length === 0;
@@ -1106,13 +1170,17 @@
         x: isAudio ? 0 : 10,
         y: isAudio ? 0 : type === "text" ? 30 : 10,
         w: isAudio ? 100 : 80,
-        h: isAudio ? 100 : type === "text" ? 20 : 80,
+        h: isAudio ? 100 : type === "text" ? 20 : isShape ? 12 : 80,
         start: 0,
         duration: 5000,
         z: maxZ + 1,
         opacity: 1,
         size: type === "text" ? 5 : undefined,
-        color: "#ffffff",
+        color: isShape ? "#7b2cff" : "#ffffff",
+        color2: "#ff4fd8",
+        angle: 90,
+        radius: isShape ? 1 : 0,
+        fade: false,
         align: "center",
         weight: type === "text" ? 700 : undefined,
         font: "body",
@@ -1471,6 +1539,9 @@
   document.getElementById("addAudio").addEventListener("click", async () => {
     const layer = addLayer("audio");
     if (layer) await pickFile(layer);
+  });
+  document.getElementById("addShape").addEventListener("click", () => {
+    addLayer("shape");
   });
 
   function isEditableTarget(target) {

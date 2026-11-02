@@ -4127,3 +4127,10 @@
   display: block;
   background: transparent;
 }
+
+/* Плашка: заливка приходит из слоя (градиент), здесь — только геометрия. */
+.la-shape {
+  width: 100%;
+  height: 100%;
+  display: block;
+}

@@ -40,7 +40,7 @@
 })(typeof window !== "undefined" ? window : globalThis, function () {
   "use strict";
 
-  const LAYER_TYPES = ["text", "image", "video", "audio"];
+  const LAYER_TYPES = ["text", "image", "video", "audio", "shape"];
   const ANIMATIONS = ["none", "fade", "slide-left", "slide-right", "slide-up", "slide-down", "zoom"];
   const ALIGNS = ["left", "center", "right"];
   const FONTS = ["body", "display", "mono"];
@@ -121,6 +121,11 @@
       opacity: clamp(toNumber(layer.opacity, 1), 0, 1),
       size: clamp(toNumber(layer.size, DEFAULT_TEXT_SIZE), 0.5, 50),
       color: layer.color != null ? String(layer.color) : "#ffffff",
+      // Второй цвет и угол нужны плашке-градиенту; тексту они не мешают.
+      color2: layer.color2 != null ? String(layer.color2) : "#ff4fd8",
+      angle: clamp(toNumber(layer.angle, 90), 0, 360),
+      radius: clamp(toNumber(layer.radius, 0), 0, 50),
+      fade: layer.fade === true,
       align: oneOf(layer.align, ALIGNS, "center"),
       weight: clamp(Math.round(toNumber(layer.weight, 600)), 100, 900),
       font: oneOf(layer.font, FONTS, "body"),
@@ -398,6 +403,16 @@
     el.style.transform = transform || "none";
   }
 
+  /*
+    Фон плашки: градиент из двух цветов. «Растворять» убирает второй цвет —
+    полоса уходит в прозрачность, как в HUD-панелях. Угол — в градусах, как
+    у `linear-gradient` в CSS.
+  */
+  function shapeBackground(layer) {
+    const to = layer.fade ? "transparent" : layer.color2;
+    return "linear-gradient(" + layer.angle + "deg, " + layer.color + ", " + to + ")";
+  }
+
   function createLayerNode(doc, layer, alert, options) {
     const el = doc.createElement("div");
     el.className = "la-layer la-layer--" + layer.type;
@@ -460,6 +475,14 @@
       const src = resolveMedia(layer.src, options);
       if (src) audio.src = src;
       el.appendChild(audio);
+    } else if (layer.type === "shape") {
+      const shape = doc.createElement("div");
+      shape.className = "la-shape";
+      shape.style.background = shapeBackground(layer);
+      // Скругление — в процентах ширины рамки, как размер текста: композиция
+      // масштабируется вместе с виджетом.
+      shape.style.borderRadius = layer.radius + "cqw";
+      el.appendChild(shape);
     }
     return { el, video, audio, text: textEl };
   }

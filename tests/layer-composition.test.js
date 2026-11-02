@@ -132,6 +132,19 @@ describe("layer-composition: модель", () => {
     expect(composition.persistent).toBe(false);
   });
 
+  test("плашка хранит градиент и скругление", () => {
+    const layer = LayerComposition.normalizeLayer(
+      { type: "shape", color: "#7b2cff", color2: "#ff4fd8", angle: 45, radius: 2, fade: true },
+      0
+    );
+    expect(layer.type).toBe("shape");
+    expect(layer.color).toBe("#7b2cff");
+    expect(layer.color2).toBe("#ff4fd8");
+    expect(layer.angle).toBe(45);
+    expect(layer.radius).toBe(2);
+    expect(layer.fade).toBe(true);
+  });
+
   test("compositionForEvent переносит порог суммы реакции", () => {
     const composition = LayerComposition.compositionForEvent(
       { minAmount: 100, reactions: { donation: { minAmount: 500, layers: [] } } },
@@ -351,6 +364,32 @@ describe("layer-composition: статичная раскладка", () => {
     expect(text.style.fontSize).toBe("calc(7cqw * var(--la-text-scale, 1))");
     expect(text.style.color).toBe("#00ff66");
     expect(text.style.textAlign).toBe("right");
+  });
+
+  test("рисует плашку градиентом", () => {
+    const doc = makeDocument();
+    const host = doc.createElement("div");
+    LayerComposition.renderStatic(
+      host,
+      {
+        layers: [
+          { type: "shape", color: "#111111", color2: "#222222", angle: 90, radius: 1 },
+          { type: "shape", color: "#111111", color2: "#222222", fade: true },
+        ],
+      },
+      {},
+      {}
+    );
+
+    const root = host.children[0];
+    const solid = root.children[0].children[0];
+    expect(solid.className).toBe("la-shape");
+    expect(solid.style.background).toBe("linear-gradient(90deg, #111111, #222222)");
+    expect(solid.style.borderRadius).toBe("1cqw");
+
+    // «Растворять» убирает второй цвет: правый край уходит в прозрачность.
+    const faded = root.children[1].children[0];
+    expect(faded.style.background).toBe("linear-gradient(90deg, #111111, transparent)");
   });
 
   test("статичная раскладка создаёт звук, но не запускает его", () => {
