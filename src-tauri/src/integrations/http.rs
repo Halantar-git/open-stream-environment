@@ -162,6 +162,108 @@ pub fn helix_get(url: String, client_id: String, token: String) -> JsonFuture {
     })
 }
 
+/// GET с `Client-Id`, который читается из настроек при каждом запросе.
+///
+/// `helix_get` выше принимает ключ аргументом; этот адаптер нужен
+/// интеграциям, которым ключ не передают (поиск категорий, чтение канала).
+pub fn helix_get_authed(
+    config: Arc<Mutex<ConfigFile>>,
+) -> crate::integrations::twitch_helix::JsonGetFn {
+    Arc::new(move |url: String, token: String| {
+        let config = Arc::clone(&config);
+        Box::pin(async move {
+            let client_id = {
+                let config = config.lock().unwrap_or_else(|error| error.into_inner());
+                config
+                    .get("twitch")
+                    .and_then(|twitch| twitch.get("clientId"))
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string()
+            };
+            helix_get(url, client_id, token).await
+        })
+    })
+}
+
+/// PATCH JSON в Twitch Helix — правка названия и категории канала.
+pub fn helix_patch(config: Arc<Mutex<ConfigFile>>) -> PostFn {
+    Arc::new(move |url: &str, token: &str, body: &Value| {
+        let config = Arc::clone(&config);
+        let url = url.to_string();
+        let token = token.to_string();
+        let body = body.clone();
+        Box::pin(async move {
+            let client_id = {
+                let config = config.lock().unwrap_or_else(|error| error.into_inner());
+                config
+                    .get("twitch")
+                    .and_then(|twitch| twitch.get("clientId"))
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string()
+            };
+            match client()
+                .patch(&url)
+                .header("Client-Id", client_id)
+                .header("Authorization", format!("Bearer {token}"))
+                .json(&body)
+                .send()
+                .await
+            {
+                Ok(response) => {
+                    let status = response.status().as_u16();
+                    let body = response.json::<Value>().await.unwrap_or_else(|_| json!({}));
+                    HttpOutcome {
+                        status,
+                        body,
+                        network_error: None,
+                    }
+                }
+                Err(error) => HttpOutcome {
+                    status: 0,
+                    body: json!({}),
+                    network_error: Some(error.to_string()),
+                },
+            }
+        })
+    })
+}
+
+/// GET JSON с `Bearer` — YouTube Data API (списки и текущий эфир).
+pub fn bearer_get_json(url: String, token: String) -> JsonFuture {
+    Box::pin(async move {
+        match client().get(&url).bearer_auth(&token).send().await {
+            Ok(response) => {
+                let status = response.status().as_u16();
+                let body = response.json::<Value>().await.unwrap_or_else(|_| json!({}));
+                (status, body)
+            }
+            Err(_) => (0, json!({})),
+        }
+    })
+}
+
+/// PUT JSON с `Bearer` — обновление трансляции YouTube.
+pub fn bearer_put_json(url: String, token: String, body: Value) -> JsonFuture {
+    Box::pin(async move {
+        match client()
+            .put(&url)
+            .bearer_auth(&token)
+            .json(&body)
+            .send()
+            .await
+        {
+            Ok(response) => {
+                let status = response.status().as_u16();
+                let body = response.json::<Value>().await.unwrap_or_else(|_| json!({}));
+                (status, body)
+            }
+            Err(_) => (0, json!({})),
+        }
+    })
+}
+
 /// POST JSON с `Bearer`-токеном — подписка Centrifugo.
 pub fn bearer_post(url: String, token: String, body: Value) -> JsonFuture {
     Box::pin(async move {

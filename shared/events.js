@@ -84,6 +84,7 @@
     CHAT_HUD_CONFIG_UPDATE: "chat_hud_config_update", // { config } — chat HUD window geometry/opacity/font (after save)
     REWARD_TTS: "reward_tts", // { text } — server -> overlay: speak a channel-point reward phrase
     TWITCH_ACTION_RESULT: "twitch_action_result", // { action, ok, message?, error? } — server -> control: clip/marker feedback
+    STREAM_INFO_RESULT: "stream_info_result", // { action: 'load'|'apply', twitch, youtube } — название/категория/описание эфира
     // Гостевые камеры. Сигналинг WebRTC идёт через сервер, медиа — напрямую.
     GUEST_STATUS: "guest_status", // { slots: [{ slot, name, state, guest? }] } — server -> все локальные окна
     GUEST_INVITE: "guest_invite", // { slot, token, host, port } — server -> панель после создания приглашения
@@ -111,6 +112,8 @@
     CMD_TEST_TWITCH_REWARD: "cmd_test_twitch_reward", // { rewardId } — simulate a channel-point redemption
     CMD_CREATE_CLIP: "cmd_create_clip", // {} — create a Twitch clip via Helix
     CMD_CREATE_STREAM_MARKER: "cmd_create_stream_marker", // { description? } — create a Twitch stream marker
+    CMD_GET_STREAM_INFO: "cmd_get_stream_info", // {} — read title/category/description from Twitch and YouTube
+    CMD_UPDATE_STREAM_INFO: "cmd_update_stream_info", // { title?, description?, twitchCategory?, youtubeCategory? }
     CMD_SAVE_LAYOUT_PRESET: "cmd_save_layout_preset", // { id?, name }
     CMD_APPLY_LAYOUT_PRESET: "cmd_apply_layout_preset", // { id }
     CMD_DELETE_LAYOUT_PRESET: "cmd_delete_layout_preset", // { id }

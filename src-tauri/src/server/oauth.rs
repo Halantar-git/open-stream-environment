@@ -141,7 +141,9 @@ pub fn build_youtube_authorize_url(config: &Value, port: u16, states: &PendingSt
         ("response_type", "code".to_string()),
         (
             "scope",
-            "https://www.googleapis.com/auth/youtube.readonly".to_string(),
+            // `force-ssl` — чтение и запись: без него нельзя обновить название,
+            // описание и категорию эфира. Старые токены только на чтение.
+            "https://www.googleapis.com/auth/youtube.force-ssl".to_string(),
         ),
         ("access_type", "offline".to_string()),
         ("prompt", "consent".to_string()),

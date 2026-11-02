@@ -205,6 +205,16 @@ const SECTIONS = [
     ],
   },
   {
+    id: "stream-info",
+    title: "help.streamInfo.title",
+    blocks: [
+      { type: "p", key: "help.streamInfo.p1" },
+      { type: "p", key: "help.streamInfo.p2" },
+      { type: "p", key: "help.streamInfo.p3" },
+      { type: "p", key: "help.streamInfo.p4" },
+    ],
+  },
+  {
     id: "chatbot",
     title: "help.chatbot.title",
     blocks: [

@@ -585,6 +585,81 @@ impl Diagnostics {
         }));
     }
 
+    /// Прочитать название/категорию/описание с Twitch и YouTube; результат —
+    /// кадром `stream_info_result` с `action: "load"`.
+    pub fn load_stream_info(&self) {
+        let twitch_get = http::helix_get_authed(Arc::clone(&self.config));
+        let twitch_tokens = twitch_tokens(Arc::clone(&self.config));
+        let twitch = self.twitch_config();
+        let youtube_get: crate::integrations::youtube_stream_info::JsonGetFn =
+            Arc::new(http::bearer_get_json);
+        let youtube_tokens = youtube_tokens(Arc::clone(&self.config));
+        let clients = Arc::clone(&self.clients);
+        std::mem::drop(tauri::async_runtime::spawn(async move {
+            let (twitch_result, youtube_result) = tokio::join!(
+                crate::integrations::twitch_helix::load_channel(
+                    &twitch_get,
+                    &twitch_tokens,
+                    &twitch
+                ),
+                crate::integrations::youtube_stream_info::load_info(&youtube_get, &youtube_tokens),
+            );
+            let payload = json!({
+                "action": "load",
+                "twitch": twitch_result,
+                "youtube": youtube_result,
+            });
+            clients.broadcast_text(&stream_info_frame(payload).to_string());
+        }));
+    }
+
+    /// Обновить название/категорию/описание на Twitch и YouTube одной командой;
+    /// результат — кадром `stream_info_result` с `action: "apply"`.
+    pub fn apply_stream_info(
+        &self,
+        title: String,
+        description: String,
+        twitch_category: String,
+        youtube_category: String,
+    ) {
+        let twitch_patch = http::helix_patch(Arc::clone(&self.config));
+        let twitch_get = http::helix_get_authed(Arc::clone(&self.config));
+        let twitch_tokens = twitch_tokens(Arc::clone(&self.config));
+        let twitch = self.twitch_config();
+        let youtube_get: crate::integrations::youtube_stream_info::JsonGetFn =
+            Arc::new(http::bearer_get_json);
+        let youtube_put: crate::integrations::youtube_stream_info::JsonPutFn =
+            Arc::new(http::bearer_put_json);
+        let youtube_tokens = youtube_tokens(Arc::clone(&self.config));
+        let clients = Arc::clone(&self.clients);
+        std::mem::drop(tauri::async_runtime::spawn(async move {
+            let (twitch_result, youtube_result) = tokio::join!(
+                crate::integrations::twitch_helix::update_channel(
+                    &twitch_patch,
+                    &twitch_get,
+                    &twitch_tokens,
+                    &twitch,
+                    &title,
+                    &twitch_category,
+                ),
+                crate::integrations::youtube_stream_info::apply_info(
+                    &youtube_get,
+                    &youtube_put,
+                    &youtube_tokens,
+                    &title,
+                    &description,
+                    &youtube_category,
+                ),
+            );
+            let payload = json!({
+                "action": "apply",
+                "twitch": twitch_result,
+                "youtube": youtube_result,
+            });
+            clients.broadcast_text(&stream_info_frame(payload).to_string());
+        }));
+    }
+
     /// Подтянуть донаты, пришедшие пока приложение было выключено, — как
     /// `recoverDonations`. Запрос только по кнопке: у DonationAlerts лимит 60
     /// запросов в минуту, а живые донаты приходят сокетом.
@@ -3162,6 +3237,11 @@ fn action_frame(action: &str, result: Value) -> Value {
         }
     }
     json!({ "type": event_types::TWITCH_ACTION_RESULT, "payload": payload })
+}
+
+/// Кадр ответа на чтение/правку информации о стриме.
+fn stream_info_frame(payload: Value) -> Value {
+    json!({ "type": event_types::STREAM_INFO_RESULT, "payload": payload })
 }
 
 /// Момент доната в миллисекундах — для порядка «от старых к новым».

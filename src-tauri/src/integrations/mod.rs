@@ -26,3 +26,4 @@ pub mod twitch_eventsub_control;
 pub mod twitch_helix;
 pub mod youtube_live;
 pub mod youtube_live_control;
+pub mod youtube_stream_info;

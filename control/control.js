@@ -204,6 +204,13 @@ const { EVENT_TYPES } = window.SharedEvents;
   const youtubeClientSecretInput = document.getElementById("youtubeClientSecret");
   const youtubeRedirectUriEl = document.getElementById("youtubeRedirectUri");
   const youtubeVideoIdInput = document.getElementById("youtubeVideoId");
+  const streamInfoTitleInput = document.getElementById("streamInfoTitle");
+  const streamInfoTwitchCategoryInput = document.getElementById("streamInfoTwitchCategory");
+  const streamInfoYoutubeCategoryInput = document.getElementById("streamInfoYoutubeCategory");
+  const streamInfoDescriptionInput = document.getElementById("streamInfoDescription");
+  const streamInfoStatusEl = document.getElementById("streamInfoStatus");
+  const streamInfoLoadBtn = document.getElementById("streamInfoLoadBtn");
+  const streamInfoApplyBtn = document.getElementById("streamInfoApplyBtn");
   const twitchEnabledSwitch = document.getElementById("twitchEnabledSwitch");
   const donationAlertsEnabledSwitch = document.getElementById("donationAlertsEnabledSwitch");
   const donatexEnabledSwitch = document.getElementById("donatexEnabledSwitch");
@@ -1894,6 +1901,101 @@ const { EVENT_TYPES } = window.SharedEvents;
     addRewardBtn.addEventListener("click", () => {
       const rewards = [...(state.twitchRewards || []), { id: "r_" + Date.now(), rewardId: "", rewardTitle: "", alert: false, alertMessage: "", tts: false, ttsText: "", scene: "" }];
       sendTwitchRewards(rewards);
+    });
+  }
+
+  // ---- Информация о стриме ----
+
+  function setStreamInfoStatus(text, warn) {
+    if (!streamInfoStatusEl) return;
+    streamInfoStatusEl.hidden = !text;
+    streamInfoStatusEl.textContent = text || "";
+    streamInfoStatusEl.classList.toggle("settings__hint--warn", !!warn);
+  }
+
+  let streamInfoBusyTimer = 0;
+
+  function setStreamInfoBusy(busy) {
+    if (streamInfoLoadBtn) streamInfoLoadBtn.disabled = busy;
+    if (streamInfoApplyBtn) streamInfoApplyBtn.disabled = busy;
+    clearTimeout(streamInfoBusyTimer);
+    if (busy) {
+      // Ответ может не прийти, если сервер недоступен: не оставляем кнопки
+      // заблокированными навсегда.
+      streamInfoBusyTimer = setTimeout(() => {
+        setStreamInfoBusy(false);
+        setStreamInfoStatus(t("settings.streamInfoNetwork"), true);
+      }, 20000);
+    }
+  }
+
+  function streamInfoServiceText(label, result, mode) {
+    const value = result || {};
+    if (value.ok) {
+      return t(mode === "load" ? "settings.streamInfoLoaded" : "settings.streamInfoOk", {
+        service: label,
+      });
+    }
+    const errors = {
+      auth: "settings.streamInfoNotConnected",
+      not_configured: "settings.streamInfoNotConnected",
+      no_live: "settings.streamInfoNoLive",
+      missing_scope: "settings.streamInfoMissingScope",
+      live_disabled: "settings.streamInfoLiveDisabled",
+      category_not_found: "settings.streamInfoCategoryNotFound",
+      nothing_to_update: "settings.streamInfoNothing",
+      network: "settings.streamInfoNetwork",
+    };
+    const key = errors[value.error];
+    if (key) return t(key, { service: label });
+    return t("settings.streamInfoError", { service: label, error: String(value.error || "") });
+  }
+
+  function handleStreamInfoResult(payload) {
+    setStreamInfoBusy(false);
+    const action = payload.action === "load" ? "load" : "apply";
+    const twitch = payload.twitch || {};
+    const youtube = payload.youtube || {};
+
+    if (action === "load") {
+      const title = twitch.ok && twitch.title ? twitch.title : youtube.ok ? youtube.title : "";
+      if (title && streamInfoTitleInput) streamInfoTitleInput.value = title;
+      if (twitch.category && streamInfoTwitchCategoryInput) {
+        streamInfoTwitchCategoryInput.value = twitch.category;
+      }
+      if (youtube.category && streamInfoYoutubeCategoryInput) {
+        streamInfoYoutubeCategoryInput.value = youtube.category;
+      }
+      if (youtube.ok && typeof youtube.description === "string" && streamInfoDescriptionInput) {
+        streamInfoDescriptionInput.value = youtube.description;
+      }
+    }
+
+    const text = [
+      streamInfoServiceText("Twitch", twitch, action),
+      streamInfoServiceText("YouTube", youtube, action),
+    ].join(" · ");
+    const warn = !twitch.ok || !youtube.ok;
+    setStreamInfoStatus(text, warn);
+  }
+
+  if (streamInfoLoadBtn) {
+    streamInfoLoadBtn.addEventListener("click", () => {
+      setStreamInfoStatus(t("settings.streamInfoLoading"), false);
+      setStreamInfoBusy(true);
+      send(EVENT_TYPES.CMD_GET_STREAM_INFO, {});
+    });
+  }
+  if (streamInfoApplyBtn) {
+    streamInfoApplyBtn.addEventListener("click", () => {
+      setStreamInfoStatus(t("settings.streamInfoApplying"), false);
+      setStreamInfoBusy(true);
+      send(EVENT_TYPES.CMD_UPDATE_STREAM_INFO, {
+        title: streamInfoTitleInput ? streamInfoTitleInput.value : "",
+        description: streamInfoDescriptionInput ? streamInfoDescriptionInput.value : "",
+        twitchCategory: streamInfoTwitchCategoryInput ? streamInfoTwitchCategoryInput.value : "",
+        youtubeCategory: streamInfoYoutubeCategoryInput ? streamInfoYoutubeCategoryInput.value : "",
+      });
     });
   }
 
@@ -4379,6 +4481,9 @@ const { EVENT_TYPES } = window.SharedEvents;
         break;
       case EVENT_TYPES.TWITCH_ACTION_RESULT:
         showTwitchActionResult(msg.payload || {});
+        break;
+      case EVENT_TYPES.STREAM_INFO_RESULT:
+        handleStreamInfoResult(msg.payload || {});
         break;
       case EVENT_TYPES.THEME_UPDATE:
         state.appearance = msg.payload;

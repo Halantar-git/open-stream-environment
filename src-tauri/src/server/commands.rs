@@ -371,6 +371,23 @@ pub fn handle_message(
                 .unwrap_or_default();
             diagnostics.create_marker(&description);
         }
+        event_types::CMD_GET_STREAM_INFO => {
+            diagnostics.load_stream_info();
+        }
+        event_types::CMD_UPDATE_STREAM_INFO => {
+            let field = |key: &str| {
+                payload
+                    .get(key)
+                    .map(crate::state::js_string)
+                    .unwrap_or_default()
+            };
+            diagnostics.apply_stream_info(
+                field("title"),
+                field("description"),
+                field("twitchCategory"),
+                field("youtubeCategory"),
+            );
+        }
         // ---- OBS: камеры ----
         event_types::CMD_SET_CAMERA_ANGLE => {
             // Работа с OBS асинхронная: задачу заводим в фоне, результат придёт

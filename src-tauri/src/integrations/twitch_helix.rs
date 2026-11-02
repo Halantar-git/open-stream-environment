@@ -187,6 +187,160 @@ fn text(value: &Value, key: &str) -> String {
     }
 }
 
+// ---- название и категория канала ----
+
+/// Чтение канала и поиск категорий: URL и токен → статус и JSON.
+pub type JsonGetFn =
+    Arc<dyn Fn(String, String) -> crate::integrations::http::JsonFuture + Send + Sync>;
+/// PATCH в Helix: тот же контракт, что у POST.
+pub type PatchFn = PostFn;
+
+/// `PATCH /helix/channels` — название и игра канала.
+pub const CHANNELS_URL: &str = "https://api.twitch.tv/helix/channels";
+/// Поиск игры по названию — из него берётся `game_id`.
+pub const CATEGORY_SEARCH_URL: &str = "https://api.twitch.tv/helix/search/categories";
+
+/// Прочитать текущее название и категорию канала.
+pub async fn load_channel(get: &JsonGetFn, tokens: &Tokens, twitch: &Value) -> Value {
+    if !is_authorized(twitch) {
+        return not_configured();
+    }
+    let broadcaster_id = text(twitch, "broadcasterId");
+    let Some(token) = ensure_token(tokens).await else {
+        return auth_error();
+    };
+    let url = format!(
+        "{CHANNELS_URL}?broadcaster_id={}",
+        crate::server::oauth::encode_uri_component(&broadcaster_id)
+    );
+    let (status, body) = match get_with_retry(get, tokens, url, token).await {
+        Ok(outcome) => outcome,
+        Err(error) => return json!({ "ok": false, "error": error }),
+    };
+    if !(200..300).contains(&status) {
+        return json!({ "ok": false, "error": format!("http_{status}") });
+    }
+    let channel = body
+        .get("data")
+        .and_then(Value::as_array)
+        .and_then(|data| data.first());
+    json!({
+        "ok": true,
+        "title": channel.and_then(|item| item.get("title")).cloned().unwrap_or(Value::Null),
+        "category": channel.and_then(|item| item.get("game_name")).cloned().unwrap_or(Value::Null),
+        "categoryId": channel.and_then(|item| item.get("game_id")).cloned().unwrap_or(Value::Null),
+    })
+}
+
+/// Обновить название и/или категорию канала. Пустые поля не трогаем.
+pub async fn update_channel(
+    patch: &PatchFn,
+    get: &JsonGetFn,
+    tokens: &Tokens,
+    twitch: &Value,
+    title: &str,
+    category: &str,
+) -> Value {
+    if !is_authorized(twitch) {
+        return not_configured();
+    }
+    let broadcaster_id = text(twitch, "broadcasterId");
+    let Some(mut token) = ensure_token(tokens).await else {
+        return auth_error();
+    };
+
+    let title = title.trim();
+    let category = category.trim();
+    let mut game_id: Option<String> = None;
+    if !category.is_empty() {
+        match resolve_game_id(get, tokens, &token, category).await {
+            Ok(Some(id)) => game_id = Some(id),
+            Ok(None) => return json!({ "ok": false, "error": "category_not_found" }),
+            Err(error) => return json!({ "ok": false, "error": error }),
+        }
+    }
+
+    let mut body = serde_json::Map::new();
+    if !title.is_empty() {
+        body.insert(
+            "title".to_string(),
+            Value::from(title.chars().take(140).collect::<String>()),
+        );
+    }
+    if let Some(id) = game_id.clone() {
+        body.insert("game_id".to_string(), Value::from(id));
+    }
+    if body.is_empty() {
+        return json!({ "ok": false, "error": "nothing_to_update" });
+    }
+
+    let url = format!(
+        "{CHANNELS_URL}?broadcaster_id={}",
+        crate::server::oauth::encode_uri_component(&broadcaster_id)
+    );
+    let payload = Value::Object(body);
+    let mut outcome = patch(&url, &token, &payload).await;
+    if outcome.network_error.is_none() && outcome.status == 401 {
+        let Some(refreshed) = refresh_token(tokens).await else {
+            return auth_error();
+        };
+        token = refreshed;
+        outcome = patch(&url, &token, &payload).await;
+    }
+
+    finish(&outcome, |_| {
+        json!({
+            "title": if title.is_empty() { Value::Null } else { Value::from(title) },
+            "category": if category.is_empty() { Value::Null } else { Value::from(category) },
+        })
+    })
+}
+
+/// Найти `game_id` по названию игры. `None` — совпадений нет.
+async fn resolve_game_id(
+    get: &JsonGetFn,
+    tokens: &Tokens,
+    token: &str,
+    query: &str,
+) -> Result<Option<String>, String> {
+    let url = format!(
+        "{CATEGORY_SEARCH_URL}?query={}&first=1",
+        crate::server::oauth::encode_uri_component(query)
+    );
+    let (status, body) = get_with_retry(get, tokens, url, token.to_string()).await?;
+    if !(200..300).contains(&status) {
+        return Err(format!("category_search_{status}"));
+    }
+    Ok(body
+        .get("data")
+        .and_then(Value::as_array)
+        .and_then(|data| data.first())
+        .and_then(|item| item.get("id"))
+        .and_then(Value::as_str)
+        .map(str::to_string))
+}
+
+/// GET с повтором после `401`: обновляем токен и пробуем тот же адрес снова.
+async fn get_with_retry(
+    get: &JsonGetFn,
+    tokens: &Tokens,
+    url: String,
+    mut token: String,
+) -> Result<(u16, Value), String> {
+    let mut outcome = get(url.clone(), token.clone()).await;
+    if outcome.0 == 0 {
+        return Err("network".to_string());
+    }
+    if outcome.0 == 401 {
+        token = (tokens.refresh)().await?;
+        outcome = get(url, token).await;
+        if outcome.0 == 0 {
+            return Err("network".to_string());
+        }
+    }
+    Ok(outcome)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -351,5 +505,174 @@ mod tests {
             create_clip(&http, &tokens(), &authorized()).await,
             json!({ "ok": false, "error": "http_503" })
         );
+    }
+
+    fn category_search(id: &str, name: &str) -> JsonGetFn {
+        let id = id.to_string();
+        let name = name.to_string();
+        Arc::new(move |url: String, _token: String| {
+            let id = id.clone();
+            let name = name.clone();
+            Box::pin(async move {
+                assert!(url.contains("/search/categories?query="));
+                (200, json!({ "data": [{ "id": id, "name": name }] }))
+            })
+        })
+    }
+
+    #[tokio::test]
+    async fn updating_a_channel_sends_the_resolved_game_id() {
+        let calls = Arc::new(Mutex::new(Vec::new()));
+        let patch: PatchFn = {
+            let calls = calls.clone();
+            Arc::new(move |url: &str, token: &str, body: &Value| {
+                let calls = calls.clone();
+                let url = url.to_string();
+                let token = token.to_string();
+                let body = body.clone();
+                Box::pin(async move {
+                    calls.lock().unwrap().push((url, token, body));
+                    HttpOutcome {
+                        status: 204,
+                        body: json!({}),
+                        network_error: None,
+                    }
+                })
+            })
+        };
+        let result = update_channel(
+            &patch,
+            &category_search("509263", "Just Chatting"),
+            &tokens(),
+            &authorized(),
+            "Новый стрим",
+            "Just Chatting",
+        )
+        .await;
+
+        assert_eq!(result["ok"], json!(true));
+        assert_eq!(result["title"], json!("Новый стрим"));
+        assert_eq!(result["category"], json!("Just Chatting"));
+        let calls = calls.lock().unwrap();
+        assert_eq!(calls.len(), 1);
+        assert!(calls[0].0.contains("broadcaster_id=bid"));
+        assert_eq!(calls[0].1, "tok");
+        assert_eq!(
+            calls[0].2,
+            json!({ "title": "Новый стрим", "game_id": "509263" })
+        );
+    }
+
+    #[tokio::test]
+    async fn a_title_only_update_does_not_search_categories() {
+        let get: JsonGetFn = Arc::new(|_url: String, _token: String| {
+            Box::pin(async {
+                panic!("категории не должны запрашиваться")
+            })
+        });
+        let calls = Arc::new(Mutex::new(0));
+        let patch: PatchFn = {
+            let calls = calls.clone();
+            Arc::new(move |_url: &str, _token: &str, _body: &Value| {
+                let calls = calls.clone();
+                Box::pin(async move {
+                    *calls.lock().unwrap() += 1;
+                    HttpOutcome {
+                        status: 204,
+                        body: json!({}),
+                        network_error: None,
+                    }
+                })
+            })
+        };
+        let result = update_channel(&patch, &get, &tokens(), &authorized(), "Только имя", "").await;
+        assert_eq!(result["ok"], json!(true));
+        assert_eq!(*calls.lock().unwrap(), 1);
+    }
+
+    #[tokio::test]
+    async fn an_unknown_category_does_not_touch_the_channel() {
+        let get: JsonGetFn = Arc::new(|_url: String, _token: String| {
+            Box::pin(async { (200, json!({ "data": [] })) })
+        });
+        let calls = Arc::new(Mutex::new(0));
+        let patch: PatchFn = {
+            let calls = calls.clone();
+            Arc::new(move |_url: &str, _token: &str, _body: &Value| {
+                let calls = calls.clone();
+                Box::pin(async move {
+                    *calls.lock().unwrap() += 1;
+                    HttpOutcome {
+                        status: 204,
+                        body: json!({}),
+                        network_error: None,
+                    }
+                })
+            })
+        };
+        let result = update_channel(
+            &patch,
+            &get,
+            &tokens(),
+            &authorized(),
+            "Новый стрим",
+            "Нет такой игры",
+        )
+        .await;
+        assert_eq!(
+            result,
+            json!({ "ok": false, "error": "category_not_found" })
+        );
+        assert_eq!(*calls.lock().unwrap(), 0);
+    }
+
+    #[tokio::test]
+    async fn a_401_on_patch_refreshes_the_token_and_retries_once() {
+        let seen = Arc::new(Mutex::new(Vec::new()));
+        let patch: PatchFn = {
+            let seen = seen.clone();
+            Arc::new(move |_url: &str, token: &str, _body: &Value| {
+                let seen = seen.clone();
+                let token = token.to_string();
+                Box::pin(async move {
+                    seen.lock().unwrap().push(token.clone());
+                    HttpOutcome {
+                        status: if token == "tok" { 401 } else { 204 },
+                        body: json!({}),
+                        network_error: None,
+                    }
+                })
+            })
+        };
+        let result = update_channel(
+            &patch,
+            &category_search("1", "Game"),
+            &tokens(),
+            &authorized(),
+            "Стрим",
+            "Game",
+        )
+        .await;
+        assert_eq!(result["ok"], json!(true));
+        assert_eq!(
+            *seen.lock().unwrap(),
+            vec!["tok".to_string(), "newtok".to_string()]
+        );
+    }
+
+    #[tokio::test]
+    async fn loading_a_channel_returns_title_and_category() {
+        let get: JsonGetFn = Arc::new(|_url: String, _token: String| {
+            Box::pin(async {
+                (
+                    200,
+                    json!({ "data": [{ "title": "Стрим", "game_name": "Just Chatting", "game_id": "509263" }] }),
+                )
+            })
+        });
+        let result = load_channel(&get, &tokens(), &authorized()).await;
+        assert_eq!(result["ok"], json!(true));
+        assert_eq!(result["title"], json!("Стрим"));
+        assert_eq!(result["category"], json!("Just Chatting"));
     }
 }

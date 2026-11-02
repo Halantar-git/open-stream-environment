@@ -916,6 +916,39 @@
           </div>
         </div>
 
+        <div class="settings__card md-card" id="settingsCardStreamInfo">
+          <div class="settings__card-head">
+            <h2 data-i18n="settings.streamInfo">Информация о стриме</h2>
+          </div>
+          <p class="settings__desc" data-i18n="settings.streamInfoDesc">Название и категория обновляются на Twitch; на YouTube — ещё описание и категория. Одна кнопка применяет всё сразу.</p>
+          <div class="md-field">
+            <label data-i18n="settings.streamInfoTitle">Название</label>
+            <input type="text" id="streamInfoTitle" maxlength="100" />
+          </div>
+          <div class="properties__row">
+            <div class="md-field">
+              <label data-i18n="settings.streamInfoTwitchCategory">Категория Twitch</label>
+              <input type="text" id="streamInfoTwitchCategory" data-i18n-placeholder="settings.streamInfoTwitchCategoryPlaceholder" placeholder="Например, Just Chatting" />
+            </div>
+            <div class="md-field">
+              <label data-i18n="settings.streamInfoYoutubeCategory">Категория YouTube</label>
+              <input type="text" id="streamInfoYoutubeCategory" data-i18n-placeholder="settings.streamInfoYoutubeCategoryPlaceholder" placeholder="Например, Игры" />
+            </div>
+          </div>
+          <div class="md-field">
+            <label data-i18n="settings.streamInfoDescription">Описание (YouTube)</label>
+            <textarea id="streamInfoDescription" rows="3" data-i18n-placeholder="settings.streamInfoDescriptionPlaceholder" placeholder="Описание эфира"></textarea>
+            <span class="md-field__hint" data-i18n="settings.streamInfoDescriptionHint">У Twitch нет описания эфира — только название и категория.</span>
+          </div>
+          <div class="settings__hint" data-i18n="settings.streamInfoCategoryHint">Категории Twitch — игры, YouTube — разделы. Поэтому поля отдельные, а кнопка «Применить» одна.</div>
+          <div class="settings__hint" data-i18n="settings.streamInfoScopeHint">Для изменения YouTube переподключите его один раз: старый токен был только на чтение.</div>
+          <div class="settings__actions">
+            <button class="md-button md-button--tonal" id="streamInfoLoadBtn" data-i18n="settings.streamInfoLoad">Загрузить текущее</button>
+            <button class="md-button md-button--filled" id="streamInfoApplyBtn" data-i18n="settings.streamInfoApply">Применить</button>
+          </div>
+          <div class="settings__hint" id="streamInfoStatus" hidden></div>
+        </div>
+
         <div class="settings__card md-card" id="settingsCardObs">
           <div class="settings__card-head">
             <h2 data-i18n="settings.obs">OBS WebSocket</h2>
