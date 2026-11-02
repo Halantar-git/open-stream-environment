@@ -3278,6 +3278,22 @@ const { EVENT_TYPES } = window.SharedEvents;
       head.appendChild(name);
       head.appendChild(kind);
       head.appendChild(id);
+
+      // У темы `id` — это `plugin:<папка>`, а удалять надо папку.
+      const folderId = item.pluginId || item.id;
+      if (folderId) {
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "plugin-item__remove";
+        remove.title = t("packages.remove");
+        remove.setAttribute("aria-label", t("packages.remove"));
+        remove.innerHTML = ICONS.trash;
+        remove.addEventListener("click", (event) => {
+          event.stopPropagation();
+          removePackage(String(folderId), String(item.name || folderId));
+        });
+        head.appendChild(remove);
+      }
       card.appendChild(head);
 
       if (item.description) {
@@ -3307,6 +3323,26 @@ const { EVENT_TYPES } = window.SharedEvents;
       packagesErrorsEl.hidden = !text;
       packagesErrorsEl.textContent = text ? t("packages.errors", { list: text }) : "";
       packagesErrorsEl.style.color = text ? "var(--md-error)" : "";
+    }
+  }
+
+  /* Удаление пакета: папка стирается с диска, поэтому сначала подтверждение. */
+  async function removePackage(id, name) {
+    if (!window.confirm(t("packages.removeConfirm", { name }))) return;
+    try {
+      const response = await fetch("/api/plugins/remove", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-ose-install": "1" },
+        body: JSON.stringify({ id }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error || `HTTP ${response.status}`);
+      }
+      showPackagesStatus(t("packages.removed", { name }), false);
+      setTimeout(() => window.location.reload(), 500);
+    } catch (error) {
+      showPackagesStatus(t("packages.removeFailed", { error: error.message }), true);
     }
   }
 

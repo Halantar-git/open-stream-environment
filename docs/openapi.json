@@ -220,6 +220,85 @@
         }
       }
     },
+    "/api/plugins/remove": {
+      "post": {
+        "tags": ["plugins"],
+        "operationId": "removePlugin",
+        "summary": "Удалить установленный пакет",
+        "description": "Стирает папку пакета с диска. Как и установка, принимается только с этой машины и только с заголовком `x-ose-install`; битый пакет тоже можно удалить.",
+        "parameters": [
+          {
+            "name": "x-ose-install",
+            "in": "header",
+            "required": true,
+            "description": "Метка панели: без неё сервер отвечает 403.",
+            "schema": { "type": "string", "enum": ["1"] }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["id"],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+                    "description": "Имя папки пакета (у тем — без `plugin:`)."
+                  }
+                }
+              },
+              "examples": {
+                "widget": { "value": { "id": "last-donation" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Пакет удалён",
+            "headers": {
+              "Cache-Control": {
+                "schema": { "type": "string", "const": "no-store" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["ok", "id"],
+                  "properties": {
+                    "ok": { "type": "boolean", "const": true },
+                    "id": { "type": "string" }
+                  }
+                },
+                "examples": {
+                  "widget": { "value": { "ok": true, "id": "last-donation" } }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Пакет не найден или id недопустим",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PluginInstallError" }
+              }
+            }
+          },
+          "403": {
+            "description": "Запрос не с этой машины или без заголовка",
+            "content": {
+              "text/plain": {
+                "schema": { "type": "string", "example": "403: удаление пакета доступно только с этой машины" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/plugins/{id}/{file}": {
       "get": {
         "tags": ["plugins"],

@@ -71,6 +71,7 @@ describe("docs/openapi.json", () => {
       "/support-bundle",
       "/api/plugins",
       "/api/plugins/install",
+      "/api/plugins/remove",
       "/plugins/{id}/{file}",
       "/media/{file}",
       "/oauth/twitch/callback",

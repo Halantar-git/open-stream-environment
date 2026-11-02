@@ -683,6 +683,27 @@ pub fn install_zip(dir: &Path, bytes: &[u8]) -> Result<Value, String> {
     result
 }
 
+/// Удалить пакет из каталога по id (имени папки).
+///
+/// Папку удаляем целиком: пакет — это его файлы, и «удалить» в интерфейсе
+/// означает именно это. Манифест не требуется: битый пакет тоже должно быть
+/// можно убрать. Символические ссылки отвергаем — иначе `remove_dir_all`
+/// прошёлся бы по чужому каталогу.
+pub fn remove_package(dir: &Path, id: &str) -> Result<(), String> {
+    let _guard = INSTALLING.lock().unwrap_or_else(|error| error.into_inner());
+    if !valid_id(id) {
+        return Err("id пакета — латиница в нижнем регистре: a-z, 0-9, «.», «-», «_»".to_string());
+    }
+    let target = dir.join(id);
+    let meta = fs::symlink_metadata(&target).map_err(|_| format!("пакет «{id}» не установлен"))?;
+    if !meta.is_dir() {
+        return Err(format!("«{id}» — не папка пакета"));
+    }
+    fs::remove_dir_all(&target).map_err(|error| format!("не удалось удалить «{id}»: {error}"))?;
+    refresh();
+    Ok(())
+}
+
 /// Служебные файлы Finder и Windows в пакете не нужны: из-за `__MACOSX` архив
 /// перестал бы выглядеть как «одна папка», и установка отвергла бы годный пакет.
 fn junk(name: &str) -> bool {
@@ -1255,6 +1276,36 @@ mod tests {
         let list = &registry.payload()["plugins"][0];
         assert_eq!(list["has3d"], json!(true));
         assert_eq!(list["threeDWidgets"], json!(["plugin:orbit-test-3d"]));
+    }
+
+    #[test]
+    fn a_package_can_be_removed() {
+        let temp = TempDir::new("remove");
+        let manifest = widget_manifest("");
+        temp.package(
+            "hello",
+            &[
+                ("widget.json", manifest.as_str()),
+                ("widget.js", ""),
+                ("widget.css", ".x{}"),
+            ],
+        );
+        let plugins = Plugins::new(&temp.0);
+        assert!(plugins.widget_def("plugin:hello").is_some());
+
+        remove_package(&temp.0, "hello").expect("удаление");
+        assert!(!temp.0.join("hello").exists());
+        plugins.refresh();
+        assert!(plugins.widget_def("plugin:hello").is_none());
+    }
+
+    #[test]
+    fn removing_refuses_paths_outside_the_packages_directory() {
+        let temp = TempDir::new("remove-bad");
+        // Идентификатор — только имя папки внутри каталога пакетов.
+        assert!(remove_package(&temp.0, "../evil").is_err());
+        assert!(remove_package(&temp.0, "nope").is_err());
+        assert!(remove_package(&temp.0, "").is_err());
     }
 
     fn zip_bytes(files: &[(&str, &str)]) -> Vec<u8> {

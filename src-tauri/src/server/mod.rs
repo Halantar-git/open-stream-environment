@@ -798,6 +798,7 @@ fn plugins_routes(plugins_dir: PathBuf) -> Router {
             "/api/plugins/install",
             post(plugins_install).layer(DefaultBodyLimit::max(crate::plugins::MAX_ARCHIVE_BYTES)),
         )
+        .route("/api/plugins/remove", post(plugins_remove))
         .nest_service("/plugins", ServeDir::new(plugins_dir.clone()))
         .with_state(PluginRoutes { dir: plugins_dir })
         .layer(middleware::from_fn(no_cache))
@@ -841,6 +842,39 @@ async fn plugins_install(
         Ok(installed) => Json(json!({ "ok": true, "installed": installed })).into_response(),
         Err(error) => {
             eprintln!("[ose] установка пакета: {error}");
+            (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "ok": false, "error": error })),
+            )
+                .into_response()
+        }
+    };
+    no_store(&mut response);
+    response
+}
+
+/// Удаление пакета: папка пакета стирается с диска.
+///
+/// Как и установка, действие необратимое и меняет данные пользователя, поэтому
+/// только с этой машины и только с заголовком `x-ose-install`.
+async fn plugins_remove(
+    State(routes): State<PluginRoutes>,
+    ConnectInfo(address): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+    Json(body): Json<Value>,
+) -> Response {
+    if !access::is_loopback_addr(&address.ip()) || !headers.contains_key("x-ose-install") {
+        return (
+            StatusCode::FORBIDDEN,
+            "403: удаление пакета доступно только с этой машины",
+        )
+            .into_response();
+    }
+    let id = body.get("id").and_then(Value::as_str).unwrap_or("");
+    let mut response = match crate::plugins::remove_package(&routes.dir, id) {
+        Ok(()) => Json(json!({ "ok": true, "id": id })).into_response(),
+        Err(error) => {
+            eprintln!("[ose] удаление пакета: {error}");
             (
                 StatusCode::BAD_REQUEST,
                 Json(json!({ "ok": false, "error": error })),
@@ -1621,6 +1655,51 @@ mod tests {
             .as_str()
             .unwrap_or_default()
             .contains("пустой"));
+    }
+
+    #[tokio::test]
+    async fn a_package_remove_needs_this_machine_and_a_marked_request() {
+        let fixture = Fixture::new();
+        let request = |address: [u8; 4], marked: bool| {
+            let mut builder = Request::builder()
+                .method("POST")
+                .uri("/api/plugins/remove")
+                .header(header::CONTENT_TYPE, "application/json")
+                .extension(ConnectInfo(SocketAddr::from((address, 1234))));
+            if marked {
+                builder = builder.header("x-ose-install", "1");
+            }
+            builder.body(Body::from(r#"{"id":"nope"}"#)).unwrap()
+        };
+
+        let response = fixture
+            .app()
+            .oneshot(request([127, 0, 0, 1], false))
+            .await
+            .expect("запрос должен дойти до сервера");
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let response = fixture
+            .app()
+            .oneshot(request([192, 168, 1, 5], true))
+            .await
+            .expect("запрос должен дойти до сервера");
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let response = fixture
+            .app()
+            .oneshot(request([127, 0, 0, 1], true))
+            .await
+            .expect("запрос должен дойти до сервера");
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let report: serde_json::Value =
+            serde_json::from_slice(&body).expect("ответ должен быть JSON");
+        assert_eq!(report["ok"], json!(false));
+        assert!(report["error"]
+            .as_str()
+            .unwrap_or_default()
+            .contains("не установлен"));
     }
 
     #[tokio::test]
