@@ -38,8 +38,10 @@
   const MIN_DURATION = 100;
   const MAX_TIME = 600000;
   // Масштаб таймлайна: каждая ступень — своя ширина дорожек в долях видимой
-  // части. Больше восьми не даём — клип становится шире экрана целиком.
-  const ZOOM_STEPS = [1, 1.5, 2, 3, 4, 6, 8];
+  // части. Ниже половины не уходим — при 132 px на подписи слоёв дорожка
+  // становится уже клипа. Больше восьми не даём — клип становится шире экрана
+  // целиком.
+  const ZOOM_STEPS = [0.5, 0.75, 1, 1.5, 2, 3, 4, 6, 8];
 
   const statusLabel = document.getElementById("statusLabel");
   const editorTitle = document.getElementById("editorTitle");
