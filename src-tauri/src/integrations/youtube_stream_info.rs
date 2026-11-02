@@ -287,6 +287,61 @@ async fn resolve_category_id(
     Ok(None)
 }
 
+/// Подсказки разделов по началу названия.
+///
+/// Названия локализованы, поэтому ищем и в русском списке, и в английском:
+/// «Игры» и «Gaming» — одна и та же категория, и искать можно любым словом.
+/// Повторы отсеиваются по id: локализованное название показываем первым.
+pub async fn search_categories(get: &JsonGetFn, tokens: &Tokens, query: &str) -> Value {
+    let query = query.trim().to_lowercase();
+    if query.is_empty() {
+        return json!({ "ok": true, "items": [] });
+    }
+    let Some(token) = ensure_token(tokens).await else {
+        return json!({ "ok": false, "error": "auth" });
+    };
+    let mut items: Vec<Value> = Vec::new();
+    for language in ["ru", "en"] {
+        let url = format!("{VIDEO_CATEGORIES_URL}?part=snippet&regionCode=RU&hl={language}");
+        let (status, body) = match get_json(get, tokens, url, token.clone()).await {
+            Ok(outcome) => outcome,
+            Err(error) => return json!({ "ok": false, "error": error }),
+        };
+        if !(200..300).contains(&status) {
+            return json!({ "ok": false, "error": format!("categories_{status}") });
+        }
+        let Some(list) = body.get("items").and_then(Value::as_array) else {
+            continue;
+        };
+        for item in list {
+            let snippet = item.get("snippet");
+            let title = snippet
+                .and_then(|snippet| snippet.get("title"))
+                .and_then(Value::as_str);
+            let assignable = snippet
+                .and_then(|snippet| snippet.get("assignable"))
+                .and_then(Value::as_bool)
+                .unwrap_or(true);
+            let Some(title) = title else { continue };
+            if !assignable || !title.to_lowercase().contains(&query) {
+                continue;
+            }
+            let id = item.get("id").cloned().unwrap_or(Value::Null);
+            if items.iter().any(|existing| existing.get("id") == Some(&id)) {
+                continue;
+            }
+            items.push(json!({ "id": id, "name": title }));
+            if items.len() >= 10 {
+                break;
+            }
+        }
+        if items.len() >= 10 {
+            break;
+        }
+    }
+    json!({ "ok": true, "items": items })
+}
+
 /// GET с повтором после `401`.
 async fn get_json(
     get: &JsonGetFn,
@@ -529,6 +584,56 @@ mod tests {
             json!({ "ok": false, "error": "category_not_found" })
         );
         assert_eq!(*calls.lock().unwrap(), 0);
+    }
+
+    #[tokio::test]
+    async fn category_suggestions_match_names_in_both_languages() {
+        let get: JsonGetFn = Arc::new(|url: String, _token: String| {
+            Box::pin(async move {
+                assert!(url.contains("videoCategories?part=snippet"));
+                if url.contains("hl=en") {
+                    (
+                        200,
+                        json!({ "items": [
+                            { "id": "20", "snippet": { "title": "Gaming", "assignable": true } },
+                        ] }),
+                    )
+                } else {
+                    (
+                        200,
+                        json!({ "items": [
+                            { "id": "20", "snippet": { "title": "Игры", "assignable": true } },
+                            { "id": "24", "snippet": { "title": "Развлечения", "assignable": true } },
+                        ] }),
+                    )
+                }
+            })
+        });
+        let ru = search_categories(&get, &tokens(), "иг").await;
+        assert_eq!(ru["ok"], json!(true));
+        assert_eq!(ru["items"][0], json!({ "id": "20", "name": "Игры" }));
+        assert_eq!(ru["items"].as_array().unwrap().len(), 1);
+
+        // Английское название не должно задваивать ту же категорию.
+        let en = search_categories(&get, &tokens(), "gam").await;
+        assert_eq!(en["items"].as_array().unwrap().len(), 1);
+        assert_eq!(en["items"][0]["name"], json!("Gaming"));
+    }
+
+    #[tokio::test]
+    async fn non_assignable_sections_are_skipped() {
+        let get: JsonGetFn = Arc::new(|_url: String, _token: String| {
+            Box::pin(async {
+                (
+                    200,
+                    json!({ "items": [
+                        { "id": "1", "snippet": { "title": "Фильмы", "assignable": false } },
+                    ] }),
+                )
+            })
+        });
+        let result = search_categories(&get, &tokens(), "фил").await;
+        assert_eq!(result, json!({ "ok": true, "items": [] }));
     }
 
     #[tokio::test]

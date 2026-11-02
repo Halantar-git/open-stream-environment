@@ -660,6 +660,41 @@ impl Diagnostics {
         }));
     }
 
+    /// Подсказки категорий для поля «Категория»: Twitch ищет по названию,
+    /// YouTube — по списку разделов региона. Результат — кадром
+    /// `stream_categories_result` с тем же `query`: панель по нему понимает,
+    /// к какому запросу относится ответ (набранное уже могло измениться).
+    pub fn search_stream_categories(&self, service: String, query: String) {
+        let config = Arc::clone(&self.config);
+        let clients = Arc::clone(&self.clients);
+        let twitch = self.twitch_config();
+        std::mem::drop(tauri::async_runtime::spawn(async move {
+            let result = if service == "youtube" {
+                let get: crate::integrations::youtube_stream_info::JsonGetFn =
+                    Arc::new(http::bearer_get_json);
+                let tokens = youtube_tokens(config);
+                crate::integrations::youtube_stream_info::search_categories(&get, &tokens, &query)
+                    .await
+            } else {
+                let get = http::helix_get_authed(Arc::clone(&config));
+                let tokens = twitch_tokens(config);
+                crate::integrations::twitch_helix::search_categories(&get, &tokens, &twitch, &query)
+                    .await
+            };
+            let payload = json!({
+                "service": service,
+                "query": query,
+                "ok": result.get("ok").cloned().unwrap_or(Value::Bool(false)),
+                "items": result.get("items").cloned().unwrap_or(json!([])),
+            });
+            let frame = json!({
+                "type": event_types::STREAM_CATEGORIES_RESULT,
+                "payload": payload,
+            });
+            clients.broadcast_text(&frame.to_string());
+        }));
+    }
+
     /// Подтянуть донаты, пришедшие пока приложение было выключено, — как
     /// `recoverDonations`. Запрос только по кнопке: у DonationAlerts лимит 60
     /// запросов в минуту, а живые донаты приходят сокетом.

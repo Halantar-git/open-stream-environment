@@ -85,6 +85,7 @@
     REWARD_TTS: "reward_tts", // { text } — server -> overlay: speak a channel-point reward phrase
     TWITCH_ACTION_RESULT: "twitch_action_result", // { action, ok, message?, error? } — server -> control: clip/marker feedback
     STREAM_INFO_RESULT: "stream_info_result", // { action: 'load'|'apply', twitch, youtube } — название/категория/описание эфира
+    STREAM_CATEGORIES_RESULT: "stream_categories_result", // { service: 'twitch'|'youtube', query, ok, items: [{ id, name }] } — подсказки категорий
     // Гостевые камеры. Сигналинг WebRTC идёт через сервер, медиа — напрямую.
     GUEST_STATUS: "guest_status", // { slots: [{ slot, name, state, guest? }] } — server -> все локальные окна
     GUEST_INVITE: "guest_invite", // { slot, token, host, port } — server -> панель после создания приглашения
@@ -114,6 +115,7 @@
     CMD_CREATE_STREAM_MARKER: "cmd_create_stream_marker", // { description? } — create a Twitch stream marker
     CMD_GET_STREAM_INFO: "cmd_get_stream_info", // {} — read title/category/description from Twitch and YouTube
     CMD_UPDATE_STREAM_INFO: "cmd_update_stream_info", // { title?, description?, twitchCategory?, youtubeCategory? }
+    CMD_SEARCH_STREAM_CATEGORIES: "cmd_search_stream_categories", // { service: 'twitch'|'youtube', query } — подсказки категорий
     CMD_SAVE_LAYOUT_PRESET: "cmd_save_layout_preset", // { id?, name }
     CMD_APPLY_LAYOUT_PRESET: "cmd_apply_layout_preset", // { id }
     CMD_DELETE_LAYOUT_PRESET: "cmd_delete_layout_preset", // { id }

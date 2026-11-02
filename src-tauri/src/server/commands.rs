@@ -388,6 +388,15 @@ pub fn handle_message(
                 field("youtubeCategory"),
             );
         }
+        event_types::CMD_SEARCH_STREAM_CATEGORIES => {
+            let field = |key: &str| {
+                payload
+                    .get(key)
+                    .map(crate::state::js_string)
+                    .unwrap_or_default()
+            };
+            diagnostics.search_stream_categories(field("service"), field("query"));
+        }
         // ---- OBS: камеры ----
         event_types::CMD_SET_CAMERA_ANGLE => {
             // Работа с OBS асинхронная: задачу заводим в фоне, результат придёт

@@ -320,6 +320,58 @@ async fn resolve_game_id(
         .map(str::to_string))
 }
 
+/// Подсказки категорий по началу названия — до десяти штук.
+///
+/// Для поиска нужны только ключ и токен: `broadcaster_id` тут не при чём,
+/// поэтому проверка мягче, чем у действий над каналом — иначе подсказки
+/// пропадали бы у тех, кто ещё не подключил вещателя.
+pub async fn search_categories(
+    get: &JsonGetFn,
+    tokens: &Tokens,
+    twitch: &Value,
+    query: &str,
+) -> Value {
+    if !["clientId", "userAccessToken"]
+        .iter()
+        .all(|key| js_truthy(twitch.get(key)))
+    {
+        return not_configured();
+    }
+    let query = query.trim();
+    if query.is_empty() {
+        return json!({ "ok": true, "items": [] });
+    }
+    let Some(token) = ensure_token(tokens).await else {
+        return auth_error();
+    };
+    let url = format!(
+        "{CATEGORY_SEARCH_URL}?query={}&first=10",
+        crate::server::oauth::encode_uri_component(query)
+    );
+    let (status, body) = match get_with_retry(get, tokens, url, token).await {
+        Ok(outcome) => outcome,
+        Err(error) => return json!({ "ok": false, "error": error }),
+    };
+    if !(200..300).contains(&status) {
+        return json!({ "ok": false, "error": format!("http_{status}") });
+    }
+    let items = body
+        .get("data")
+        .and_then(Value::as_array)
+        .map(|data| {
+            data.iter()
+                .map(|item| {
+                    json!({
+                        "id": item.get("id").cloned().unwrap_or(Value::Null),
+                        "name": item.get("name").cloned().unwrap_or(Value::Null),
+                    })
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    json!({ "ok": true, "items": items })
+}
+
 /// GET с повтором после `401`: обновляем токен и пробуем тот же адрес снова.
 async fn get_with_retry(
     get: &JsonGetFn,
@@ -627,6 +679,40 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn category_suggestions_come_back_as_id_and_name() {
+        let get: JsonGetFn = Arc::new(|url: String, _token: String| {
+            Box::pin(async move {
+                assert!(url.contains("/search/categories?query=Just&first=10"));
+                (
+                    200,
+                    json!({ "data": [
+                        { "id": "509263", "name": "Just Chatting" },
+                        { "id": "1", "name": "Just Dance" },
+                    ] }),
+                )
+            })
+        });
+        let result = search_categories(&get, &tokens(), &authorized(), " Just ").await;
+        assert_eq!(result["ok"], json!(true));
+        assert_eq!(
+            result["items"][0],
+            json!({ "id": "509263", "name": "Just Chatting" })
+        );
+        assert_eq!(result["items"].as_array().unwrap().len(), 2);
+    }
+
+    #[tokio::test]
+    async fn an_empty_category_query_does_not_hit_the_network() {
+        let get: JsonGetFn = Arc::new(|_url: String, _token: String| {
+            Box::pin(async {
+                panic!("пустой запрос не должен уходить в сеть")
+            })
+        });
+        let result = search_categories(&get, &tokens(), &authorized(), "   ").await;
+        assert_eq!(result, json!({ "ok": true, "items": [] }));
+    }
+
+    #[tokio::test]
     async fn a_401_on_patch_refreshes_the_token_and_retries_once() {
         let seen = Arc::new(Mutex::new(Vec::new()));
         let patch: PatchFn = {
@@ -653,6 +739,31 @@ mod tests {
             "Game",
         )
         .await;
+        assert_eq!(result["ok"], json!(true));
+        assert_eq!(
+            *seen.lock().unwrap(),
+            vec!["tok".to_string(), "newtok".to_string()]
+        );
+    }
+
+    #[tokio::test]
+    async fn category_suggestions_survive_an_expired_token() {
+        let seen = Arc::new(Mutex::new(Vec::new()));
+        let get: JsonGetFn = {
+            let seen = seen.clone();
+            Arc::new(move |_url: String, token: String| {
+                let seen = seen.clone();
+                Box::pin(async move {
+                    seen.lock().unwrap().push(token.clone());
+                    if token == "tok" {
+                        (401, json!({}))
+                    } else {
+                        (200, json!({ "data": [{ "id": "1", "name": "Game" }] }))
+                    }
+                })
+            })
+        };
+        let result = search_categories(&get, &tokens(), &authorized(), "Game").await;
         assert_eq!(result["ok"], json!(true));
         assert_eq!(
             *seen.lock().unwrap(),

@@ -211,6 +211,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const streamInfoStatusEl = document.getElementById("streamInfoStatus");
   const streamInfoLoadBtn = document.getElementById("streamInfoLoadBtn");
   const streamInfoApplyBtn = document.getElementById("streamInfoApplyBtn");
+  const openStreamInfoBtn = document.getElementById("openStreamInfoBtn");
   const twitchEnabledSwitch = document.getElementById("twitchEnabledSwitch");
   const donationAlertsEnabledSwitch = document.getElementById("donationAlertsEnabledSwitch");
   const donatexEnabledSwitch = document.getElementById("donatexEnabledSwitch");
@@ -2029,6 +2030,76 @@ const { EVENT_TYPES } = window.SharedEvents;
         youtubeCategory: streamInfoYoutubeCategoryInput ? streamInfoYoutubeCategoryInput.value : "",
       });
     });
+  }
+
+  // Быстрый переход к карточке из верхней панели — тем же подсвечиванием, что
+  // у клика по статусу сервиса.
+  if (openStreamInfoBtn) {
+    openStreamInfoBtn.addEventListener("click", () => {
+      switchView("settings");
+      const card = document.getElementById("settingsCardStreamInfo");
+      if (!card) return;
+      card.classList.add("is-flash");
+      requestAnimationFrame(() => card.scrollIntoView({ behavior: "smooth", block: "start" }));
+      setTimeout(() => card.classList.remove("is-flash"), 1200);
+    });
+  }
+
+  // ---- подсказки категорий ----
+
+  const CATEGORY_FIELDS = {
+    twitch: {
+      input: streamInfoTwitchCategoryInput,
+      list: document.getElementById("streamInfoTwitchCategories"),
+    },
+    youtube: {
+      input: streamInfoYoutubeCategoryInput,
+      list: document.getElementById("streamInfoYoutubeCategories"),
+    },
+  };
+  const categoryTimers = { twitch: 0, youtube: 0 };
+
+  function fillCategorySuggestions(service, items) {
+    const target = CATEGORY_FIELDS[service].list;
+    if (!target) return;
+    target.textContent = "";
+    items.slice(0, 10).forEach((item) => {
+      const name = item && item.name ? String(item.name) : "";
+      if (!name) return;
+      const option = document.createElement("option");
+      option.value = name;
+      target.appendChild(option);
+    });
+  }
+
+  /*
+    Название категории ищется в сети по мере ввода: у Twitch это поиск игр,
+    у YouTube — разделы региона. Запрос уходит с паузой, иначе лимит API
+    съедается за одно длинное название.
+  */
+  Object.keys(CATEGORY_FIELDS).forEach((service) => {
+    const input = CATEGORY_FIELDS[service].input;
+    if (!input) return;
+    input.addEventListener("input", () => {
+      clearTimeout(categoryTimers[service]);
+      const query = input.value.trim();
+      if (query.length < 2) {
+        fillCategorySuggestions(service, []);
+        return;
+      }
+      categoryTimers[service] = setTimeout(() => {
+        send(EVENT_TYPES.CMD_SEARCH_STREAM_CATEGORIES, { service, query });
+      }, 300);
+    });
+  });
+
+  function handleStreamCategories(payload) {
+    const service = payload.service === "youtube" ? "youtube" : "twitch";
+    const input = CATEGORY_FIELDS[service].input;
+    // Ответы идут параллельно и могут прийти не по порядку: подсказки
+    // показываем только для того запроса, что совпадает с набранным сейчас.
+    if (!input || input.value.trim() !== String(payload.query || "")) return;
+    fillCategorySuggestions(service, payload.ok && Array.isArray(payload.items) ? payload.items : []);
   }
 
   // ---- Clip / stream marker ----
@@ -3954,6 +4025,8 @@ const { EVENT_TYPES } = window.SharedEvents;
   // восемь кнопок с текстом перекрывали друг друга на узком окне.
   if (createClipBtn) createClipBtn.innerHTML = ICONS.clip;
   if (createMarkerBtn) createMarkerBtn.innerHTML = ICONS.marker;
+  const openStreamInfoIcon = document.getElementById("openStreamInfoIcon");
+  if (openStreamInfoIcon) openStreamInfoIcon.innerHTML = ICONS.info;
 
   const openBoostyBtn = document.getElementById("openBoostyBtn");
   if (openBoostyBtn) {
@@ -4531,6 +4604,9 @@ const { EVENT_TYPES } = window.SharedEvents;
         break;
       case EVENT_TYPES.STREAM_INFO_RESULT:
         handleStreamInfoResult(msg.payload || {});
+        break;
+      case EVENT_TYPES.STREAM_CATEGORIES_RESULT:
+        handleStreamCategories(msg.payload || {});
         break;
       case EVENT_TYPES.THEME_UPDATE:
         state.appearance = msg.payload;

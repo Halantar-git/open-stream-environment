@@ -213,6 +213,7 @@ const SECTIONS = [
       { type: "p", key: "help.streamInfo.p2" },
       { type: "p", key: "help.streamInfo.p3" },
       { type: "p", key: "help.streamInfo.p4" },
+      { type: "p", key: "help.streamInfo.p5" },
     ],
   },
   {

@@ -129,6 +129,7 @@
     marker: `<svg viewBox="0 0 24 24" ${stroke}><path d="M6 3h12v18l-6-4.5L6 21V3z"/></svg>`,
     bug: `<svg viewBox="0 0 24 24" ${stroke}><path d="M9 3h6M10 3v5.5L5.5 17a2 2 0 0 0 1.8 3h9.4a2 2 0 0 0 1.8-3L14 8.5V3"/><path d="M7.5 14h9"/></svg>`,
     help: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="12" r="9"/><path d="M9.3 9a2.8 2.8 0 0 1 5.4 1c0 1.7-2.7 2.4-2.7 4"/><circle cx="12" cy="17.4" r="1.2" fill="currentColor" stroke="none"/></svg>`,
+    info: `<svg viewBox="0 0 24 24" ${stroke}><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.6" r="1.2" fill="currentColor" stroke="none"/></svg>`,
     back: `<svg viewBox="0 0 24 24" ${stroke}><path d="M15 5l-7 7 7 7"/></svg>`,
     heart: `<svg viewBox="0 0 24 24"><path d="M12 21s-7-4.35-9.5-8.5C.8 8.9 2.6 5 6.2 5c2 0 3.3 1 4.8 2.7C12.5 6 13.8 5 15.8 5c3.6 0 5.4 3.9 3.7 7.5C19 16.65 12 21 12 21z" fill="currentColor"/></svg>`,
   };

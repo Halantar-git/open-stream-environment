@@ -44,6 +44,7 @@
         <button class="topbar__tab" data-view="scenes" data-i18n="nav.scenes">Сцены</button>
         <button class="topbar__tab" data-view="splashes" data-i18n="nav.splashes">Заставки</button>
         <button class="topbar__tab" data-view="settings" data-i18n="nav.settings">Настройки</button>
+        <button class="topbar__quick" id="openStreamInfoBtn" type="button" data-i18n-title="nav.streamInfo"><span class="topbar__quick-icon" id="openStreamInfoIcon" aria-hidden="true"></span><span class="topbar__quick-label" data-i18n="nav.streamInfo">Информация о стриме</span></button>
       </nav>
       <div class="topbar__actions">
         <button class="md-button md-button--tonal topbar__clip-btn" id="createClipBtn" data-i18n-title="settings.createClip">Клип</button>
@@ -928,11 +929,13 @@
           <div class="properties__row">
             <div class="md-field">
               <label data-i18n="settings.streamInfoTwitchCategory">Категория Twitch</label>
-              <input type="text" id="streamInfoTwitchCategory" data-i18n-placeholder="settings.streamInfoTwitchCategoryPlaceholder" placeholder="Например, Just Chatting" />
+              <input type="text" id="streamInfoTwitchCategory" list="streamInfoTwitchCategories" data-i18n-placeholder="settings.streamInfoTwitchCategoryPlaceholder" placeholder="Например, Just Chatting" />
+              <datalist id="streamInfoTwitchCategories"></datalist>
             </div>
             <div class="md-field">
               <label data-i18n="settings.streamInfoYoutubeCategory">Категория YouTube</label>
-              <input type="text" id="streamInfoYoutubeCategory" data-i18n-placeholder="settings.streamInfoYoutubeCategoryPlaceholder" placeholder="Например, Игры" />
+              <input type="text" id="streamInfoYoutubeCategory" list="streamInfoYoutubeCategories" data-i18n-placeholder="settings.streamInfoYoutubeCategoryPlaceholder" placeholder="Например, Игры" />
+              <datalist id="streamInfoYoutubeCategories"></datalist>
             </div>
           </div>
           <div class="md-field">
@@ -940,7 +943,7 @@
             <textarea id="streamInfoDescription" rows="3" data-i18n-placeholder="settings.streamInfoDescriptionPlaceholder" placeholder="Описание эфира"></textarea>
             <span class="md-field__hint" data-i18n="settings.streamInfoDescriptionHint">У Twitch нет описания эфира — только название и категория.</span>
           </div>
-          <div class="settings__hint" data-i18n="settings.streamInfoCategoryHint">Категории Twitch — игры, YouTube — разделы. Поэтому поля отдельные, а кнопка «Применить» одна.</div>
+          <div class="settings__hint" data-i18n="settings.streamInfoCategoryHint">Категории Twitch — игры, YouTube — разделы. Поэтому поля отдельные, а кнопка «Применить» одна. При вводе названия подсказки приходят из сети — выберите нужную из списка.</div>
           <div class="settings__hint" data-i18n="settings.streamInfoScopeHint">Для изменения YouTube переподключите его один раз: старый токен был только на чтение.</div>
           <div class="settings__actions">
             <button class="md-button md-button--tonal" id="streamInfoLoadBtn" data-i18n="settings.streamInfoLoad">Загрузить текущее</button>

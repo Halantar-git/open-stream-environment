@@ -86,6 +86,34 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .topbar__tab { border: none; background: transparent; color: var(--md-on-surface-variant); font-family: var(--font-body); font-size: 13px; font-weight: 500; padding: 7px 18px; border-radius: var(--shape-full); cursor: pointer; -webkit-app-region: no-drag; }
 .topbar__tab:hover { color: var(--md-on-surface); }
 .topbar__tab.is-active { background: var(--md-primary); color: var(--md-on-primary); }
+/* Ярлык к «Информации о стриме»: это не раздел, а быстрый переход к карточке
+   в настройках, поэтому кнопка не участвует в подсветке вкладок. */
+.topbar__quick {
+  margin-left: 6px;
+  padding: 7px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-full);
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+.topbar__quick:hover { color: var(--md-on-surface); border-color: var(--md-primary); }
+.topbar__quick-icon { display: none; }
+.topbar__quick-icon svg { width: 15px; height: 15px; display: block; }
+/* На узком окне в шапке тесно — подпись прячется, остаётся иконка с подсказкой. */
+@media (max-width: 1300px) {
+  .topbar__quick { padding: 7px 8px; margin-left: 2px; }
+  .topbar__quick-label { display: none; }
+  .topbar__quick-icon { display: block; }
+}
 .topbar__status { margin-left: auto; display: flex; gap: 8px; }
 .topbar__actions { margin-left: auto; display: flex; align-items: center; }
 .topbar__actions > :first-child { margin-left: 0; }
