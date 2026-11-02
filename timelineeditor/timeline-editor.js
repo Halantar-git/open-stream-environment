@@ -92,6 +92,7 @@
     formatMoney,
     currencySymbol,
     resolveMediaUrl: (path) => LC.resolveMedia(path),
+    t,
   };
 
   const player = LC.createPlayer(stage, previewOptions);

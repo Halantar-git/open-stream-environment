@@ -321,6 +321,19 @@
     return Number.isFinite(amount) ? amount >= min : true;
   }
 
+  // Категории, для которых есть человекочитаемая подпись в словаре.
+  const EVENT_KIND_LABELS = [
+    "follow",
+    "sub",
+    "gift_sub",
+    "cheer",
+    "donation",
+    "reward",
+    "ai",
+    "boosty_sub",
+    "boosty_resub",
+  ];
+
   /*
     Подстановки в текстовом слое. Неизвестный ключ остаётся пустым: опечатка в
     шаблоне не должна показывать зрителю `{{users}}`.
@@ -336,6 +349,13 @@
       typeof opts.currencySymbol === "function"
         ? opts.currencySymbol
         : (value) => String(value || "");
+    const kind = String(source.kind || "");
+    // `{{event}}` — подпись для строки списка: «Фолловер», «Подписка» и т.д.
+    // Без словаря остаётся технический `kind`, чтобы строка не была пустой.
+    const kindLabel =
+      typeof opts.t === "function" && EVENT_KIND_LABELS.indexOf(kind) >= 0
+        ? opts.t("eventKind." + kind)
+        : kind;
     const values = {
       user: source.user || "",
       amount: source.amount != null ? money(source.amount) : "",
@@ -345,7 +365,8 @@
       months: source.months != null ? String(source.months) : "",
       title: source.rewardTitle || source.musicTitle || source.title || "",
       reward: source.rewardTitle || "",
-      kind: source.kind || "",
+      kind,
+      event: kindLabel,
     };
     return String(template == null ? "" : template).replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, key) => {
       return values[key] != null ? values[key] : "";

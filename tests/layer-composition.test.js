@@ -204,6 +204,16 @@ describe("layer-composition: модель", () => {
     expect(text).toBe("Stargazer — 1 500 ₽: Привет ");
   });
 
+  test("fillText подставляет подпись события", () => {
+    const dictionary = { "eventKind.follow": "Фолловер" };
+    const t = (key) => dictionary[key] || key;
+    expect(LayerComposition.fillText("{{event}}", { kind: "follow" }, { t })).toBe("Фолловер");
+    // Без словаря остаётся технический kind — строка не должна быть пустой.
+    expect(LayerComposition.fillText("{{event}}", { kind: "follow" }, {})).toBe("follow");
+    // Неизвестная категория не выдумывает подпись.
+    expect(LayerComposition.fillText("{{event}}", { kind: "weird" }, { t })).toBe("weird");
+  });
+
   test("normalizeConfig хранит реакции категорий и отбрасывает мусор", () => {
     const reactions = JSON.parse(
       '{"donation":{"durationMs":5000,"layers":[{"text":"donation"}]},"__proto__":{"layers":[]},"broken":42}'
@@ -802,14 +812,16 @@ describe("layer-alert: виджет", () => {
     global.cancelAnimationFrame = realCancel;
   });
 
-  function mountWidget(config) {
+  function mountWidget(config, state) {
     const bus = new EventBus();
     const context = {
       bus,
       EVENT_TYPES,
+      state: state || { recentEvents: [] },
       formatMoney: (value) => String(value),
       currencySymbol: (value) => value,
       resolveMediaUrl: (value) => value,
+      t: (key) => key,
     };
     const widget = new LayerAlertWidget(
       {
@@ -913,6 +925,30 @@ describe("layer-alert: виджет", () => {
     jest.advanceTimersByTime(5000);
     expect(widget.stackHost.children).toHaveLength(1);
     expect(widget.stackHost.children[0].children[0].children[0].children[0].textContent).toBe("Vasya");
+  });
+
+  test("постоянный список набирается из истории событий", () => {
+    const { widget } = mountWidget(
+      {
+        eventKinds: ["follow"],
+        durationMs: 300,
+        stack: true,
+        stackMax: 2,
+        persistent: true,
+        layers: [
+          { id: "t", type: "text", text: "{{user}}", start: 0, duration: 250, in: "none", out: "none" },
+        ],
+      },
+      // История приходит от старых к новым наоборот: свежее — первым.
+      { recentEvents: [{ kind: "follow", user: "Newest" }, { kind: "follow", user: "Older" }] }
+    );
+
+    expect(widget.stackHost.children).toHaveLength(2);
+    // Порядок в DOM не совпадает с визуальным: ищем по `top`.
+    const latest = widget.stackHost.children.find((row) => row.style.top === "0%");
+    const previous = widget.stackHost.children.find((row) => row.style.top === "50%");
+    expect(latest.children[0].children[0].children[0].textContent).toBe("Newest");
+    expect(previous.children[0].children[0].children[0].textContent).toBe("Older");
   });
 
   test("играет свою реакцию категории вместо общей", () => {

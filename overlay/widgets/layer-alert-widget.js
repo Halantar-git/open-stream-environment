@@ -58,6 +58,7 @@
         formatMoney: this.context.formatMoney,
         currencySymbol: this.context.currencySymbol,
         resolveMediaUrl: this.context.resolveMediaUrl,
+        t: this.context.t,
       };
       // Список и одиночные алерты живут в разных слоях: список не должен
       // стираться, когда одиночная композиция доиграла.
@@ -72,6 +73,7 @@
       this.stack.onEmpty(() => this.drain());
       this.player = LayerComposition.createPlayer(this.queueHost, options);
       this.subscribe(this.context.EVENT_TYPES.ALERT, (alert) => this.queueAlert(alert));
+      this._seedFromHistory();
     }
 
     onUpdate() {
@@ -83,6 +85,8 @@
       this.queue = [];
       this.pendingStack = [];
       this._stopCurrent();
+      // Вид списка изменился — собираем его заново из той же истории.
+      this._seedFromHistory();
     }
 
     onUnmount() {
@@ -112,6 +116,32 @@
       if (this.stack) this.stack.clear();
       if (this.player) this.player.stop();
       else if (this.queueHost) this.queueHost.innerHTML = "";
+    }
+
+    /*
+      Постоянный список после перезагрузки оверлея пуст, хотя история событий
+      уже есть в снимке состояния. Набиваем строки из неё — от старых к новым,
+      чтобы последнее событие оказалось сверху. Слушаем только историю: живые
+      события приходят кадром ALERT и строками не дублируются.
+    */
+    _seedFromHistory() {
+      const state = this.context.state || {};
+      const recent = Array.isArray(state.recentEvents) ? state.recentEvents : [];
+      if (!recent.length || !this.stack) return;
+      // Больше шести строк интерфейс не умеет, глубже историю не берём.
+      recent
+        .slice(0, 6)
+        .reverse()
+        .forEach((alert) => {
+          if (!alert) return;
+          if (!LayerComposition.matchesEvent(this.config, alert)) return;
+          // У категории может быть своя реакция: в список попадает по ней.
+          const composition = LayerComposition.compositionForEvent(this.config, alert.kind);
+          if (!composition.stack || !composition.persistent) return;
+          if (!composition.layers.length) return;
+          if (!LayerComposition.passesAmount(composition, alert)) return;
+          this.stack.push(composition, alert);
+        });
     }
 
     queueAlert(alert) {
