@@ -78,17 +78,27 @@
     }
 
     render() {
-      const { t, state } = this.context;
+      const { t, state, escapeHtml } = this.context;
       const max = this.config.maxItems || 5;
-      const items = (state.recentEvents || []).slice(0, max);
+      const items = this._events(state.recentEvents).slice(0, max);
+      const title = this.config.title || t("preview.recentTitle");
 
       this.host.innerHTML =
-        `<div class="widget-recent__title">${t("preview.recentTitle")}</div>` +
+        `<div class="widget-recent__title">${escapeHtml(title)}</div>` +
         (items.length
           ? `<div class="widget-recent__list">${items
               .map((e) => `<div class="widget-recent__item"><span class="widget-recent__dot" data-kind="${e.kind}"></span><span>${this._text(e)}</span></div>`)
               .join("")}</div>`
           : `<div class="widget-recent__empty">${t("recent.empty")}</div>`);
+    }
+
+    // Фильтр категорий: пустой список — все события. Так из одного виджета
+    // получаются «Последние фолловеры» или «Последние донаты».
+    _events(list) {
+      const kinds = Array.isArray(this.config.kinds) ? this.config.kinds : [];
+      const events = Array.isArray(list) ? list : [];
+      if (!kinds.length) return events;
+      return events.filter((event) => event && kinds.indexOf(String(event.kind || "")) >= 0);
     }
 
     _text(evt) {

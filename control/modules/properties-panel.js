@@ -62,6 +62,37 @@ export function initPropertiesPanel({
   const propertiesTitle = el("propertiesTitle");
   const propertiesEl = el("properties");
 
+  // Категории, которые «Последние события» умеют подписывать. Отметка одной
+  // категории превращает виджет в отдельный блок — например, только фолловеры.
+  const RECENT_KINDS = ["follow", "sub", "gift_sub", "cheer", "donation", "boosty_sub", "boosty_resub"];
+
+  function recentFilterHtml(config) {
+    const kinds = Array.isArray(config.kinds) ? config.kinds : [];
+    const checks = RECENT_KINDS.map(
+      (kind) =>
+        `<label style="display:flex;align-items:center;gap:6px;font-size:12px;"><input type="checkbox" data-recent-kind="${kind}"${
+          kinds.indexOf(kind) >= 0 ? " checked" : ""
+        }>${escapeHtml(t("eventKind." + kind))}</label>`
+    ).join("");
+    return `
+        <div class="md-field"><label>${t("properties.recentTitle")}</label><input type="text" id="pRecentTitle" value="${escapeAttr(config.title || "")}" placeholder="${escapeAttr(t("preview.recentTitle"))}"></div>
+        <div class="md-field"><label>${t("properties.recentKinds")}</label><div class="properties__row" style="flex-wrap:wrap;gap:8px 14px;">${checks}</div></div>
+        <p class="properties__hint">${t("properties.recentKindsHint")}</p>`;
+  }
+
+  function wireRecentFilter(inst) {
+    const patch = (configPatch) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: configPatch } });
+    const title = propertiesEl.querySelector("#pRecentTitle");
+    if (title) title.addEventListener("change", () => patch({ title: title.value.trim() }));
+    propertiesEl.querySelectorAll("[data-recent-kind]").forEach((check) => {
+      check.addEventListener("change", () => {
+        const selected = [];
+        propertiesEl.querySelectorAll("[data-recent-kind]:checked").forEach((node) => selected.push(node.getAttribute("data-recent-kind")));
+        patch({ kinds: selected });
+      });
+    });
+  }
+
   /*
     Поля пакетного виджета по схеме из манифеста. Инспектор не знает, что
     виджет делает, — он рисует только типы из `settings`, поэтому новый виджет
@@ -384,6 +415,7 @@ export function initPropertiesPanel({
         <div class="md-field"><label>${t("properties.opacity")}: <span id="pOpacityValue">${config.opacity ?? 100}%</span></label><input type="range" id="pOpacity" min="0" max="100" step="1" value="${config.opacity ?? 100}"></div>`;
     } else if (inst.type.endsWith("-recent")) {
       extraHtml = `
+        ${recentFilterHtml(config)}
         <div class="md-field"><label>${t("properties.maxItems")}</label><input type="number" id="pMaxItems" min="1" max="15" value="${config.maxItems || 5}"></div>
         <div class="md-field"><label>${t("properties.recentAnimationMs")}: <span id="pRecentAnimationValue">${config.animationMs || 840}</span></label><input type="range" id="pRecentAnimation" min="100" max="1500" step="10" value="${config.animationMs || 840}"></div>
         <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>
@@ -398,6 +430,7 @@ export function initPropertiesPanel({
         <p class="properties__hint">${t("properties.recentAnimationHint")}</p>`;
     } else if (inst.type === "recent") {
       extraHtml = `
+        ${recentFilterHtml(config)}
         <div class="md-field"><label>${t("properties.maxItems")}</label><input type="number" id="pMaxItems" min="1" max="15" value="${config.maxItems || 5}"></div>
         <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>
         <div class="md-field"><label>${t("properties.perspectiveDirection")}</label>
@@ -988,6 +1021,7 @@ export function initPropertiesPanel({
       });
     } else if (inst.type.endsWith("-recent")) {
       const patchRecent = (configPatch) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: configPatch } });
+      wireRecentFilter(inst);
       propertiesEl.querySelector("#pMaxItems").addEventListener("change", (e) => patchRecent({ maxItems: Number(e.target.value) || 5 }));
       propertiesEl.querySelector("#pRecentAnimation").addEventListener("input", (e) => {
         const value = Number(e.target.value);
@@ -1004,6 +1038,7 @@ export function initPropertiesPanel({
       propertiesEl.querySelector("#pPerspectiveDirection").addEventListener("change", (e) => patchRecent({ perspectiveDirection: e.target.value }));
     } else if (inst.type === "recent") {
       const patchRecent = (configPatch) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: configPatch } });
+      wireRecentFilter(inst);
       propertiesEl.querySelector("#pMaxItems").addEventListener("change", (e) => patchRecent({ maxItems: Number(e.target.value) }));
       propertiesEl.querySelector("#pPerspective").addEventListener("input", (e) => {
         const value = Number(e.target.value);

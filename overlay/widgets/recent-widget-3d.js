@@ -89,7 +89,9 @@
       // меняются собственные настройки виджета.
       if (
         prevConfig.maxItems !== nextConfig.maxItems ||
-        prevConfig.animationMs !== nextConfig.animationMs
+        prevConfig.animationMs !== nextConfig.animationMs ||
+        prevConfig.title !== nextConfig.title ||
+        (prevConfig.kinds || []).join(",") !== (nextConfig.kinds || []).join(",")
       ) {
         this.refresh(true);
       }
@@ -102,6 +104,15 @@
       if (!this.nodes) this.refresh(true);
     }
 
+    // Фильтр категорий: пустой список — все события. Так из одного виджета
+    // получаются «Последние фолловеры» или «Последние донаты».
+    _events(list) {
+      const kinds = Array.isArray(this.config.kinds) ? this.config.kinds : [];
+      const events = Array.isArray(list) ? list : [];
+      if (!kinds.length) return events;
+      return events.filter((event) => event && kinds.indexOf(String(event.kind || "")) >= 0);
+    }
+
     duration() {
       return Math.max(80, Math.min(2000, Number(this.config.animationMs) || 840));
     }
@@ -110,10 +121,10 @@
       if (!this.host || !this.listEl) return;
       const { t, state } = this.context;
       const max = Math.max(1, Number(this.config.maxItems) || 5);
-      const events = (state.recentEvents || []).slice(0, max);
+      const events = this._events(state.recentEvents).slice(0, max);
 
       this.host.style.setProperty("--recent-animation", `${this.duration()}ms`);
-      this.titleEl.textContent = t("preview.recentTitle");
+      this.titleEl.textContent = this.config.title || t("preview.recentTitle");
 
       // Уникальные ключи: одинаковые события на одной миллисекунде не должны
       // переиспользовать один и тот же DOM-узел.

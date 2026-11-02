@@ -156,6 +156,16 @@ describe("RecentWidget3d", () => {
     expect(widget.listEl.children[0].classList.contains("is-entering")).toBe(true);
   });
 
+  test("фильтр категорий оставляет только выбранные события", () => {
+    const { widget } = setup(
+      { maxItems: 5, kinds: ["follow"], title: "Последние фолловеры" },
+      [{ kind: "donation", user: "bob", at: 2 }, event("alice", 1)]
+    );
+    expect(widget.listEl.children).toHaveLength(1);
+    expect(widget.listEl.children[0].innerHTML).toContain("alice");
+    expect(widget.titleEl.textContent).toBe("Последние фолловеры");
+  });
+
   test("скорость анимации попадает в CSS-переменную", () => {
     const { widget } = setup({ animationMs: 250 }, [event("a", 1)]);
     expect(widget.host.style.props["--recent-animation"]).toBe("250ms");

@@ -1,5 +1,5 @@
 {
-  "sourceHash": "231ae07478b61fdf",
+  "sourceHash": "e3ff4b80bb63edff",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -176,7 +176,9 @@
       "minW": 14,
       "minH": 12,
       "defaultConfig": {
-        "maxItems": 5
+        "maxItems": 5,
+        "kinds": [],
+        "title": ""
       }
     },
     "ticker": {

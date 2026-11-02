@@ -228,7 +228,9 @@
       defaultGeometry: { x: 3, y: 4, w: 24, h: 26 },
       minW: 14,
       minH: 12,
-      defaultConfig: { maxItems: 5 },
+      // `kinds` — фильтр категорий: пустой список показывает всё, а одна
+      // отмеченная «Фолловер» превращает блок в «Последние фолловеры».
+      defaultConfig: { maxItems: 5, kinds: [], title: "" },
     },
     ticker: {
       type: "ticker",

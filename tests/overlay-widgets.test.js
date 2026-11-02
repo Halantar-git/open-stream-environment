@@ -277,6 +277,22 @@ describe("overlay widgets", () => {
     expect(w.host.innerHTML).toContain('data-kind="follow"');
   });
 
+  test("RecentWidget фильтрует категории и берёт свой заголовок", () => {
+    const ctx = makeContext();
+    ctx.state.recentEvents = [
+      { kind: "follow", user: "alice" },
+      { kind: "donation", user: "bob", amount: 100 },
+    ];
+    const { w } = mountWidget(RecentWidget, ctx, {
+      type: "recent",
+      config: { maxItems: 5, kinds: ["follow"], title: "Последние фолловеры" },
+    });
+
+    expect(w.host.innerHTML).toContain("Последние фолловеры");
+    expect(w.host.innerHTML).toContain('data-kind="follow"');
+    expect(w.host.innerHTML).not.toContain('data-kind="donation"');
+  });
+
   test("AlertsWidget показывает карточку победителя и не дублирует звук колеса", () => {
     const ctx = makeContext();
     const { w } = mountWidget(AlertsWidget, ctx, { type: "alerts" });
