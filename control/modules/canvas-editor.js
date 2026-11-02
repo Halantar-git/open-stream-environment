@@ -536,6 +536,12 @@ export function initCanvasEditor({
       case "timer":
       case "grimhex-timer":
         return buildExecTimerPreview(config);
+      case "layer-alert": {
+        // На канвасе композиция показывается пиктограммой: пустой прямоугольник
+        // легко потерять среди виджетов, а живой алерт рисует только оверлей.
+        const icon = ICONS.widgetTimeline || ICONS.widgetAlerts || "";
+        return `<div class="canvas-widget__placeholder">${icon}<span>${escapeHtml(t("widgets.layer-alert"))}</span></div>`;
+      }
       case "donatex-ai": {
         // Аудио-мост ничего не рисует в эфире, но на канвасе должен быть виден:
         // иначе пустой прямоугольник легко потерять среди виджетов. Ссылки
