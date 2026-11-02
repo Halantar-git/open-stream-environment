@@ -147,6 +147,7 @@
       durationMs: composition.durationMs,
       stack: composition.stack === true,
       stackMax: composition.stackMax,
+      persistent: composition.persistent === true,
       minAmount: composition.minAmount,
       layers: composition.layers.map((layer) => Object.assign({}, layer)),
     };
@@ -917,6 +918,15 @@
       '<p class="te-hint">' +
       escapeHtml(t("timelineEditor.stackHint")) +
       "</p>" +
+      '<label class="te-check"><input type="checkbox" id="compPersistent"' +
+      (active().persistent ? " checked" : "") +
+      (active().stack ? "" : " disabled") +
+      ">" +
+      escapeHtml(t("timelineEditor.persistent")) +
+      "</label>" +
+      '<p class="te-hint">' +
+      escapeHtml(t("timelineEditor.persistentHint")) +
+      "</p>" +
       '<div class="te-section">' +
       escapeHtml(t("timelineEditor.eventKinds")) +
       "</div>" +
@@ -956,12 +966,19 @@
       ensureActive().minAmount = Math.max(0, Math.round(value));
     });
 
+    const persistentInput = composition.querySelector("#compPersistent");
+    persistentInput.addEventListener("change", (event) => {
+      ensureActive().persistent = event.target.checked;
+    });
+
     const stackInput = composition.querySelector("#compStack");
     stackInput.addEventListener("change", (event) => {
       const target = ensureActive();
       target.stack = event.target.checked;
       const maxInput = composition.querySelector("#compStackMax");
       if (maxInput) maxInput.disabled = !target.stack;
+      const persistentInput = composition.querySelector("#compPersistent");
+      if (persistentInput) persistentInput.disabled = !target.stack;
       schedulePreview(0);
       renderSelection();
     });
@@ -1357,6 +1374,7 @@
       durationMs: config.durationMs,
       stack: config.stack,
       stackMax: config.stackMax,
+      persistent: config.persistent,
       minAmount: config.minAmount,
       layers: config.layers,
       reactions: config.reactions,
@@ -1398,6 +1416,7 @@
         durationMs: composition.durationMs,
         stack: composition.stack === true,
         stackMax: composition.stackMax,
+        persistent: composition.persistent === true,
         minAmount: composition.minAmount,
         layers: composition.layers.map((layer) => Object.assign({}, layer)),
       };
@@ -1407,6 +1426,7 @@
       durationMs: state.config.durationMs,
       stack: state.config.stack === true,
       stackMax: state.config.stackMax,
+      persistent: state.config.persistent === true,
       minAmount: state.config.minAmount,
       layers: state.config.layers.map((layer) => Object.assign({}, layer)),
       reactions,

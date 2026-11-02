@@ -181,6 +181,9 @@
       // Режим списка: новое событие сверху, старые строки уезжают вниз.
       stack: config.stack === true,
       stackMax: clamp(Math.round(toNumber(config.stackMax, 3)), 2, 6),
+      // Настройка «висеть постоянно»: строки списка не исчезают по таймеру, их
+      // вытесняет только новое событие. Так счётчик фолловеров висит в эфире.
+      persistent: config.persistent === true,
       // Порог доната: ниже этой суммы композиция молчит. Ноль — показывать все.
       minAmount: clamp(toNumber(config.minAmount, 0), 0, 1000000000),
       layers: normalizeLayers(config.layers),
@@ -209,6 +212,7 @@
       durationMs: composition.durationMs,
       stack: composition.stack,
       stackMax: composition.stackMax,
+      persistent: composition.persistent,
       minAmount: composition.minAmount,
       layers: composition.layers,
       reactions: normalizeReactions(source.reactions),
@@ -226,6 +230,7 @@
       durationMs: normalized.durationMs,
       stack: normalized.stack,
       stackMax: normalized.stackMax,
+      persistent: normalized.persistent,
       minAmount: normalized.minAmount,
       layers: normalized.layers,
     };
@@ -773,6 +778,10 @@
       finished = typeof onDone === "function" ? onDone : null;
 
       const normalized = normalizeComposition(config);
+      // Постоянная композиция не гаснет: слои остаются в кадре, пока их не
+      // заменит следующее событие или пока список не вытеснит самую старую
+      // строку.
+      const persistent = normalized.persistent && normalized.stack;
       const root = doc.createElement("div");
       root.className = "la-composition";
 
@@ -782,6 +791,7 @@
         root.appendChild(node.el);
 
         later(() => showLayer(node, layer), layer.start);
+        if (persistent) return;
         const end = layer.start + layer.duration;
         if (layer.out !== "none" && layer.outMs > 0) {
           later(() => exitLayer(node, layer), Math.max(layer.start, end - layer.outMs));
@@ -796,7 +806,9 @@
         const callback = finished;
         finished = null;
         stopped = true;
-        reset(false);
+        // Постоянные строки остаются живыми: видео продолжает крутиться,
+        // звук и печать не обрываются по общему таймеру.
+        if (!persistent) reset(false);
         if (callback) callback();
       }, total);
       return total;
@@ -809,7 +821,7 @@
     Список одновременных алертов: новое событие ставится в верхнюю строку,
     остальные сдвигаются вниз. Высота строки — `100 / stackMax` рамки, поэтому
     одну строку и рисуют в редакторе. Старые строки уходят сами по времени
-    композиции; при переполнении снимается самая нижняя.
+    композиции, а у постоянной — только при переполнении снимается самая нижняя.
   */
   function createStack(host, options) {
     const opts = options || {};
@@ -869,7 +881,7 @@
       el.style.transform = "translateY(-8px)";
       host.appendChild(el);
 
-      const item = { el, player: null };
+      const item = { el, player: null, persistent: normalized.persistent };
       items.unshift(item);
       layout();
 
@@ -880,7 +892,10 @@
 
       const player = createPlayer(el, opts);
       item.player = player;
-      player.play(normalized, alert, () => removeItem(item, true));
+      player.play(normalized, alert, () => {
+        // Постоянная строка живёт до вытеснения новой.
+        if (!normalized.persistent) removeItem(item, true);
+      });
       return item;
     }
 
@@ -902,6 +917,9 @@
       push,
       clear,
       size: () => items.length,
+      // Постоянные строки не освобождаются сами: одиночным алертам ждать их
+      // ухода бессмысленно, иначе они не заиграют никогда.
+      persistent: () => items.some((item) => item.persistent),
       onEmpty: (handler) => {
         emptyHandler = typeof handler === "function" ? handler : null;
       },

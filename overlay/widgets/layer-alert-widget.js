@@ -100,6 +100,7 @@
         config.durationMs,
         config.stack,
         config.stackMax,
+        config.persistent,
         config.minAmount,
         config.layers,
         config.reactions,
@@ -136,8 +137,9 @@
       if (!this.player || !this.stack) return;
       if (this.playing) return;
       // Пока список на экране, одиночные алерты ждут: они занимают всю рамку
-      // и перекрыли бы строки списка.
-      if (this.stack.size() > 0) return;
+      // и перекрыли бы строки списка. Постоянный список сам не освободится,
+      // поэтому его ждать не заставляем.
+      if (this.stack.size() > 0 && !this.stack.persistent()) return;
 
       if (this.pendingStack.length) {
         const pending = this.pendingStack;
@@ -148,7 +150,7 @@
           if (composition.stack) this.stack.push(composition, alert);
           else this.queue.push(alert);
         });
-        if (this.stack.size() > 0) return;
+        if (this.stack.size() > 0 && !this.stack.persistent()) return;
       }
 
       // Категория без слоёв пропускается, не занимая эфир пустой композицией.

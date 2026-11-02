@@ -121,6 +121,17 @@ describe("layer-composition: модель", () => {
     expect(LayerComposition.normalizeLayer({ textAnim: "shimmer" }, 0).textAnim).toBe("none");
   });
 
+  test("normalizeConfig знает постоянный показ", () => {
+    expect(LayerComposition.normalizeConfig({ persistent: true }).persistent).toBe(true);
+    expect(LayerComposition.normalizeComposition({}).persistent).toBe(false);
+    // У своей реакции свой флаг, как и остальные настройки композиции.
+    const composition = LayerComposition.compositionForEvent(
+      { persistent: true, reactions: { follow: { persistent: false, layers: [] } } },
+      "follow"
+    );
+    expect(composition.persistent).toBe(false);
+  });
+
   test("compositionForEvent переносит порог суммы реакции", () => {
     const composition = LayerComposition.compositionForEvent(
       { minAmount: 100, reactions: { donation: { minAmount: 500, layers: [] } } },
@@ -492,6 +503,29 @@ describe("layer-composition: проигрыватель", () => {
     expect(chunks[1].style.opacity).toBe("1");
   });
 
+  test("постоянная композиция остаётся в кадре после конца", () => {
+    const host = global.document.createElement("div");
+    const player = LayerComposition.createPlayer(host, {});
+    const done = jest.fn();
+
+    player.play(
+      {
+        durationMs: 500,
+        stack: true,
+        persistent: true,
+        layers: [
+          { type: "text", text: "hi", start: 0, duration: 400, in: "none", out: "none" },
+        ],
+      },
+      {},
+      done
+    );
+
+    jest.advanceTimersByTime(600);
+    expect(done).toHaveBeenCalledTimes(1);
+    expect(host.children[0].children[0].hidden).toBe(false);
+  });
+
   test("дешифровка заканчивается исходным текстом", () => {
     const host = global.document.createElement("div");
     const player = LayerComposition.createPlayer(host, {});
@@ -654,6 +688,32 @@ describe("layer-composition: список", () => {
     expect(textOf(atSecond(host))).toBe("Petya");
   });
 
+  test("постоянные строки не исчезают по таймеру", () => {
+    const host = global.document.createElement("div");
+    const stack = LayerComposition.createStack(host, {});
+    const row = (text) => ({
+      durationMs: 500,
+      stack: true,
+      stackMax: 2,
+      persistent: true,
+      layers: [{ id: text, type: "text", text, start: 0, duration: 400, in: "none", out: "none" }],
+    });
+
+    stack.push(row("Vasya"), {});
+    stack.push(row("Petya"), {});
+    jest.advanceTimersByTime(5000);
+    expect(stack.size()).toBe(2);
+    expect(stack.persistent()).toBe(true);
+    expect(textOf(atTop(host))).toBe("Petya");
+
+    // Третья строка вытесняет самую старую.
+    stack.push(row("Ivan"), {});
+    jest.advanceTimersByTime(300);
+    expect(stack.size()).toBe(2);
+    expect(textOf(atTop(host))).toBe("Ivan");
+    expect(textOf(atSecond(host))).toBe("Petya");
+  });
+
   test("после последней строки зовёт onEmpty", () => {
     const host = global.document.createElement("div");
     const stack = LayerComposition.createStack(host, {});
@@ -786,6 +846,22 @@ describe("layer-alert: виджет", () => {
     jest.advanceTimersByTime(1000);
     bus.emit(EVENT_TYPES.ALERT, { kind: "follow", user: "Fan" });
     expect(widget.queueHost.children).toHaveLength(1);
+  });
+
+  test("постоянный список висит в эфире", () => {
+    const { bus, widget } = mountWidget({
+      eventKinds: ["follow"],
+      durationMs: 300,
+      stack: true,
+      stackMax: 2,
+      persistent: true,
+      layers: [{ id: "t", type: "text", text: "{{user}}", start: 0, duration: 250, in: "none", out: "none" }],
+    });
+
+    bus.emit(EVENT_TYPES.ALERT, { kind: "follow", user: "Vasya" });
+    jest.advanceTimersByTime(5000);
+    expect(widget.stackHost.children).toHaveLength(1);
+    expect(widget.stackHost.children[0].children[0].children[0].children[0].textContent).toBe("Vasya");
   });
 
   test("играет свою реакцию категории вместо общей", () => {
