@@ -1326,10 +1326,29 @@
     if (layer) await pickFile(layer);
   });
 
+  function isEditableTarget(target) {
+    if (!target || target.nodeType !== 1) return false;
+    const tag = String(target.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "textarea" || tag === "select") return true;
+    return target.isContentEditable === true;
+  }
+
   document.addEventListener("keydown", (event) => {
-    if ((event.metaKey || event.ctrlKey) && event.key === "s") {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
       event.preventDefault();
       save();
+      return;
+    }
+    // Delete (и Backspace на клавиатурах Mac) удаляет выбранный слой, но
+    // только когда фокус не в поле ввода: там эти клавиши правят текст.
+    if (
+      (event.key === "Delete" || event.key === "Backspace") &&
+      !isEditableTarget(event.target) &&
+      !widgetGone &&
+      state.selectedId
+    ) {
+      event.preventDefault();
+      deleteSelected();
     }
   });
 
