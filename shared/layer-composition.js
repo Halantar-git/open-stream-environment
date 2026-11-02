@@ -24,9 +24,10 @@
   анимациями и таймингом.
 
   Координаты и размеры слоя — проценты от рамки виджета, `start`/`duration` —
-  миллисекунды от начала алерта. Размер текста — `cqw` (процент ширины рамки),
-  поэтому композиция одинаково выглядит в превью и в эфире при любом
-  разрешении источника OBS.
+  миллисекунды от начала алерта. `start` бывает отрицательным: такой слой
+  к первому кадру уже стоит в кадре, будто он начался до события. Размер
+  текста — `cqw` (процент ширины рамки), поэтому композиция одинаково
+  выглядит в превью и в эфире при любом разрешении источника OBS.
 */
 (function (root, factory) {
   const api = factory();
@@ -115,7 +116,7 @@
       y: clamp(toNumber(layer.y, 10), -100, 200),
       w: clamp(toNumber(layer.w, 80), 1, 200),
       h: clamp(toNumber(layer.h, 20), 1, 200),
-      start: clamp(toNumber(layer.start, 0), 0, MAX_TIME_MS),
+      start: clamp(toNumber(layer.start, 0), -MAX_TIME_MS, MAX_TIME_MS),
       duration: clamp(toNumber(layer.duration, 4000), MIN_LAYER_MS, MAX_TIME_MS),
       z: clamp(Math.round(toNumber(layer.z, 1)), 0, 100),
       opacity: clamp(toNumber(layer.opacity, 1), 0, 1),
@@ -606,6 +607,27 @@
     pauseMedia(audio);
   }
 
+  // Отрицательное начало означает, что слой «уже идёт» к моменту алерта,
+  // поэтому файл начинается не с нуля, а с пропущенного куска. У только что
+  // созданного элемента длительность ещё неизвестна — ждём метаданные.
+  function seekMedia(media, ms) {
+    if (!media) return;
+    const apply = () => {
+      try {
+        const seconds = ms / 1000;
+        if (Number.isFinite(media.duration) && seconds < media.duration) {
+          media.currentTime = Math.max(0, seconds);
+        }
+      } catch (_) {
+        /* источник без метаданных — начнём с начала */
+      }
+    };
+    if (Number.isFinite(media.duration)) apply();
+    else if (typeof media.addEventListener === "function") {
+      media.addEventListener("loadedmetadata", apply, { once: true });
+    }
+  }
+
   // ---- печать текста ----
 
   function reduceMotion() {
@@ -839,9 +861,11 @@
       reset(true);
     }
 
-    function showLayer(node, layer) {
+    function showLayer(node, layer, instant) {
       node.el.hidden = false;
-      const animate = layer.in !== "none" && layer.inMs > 0;
+      // Слой, начавшийся до алерта, к первому кадру уже стоит в кадре: вход и
+      // печать текста к этому моменту прошли. Медиа догоняем перемоткой.
+      const animate = !instant && layer.in !== "none" && layer.inMs > 0;
       if (!animate) {
         setVisual(node.el, layer.opacity, "none", 0);
       } else {
@@ -854,11 +878,14 @@
           setVisual(node.el, layer.opacity, "none", layer.inMs);
         });
       }
+      if (layer.start < 0) {
+        seekMedia(node.video || node.audio, -layer.start);
+      }
       if (node.video) playVideo(node.video);
       if (node.audio) playAudio(node.audio);
       // Появление текста идёт поверх входа: слой может одновременно выезжать
       // и печатать или проявляться по словам.
-      if (node.text) startTextReveal(node, layer);
+      if (!instant && node.text) startTextReveal(node, layer);
     }
 
     function exitLayer(node, layer) {
@@ -898,15 +925,17 @@
       // ни по времени: иначе пустая пауза держала бы эфир.
       const layers = layersForAlert(normalized.layers, alert);
       layers.forEach((layer) => {
+        const end = layer.start + layer.duration;
+        // Слой целиком прошёл до начала алерта — показывать уже нечего.
+        if (end <= 0) return;
         const node = createLayerNode(doc, layer, alert, opts);
         nodes.push(node);
         root.appendChild(node.el);
 
-        later(() => showLayer(node, layer), layer.start);
+        later(() => showLayer(node, layer, layer.start < 0), Math.max(0, layer.start));
         if (persistent) return;
-        const end = layer.start + layer.duration;
         if (layer.out !== "none" && layer.outMs > 0) {
-          later(() => exitLayer(node, layer), Math.max(layer.start, end - layer.outMs));
+          later(() => exitLayer(node, layer), Math.max(0, end - layer.outMs));
         }
         later(() => hideLayer(node), end);
       });
@@ -1059,6 +1088,7 @@
     EVENT_KINDS,
     DEFAULT_DURATION_MS,
     MIN_LAYER_MS,
+    MAX_TIME_MS,
     DEFAULT_TYPE_MS,
     MIN_TYPE_MS,
     MAX_TYPE_MS,

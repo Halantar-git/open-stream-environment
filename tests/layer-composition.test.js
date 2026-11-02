@@ -207,11 +207,19 @@ describe("layer-composition: модель", () => {
     expect(config.layers).toHaveLength(3);
     expect(config.layers[0].id).toBe("same");
     expect(config.layers[1].id).toBe("same-2");
-    expect(config.layers[0].start).toBe(0);
+    expect(config.layers[0].start).toBe(-100);
     expect(config.layers[0].duration).toBe(LayerComposition.MIN_LAYER_MS);
     expect(config.layers[1].opacity).toBe(1);
     // Неизвестный тип не роняет слой: он становится текстовым.
     expect(config.layers[2].type).toBe("text");
+  });
+
+  test("отрицательное начало слоя сохраняется", () => {
+    expect(LayerComposition.normalizeLayer({ start: -750 }, 0).start).toBe(-750);
+    // Слишком далеко в минус — обрезается так же, как и в плюс.
+    expect(LayerComposition.normalizeLayer({ start: -9e9 }, 0).start).toBe(
+      -LayerComposition.MAX_TIME_MS
+    );
   });
 
   test("compositionDuration учитывает самый поздний слой", () => {
@@ -576,6 +584,56 @@ describe("layer-composition: проигрыватель", () => {
     expect(total).toBe(300);
     // Слой другой категории не создаётся вовсе.
     expect(host.children[0].children).toHaveLength(1);
+  });
+
+  test("слой, начавшийся до алерта, стоит в кадре сразу и кончается в свой срок", () => {
+    const host = global.document.createElement("div");
+    const player = LayerComposition.createPlayer(host, {});
+
+    const total = player.play(
+      {
+        durationMs: 1000,
+        layers: [
+          { type: "text", text: "a", start: -500, duration: 800, in: "fade", inMs: 300, out: "none" },
+        ],
+      },
+      {},
+      () => {}
+    );
+
+    expect(total).toBe(1000);
+    jest.advanceTimersByTime(0);
+    const layer = host.children[0].children[0];
+    expect(layer.hidden).toBe(false);
+    // Вход не проигрывается: к первому кадру слой уже проявился сам.
+    expect(layer.style.opacity).toBe("1");
+
+    // Конец наступает через 300 мс после старта, а не через 800.
+    jest.advanceTimersByTime(299);
+    expect(layer.hidden).toBe(false);
+    jest.advanceTimersByTime(1);
+    expect(layer.hidden).toBe(true);
+  });
+
+  test("слой, закончившийся до алерта, не создаётся", () => {
+    const host = global.document.createElement("div");
+    const player = LayerComposition.createPlayer(host, {});
+
+    player.play(
+      {
+        durationMs: 1000,
+        layers: [
+          { type: "text", text: "past", start: -900, duration: 500, in: "none" },
+          { type: "text", text: "now", start: 0, duration: 900, in: "none" },
+        ],
+      },
+      {},
+      () => {}
+    );
+
+    jest.advanceTimersByTime(0);
+    expect(host.children[0].children).toHaveLength(1);
+    expect(host.children[0].children[0].dataset.layerId).toBe("layer-2");
   });
 
   test("звук играет в окне слоя и останавливается в конце", () => {
