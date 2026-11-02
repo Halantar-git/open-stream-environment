@@ -179,6 +179,15 @@ function checkWidget(packageDir, manifest, errors, warnings) {
 
   checkGeometry(manifest, errors, warnings);
   checkSettings(manifest, errors, warnings);
+
+  // 3D-виджет рисует на canvas: приложение отличит его от обычного по этим
+  // полям и включит вместе с набором темы.
+  const renderType = manifest.renderType === undefined ? "2d" : manifest.renderType;
+  if (!["2d", "canvas", "3d-webgl"].includes(renderType)) {
+    errors.push(`renderType «${String(manifest.renderType)}» неизвестен: 2d, canvas или 3d-webgl`);
+  } else if (renderType !== "2d" && !text(manifest.theme)) {
+    errors.push("3D-виджету (canvas или 3d-webgl) нужно поле theme — семейство темы");
+  }
 }
 
 function checkTheme(packageDir, manifest, errors, warnings) {
@@ -198,6 +207,17 @@ function checkTheme(packageDir, manifest, errors, warnings) {
       warnings.push("css должен быть строкой — приложение его проигнорирует");
     } else if (text(manifest.css)) {
       checkFile(packageDir, manifest.css, ".css", "css", errors);
+    }
+  }
+
+  if (manifest.threeDWidgets !== undefined) {
+    if (!Array.isArray(manifest.threeDWidgets)) {
+      errors.push("threeDWidgets должен быть массивом типов");
+    } else {
+      manifest.threeDWidgets.forEach((kind) => {
+        if (typeof kind !== "string") errors.push("threeDWidgets содержит не строку");
+        else if (!text(kind)) warnings.push("пустой тип в threeDWidgets пропускается");
+      });
     }
   }
 }

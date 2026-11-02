@@ -250,6 +250,17 @@ describe("shared/plugin-sandbox: запуск пакета", () => {
     expect(sandbox.state.instance.config.text).toBe("Новый");
   });
 
+  test("3D-виджет получает renderType и семейство темы", async () => {
+    const { sandbox, listener, frame } = boot();
+    deliver(listener, frame, initMessage({ renderType: "canvas", family: "orbit_test" }).data);
+    await Promise.resolve();
+
+    // renderType передаётся в конфиг виджета: base-widget создаёт canvas
+    // и запускает цикл кадров внутри рамки.
+    expect(sandbox.state.instance.raw.renderType).toBe("canvas");
+    expect(sandbox.state.instance.context.theme).toBe("orbit_test");
+  });
+
   test("подписка просит события у родителя и снимается последним обработчиком", async () => {
     class Subscribed extends FakeWidget {
       mount(host) {

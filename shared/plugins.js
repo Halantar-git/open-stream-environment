@@ -87,6 +87,11 @@
       icon: item.icon || "widgetCustom",
       plugin: true,
       pluginId: item.id,
+      // 3D-виджет привязан к семейству темы: по нему менеджер решает, включать
+      // его вместе с набором или держать только 2D-версию.
+      renderType: item.renderType === "canvas" || item.renderType === "3d-webgl" ? item.renderType : "2d",
+      dimension: item.dimension === "3d" ? "3d" : "2d",
+      theme: item.theme || "",
       defaultGeometry: item.geometry || {},
       minW: item.minW,
       minH: item.minH,

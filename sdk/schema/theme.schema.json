@@ -52,6 +52,11 @@
       "type": "string",
       "pattern": "\\.css$",
       "description": "CSS-файл внутри пакета; правила пишутся под [data-theme=\"plugin:<id>\"]."
+    },
+    "threeDWidgets": {
+      "type": "array",
+      "description": "Типы 3D-виджетов этой темы (plugin:<id>): на карточке появится тумблер «3D», и они включатся вместе с ним.",
+      "items": { "type": "string" }
     }
   },
   "additionalProperties": true

@@ -130,6 +130,27 @@ impl Registry {
         let title = text(&manifest, "name").unwrap_or_else(|| name.to_string());
         let description = text(&manifest, "description").unwrap_or_default();
         let plugin_type = format!("plugin:{name}");
+        // 3D-виджет — тот, который рисует на canvas или в WebGL. Псевдо-3D
+        // (перспектива на DOM) остаётся `2d` и в набор темы не попадает.
+        let render_type = match text(&manifest, "renderType").as_deref() {
+            None | Some("2d") => "2d",
+            Some("canvas") => "canvas",
+            Some("3d-webgl") => "3d-webgl",
+            Some(other) => {
+                return Err(format!(
+                    "renderType «{other}» неизвестен: 2d, canvas или 3d-webgl"
+                ))
+            }
+        };
+        let family = text(&manifest, "theme").unwrap_or_default();
+        // Без семейства менеджер виджетов не знает, к какой теме привязать
+        // 3D-виджет, и не сможет его включить или выключить вместе с набором.
+        if render_type != "2d" && family.is_empty() {
+            return Err(
+                "3D-виджету (canvas или 3d-webgl) нужно поле theme — семейство темы".to_string(),
+            );
+        }
+        let dimension = if render_type == "2d" { "2d" } else { "3d" };
 
         let mut defaults = Map::new();
         for (key, field) in &settings {
@@ -145,6 +166,9 @@ impl Registry {
             "icon": icon.clone(),
             "plugin": true,
             "pluginId": name,
+            "renderType": render_type,
+            "dimension": dimension,
+            "theme": family.clone(),
             "defaultGeometry": geometry.clone(),
             "minW": min_w,
             "minH": min_h,
@@ -165,6 +189,9 @@ impl Registry {
             "entry": entry.to_string_lossy().replace('\\', "/"),
             "styles": styles,
             "icon": icon,
+            "renderType": render_type,
+            "dimension": dimension,
+            "theme": family,
             "geometry": geometry,
             "minW": min_w,
             "minH": min_h,
@@ -204,6 +231,23 @@ impl Registry {
             None => None,
         };
 
+        // Набор 3D-виджетов темы: те же типы, что у своих тем. Без списка тема
+        // остаётся 2D, а тумблер «3D» на её карточке не появляется.
+        let mut three_d: Vec<Value> = Vec::new();
+        for item in array(&manifest, "threeDWidgets") {
+            let raw = item
+                .as_str()
+                .ok_or("threeDWidgets должен перечислять строки")?;
+            let kind = raw.trim();
+            if kind.is_empty() {
+                continue;
+            }
+            let value = Value::from(kind);
+            if !three_d.contains(&value) {
+                three_d.push(value);
+            }
+        }
+
         let id = format!("plugin:{name}");
         let title = text(&manifest, "name").unwrap_or_else(|| name.to_string());
         let color = |key: &str| tokens.get(key).cloned().unwrap_or(Value::Null);
@@ -216,6 +260,7 @@ impl Registry {
             "plugin": true,
             "category": "plugin",
             "dimension": "2d",
+            "threeDWidgets": Value::Array(three_d.clone()),
             "tokens": Value::Object(tokens.clone()),
         });
         self.themes.insert(id.clone(), theme);
@@ -229,6 +274,8 @@ impl Registry {
             "author": text(&manifest, "author").unwrap_or_default(),
             "baseUrl": format!("/plugins/{name}/"),
             "css": css,
+            "has3d": !three_d.is_empty(),
+            "threeDWidgets": three_d,
             "tokens": Value::Object(tokens.clone()),
             "colors": [color("--md-primary"), color("--md-secondary"), color("--md-tertiary")],
         }));
@@ -1099,6 +1146,115 @@ mod tests {
         fs::remove_dir_all(temp.0.join("hello")).expect("удаление пакета");
         plugins.refresh();
         assert!(plugins.widget_def("plugin:hello").is_none());
+    }
+
+    /// 3D-виджет получает семейство темы и размерность: по ним менеджер
+    /// виджетов решает, включать ли его вместе с набором темы.
+    #[test]
+    fn a_three_d_widget_keeps_its_render_type_and_family() {
+        let temp = TempDir::new("3d");
+        let manifest = json!({
+            "apiVersion": 1,
+            "kind": "widget",
+            "id": "orbit-test-3d",
+            "name": "Ring",
+            "entry": "widget.js",
+            "renderType": "canvas",
+            "theme": "orbit_test"
+        })
+        .to_string();
+        temp.package(
+            "orbit-test-3d",
+            &[("widget.json", manifest.as_str()), ("widget.js", "")],
+        );
+
+        let registry = Registry::scan(&temp.0);
+        assert!(registry.errors.is_empty(), "{:?}", registry.errors);
+        let def = registry
+            .widgets
+            .get("plugin:orbit-test-3d")
+            .expect("определение");
+        assert_eq!(def["renderType"], json!("canvas"));
+        assert_eq!(def["dimension"], json!("3d"));
+        assert_eq!(def["theme"], json!("orbit_test"));
+
+        let list = &registry.payload()["plugins"][0];
+        assert_eq!(list["renderType"], json!("canvas"));
+        assert_eq!(list["dimension"], json!("3d"));
+        assert_eq!(list["theme"], json!("orbit_test"));
+    }
+
+    #[test]
+    fn a_canvas_widget_without_a_family_is_refused() {
+        let temp = TempDir::new("3d-no-family");
+        let manifest = json!({
+            "apiVersion": 1,
+            "kind": "widget",
+            "id": "ring",
+            "name": "Ring",
+            "entry": "widget.js",
+            "renderType": "canvas"
+        })
+        .to_string();
+        temp.package(
+            "ring",
+            &[("widget.json", manifest.as_str()), ("widget.js", "")],
+        );
+
+        let registry = Registry::scan(&temp.0);
+        assert!(registry.widgets.is_empty());
+        assert!(registry.errors[0]["error"]
+            .as_str()
+            .unwrap_or_default()
+            .contains("theme"));
+    }
+
+    #[test]
+    fn an_unknown_render_type_is_refused() {
+        let temp = TempDir::new("render-type");
+        let manifest = widget_manifest("").replace(
+            "\"entry\": \"widget.js\",",
+            "\"entry\": \"widget.js\", \"renderType\": \"dom\",",
+        );
+        temp.package(
+            "hello",
+            &[
+                ("widget.json", manifest.as_str()),
+                ("widget.js", ""),
+                ("widget.css", ".x{}"),
+            ],
+        );
+
+        let registry = Registry::scan(&temp.0);
+        assert!(registry.widgets.is_empty());
+        assert!(registry.errors[0]["error"]
+            .as_str()
+            .unwrap_or_default()
+            .contains("renderType"));
+    }
+
+    #[test]
+    fn a_theme_lists_its_three_d_widgets() {
+        let temp = TempDir::new("3d-theme");
+        let manifest = json!({
+            "apiVersion": 1,
+            "kind": "theme",
+            "id": "orbit_test",
+            "name": "Orbit Test",
+            "tokens": { "--md-primary": "#00f0ff" },
+            "threeDWidgets": ["plugin:orbit-test-3d", "plugin:orbit-test-3d", ""]
+        })
+        .to_string();
+        temp.package("orbit_test", &[("theme.json", manifest.as_str())]);
+
+        let registry = Registry::scan(&temp.0);
+        assert!(registry.errors.is_empty(), "{:?}", registry.errors);
+        let theme = registry.themes.get("plugin:orbit_test").expect("тема");
+        assert_eq!(theme["threeDWidgets"], json!(["plugin:orbit-test-3d"]));
+
+        let list = &registry.payload()["plugins"][0];
+        assert_eq!(list["has3d"], json!(true));
+        assert_eq!(list["threeDWidgets"], json!(["plugin:orbit-test-3d"]));
     }
 
     fn zip_bytes(files: &[(&str, &str)]) -> Vec<u8> {

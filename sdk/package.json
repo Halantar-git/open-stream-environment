@@ -1,6 +1,6 @@
 {
   "name": "ose-plugin",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Scaffold and validate Open Stream Environment widget and theme packages, with types for window.OSE.",
   "license": "GPL-3.0-or-later",
   "type": "module",

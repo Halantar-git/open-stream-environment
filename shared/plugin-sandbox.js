@@ -52,6 +52,8 @@
     started: false,
     pluginId: "",
     baseUrl: "",
+    family: "",
+    renderType: "2d",
     instance: null,
     widgets: {},
     listeners: [],
@@ -312,6 +314,10 @@
      раскладке. Виджет растягивается на всю её площадь, поэтому тут проценты
      фиксированные. */
   function frameConfig(message) {
+    const renderType =
+      message.renderType === "canvas" || message.renderType === "3d-webgl"
+        ? message.renderType
+        : "2d";
     return {
       id: message.id,
       type: message.type,
@@ -321,7 +327,7 @@
       h: 100,
       z: 0,
       visible: true,
-      renderType: "2d",
+      renderType,
       config: message.config && typeof message.config === "object" ? message.config : {},
     };
   }
@@ -338,7 +344,7 @@
       currencySymbol,
       resolveMediaUrl,
       readCssVar,
-      theme: "",
+      theme: state.family || "",
     };
   }
 
@@ -398,6 +404,10 @@
     state.started = true;
     state.pluginId = String(message.pluginId || "");
     state.baseUrl = String(message.baseUrl || "");
+    state.family = String(message.family || "");
+    state.renderType = message.renderType === "canvas" || message.renderType === "3d-webgl"
+      ? message.renderType
+      : "2d";
     loadLocales(message.lang);
     applyTheme(message.theme);
     loadEntry(message);

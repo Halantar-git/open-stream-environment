@@ -533,6 +533,9 @@ curl -H "x-ose-token: <код>" http://192.168.1.42:8710/api/plugins
   `OSE.defineWidget("id", class extends OSE.BaseWidget { … })`;
 - тема — `theme.json` с `tokens` и необязательным `css`; правила CSS пишутся
   под `[data-theme="plugin:<id>"]`;
+- 3D-виджет — `renderType: "canvas"` или `"3d-webgl"` плюс `theme` с именем
+  семейства; тема перечисляет такие типы в `threeDWidgets`, и они включаются
+  тумблером «3D» на её карточке;
 - код пакета исполняется в отдельной рамке-песочнице (`iframe` без доступа к
   странице), но сеть ей доступна — ставить можно только доверенные пакеты.
 

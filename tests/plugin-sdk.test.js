@@ -181,6 +181,45 @@ describe("SDK пакетов", () => {
     expect(checked.out).toContain("за пределы пакета");
   });
 
+  test("3D-виджет без theme — ошибка", () => {
+    const dir = tempDir();
+    const folder = writeWidget(dir, { renderType: "canvas" });
+    const checked = validate(folder);
+    expect(checked.code).toBe(1);
+    expect(checked.out).toContain("семейство темы");
+  });
+
+  test("неизвестный renderType — ошибка", () => {
+    const dir = tempDir();
+    const folder = writeWidget(dir, { renderType: "dom", theme: "orbit" });
+    const checked = validate(folder);
+    expect(checked.code).toBe(1);
+    expect(checked.out).toContain("renderType");
+  });
+
+  test("тема с threeDWidgets проходит проверку", () => {
+    const dir = tempDir();
+    const folder = writePackage(
+      dir,
+      "orbit",
+      "theme.json",
+      JSON.stringify(
+        {
+          apiVersion: 1,
+          kind: "theme",
+          id: "orbit",
+          name: "Orbit",
+          tokens: { "--md-primary": "#00f0ff" },
+          threeDWidgets: ["plugin:ring"],
+        },
+        null,
+        2
+      )
+    );
+    const checked = validate(folder);
+    expect(checked.code).toBe(0);
+  });
+
   test("id не совпадает с именем папки — ошибка", () => {
     const dir = tempDir();
     const folder = writePackage(

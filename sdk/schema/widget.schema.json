@@ -55,6 +55,15 @@
       "type": "string",
       "description": "Ключ из shared/icons.js; неизвестный заменяется на widgetCustom."
     },
+    "renderType": {
+      "enum": ["2d", "canvas", "3d-webgl"],
+      "description": "canvas и 3d-webgl — 3D-виджет: он попадает в набор темы и рисуется на холсте внутри песочницы."
+    },
+    "theme": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Семейство темы. Обязательно для 3D-виджета: по нему он включается и выключается вместе с набором."
+    },
     "defaultGeometry": {
       "type": "object",
       "description": "Положение и размер в процентах холста (0–100).",

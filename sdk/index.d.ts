@@ -260,6 +260,10 @@ declare namespace Ose {
     entry: string;
     styles?: string[];
     icon?: string;
+    /** 3D-виджет: canvas или 3d-webgl. По умолчанию — обычный DOM-виджет. */
+    renderType?: "2d" | "canvas" | "3d-webgl";
+    /** Семейство темы; обязательно для 3D-виджета. */
+    theme?: string;
     defaultGeometry?: Partial<Pick<Geometry, "x" | "y" | "w" | "h">>;
     minW?: number;
     minH?: number;
@@ -270,6 +274,8 @@ declare namespace Ose {
     kind: "theme";
     tokens: Record<`--${string}`, string>;
     css?: string;
+    /** Типы 3D-виджетов этой темы: включаются тумблером «3D» на карточке. */
+    threeDWidgets?: string[];
   }
 }
 

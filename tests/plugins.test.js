@@ -127,6 +127,26 @@ describe("shared/plugins: каталог и темы", () => {
     expect(links).toEqual([]);
   });
 
+  test("3D-виджет из пакета сохраняет renderType и семейство темы", async () => {
+    const ring = {
+      ...widget,
+      id: "ring",
+      type: "plugin:ring",
+      renderType: "canvas",
+      dimension: "3d",
+      theme: "orbit_test",
+    };
+    const plugins = loadPlugins({ payload: { apiVersion: 1, plugins: [ring] } });
+    await plugins.load({ widgets: false });
+
+    const def = global.WidgetCatalog.WIDGET_TYPES["plugin:ring"];
+    // По этим полям менеджер виджетов включает 3D-виджет вместе с набором
+    // темы и решает, рисовать ли его на canvas.
+    expect(def.renderType).toBe("canvas");
+    expect(def.dimension).toBe("3d");
+    expect(def.theme).toBe("orbit_test");
+  });
+
   test("тема из пакета дописывается во встроенные и получает CSS", async () => {
     const plugins = loadPlugins({ payload: { apiVersion: 1, plugins: [theme] } });
     await plugins.load({ widgets: false });

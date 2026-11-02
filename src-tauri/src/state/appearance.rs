@@ -358,7 +358,7 @@ pub fn list_themes(config: &ConfigFile) -> Vec<Value> {
     }
 
     // Темы пакетов идут как встроенные: панель не предлагает их править или
-    // удалять, а токены уже готовы.
+    // удалять, а токены уже готовы. Свой 3D-набор у них — из `threeDWidgets`.
     for theme in crate::plugins::themes() {
         let color = |key: &str| {
             theme
@@ -367,13 +367,19 @@ pub fn list_themes(config: &ConfigFile) -> Vec<Value> {
                 .cloned()
                 .unwrap_or(Value::Null)
         };
+        let three_d = theme
+            .get("threeDWidgets")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
         out.push(json!({
             "id": theme.get("id").cloned().unwrap_or(Value::Null),
             "name": theme.get("name").cloned().unwrap_or(Value::Null),
             "builtin": true,
             "category": "plugin",
             "dimension": "2d",
-            "has3d": false,
+            "has3d": !three_d.is_empty(),
+            "threeDWidgets": three_d,
             "colors": [color("--md-primary"), color("--md-secondary"), color("--md-tertiary")],
         }));
     }

@@ -111,6 +111,13 @@
   class PluginFrameWidget extends BaseWidget {
     constructor(config = {}, context = {}, plugin = {}) {
       super(config, context);
+      // Обёртка всегда остаётся DOM-элементом с iframe: даже если виджет сам
+      // рисует на canvas или в WebGL, его холст живёт внутри рамки. Снаружи
+      // нужны только геометрия и видимость — иначе BaseWidget попытался бы
+      // создать WebGL-контекст на обёртке.
+      this.widgetRenderType =
+        this.renderType === "canvas" || this.renderType === "3d-webgl" ? this.renderType : "2d";
+      this.renderType = "2d";
       this.plugin = plugin || {};
       this.frame = null;
       this.ready = false;
@@ -236,6 +243,8 @@
         baseUrl: plugin.baseUrl || "",
         entry: plugin.entry || "",
         styles: (plugin.styles || []).map((style) => `${plugin.baseUrl || ""}${style}`),
+        renderType: this.widgetRenderType,
+        family: plugin.family || "",
         config,
         theme,
         lang: langOf(),
@@ -296,6 +305,9 @@
       baseUrl: source.baseUrl || (def && def.baseUrl) || "",
       entry: source.entry || (def && def.entry) || "",
       styles: Array.isArray(source.styles) ? source.styles.slice() : [],
+      // Семейство темы нужно 3D-виджетам: по нему менеджер включает виджет
+      // вместе с набором и передаёт его в контекст.
+      family: (def && def.theme) || "",
     };
     const name = meta.pluginId || "plugin";
     const Remote = class extends PluginFrameWidget {

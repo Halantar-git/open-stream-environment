@@ -244,4 +244,35 @@ describe("overlay/plugin-widget: рамка-песочница", () => {
     expect(bus.handlers.get("alert").size).toBe(0);
     expect(env.listeners.filter((item) => item.type === "message")).toHaveLength(0);
   });
+
+  test("3D-виджет остаётся в DOM-обёртке, а рамка получает свой renderType", () => {
+    const env = setup();
+    const Widget = env.createPluginWidget(plugin, { theme: "orbit_test" });
+    const instance = new Widget(
+      {
+        id: "w2",
+        type: "plugin:hello",
+        renderType: "canvas",
+        x: 0,
+        y: 0,
+        w: 50,
+        h: 50,
+        config: {},
+      },
+      { bus: makeBus() }
+    );
+    instance.mount(makeElement("div"));
+
+    // Снаружи — обычный div с рамкой, а не canvas: холст живёт в песочнице.
+    expect(instance.renderType).toBe("2d");
+    expect(instance.element.tagName).toBe("DIV");
+    expect(instance.element.children[0].tagName).toBe("IFRAME");
+
+    const listener = env.listeners.find((item) => item.type === "message").handler;
+    listener({ source: instance.frame.contentWindow, data: { ose: "ready" } });
+
+    const init = env.posted[0];
+    expect(init.renderType).toBe("canvas");
+    expect(init.family).toBe("orbit_test");
+  });
 });

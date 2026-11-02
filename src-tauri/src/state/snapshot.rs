@@ -27,7 +27,12 @@ use crate::storage::secrets::labels;
 pub fn snapshot(config: &ConfigFile, db: &Database, runtime: &Runtime) -> Value {
     let theme_2d = appearance::resolved_theme(config);
     let theme_3d = appearance::resolved_theme_3d(config);
-    let is_custom_base = theme_2d.get("builtin").and_then(Value::as_bool) != Some(true);
+    // Тема из пакета помечена `builtin`, чтобы панель не предлагала её править,
+    // но набор 3D-виджетов у неё свой — как у своих тем, а не вариант
+    // встроенной. Поэтому в расчёте набора она идёт по ветке своей темы.
+    let is_plugin_theme = theme_2d.get("plugin").and_then(Value::as_bool) == Some(true);
+    let is_custom_base =
+        theme_2d.get("builtin").and_then(Value::as_bool) != Some(true) || is_plugin_theme;
     let appearance_config = appearance::appearance_config(config);
     let enabled_3d = appearance_config
         .get("enabled3d")
