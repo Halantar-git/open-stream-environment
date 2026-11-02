@@ -127,6 +127,39 @@ describe("layer-composition: модель", () => {
     );
     expect(text).toBe("Stargazer — 1 500 ₽: Привет ");
   });
+
+  test("normalizeConfig хранит реакции категорий и отбрасывает мусор", () => {
+    const reactions = JSON.parse(
+      '{"donation":{"durationMs":5000,"layers":[{"text":"donation"}]},"__proto__":{"layers":[]},"broken":42}'
+    );
+    const config = LayerComposition.normalizeConfig({
+      layers: [{ text: "default" }],
+      reactions,
+    });
+
+    expect(Object.keys(config.reactions)).toEqual(["donation"]);
+    expect(config.reactions.donation.durationMs).toBe(5000);
+    expect(config.reactions.donation.layers[0].text).toBe("donation");
+  });
+
+  test("compositionForEvent берёт реакцию категории, иначе общую", () => {
+    const config = {
+      durationMs: 6000,
+      layers: [{ id: "d", text: "default" }],
+      reactions: {
+        donation: { durationMs: 4000, layers: [{ id: "x", text: "donation" }] },
+        follow: { durationMs: 3000, layers: [] },
+      },
+    };
+
+    expect(LayerComposition.compositionForEvent(config, "donation").layers[0].text).toBe(
+      "donation"
+    );
+    // Категория без своей реакции наследует общую.
+    expect(LayerComposition.compositionForEvent(config, "sub").layers[0].text).toBe("default");
+    // Пустая своя реакция — осмысленное «молчать», а не откат к общей.
+    expect(LayerComposition.compositionForEvent(config, "follow").layers).toEqual([]);
+  });
 });
 
 // ---- static render ----
@@ -267,7 +300,7 @@ describe("layer-alert: виджет", () => {
     global.cancelAnimationFrame = realCancel;
   });
 
-  function mountWidget() {
+  function mountWidget(config) {
     const bus = new EventBus();
     const context = {
       bus,
@@ -286,7 +319,7 @@ describe("layer-alert: виджет", () => {
         h: 20,
         z: 0,
         visible: true,
-        config: {
+        config: config || {
           eventKinds: ["donation"],
           durationMs: 1000,
           layers: [
@@ -331,5 +364,38 @@ describe("layer-alert: виджет", () => {
 
     jest.advanceTimersByTime(1000);
     expect(widget.host.children).toHaveLength(0);
+  });
+
+  test("играет свою реакцию категории вместо общей", () => {
+    const { bus, widget } = mountWidget({
+      eventKinds: [],
+      durationMs: 1000,
+      layers: [{ id: "base", type: "text", text: "common", start: 0, duration: 900, in: "none", out: "none" }],
+      reactions: {
+        donation: {
+          durationMs: 1000,
+          layers: [{ id: "own", type: "text", text: "donation!", start: 0, duration: 900, in: "none", out: "none" }],
+        },
+      },
+    });
+
+    bus.emit(EVENT_TYPES.ALERT, { kind: "donation" });
+    expect(widget.host.children[0].children[0].children[0].textContent).toBe("donation!");
+  });
+
+  test("пустая реакция категории молчит, не занимая эфир", () => {
+    const { bus, widget } = mountWidget({
+      eventKinds: [],
+      durationMs: 1000,
+      layers: [{ id: "base", type: "text", text: "common", start: 0, duration: 900, in: "none", out: "none" }],
+      reactions: { donation: { durationMs: 1000, layers: [] } },
+    });
+
+    bus.emit(EVENT_TYPES.ALERT, { kind: "donation" });
+    expect(widget.host.children).toHaveLength(0);
+
+    // Остальные категории по-прежнему идут по общей композиции.
+    bus.emit(EVENT_TYPES.ALERT, { kind: "follow" });
+    expect(widget.host.children[0].children[0].children[0].textContent).toBe("common");
   });
 });

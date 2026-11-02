@@ -43,6 +43,7 @@
   const testBtn = document.getElementById("testBtn");
   const previewBox = document.getElementById("previewBox");
   const stage = document.getElementById("stage");
+  const scopeSelect = document.getElementById("scopeSelect");
   const rows = document.getElementById("rows");
   const rulerTrack = document.getElementById("rulerTrack");
   const layerList = document.getElementById("layerList");
@@ -61,7 +62,13 @@
 
   const state = {
     geometry: { w: 48, h: 30 },
-    config: LC.normalizeConfig({ eventKinds: [], durationMs: 6000, layers: [] }),
+    config: LC.normalizeConfig({
+      eventKinds: [],
+      durationMs: 6000,
+      layers: [],
+      reactions: {},
+    }),
+    scope: "",
     selectedId: null,
     playing: false,
     drag: null,
@@ -108,7 +115,46 @@
   }
 
   function findLayer(id) {
-    return state.config.layers.find((layer) => layer.id === id) || null;
+    return activeLayers().find((layer) => layer.id === id) || null;
+  }
+
+  // Редактор показывает либо общую композицию, либо реакцию выбранной
+  // категории. Пока своей реакции нет, показываем общую — она и играет в
+  // эфире, — но первая же правка создаст копию через `ensureActive()`.
+  function active() {
+    if (state.scope && state.config.reactions[state.scope]) {
+      return state.config.reactions[state.scope];
+    }
+    return state.config;
+  }
+
+  function activeLayers() {
+    return active().layers;
+  }
+
+  function ownsReaction() {
+    return !!state.scope && !!state.config.reactions[state.scope];
+  }
+
+  function cloneComposition(composition) {
+    return {
+      durationMs: composition.durationMs,
+      layers: composition.layers.map((layer) => Object.assign({}, layer)),
+    };
+  }
+
+  // Копия «на запись»: пока категория наследует общую композицию, правка
+  // отделяет её. Иначе первое же перетаскивание клипа меняло бы алерты всех
+  // остальных категорий.
+  function ensureActive() {
+    if (!state.scope) return state.config;
+    const existing = state.config.reactions[state.scope];
+    if (existing) return existing;
+    const created = cloneComposition(state.config);
+    state.config.reactions[state.scope] = created;
+    renderScopeSelect();
+    renderReactionBanner();
+    return created;
   }
 
   function layerKindLabel(type) {
@@ -145,12 +191,12 @@
   }
 
   function timelineTotal() {
-    const total = LC.compositionDuration(state.config);
+    const total = LC.compositionDuration(active());
     return Math.max(4000, Math.ceil(total / 1000) * 1000);
   }
 
   function sampleAlert() {
-    const kind = state.config.eventKinds[0] || "donation";
+    const kind = state.scope || state.config.eventKinds[0] || "donation";
     return {
       kind,
       user: "Stargazer",
@@ -211,7 +257,7 @@
 
   function renderPreview() {
     if (state.playing) return;
-    LC.renderStatic(stage, state.config, sampleAlert(), previewOptions);
+    LC.renderStatic(stage, active(), sampleAlert(), previewOptions);
   }
 
   function schedulePreview(delay) {
@@ -250,7 +296,7 @@
   function renderRows() {
     const total = timelineTotal();
     rows.innerHTML = "";
-    state.config.layers.forEach((layer, index) => {
+    activeLayers().forEach((layer, index) => {
       const row = document.createElement("div");
       row.className = "te-row" + (layer.id === state.selectedId ? " is-selected" : "");
       row.dataset.id = layer.id;
@@ -290,14 +336,15 @@
 
   function renderLayerList() {
     layerList.innerHTML = "";
-    if (!state.config.layers.length) {
+    const layers = activeLayers();
+    if (!layers.length) {
       const empty = document.createElement("p");
       empty.className = "te-empty";
       empty.textContent = t("timelineEditor.emptyLayers");
       layerList.appendChild(empty);
       return;
     }
-    state.config.layers.forEach((layer, index) => {
+    layers.forEach((layer, index) => {
       const item = document.createElement("button");
       item.type = "button";
       item.className = "te-layer-item" + (layer.id === state.selectedId ? " is-selected" : "");
@@ -320,7 +367,7 @@
       inspector.innerHTML = '<p class="te-empty">' + escapeHtml(t("timelineEditor.noSelection")) + "</p>";
       return;
     }
-    const index = state.config.layers.indexOf(layer);
+    const index = activeLayers().indexOf(layer);
     const isText = layer.type === "text";
     const isVideo = layer.type === "video";
 
@@ -581,6 +628,56 @@
     bind("fOut", "change", (event) => patchLayer({ out: event.target.value }));
   }
 
+  function renderScopeSelect() {
+    if (!scopeSelect) return;
+    const options = [
+      '<option value="">' + escapeHtml(t("timelineEditor.scopeDefault")) + "</option>",
+    ];
+    LC.EVENT_KINDS.forEach((kind) => {
+      const own = !!state.config.reactions[kind];
+      options.push(
+        '<option value="' +
+          escapeHtml(kind) +
+          '">' +
+          escapeHtml(kindLabel(kind)) +
+          (own ? " •" : "") +
+          "</option>"
+      );
+    });
+    scopeSelect.innerHTML = options.join("");
+    scopeSelect.value = state.scope;
+    scopeSelect.title = t("timelineEditor.scopeDefaultHint");
+  }
+
+  function renderReactionBanner() {
+    const host = document.getElementById("reactionBanner");
+    if (!host) return;
+    if (!state.scope) {
+      host.hidden = true;
+      host.innerHTML = "";
+      return;
+    }
+    host.hidden = false;
+    const kind = kindLabel(state.scope);
+    if (ownsReaction()) {
+      host.innerHTML =
+        '<div class="te-note"><span>' +
+        escapeHtml(t("timelineEditor.scopeOwn", { kind })) +
+        '</span><button class="md-button md-button--text" id="resetReaction" type="button">' +
+        escapeHtml(t("timelineEditor.scopeReset")) +
+        "</button></div>";
+      host.querySelector("#resetReaction").addEventListener("click", resetReaction);
+    } else {
+      host.innerHTML =
+        '<div class="te-note te-note--muted"><span>' +
+        escapeHtml(t("timelineEditor.scopeInherit", { kind })) +
+        '</span><button class="md-button md-button--tonal" id="createReaction" type="button">' +
+        escapeHtml(t("timelineEditor.scopeCreate")) +
+        "</button></div>";
+      host.querySelector("#createReaction").addEventListener("click", createReaction);
+    }
+  }
+
   function renderComposition() {
     const checks = LC.EVENT_KINDS.map(
       (kind) =>
@@ -597,7 +694,7 @@
       '<div class="te-field"><label>' +
       escapeHtml(t("timelineEditor.duration")) +
       ': <span id="compActual"></span></label><input type="number" id="compDuration" min="100" max="600000" step="100" value="' +
-      state.config.durationMs +
+      active().durationMs +
       '"></div>' +
       '<p class="te-hint">' +
       escapeHtml(t("timelineEditor.durationHint")) +
@@ -610,13 +707,17 @@
       escapeHtml(t("timelineEditor.eventKindsHint")) +
       "</p>";
 
+    renderReactionBanner();
+
     const durationInput = composition.querySelector("#compDuration");
     durationInput.addEventListener("input", (event) => {
       const value = Number(event.target.value);
       if (!Number.isFinite(value)) return;
-      state.config.durationMs = clamp(value, MIN_DURATION, MAX_TIME);
+      const target = ensureActive();
+      target.durationMs = clamp(value, MIN_DURATION, MAX_TIME);
       renderRuler();
       updateActualDuration();
+      schedulePreview();
     });
 
     composition.querySelectorAll('input[type="checkbox"]').forEach((input) => {
@@ -633,10 +734,11 @@
   function updateActualDuration() {
     const label = document.getElementById("compActual");
     if (!label) return;
-    label.textContent = (LC.compositionDuration(state.config) / 1000).toFixed(2) + " s";
+    label.textContent = (LC.compositionDuration(active()) / 1000).toFixed(2) + " s";
   }
 
   function renderAll() {
+    renderScopeSelect();
     renderLayerList();
     renderRows();
     renderRuler();
@@ -649,9 +751,12 @@
   // ---- edits ----
 
   function patchLayer(patch, timelines) {
-    const layer = findLayer(state.selectedId);
+    // Правка в категории создаёт её собственную реакцию — общую композицию
+    // трогать нельзя, иначе менялись бы все остальные категории.
+    const composition = ensureActive();
+    const layer = composition.layers.find((item) => item.id === state.selectedId);
     if (!layer) return;
-    const index = state.config.layers.indexOf(layer);
+    const index = composition.layers.indexOf(layer);
     Object.assign(layer, patch);
     Object.assign(layer, LC.normalizeLayer(layer, index));
     if (timelines !== false) {
@@ -671,37 +776,66 @@
     renderInspector();
   }
 
+  function setScope(scope) {
+    if (state.scope === scope) return;
+    stopPlayback();
+    state.scope = scope;
+    const layers = activeLayers();
+    state.selectedId = layers.length ? layers[0].id : null;
+    renderAll();
+  }
+
+  function createReaction() {
+    ensureActive();
+    const layers = activeLayers();
+    state.selectedId = layers.length ? layers[0].id : null;
+    renderAll();
+  }
+
+  function resetReaction() {
+    if (!state.scope) return;
+    stopPlayback();
+    delete state.config.reactions[state.scope];
+    const layers = activeLayers();
+    state.selectedId = layers.length ? layers[0].id : null;
+    renderAll();
+  }
+
   function deleteSelected() {
-    const index = state.config.layers.findIndex((layer) => layer.id === state.selectedId);
+    const current = activeLayers();
+    const index = current.findIndex((layer) => layer.id === state.selectedId);
     if (index < 0) return;
     if (typeof window.confirm === "function" && !window.confirm(t("timelineEditor.confirmDelete"))) {
       return;
     }
-    state.config.layers.splice(index, 1);
-    const next = state.config.layers[Math.min(index, state.config.layers.length - 1)];
+    const composition = ensureActive();
+    composition.layers.splice(index, 1);
+    const next = composition.layers[Math.min(index, composition.layers.length - 1)];
     state.selectedId = next ? next.id : null;
     renderAll();
   }
 
   function addLayer(type, src) {
+    const current = activeLayers();
     if (type === "video") {
-      const videos = state.config.layers.filter((layer) => layer.type === "video").length;
+      const videos = current.filter((layer) => layer.type === "video").length;
       if (videos >= 4) {
         if (typeof window.alert === "function") window.alert(t("timelineEditor.videoLimit"));
         return null;
       }
     }
-    const maxZ = state.config.layers.reduce((max, layer) => Math.max(max, layer.z), 0);
-    const first = state.config.layers.length === 0;
+    const composition = ensureActive();
+    const maxZ = composition.layers.reduce((max, layer) => Math.max(max, layer.z), 0);
+    const first = composition.layers.length === 0;
     const layer = LC.normalizeLayer(
       {
         id: newLayerId(type),
         type,
         text: type === "text" ? (first ? "{{user}}" : "{{message}}") : "",
         src: src || "",
-        x: type === "text" ? 10 : 10,
+        x: 10,
         y: type === "text" ? 30 : 10,
-        w: type === "text" ? 80 : 80,
+        w: 80,
         h: type === "text" ? 20 : 80,
         start: 0,
         duration: 5000,
@@ -719,9 +853,9 @@
         inMs: 300,
         outMs: 300,
       },
-      state.config.layers.length
+      composition.layers.length
     );
-    state.config.layers.push(layer);
+    composition.layers.push(layer);
     state.selectedId = layer.id;
     renderAll();
     return layer;
@@ -750,19 +884,22 @@
           : "move";
 
     selectLayer(layer.id);
+    const composition = ensureActive();
+    const liveLayer = composition.layers.find((item) => item.id === layer.id);
+    if (!liveLayer) return;
     const track = rows.querySelector('.te-row[data-id="' + layer.id + '"] .te-row__track');
     if (!track) return;
     const width = track.getBoundingClientRect().width;
     if (!(width > 0)) return;
 
     state.drag = {
-      id: layer.id,
+      id: liveLayer.id,
       mode,
       startX: event.clientX,
       width,
       total: timelineTotal(),
-      origStart: layer.start,
-      origDuration: layer.duration,
+      origStart: liveLayer.start,
+      origDuration: liveLayer.duration,
     };
     document.addEventListener("pointermove", onDragMove);
     document.addEventListener("pointerup", onDragEnd, { once: true });
@@ -837,10 +974,11 @@
   }
 
   function testPlayback() {
-    if (!state.config.layers.length) return;
+    const composition = active();
+    if (!composition.layers.length) return;
     stopPlayback();
     state.playing = true;
-    const total = player.play(state.config, sampleAlert(), () => {
+    const total = player.play(composition, sampleAlert(), () => {
       state.playing = false;
       playhead.hidden = true;
       renderPreview();
@@ -876,7 +1014,9 @@
       eventKinds: config.eventKinds,
       durationMs: config.durationMs,
       layers: config.layers,
+      reactions: config.reactions,
     });
+    state.scope = "";
     state.selectedId = state.config.layers.length ? state.config.layers[0].id : null;
     renderAll();
   }
@@ -906,10 +1046,19 @@
   function save() {
     if (widgetGone) return;
     stopPlayback();
+    const reactions = {};
+    Object.keys(state.config.reactions).forEach((kind) => {
+      const composition = state.config.reactions[kind];
+      reactions[kind] = {
+        durationMs: composition.durationMs,
+        layers: composition.layers.map((layer) => Object.assign({}, layer)),
+      };
+    });
     const config = {
       eventKinds: state.config.eventKinds.slice(),
       durationMs: state.config.durationMs,
       layers: state.config.layers.map((layer) => Object.assign({}, layer)),
+      reactions,
     };
     send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: widgetId, patch: { config } });
     setStatus("saved");
@@ -920,6 +1069,9 @@
 
   saveBtn.addEventListener("click", save);
   testBtn.addEventListener("click", testPlayback);
+  if (scopeSelect) {
+    scopeSelect.addEventListener("change", () => setScope(scopeSelect.value));
+  }
   document.getElementById("addText").addEventListener("click", () => addLayer("text"));
   document.getElementById("addImage").addEventListener("click", async () => {
     const layer = addLayer("image");

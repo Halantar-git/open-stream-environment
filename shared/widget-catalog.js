@@ -124,6 +124,7 @@
       defaultConfig: {
         eventKinds: [],
         durationMs: 6000,
+        reactions: {},
         layers: [
           {
             id: "title",

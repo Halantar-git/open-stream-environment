@@ -78,7 +78,12 @@
 
     _key() {
       const config = this.config || {};
-      return JSON.stringify([config.eventKinds, config.durationMs, config.layers]);
+      return JSON.stringify([
+        config.eventKinds,
+        config.durationMs,
+        config.layers,
+        config.reactions,
+      ]);
     }
 
     _stopCurrent() {
@@ -94,17 +99,24 @@
     }
 
     drain() {
-      const alert = this.queue.shift();
-      if (!alert) {
-        this.playing = false;
-        if (this.host) this.host.innerHTML = "";
-        return;
+      // Категория без слоёв — осознанное «молчать»: пропускаем её, не занимая
+      // эфир пустой композицией. Цикл вместо рекурсии: очередь может быть
+      // длинной, а тишина не должна упираться в стек.
+      let alert = this.queue.shift();
+      while (alert) {
+        const composition = LayerComposition.compositionForEvent(this.config, alert.kind);
+        if (composition.layers.length) {
+          this.playing = true;
+          this.player.play(composition, alert, () => {
+            this.playing = false;
+            this.drain();
+          });
+          return;
+        }
+        alert = this.queue.shift();
       }
-      this.playing = true;
-      this.player.play(this.config, alert, () => {
-        this.playing = false;
-        this.drain();
-      });
+      this.playing = false;
+      if (this.host) this.host.innerHTML = "";
     }
 
     render() {}

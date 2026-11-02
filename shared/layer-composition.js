@@ -135,14 +135,13 @@
     return kinds;
   }
 
-  function normalizeConfig(config) {
-    const source = config && typeof config === "object" ? config : {};
-    const rawLayers = Array.isArray(source.layers) ? source.layers : [];
+  // Слои одной композиции. Идентификатор нужен редактору и проигрывателю,
+  // поэтому дубликаты разводим суффиксом, а не оставляем двум слоям один ключ.
+  function normalizeLayers(value) {
+    const rawLayers = Array.isArray(value) ? value : [];
     const usedIds = new Set();
-    const layers = rawLayers.map((raw, index) => {
+    return rawLayers.map((raw, index) => {
       const layer = normalizeLayer(raw, index);
-      // Идентификатор нужен редактору и проигрывателю, поэтому дубликаты
-      // разводим суффиксом, а не оставляем двум слоям один ключ.
       let id = layer.id;
       let suffix = 2;
       while (usedIds.has(id)) {
@@ -153,17 +152,61 @@
       layer.id = id;
       return layer;
     });
+  }
+
+  // Одна композиция: минимальная длительность и слои. Этого достаточно
+  // проигрывателю, превью и таймлайну.
+  function normalizeComposition(source) {
+    const config = source && typeof source === "object" ? source : {};
+    return {
+      durationMs: clamp(
+        toNumber(config.durationMs, DEFAULT_DURATION_MS),
+        MIN_LAYER_MS,
+        MAX_TIME_MS
+      ),
+      layers: normalizeLayers(config.layers),
+    };
+  }
+
+  // Отдельные реакции по категориям. Ключ — `kind` события, значение — своя
+  // композиция. Пустой объект значит «у всех категорий общая композиция».
+  function normalizeReactions(value) {
+    const reactions = {};
+    if (!value || typeof value !== "object" || Array.isArray(value)) return reactions;
+    Object.keys(value).forEach((kind) => {
+      if (!kind || kind === "__proto__" || kind === "constructor" || kind === "prototype") return;
+      const composition = value[kind];
+      if (!composition || typeof composition !== "object" || Array.isArray(composition)) return;
+      reactions[kind] = normalizeComposition(composition);
+    });
+    return reactions;
+  }
+
+  function normalizeConfig(config) {
+    const source = config && typeof config === "object" ? config : {};
+    const composition = normalizeComposition(source);
     return {
       eventKinds: normalizeKinds(source.eventKinds),
-      durationMs: clamp(toNumber(source.durationMs, DEFAULT_DURATION_MS), MIN_LAYER_MS, MAX_TIME_MS),
-      layers,
+      durationMs: composition.durationMs,
+      layers: composition.layers,
+      reactions: normalizeReactions(source.reactions),
     };
+  }
+
+  // Композиция для конкретного события: своя реакция категории, если она
+  // задана, иначе общая. Пустая своя реакция — осознанное «молчать»: слоёв
+  // нет, и виджет просто не играет этот алерт.
+  function compositionForEvent(config, kind) {
+    const normalized = normalizeConfig(config);
+    const own = kind ? normalized.reactions[String(kind)] : null;
+    if (own) return own;
+    return { durationMs: normalized.durationMs, layers: normalized.layers };
   }
 
   // Сколько длится композиция: минимальная длительность из настроек или
   // конец самого позднего слоя — что позже.
   function compositionDuration(config) {
-    const normalized = normalizeConfig(config);
+    const normalized = normalizeComposition(config);
     let end = normalized.durationMs;
     normalized.layers.forEach((layer) => {
       end = Math.max(end, layer.start + layer.duration);
@@ -332,7 +375,7 @@
     host.innerHTML = "";
     const doc = host.ownerDocument || (typeof document !== "undefined" ? document : null);
     if (!doc) return;
-    const normalized = normalizeConfig(config);
+    const normalized = normalizeComposition(config);
     const root = doc.createElement("div");
     root.className = "la-composition";
     normalized.layers.forEach((layer) => {
@@ -426,7 +469,7 @@
       stopped = false;
       finished = typeof onDone === "function" ? onDone : null;
 
-      const normalized = normalizeConfig(config);
+      const normalized = normalizeComposition(config);
       const root = doc.createElement("div");
       root.className = "la-composition";
 
@@ -469,7 +512,10 @@
     DEFAULT_DURATION_MS,
     MIN_LAYER_MS,
     normalizeLayer,
+    normalizeLayers,
+    normalizeComposition,
     normalizeConfig,
+    compositionForEvent,
     compositionDuration,
     matchesEvent,
     fillText,
