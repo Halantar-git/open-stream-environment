@@ -28,6 +28,9 @@ Thumbs.db
 # таким именем, а git add . потом пытается его закоммитить.
 nul
 repomix-output.xml
+# Личное руководство по «Алерт-композиции»: ведётся локально и в репозиторий
+# не едет. `release.bat` делает git add ., поэтому исключение обязательно.
+docs/alert-composition-guide.md
 _discord-post.txt
 discord-update.txt
 discord-short.txt
