@@ -371,12 +371,14 @@ export function initPropertiesPanel({
     const webcamNeon = type === "webcam" ? (raw.config && raw.config.neon ? 1 : 0) : "";
     const cameraCodec = type === "webcam" ? (state.cameraConfig && state.cameraConfig.codec) || "auto" : "";
     const guestSlotsSig = type === "webcam" ? (state.guestSlots || []).map((s) => `${s.slot}:${s.state}`).join(",") : "";
-    const sig = `${raw.id}|${raw.type}|${type}|${micMode}|${micRotation}|${micMirror}|${webcamSource}|${webcamNeon}|${cameraCodec}|${(raw.config && raw.config.guestSlot) || ""}|${guestSlotsSig}|${(state.micDevices || []).length}|${(state.cameraDevices || []).length}`;
+    const sig = `${raw.id}|${raw.type}|${type}|${(raw.config && raw.config.name) || ""}|${micMode}|${micRotation}|${micMirror}|${webcamSource}|${webcamNeon}|${cameraCodec}|${(raw.config && raw.config.guestSlot) || ""}|${guestSlotsSig}|${(state.micDevices || []).length}|${(state.cameraDevices || []).length}`;
     if (!force && sig === lastSig && propertiesEl.contains(document.activeElement)) return;
     lastSig = sig;
     const def = WIDGET_TYPES[type] || {};
-    propertiesTitle.textContent = (def.plugin && def.label) || t("widgets." + (def.type || type));
     const config = inst.config || {};
+    // Имя экземпляра важнее названия типа: так две одинаковые композиции
+    // различаются в заголовке инспектора.
+    propertiesTitle.textContent = config.name || (def.plugin && def.label) || t("widgets." + (def.type || type));
 
     let extraHtml = "";
     if (inst.type === "goal" || inst.type === "grimhex-goal" || inst.type === "nuclear-goal" || inst.type === "cobra-goal" || inst.type === "wardogs-goal" || inst.type === "md3-goal" || inst.type === "pixel-goal" || inst.type === "teso-goal" || inst.type === "retrowave-goal" || inst.type === "sf-goal" || inst.type === "terminal-goal") {
@@ -941,6 +943,11 @@ export function initPropertiesPanel({
 
     propertiesEl.innerHTML = `
       <div class="properties__toggle-row"><label>${t("properties.visibility")}</label>${switchHtml("pVisible", inst.visible)}</div>
+      ${
+        inst.type === "custom"
+          ? ""
+          : `<div class="md-field"><label>${t("properties.widgetName")}</label><input type="text" id="pWidgetName" maxlength="60" value="${escapeAttr(config.name || "")}" placeholder="${escapeAttr((def.plugin && def.label) || t("widgets." + (def.type || type)))}"></div>`
+      }
       <div class="properties__row">
         <div class="md-field"><label>${t("properties.x")}</label><input type="number" id="pX" value="${round1(inst.x)}"></div>
         <div class="md-field"><label>${t("properties.y")}</label><input type="number" id="pY" value="${round1(inst.y)}"></div>
@@ -958,6 +965,15 @@ export function initPropertiesPanel({
       });
     });
     wireSwitch(propertiesEl.querySelector("#pVisible"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { visible: on } }));
+    const nameInput = propertiesEl.querySelector("#pWidgetName");
+    if (nameInput) {
+      nameInput.addEventListener("change", () => {
+        send(EVENT_TYPES.CMD_UPDATE_WIDGET, {
+          id: inst.id,
+          patch: { config: { name: nameInput.value.trim().slice(0, 60) } },
+        });
+      });
+    }
 
     // Ползунок поворота общий для всех 3D-виджетов.
     const angleInput = propertiesEl.querySelector("#pWidgetAngle");
@@ -1438,9 +1454,7 @@ export function initPropertiesPanel({
 
     document.getElementById("pDeleteBtn").addEventListener("click", () => {
       const label =
-        inst.type === "custom" && config.name
-          ? config.name
-          : (def.plugin && def.label) || t("widgets." + (def.type || inst.type));
+        config.name || (def.plugin && def.label) || t("widgets." + (def.type || inst.type));
       if (!confirm(t("common.deleteWidgetConfirm", { name: label }))) return;
       send(EVENT_TYPES.CMD_REMOVE_WIDGET, { id: inst.id });
       state.selectedId = null;

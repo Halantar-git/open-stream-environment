@@ -1276,6 +1276,7 @@
     "layerAlertLayers": "Layers: {{count}}",
     "layerAlertOpen": "Open composition",
     "visibility": "Visibility",
+    "widgetName": "Name",
     "x": "X %",
     "y": "Y %",
     "width": "Width %",
@@ -1872,7 +1873,8 @@
       "p4": "Widget icons appear on the canvas next to the label on hover or selection, so widgets are easier to tell apart.",
       "p5": "The lock button in the toolbar below the canvas prevents dragging, resizing, deleting, adding and reordering widgets. Selection and property editing stay available — handy for avoiding an accidental layout shift during a live stream. The lock state is saved in settings and survives an app restart.",
       "p6": "For a 3D widget with an Angle slider the whole tile rotates on the canvas — frame, label and resize handles. Drag a handle along the widget's axes: width and height are measured in its rotated coordinate system, not on screen.",
-      "p7": "Double-clicking a widget opens its editor: the montage window for Alert composition, the code editor for Custom widget in HTML mode. Editor windows open maximized."
+      "p7": "Double-clicking a widget opens its editor: the montage window for Alert composition, the code editor for Custom widget in HTML mode. Editor windows open maximized.",
+      "p8": "Any widget can be renamed: the Name field in the inspector changes the label on the canvas, in the layers list, in the composition window title and in the delete confirmation. That keeps two compositions for different jobs — say, followers and donations — apart. Custom widget has its own name field that does the same."
     },
     "hud": {
       "title": "Overlays over the game (HUD)",

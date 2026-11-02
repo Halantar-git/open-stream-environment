@@ -121,6 +121,11 @@ describe("layer-composition: модель", () => {
     expect(LayerComposition.normalizeLayer({ textAnim: "shimmer" }, 0).textAnim).toBe("none");
   });
 
+  test("normalizeConfig сохраняет имя экземпляра", () => {
+    expect(LayerComposition.normalizeConfig({ name: "  Фолловеры  " }).name).toBe("Фолловеры");
+    expect(LayerComposition.normalizeConfig({}).name).toBe("");
+  });
+
   test("normalizeConfig знает постоянный показ", () => {
     expect(LayerComposition.normalizeConfig({ persistent: true }).persistent).toBe(true);
     expect(LayerComposition.normalizeComposition({}).persistent).toBe(false);

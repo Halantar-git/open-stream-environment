@@ -39,6 +39,7 @@
   const MAX_TIME = 600000;
 
   const statusLabel = document.getElementById("statusLabel");
+  const editorTitle = document.getElementById("editorTitle");
   const saveBtn = document.getElementById("saveBtn");
   const testBtn = document.getElementById("testBtn");
   const previewBox = document.getElementById("previewBox");
@@ -1073,6 +1074,7 @@
   }
 
   function renderAll() {
+    renderEditorTitle();
     renderScopeSelect();
     renderLayerList();
     renderRows();
@@ -1113,6 +1115,16 @@
     renderLayerList();
     renderInspector();
     renderSelection();
+  }
+
+  // В заголовке окна монтажа видно имя композиции: при нескольких виджетах
+  // иначе не понять, какой из них открыт.
+  function renderEditorTitle() {
+    if (!editorTitle) return;
+    const name = state.config.name;
+    editorTitle.textContent = name
+      ? t("timelineEditor.title") + " — " + name
+      : t("timelineEditor.title");
   }
 
   function setScope(scope) {
@@ -1447,6 +1459,7 @@
     const config = widget.config || {};
     state.config = LC.normalizeConfig({
       eventKinds: config.eventKinds,
+      name: config.name,
       durationMs: config.durationMs,
       stack: config.stack,
       stackMax: config.stackMax,
@@ -1499,6 +1512,7 @@
     });
     const config = {
       eventKinds: state.config.eventKinds.slice(),
+      name: state.config.name || "",
       durationMs: state.config.durationMs,
       stack: state.config.stack === true,
       stackMax: state.config.stackMax,

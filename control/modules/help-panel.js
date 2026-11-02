@@ -59,6 +59,7 @@ const SECTIONS = [
       { type: "p", key: "help.editor.p5" },
       { type: "p", key: "help.editor.p6" },
       { type: "p", key: "help.editor.p7" },
+      { type: "p", key: "help.editor.p8" },
       { type: "code", text: "http://localhost:8710/overlay/overlay.html" },
     ],
   },

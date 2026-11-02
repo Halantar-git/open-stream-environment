@@ -215,6 +215,9 @@
     const composition = normalizeComposition(source);
     return {
       eventKinds: normalizeKinds(source.eventKinds),
+      // Имя экземпляра: по нему виджет узнаётся на канвасе и в списке слоёв,
+      // когда одинаковых композиций несколько. К самой композиции не относится.
+      name: source.name != null ? String(source.name).trim().slice(0, 60) : "",
       durationMs: composition.durationMs,
       stack: composition.stack,
       stackMax: composition.stackMax,

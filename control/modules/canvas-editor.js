@@ -1644,7 +1644,9 @@ export function initCanvasEditor({
   // remapped) type, and custom widgets can override it via `config.name` so
   // multiple "Свой виджет" entries stay distinguishable.
   function widgetLabel(inst) {
-    if (inst.type === "custom" && inst.config && inst.config.name) return inst.config.name;
+    // `config.name` — имя экземпляра: его можно задать любому виджету, чтобы
+    // несколько одинаковых композиций или своих виджетов не путались.
+    if (inst.config && inst.config.name) return inst.config.name;
     const type = effectiveType(inst);
     const def = WIDGET_TYPES[type] || {};
     // Пакетный виджет называет себя сам; у встроенных имя берётся из словарей.
