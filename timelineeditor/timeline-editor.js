@@ -296,11 +296,7 @@
     const availH = Math.max(30, rect.height - 8);
     const w = Number(state.geometry.w) || 48;
     const h = Number(state.geometry.h) || 30;
-    // В режиме списка канвас — это одна строка рамки: он становится во
-    // столько раз шире, во сколько строка ниже всей рамки. Иначе композиция
-    // тянулась бы по высоте, а текст — нет.
-    const slot = stackSlot(active());
-    const aspect = ((w * 16) / (h * 9)) * (100 / slot.height);
+    const aspect = (w * 16) / (h * 9);
     let stageW = availW;
     let stageH = stageW / aspect;
     if (stageH > availH) {
@@ -311,15 +307,6 @@
     stageWrap.style.height = Math.round(stageH) + "px";
   }
 
-  // Высота одной строки списка и просвет в процентах рамки. Порядок счёта тот
-  // же, что в `createStack`: строки делят остаток после зазоров.
-  function stackSlot(composition) {
-    if (!composition.stack) return { height: 100, gap: 0 };
-    const max = Math.max(1, composition.stackMax);
-    const gap = composition.stackGap || 0;
-    return { height: Math.max(5, (100 - gap * (max - 1)) / max), gap };
-  }
-
   function renderPreview() {
     if (state.playing) {
       renderSelection();
@@ -327,11 +314,9 @@
     }
     const composition = active();
     stage.innerHTML = "";
-    // В эфире строка списка занимает долю рамки, и текст уменьшается вместе
-    // с ней. Канвас уже имеет высоту строки, поэтому здесь достаточно повторить
-    // тот же коэффициент — и превью совпадёт с эфиром.
-    const slot = stackSlot(composition);
-    stage.style.setProperty("--la-text-scale", String(slot.height / 100));
+    // В режиме списка композиция — это одна строка, но редактор рисует её на
+    // всём канвасе: так слой можно поставить по центру и тащить без скачков.
+    // В эфире та же раскладка занимает свою долю высоты рамки.
     LC.renderStatic(stage, composition, sampleAlert(), previewOptions);
     bindPreviewLayers();
     renderSelection();
@@ -1174,7 +1159,6 @@
       const value = Number(event.target.value);
       if (!Number.isFinite(value)) return;
       ensureActive().stackGap = clamp(value, 0, 30);
-      updateStageSize();
       schedulePreview(0);
       renderSelection();
     });
@@ -1189,7 +1173,6 @@
       if (persistentInput) persistentInput.disabled = !target.stack;
       const gapInput = composition.querySelector("#compStackGap");
       if (gapInput) gapInput.disabled = !target.stack;
-      updateStageSize();
       schedulePreview(0);
       renderSelection();
     });
@@ -1200,7 +1183,6 @@
       if (!Number.isFinite(value)) return;
       const target = ensureActive();
       target.stackMax = clamp(Math.round(value), 2, 6);
-      updateStageSize();
       schedulePreview(0);
       renderSelection();
     });
