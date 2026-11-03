@@ -385,6 +385,7 @@ pub fn handle_message(
                 field("title"),
                 field("description"),
                 field("twitchCategory"),
+                field("twitchTags"),
                 field("youtubeCategory"),
             );
         }

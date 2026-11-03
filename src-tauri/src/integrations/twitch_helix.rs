@@ -1,4 +1,5 @@
-//! Twitch Helix: действия по User Access Token — клип и маркер стрима.
+//! Twitch Helix: действия по User Access Token — клип, маркер стрима и
+//! название/категория/теги канала.
 //!
 //! Порт `server/integrations/twitch-helix.js`:
 //!
@@ -35,6 +36,10 @@ pub const MARKERS_URL: &str = "https://api.twitch.tv/helix/streams/markers";
 
 /// Сколько символов описания маркера принимает Twitch.
 const MARKER_DESCRIPTION_LIMIT: usize = 140;
+/// Сколько тегов принимает канал.
+const TAGS_LIMIT: usize = 10;
+/// Длина одного тега по правилам Twitch.
+const TAG_LENGTH_LIMIT: usize = 25;
 
 /// Итог одного HTTP-запроса.
 pub struct HttpOutcome {
@@ -229,10 +234,14 @@ pub async fn load_channel(get: &JsonGetFn, tokens: &Tokens, twitch: &Value) -> V
         "title": channel.and_then(|item| item.get("title")).cloned().unwrap_or(Value::Null),
         "category": channel.and_then(|item| item.get("game_name")).cloned().unwrap_or(Value::Null),
         "categoryId": channel.and_then(|item| item.get("game_id")).cloned().unwrap_or(Value::Null),
+        "tags": channel
+            .and_then(|item| item.get("tags"))
+            .cloned()
+            .unwrap_or_else(|| json!([])),
     })
 }
 
-/// Обновить название и/или категорию канала. Пустые поля не трогаем.
+/// Обновить название, категорию и теги канала. Пустые поля не трогаем.
 pub async fn update_channel(
     patch: &PatchFn,
     get: &JsonGetFn,
@@ -240,6 +249,7 @@ pub async fn update_channel(
     twitch: &Value,
     title: &str,
     category: &str,
+    tags: &[String],
 ) -> Value {
     if !is_authorized(twitch) {
         return not_configured();
@@ -270,6 +280,11 @@ pub async fn update_channel(
     if let Some(id) = game_id.clone() {
         body.insert("game_id".to_string(), Value::from(id));
     }
+    // Пустой список — «не трогать»: иначе первое же «Применить» стирало бы
+    // теги, которые никто не вводил.
+    if !tags.is_empty() {
+        body.insert("tags".to_string(), json!(tags));
+    }
     if body.is_empty() {
         return json!({ "ok": false, "error": "nothing_to_update" });
     }
@@ -292,8 +307,33 @@ pub async fn update_channel(
         json!({
             "title": if title.is_empty() { Value::Null } else { Value::from(title) },
             "category": if category.is_empty() { Value::Null } else { Value::from(category) },
+            "tags": tags,
         })
     })
+}
+
+/// Теги из поля ввода: через запятую, без пустых и повторов.
+///
+/// Twitch принимает не больше десяти тегов по 25 символов — лишнее молча
+/// отбрасываем, чтобы сеть не отвечала ошибкой на длинную строку.
+pub fn parse_tags(input: &str) -> Vec<String> {
+    let mut tags: Vec<String> = Vec::new();
+    for part in input.split(',') {
+        let tag = part.trim().trim_start_matches('#').trim();
+        if tag.is_empty() {
+            continue;
+        }
+        let tag: String = tag.chars().take(TAG_LENGTH_LIMIT).collect();
+        let tag = tag.trim().to_string();
+        if tag.is_empty() || tags.iter().any(|known| known.eq_ignore_ascii_case(&tag)) {
+            continue;
+        }
+        tags.push(tag);
+        if tags.len() == TAGS_LIMIT {
+            break;
+        }
+    }
+    tags
 }
 
 /// Найти `game_id` по названию игры. `None` — совпадений нет.
@@ -599,6 +639,7 @@ mod tests {
             &authorized(),
             "Новый стрим",
             "Just Chatting",
+            &[],
         )
         .await;
 
@@ -637,7 +678,16 @@ mod tests {
                 })
             })
         };
-        let result = update_channel(&patch, &get, &tokens(), &authorized(), "Только имя", "").await;
+        let result = update_channel(
+            &patch,
+            &get,
+            &tokens(),
+            &authorized(),
+            "Только имя",
+            "",
+            &[],
+        )
+        .await;
         assert_eq!(result["ok"], json!(true));
         assert_eq!(*calls.lock().unwrap(), 1);
     }
@@ -669,6 +719,7 @@ mod tests {
             &authorized(),
             "Новый стрим",
             "Нет такой игры",
+            &[],
         )
         .await;
         assert_eq!(
@@ -737,6 +788,7 @@ mod tests {
             &authorized(),
             "Стрим",
             "Game",
+            &[],
         )
         .await;
         assert_eq!(result["ok"], json!(true));
@@ -785,5 +837,101 @@ mod tests {
         assert_eq!(result["ok"], json!(true));
         assert_eq!(result["title"], json!("Стрим"));
         assert_eq!(result["category"], json!("Just Chatting"));
+    }
+
+    #[tokio::test]
+    async fn loading_a_channel_returns_tags() {
+        let get: JsonGetFn = Arc::new(|_url: String, _token: String| {
+            Box::pin(async {
+                (
+                    200,
+                    json!({ "data": [{ "title": "Стрим", "tags": ["ru", "chill"] }] }),
+                )
+            })
+        });
+        let result = load_channel(&get, &tokens(), &authorized()).await;
+        assert_eq!(result["tags"], json!(["ru", "chill"]));
+    }
+
+    #[tokio::test]
+    async fn tags_are_sent_with_the_channel_update() {
+        let sent = Arc::new(Mutex::new(Value::Null));
+        let patch: PatchFn = {
+            let sent = sent.clone();
+            Arc::new(move |_url: &str, _token: &str, body: &Value| {
+                let sent = sent.clone();
+                let body = body.clone();
+                Box::pin(async move {
+                    *sent.lock().unwrap() = body;
+                    HttpOutcome {
+                        status: 204,
+                        body: json!({}),
+                        network_error: None,
+                    }
+                })
+            })
+        };
+        let get: JsonGetFn = Arc::new(|_url: String, _token: String| {
+            Box::pin(async {
+                panic!("категория не менялась — поиск не нужен")
+            })
+        });
+        let tags = parse_tags("ru, chill");
+        let result = update_channel(&patch, &get, &tokens(), &authorized(), "", "", &tags).await;
+        assert_eq!(result["ok"], json!(true));
+        assert_eq!(result["tags"], json!(["ru", "chill"]));
+        assert_eq!(
+            sent.lock().unwrap().clone(),
+            json!({ "tags": ["ru", "chill"] })
+        );
+    }
+
+    #[tokio::test]
+    async fn empty_tags_do_not_touch_the_channel() {
+        let calls = Arc::new(Mutex::new(0));
+        let patch: PatchFn = {
+            let calls = calls.clone();
+            Arc::new(move |_url: &str, _token: &str, _body: &Value| {
+                let calls = calls.clone();
+                Box::pin(async move {
+                    *calls.lock().unwrap() += 1;
+                    HttpOutcome {
+                        status: 204,
+                        body: json!({}),
+                        network_error: None,
+                    }
+                })
+            })
+        };
+        let get: JsonGetFn = Arc::new(|_url: String, _token: String| {
+            Box::pin(async {
+                panic!("категория не менялась — поиск не нужен")
+            })
+        });
+        let result = update_channel(&patch, &get, &tokens(), &authorized(), "", "", &[]).await;
+        assert_eq!(result, json!({ "ok": false, "error": "nothing_to_update" }));
+        assert_eq!(*calls.lock().unwrap(), 0);
+    }
+
+    #[test]
+    fn tags_parsing_cleans_the_input() {
+        // Через запятую, с решёткой, с лишними пробелами и повтором в другом
+        // регистре: Twitch такое не примет, а панель должна отправлять чистое.
+        assert_eq!(
+            parse_tags("  #ru , chill,, RU , "),
+            vec!["ru".to_string(), "chill".to_string()]
+        );
+        assert!(parse_tags("   ").is_empty());
+    }
+
+    #[test]
+    fn tags_parsing_respects_twitch_limits() {
+        let long = "я".repeat(40);
+        assert_eq!(parse_tags(&long)[0].chars().count(), 25);
+        let many = (1..=15)
+            .map(|index| format!("tag{index}"))
+            .collect::<Vec<_>>()
+            .join(",");
+        assert_eq!(parse_tags(&many).len(), 10);
     }
 }

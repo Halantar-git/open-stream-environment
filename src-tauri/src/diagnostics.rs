@@ -552,6 +552,15 @@ impl Diagnostics {
         self.config().get("twitch").cloned().unwrap_or(Value::Null)
     }
 
+    /// Включён ли сервис в настройках. По умолчанию включён: флага может не
+    /// оказаться у конфига, который не проходил нормализацию.
+    fn service_enabled(&self, service: &str) -> bool {
+        self.config()
+            .get(service)
+            .and_then(|value| value.get("enabled"))
+            != Some(&Value::Bool(false))
+    }
+
     /// Создать клип Twitch; результат придёт кадром `twitch_action_result`
     /// (`action: "clip"`), как `.then(...)` в JS.
     pub fn create_clip(&self) {
@@ -585,7 +594,7 @@ impl Diagnostics {
         }));
     }
 
-    /// Прочитать название/категорию/описание с Twitch и YouTube; результат —
+    /// Прочитать название/категорию/теги/описание с Twitch и YouTube; результат —
     /// кадром `stream_info_result` с `action: "load"`.
     pub fn load_stream_info(&self) {
         let twitch_get = http::helix_get_authed(Arc::clone(&self.config));
@@ -595,14 +604,33 @@ impl Diagnostics {
             Arc::new(http::bearer_get_json);
         let youtube_tokens = youtube_tokens(Arc::clone(&self.config));
         let clients = Arc::clone(&self.clients);
+        // Выключенный сервис не трогаем вовсе: его ответ вернётся отметкой
+        // `disabled`, и панель про него промолчит.
+        let twitch_on = self.service_enabled("twitch");
+        let youtube_on = self.service_enabled("youtube");
         std::mem::drop(tauri::async_runtime::spawn(async move {
             let (twitch_result, youtube_result) = tokio::join!(
-                crate::integrations::twitch_helix::load_channel(
-                    &twitch_get,
-                    &twitch_tokens,
-                    &twitch
-                ),
-                crate::integrations::youtube_stream_info::load_info(&youtube_get, &youtube_tokens),
+                async {
+                    if !twitch_on {
+                        return service_disabled();
+                    }
+                    crate::integrations::twitch_helix::load_channel(
+                        &twitch_get,
+                        &twitch_tokens,
+                        &twitch,
+                    )
+                    .await
+                },
+                async {
+                    if !youtube_on {
+                        return service_disabled();
+                    }
+                    crate::integrations::youtube_stream_info::load_info(
+                        &youtube_get,
+                        &youtube_tokens,
+                    )
+                    .await
+                },
             );
             let payload = json!({
                 "action": "load",
@@ -613,43 +641,62 @@ impl Diagnostics {
         }));
     }
 
-    /// Обновить название/категорию/описание на Twitch и YouTube одной командой;
-    /// результат — кадром `stream_info_result` с `action: "apply"`.
+    /// Обновить название/категорию/теги/описание одной командой; результат —
+    /// кадром `stream_info_result` с `action: "apply"`.
     pub fn apply_stream_info(
         &self,
         title: String,
         description: String,
         twitch_category: String,
+        twitch_tags: String,
         youtube_category: String,
     ) {
         let twitch_patch = http::helix_patch(Arc::clone(&self.config));
         let twitch_get = http::helix_get_authed(Arc::clone(&self.config));
         let twitch_tokens = twitch_tokens(Arc::clone(&self.config));
         let twitch = self.twitch_config();
+        let tags = crate::integrations::twitch_helix::parse_tags(&twitch_tags);
         let youtube_get: crate::integrations::youtube_stream_info::JsonGetFn =
             Arc::new(http::bearer_get_json);
         let youtube_put: crate::integrations::youtube_stream_info::JsonPutFn =
             Arc::new(http::bearer_put_json);
         let youtube_tokens = youtube_tokens(Arc::clone(&self.config));
         let clients = Arc::clone(&self.clients);
+        // Правка уходит только включённым сервисам: выключенный ничего не
+        // получает, а панель не показывает его в строке статуса.
+        let twitch_on = self.service_enabled("twitch");
+        let youtube_on = self.service_enabled("youtube");
         std::mem::drop(tauri::async_runtime::spawn(async move {
             let (twitch_result, youtube_result) = tokio::join!(
-                crate::integrations::twitch_helix::update_channel(
-                    &twitch_patch,
-                    &twitch_get,
-                    &twitch_tokens,
-                    &twitch,
-                    &title,
-                    &twitch_category,
-                ),
-                crate::integrations::youtube_stream_info::apply_info(
-                    &youtube_get,
-                    &youtube_put,
-                    &youtube_tokens,
-                    &title,
-                    &description,
-                    &youtube_category,
-                ),
+                async {
+                    if !twitch_on {
+                        return service_disabled();
+                    }
+                    crate::integrations::twitch_helix::update_channel(
+                        &twitch_patch,
+                        &twitch_get,
+                        &twitch_tokens,
+                        &twitch,
+                        &title,
+                        &twitch_category,
+                        &tags,
+                    )
+                    .await
+                },
+                async {
+                    if !youtube_on {
+                        return service_disabled();
+                    }
+                    crate::integrations::youtube_stream_info::apply_info(
+                        &youtube_get,
+                        &youtube_put,
+                        &youtube_tokens,
+                        &title,
+                        &description,
+                        &youtube_category,
+                    )
+                    .await
+                },
             );
             let payload = json!({
                 "action": "apply",
@@ -3277,6 +3324,12 @@ fn action_frame(action: &str, result: Value) -> Value {
 /// Кадр ответа на чтение/правку информации о стриме.
 fn stream_info_frame(payload: Value) -> Value {
     json!({ "type": event_types::STREAM_INFO_RESULT, "payload": payload })
+}
+
+/// Ответ по выключенному сервису: ни запроса, ни ошибки — панель такие
+/// результаты отбрасывает и молчит.
+fn service_disabled() -> Value {
+    json!({ "ok": false, "error": "disabled" })
 }
 
 /// Момент доната в миллисекундах — для порядка «от старых к новым».

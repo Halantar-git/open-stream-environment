@@ -207,6 +207,7 @@ const { EVENT_TYPES } = window.SharedEvents;
   const streamInfoTitleInput = document.getElementById("streamInfoTitle");
   const streamInfoTwitchCategoryInput = document.getElementById("streamInfoTwitchCategory");
   const streamInfoYoutubeCategoryInput = document.getElementById("streamInfoYoutubeCategory");
+  const streamInfoTwitchTagsInput = document.getElementById("streamInfoTwitchTags");
   const streamInfoDescriptionInput = document.getElementById("streamInfoDescription");
   const streamInfoStatusEl = document.getElementById("streamInfoStatus");
   const streamInfoChangesEl = document.getElementById("streamInfoChanges");
@@ -1963,13 +1964,34 @@ const { EVENT_TYPES } = window.SharedEvents;
     }
   }
 
-  const STREAM_INFO_KEYS = ["title", "description", "twitchCategory", "youtubeCategory"];
+  const STREAM_INFO_KEYS = ["title", "description", "twitchCategory", "twitchTags", "youtubeCategory"];
   const STREAM_INFO_LABELS = {
     title: "settings.streamInfoTitle",
     description: "settings.streamInfoDescription",
     twitchCategory: "settings.streamInfoTwitchCategory",
+    twitchTags: "settings.streamInfoTwitchTags",
     youtubeCategory: "settings.streamInfoYoutubeCategory",
   };
+
+  // Какому сервису принадлежит поле. Название общее: его получают оба.
+  const STREAM_INFO_SERVICE = {
+    twitchCategory: "twitch",
+    twitchTags: "twitch",
+    youtubeCategory: "youtube",
+    description: "youtube",
+  };
+
+  function streamInfoServiceOn(service) {
+    return service === "twitch" ? !!state.twitchEnabled : !!state.youtubeEnabled;
+  }
+
+  // Поле выключенного сервиса ничего не ждёт: отправлять его некуда, и
+  // пометка «не применено» на нём была бы вечной.
+  function streamInfoFieldLive(key) {
+    const service = STREAM_INFO_SERVICE[key];
+    if (!service) return streamInfoServiceOn("twitch") || streamInfoServiceOn("youtube");
+    return streamInfoServiceOn(service);
+  }
 
   // Что уже уехало на сервисы. `null` — неизвестно: тогда точкой отсчёта
   // становится то, что было в полях до начала правки.
@@ -1982,6 +2004,7 @@ const { EVENT_TYPES } = window.SharedEvents;
       ["title", streamInfoTitleInput],
       ["description", streamInfoDescriptionInput],
       ["twitchCategory", streamInfoTwitchCategoryInput],
+      ["twitchTags", streamInfoTwitchTagsInput],
       ["youtubeCategory", streamInfoYoutubeCategoryInput],
     ];
   }
@@ -2003,7 +2026,8 @@ const { EVENT_TYPES } = window.SharedEvents;
     const values = streamInfoValues();
     const changed = streamInfoApplied
       ? STREAM_INFO_KEYS.filter((key) => {
-          // Пустые название и категория для сервисов — «не менять», это не правка.
+          if (!streamInfoFieldLive(key)) return false;
+          // Пустые название, категория и теги для сервисов — «не менять», это не правка.
           if (key !== "description" && values[key] === "") return false;
           return values[key] !== streamInfoApplied[key];
         })
@@ -2032,6 +2056,8 @@ const { EVENT_TYPES } = window.SharedEvents;
 
   function streamInfoServiceText(label, result, mode) {
     const value = result || {};
+    // Выключенный сервис ничего не делал — и говорить о нём нечего.
+    if (value.error === "disabled") return "";
     if (value.ok) {
       return t(mode === "load" ? "settings.streamInfoLoaded" : "settings.streamInfoOk", {
         service: label,
@@ -2064,6 +2090,10 @@ const { EVENT_TYPES } = window.SharedEvents;
       if (twitch.category && streamInfoTwitchCategoryInput) {
         streamInfoTwitchCategoryInput.value = twitch.category;
       }
+      // Теги — массив: в поле они живут одной строкой через запятую, как их и вводят.
+      if (twitch.ok && Array.isArray(twitch.tags) && streamInfoTwitchTagsInput) {
+        streamInfoTwitchTagsInput.value = twitch.tags.join(", ");
+      }
       if (youtube.category && streamInfoYoutubeCategoryInput) {
         streamInfoYoutubeCategoryInput.value = youtube.category;
       }
@@ -2076,13 +2106,36 @@ const { EVENT_TYPES } = window.SharedEvents;
     }
 
     if (action === "apply") {
-      const sent = streamInfoSent || {};
-      if (!streamInfoApplied && twitch.ok && youtube.ok) streamInfoApplied = streamInfoValues();
+      const sent = streamInfoSent || streamInfoValues();
+      if (!streamInfoApplied) {
+        // Отправленное и есть новая точка отсчёта: живой сервис правку принял.
+        // А поле живого сервиса, который не ответил, оставляем в очереди —
+        // пустая строка заведомо не совпадёт с тем, что ввели.
+        const base = Object.assign({}, sent);
+        if (streamInfoServiceOn("twitch") && !twitch.ok) {
+          base.twitchCategory = "";
+          base.twitchTags = "";
+        }
+        if (streamInfoServiceOn("youtube") && !youtube.ok) {
+          base.youtubeCategory = "";
+          base.description = "";
+        }
+        const anyLive =
+          (streamInfoServiceOn("twitch") && twitch.ok) ||
+          (streamInfoServiceOn("youtube") && youtube.ok);
+        if (anyLive) streamInfoApplied = base;
+      }
       if (streamInfoApplied) {
         // Неудачный сервис ничего не поменял — его поля остаются помеченными.
         if (twitch.ok) {
           if (sent.title) streamInfoApplied.title = sent.title;
           if (sent.twitchCategory) streamInfoApplied.twitchCategory = sent.twitchCategory;
+          // Сервер чистит теги — показываем то, что он на самом деле записал.
+          if (Array.isArray(twitch.tags) && streamInfoTwitchTagsInput) {
+            const text = twitch.tags.join(", ");
+            streamInfoTwitchTagsInput.value = text;
+            streamInfoApplied.twitchTags = text;
+          }
         }
         if (youtube.ok) {
           if (sent.title) streamInfoApplied.title = sent.title;
@@ -2093,12 +2146,20 @@ const { EVENT_TYPES } = window.SharedEvents;
       }
     }
 
-    const text = [
-      streamInfoServiceText("Twitch", twitch, action),
-      streamInfoServiceText("YouTube", youtube, action),
-    ].join(" · ");
-    const warn = !twitch.ok || !youtube.ok;
-    setStreamInfoStatus(text, warn);
+    // Сервис участвует в правке, только если он включён и сервер его не
+    // пропустил: выключенному ничего не отправляли, и его «не подключён»
+    // был бы шумом.
+    const twitchLive = streamInfoServiceOn("twitch") && twitch.error !== "disabled";
+    const youtubeLive = streamInfoServiceOn("youtube") && youtube.error !== "disabled";
+    const notices = [
+      twitchLive ? streamInfoServiceText("Twitch", twitch, action) : "",
+      youtubeLive ? streamInfoServiceText("YouTube", youtube, action) : "",
+    ].filter(Boolean);
+    const warn = (twitchLive && !twitch.ok) || (youtubeLive && !youtube.ok);
+    setStreamInfoStatus(
+      notices.length ? notices.join(" · ") : t("settings.streamInfoAllDisabled"),
+      notices.length ? warn : false
+    );
   }
 
   if (streamInfoLoadBtn) {
@@ -4646,6 +4707,8 @@ const { EVENT_TYPES } = window.SharedEvents;
         populateSettings();
         renderSceneBudget();
         syncIntegrationSwitches();
+        // Выключенный сервис мог измениться — пометка «не применено» зависит от него.
+        renderStreamInfoChanges();
         if (!wheelPanelEl.hidden) renderWheelPanels();
         if (!pollPanelEl.hidden) renderPollPanels();
         selectScene(state.activeSceneId);

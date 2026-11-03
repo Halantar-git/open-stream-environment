@@ -84,7 +84,7 @@
     CHAT_HUD_CONFIG_UPDATE: "chat_hud_config_update", // { config } — chat HUD window geometry/opacity/font (after save)
     REWARD_TTS: "reward_tts", // { text } — server -> overlay: speak a channel-point reward phrase
     TWITCH_ACTION_RESULT: "twitch_action_result", // { action, ok, message?, error? } — server -> control: clip/marker feedback
-    STREAM_INFO_RESULT: "stream_info_result", // { action: 'load'|'apply', twitch, youtube } — название/категория/описание эфира
+    STREAM_INFO_RESULT: "stream_info_result", // { action: 'load'|'apply', twitch, youtube } — название/категория/теги/описание эфира; `error: 'disabled'` — сервис выключен и ничего не получал
     STREAM_CATEGORIES_RESULT: "stream_categories_result", // { service: 'twitch'|'youtube', query, ok, items: [{ id, name }] } — подсказки категорий
     // Гостевые камеры. Сигналинг WebRTC идёт через сервер, медиа — напрямую.
     GUEST_STATUS: "guest_status", // { slots: [{ slot, name, state, guest? }] } — server -> все локальные окна
