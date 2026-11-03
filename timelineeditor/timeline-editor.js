@@ -1289,6 +1289,17 @@
     renderAll();
   }
 
+  // Стартовый размер текста считаем от высоты его рамки и пропорций кадра:
+  // на вытянутом по вертикали виджете фиксированные 5 единиц выглядели бы
+  // слишком мелко, а на широком — слишком крупно.
+  function initialTextSize(heightPercent) {
+    const w = Number(state.geometry.w) || 48;
+    const h = Number(state.geometry.h) || 30;
+    const frameRatio = (h * 9) / (w * 16);
+    const size = 0.7 * heightPercent * frameRatio;
+    return clamp(Math.round(size * 2) / 2, 0.5, 30);
+  }
+
   function addLayer(type, src) {
     const current = activeLayers();
     if (type === "video") {
@@ -1317,7 +1328,7 @@
         duration: 5000,
         z: maxZ + 1,
         opacity: 1,
-        size: type === "text" ? 5 : undefined,
+        size: type === "text" ? initialTextSize(20) : undefined,
         color: isShape ? "#7b2cff" : "#ffffff",
         color2: "#ff4fd8",
         angle: 90,
