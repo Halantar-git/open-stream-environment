@@ -314,12 +314,22 @@
     }
     const composition = active();
     stage.innerHTML = "";
-    // В режиме списка композиция — это одна строка, но редактор рисует её на
-    // всём канвасе: так слой можно поставить по центру и тащить без скачков.
-    // В эфире та же раскладка занимает свою долю высоты рамки.
+    // В списке эфирная строка занимает долю рамки, и текст уменьшается вместе
+    // с ней. Повторяем тот же коэффициент в превью, иначе шрифт, выставленный
+    // по превью, в эфире оказывается другим.
+    stage.style.setProperty("--la-text-scale", String(stackSlot(composition).height / 100));
     LC.renderStatic(stage, composition, sampleAlert(), previewOptions);
     bindPreviewLayers();
     renderSelection();
+  }
+
+  // Высота одной строки списка в процентах рамки. Считается так же, как в
+  // `createStack`: строки делят остаток после зазоров.
+  function stackSlot(composition) {
+    if (!composition.stack) return { height: 100 };
+    const max = Math.max(1, composition.stackMax);
+    const gap = composition.stackGap || 0;
+    return { height: Math.max(5, (100 - gap * (max - 1)) / max) };
   }
 
   function findPreviewLayer(id) {
