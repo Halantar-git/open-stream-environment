@@ -193,6 +193,11 @@ describe("layer-composition: модель", () => {
     expect(composition.minAmount).toBe(500);
   });
 
+  test("видео хранит флаг звука", () => {
+    expect(LayerComposition.normalizeLayer({ type: "video" }, 0).sound).toBe(false);
+    expect(LayerComposition.normalizeLayer({ type: "video", sound: true }, 0).sound).toBe(true);
+  });
+
   test("normalizeConfig заполняет умолчания и разводит одинаковые id", () => {
     const config = LayerComposition.normalizeConfig({
       eventKinds: ["donation", "donation", ""],
@@ -491,6 +496,24 @@ describe("layer-composition: статичная раскладка", () => {
     expect(audio.loop).toBe(true);
     expect(audio.play).not.toHaveBeenCalled();
   });
+
+  test("статичное превью глушит видео со звуком", () => {
+    const doc = makeDocument();
+    const host = doc.createElement("div");
+    LayerComposition.renderStatic(
+      host,
+      {
+        durationMs: 1000,
+        layers: [
+          { type: "video", src: "media/a.webm", sound: true, start: 0, duration: 500 },
+        ],
+      },
+      {},
+      {}
+    );
+    const video = host.children[0].children[0].children[0];
+    expect(video.muted).toBe(true);
+  });
 });
 
 // ---- player ----
@@ -605,6 +628,35 @@ describe("layer-composition: проигрыватель", () => {
 
     jest.advanceTimersByTime(500);
     expect(audio.pause).toHaveBeenCalled();
+  });
+
+  test("видео со звуком не глушится в проигрывателе", () => {
+    const host = global.document.createElement("div");
+    const player = LayerComposition.createPlayer(host, {});
+
+    player.play(
+      {
+        durationMs: 1000,
+        layers: [
+          {
+            type: "video",
+            src: "media/a.webm",
+            sound: true,
+            start: 0,
+            duration: 500,
+            in: "none",
+            out: "none",
+          },
+        ],
+      },
+      {},
+      () => {}
+    );
+    jest.advanceTimersByTime(0);
+    const video = host.children[0].children[0].children[0];
+    expect(video.muted).toBe(false);
+    expect(video.volume).toBeCloseTo(0.8);
+    expect(video.play).toHaveBeenCalled();
   });
 
   test("текст появляется по словам и по буквам", () => {

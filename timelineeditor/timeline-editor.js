@@ -595,6 +595,7 @@
   }
 
   function mediaInspector(layer, fitOptions) {
+    const volume = Math.round(layer.volume * 100);
     return (
       sourceField(layer) +
       '<div class="te-row2">' +
@@ -604,7 +605,26 @@
       fitOptions +
       "</select></div>" +
       (layer.type === "video" ? loopCheck(layer) : "") +
-      "</div>"
+      "</div>" +
+      (layer.type === "video"
+        ? '<label class="te-check"><input type="checkbox" id="fSound"' +
+          (layer.sound ? " checked" : "") +
+          ">" +
+          escapeHtml(t("timelineEditor.videoSound")) +
+          "</label>" +
+          '<p class="te-hint">' +
+          escapeHtml(t("timelineEditor.videoSoundHint")) +
+          "</p>" +
+          (layer.sound
+            ? '<div class="te-row2"><div class="te-field"><label>' +
+              escapeHtml(t("timelineEditor.audioVolume")) +
+              ': <span id="fVolumeValue">' +
+              volume +
+              '</span></label><input type="range" id="fVolume" min="0" max="100" step="1" value="' +
+              volume +
+              '"></div></div>'
+            : "")
+        : "")
     );
   }
 
@@ -1059,6 +1079,17 @@
       bind("pickFile", "click", () => pickFile(layer));
       bind("fFit", "change", (event) => patchLayer({ fit: event.target.value }));
       bind("fLoop", "change", (event) => patchLayer({ loop: event.target.checked }));
+      bind("fSound", "change", (event) => {
+        patchLayer({ sound: event.target.checked });
+        // Появляется или исчезает громкость — инспектор нужно перерисовать.
+        renderInspector();
+      });
+      bind("fVolume", "input", (event) => {
+        const value = Number(event.target.value);
+        const label = field("fVolumeValue");
+        if (label) label.textContent = String(Math.round(value));
+        patchLayer({ volume: value / 100 });
+      });
     }
 
     const number = (id, setter, min, max) => {

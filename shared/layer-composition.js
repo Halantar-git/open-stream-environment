@@ -132,6 +132,9 @@
       italic: layer.italic === true,
       fit: oneOf(layer.fit, FITS, "contain"),
       loop: layer.loop !== false,
+      // Видео по умолчанию играет без звука: так автоплей не блокируется в
+      // браузере и OBS. Тумблер «Звук из видео» включает его вручную.
+      sound: layer.sound === true,
       volume: clamp(toNumber(layer.volume, 0.8), 0, 1),
       textAnim: oneOf(layer.textAnim, TEXT_ANIMS, "none"),
       typeMs: clamp(toNumber(layer.typeMs, DEFAULT_TYPE_MS), MIN_TYPE_MS, MAX_TYPE_MS),
@@ -540,11 +543,12 @@
     } else if (layer.type === "video") {
       video = doc.createElement("video");
       video.className = "la-media";
-      video.muted = true;
-      video.defaultMuted = true;
+      video.muted = layer.sound !== true;
+      video.defaultMuted = layer.sound !== true;
       video.playsInline = true;
       video.preload = "auto";
       video.loop = layer.loop !== false;
+      video.volume = clamp(layer.volume, 0, 1);
       video.style.objectFit = layer.fit;
       const src = resolveMedia(layer.src, options);
       if (src) video.src = src;
@@ -791,7 +795,11 @@
       const node = createLayerNode(doc, layer, alert, options);
       node.el.style.opacity = String(layer.opacity);
       root.appendChild(node.el);
-      if (node.video) playVideo(node.video);
+      if (node.video) {
+        // Статичное превью молчит, даже если у видео включён звук.
+        node.video.muted = true;
+        playVideo(node.video);
+      }
     });
     host.appendChild(root);
   }
