@@ -649,6 +649,93 @@
     );
   }
 
+  // Подстановки в подсказке — кнопки: клик вставляет токен в текст, а над
+  // полем он превращается в чип с крестиком.
+  function placeholderHintHtml() {
+    const title = escapeHtml(t("timelineEditor.insertPlaceholder"));
+    return t("timelineEditor.placeholders")
+      .split(/(\{\{[^}]*\}\})/g)
+      .map((part) =>
+        /^\{\{[^}]*\}\}$/.test(part)
+          ? '<button type="button" class="te-token" data-token="' +
+            escapeHtml(part) +
+            '" title="' +
+            title +
+            '">' +
+            escapeHtml(part) +
+            "</button>"
+          : escapeHtml(part)
+      )
+      .join("");
+  }
+
+  function renderTextTokens(text) {
+    const host = inspector.querySelector("#fTokens");
+    if (!host) return;
+    const tokens = [];
+    const re = /\{\{[^}]*\}\}/g;
+    let match;
+    while ((match = re.exec(text))) tokens.push(match[0]);
+    if (!tokens.length) {
+      host.hidden = true;
+      host.innerHTML = "";
+      return;
+    }
+    const remove = escapeHtml(t("timelineEditor.removePlaceholder"));
+    host.hidden = false;
+    host.innerHTML = tokens
+      .map(
+        (token, index) =>
+          '<span class="te-chip"><span class="te-chip__text">' +
+          escapeHtml(token) +
+          '</span><button type="button" class="te-chip__remove" data-index="' +
+          index +
+          '" title="' +
+          remove +
+          '" aria-label="' +
+          remove +
+          '">×</button></span>'
+      )
+      .join("");
+  }
+
+  function insertPlaceholder(token) {
+    if (!token) return;
+    const textarea = inspector.querySelector("#fText");
+    if (!textarea) return;
+    // Если поле в фокусе — вставляем по каретке, иначе в конец текста.
+    const focused = document.activeElement === textarea;
+    const start =
+      focused && textarea.selectionStart != null ? textarea.selectionStart : textarea.value.length;
+    const end = focused && textarea.selectionEnd != null ? textarea.selectionEnd : start;
+    const next = textarea.value.slice(0, start) + token + textarea.value.slice(end);
+    textarea.value = next;
+    textarea.focus();
+    textarea.setSelectionRange(start + token.length, start + token.length);
+    patchLayer({ text: next });
+    renderTextTokens(next);
+  }
+
+  function removeTextToken(index) {
+    const textarea = inspector.querySelector("#fText");
+    if (!textarea) return;
+    const re = /\{\{[^}]*\}\}/g;
+    let current = 0;
+    let match;
+    while ((match = re.exec(textarea.value))) {
+      if (current === index) {
+        const next =
+          textarea.value.slice(0, match.index) +
+          textarea.value.slice(match.index + match[0].length);
+        textarea.value = next;
+        patchLayer({ text: next });
+        renderTextTokens(next);
+        return;
+      }
+      current += 1;
+    }
+  }
+
   function renderInspector() {
     const layer = findLayer(state.selectedId);
     if (!layer) {
@@ -748,11 +835,11 @@
       (isText
         ? '<div class="te-field"><label>' +
           escapeHtml(t("timelineEditor.fieldText")) +
-          '</label><textarea id="fText">' +
+          '</label><div class="te-tokens" id="fTokens" hidden></div><textarea id="fText">' +
           escapeHtml(layer.text) +
           "</textarea></div>" +
-          '<p class="te-hint">' +
-          escapeHtml(t("timelineEditor.placeholders")) +
+          '<p class="te-hint" id="fPlaceholders">' +
+          placeholderHintHtml() +
           "</p>" +
           '<div class="te-section">' +
           escapeHtml(t("timelineEditor.textStyle")) +
@@ -898,6 +985,7 @@
           Math.round(layer.outMs) +
           '"></div></div>');
 
+    if (isText) renderTextTokens(layer.text);
     bindInspector(layer);
   }
 
@@ -914,7 +1002,10 @@
     });
 
     if (layer.type === "text") {
-      bind("fText", "input", (event) => patchLayer({ text: event.target.value }));
+      bind("fText", "input", (event) => {
+        patchLayer({ text: event.target.value });
+        renderTextTokens(event.target.value);
+      });
       bind("fSize", "input", (event) => {
         const value = Number(event.target.value);
         const label = field("fSizeValue");
@@ -1766,6 +1857,25 @@
   });
 
   renderAll();
+
+  // Подстановки добавляются кликом, а чипы над полем убираются крестиком.
+  // Делегирование живёт на контейнере: сам инспектор перерисовывается.
+  inspector.addEventListener("mousedown", (event) => {
+    if (event.target && event.target.closest && event.target.closest(".te-token")) {
+      event.preventDefault();
+    }
+  });
+  inspector.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!target || !target.closest) return;
+    const token = target.closest(".te-token");
+    if (token) {
+      insertPlaceholder(token.dataset.token || "");
+      return;
+    }
+    const remove = target.closest(".te-chip__remove");
+    if (remove) removeTextToken(Number(remove.dataset.index));
+  });
 
   function connect() {
     ws = new WebSocket("ws://localhost:" + port + "/ws");
