@@ -1149,7 +1149,11 @@
         patchLayer({ fade: event.target.checked });
       });
     } else {
-      bind("fSrc", "change", (event) => patchLayer({ src: event.target.value.trim() }));
+      bind("fSrc", "change", (event) => {
+        const src = event.target.value.trim();
+        patchLayer({ src });
+        if (layer.type === "video") fitVideoDuration(layer.id, src);
+      });
       bind("pickFile", "click", () => pickFile(layer));
       bind("fFit", "change", (event) => patchLayer({ fit: event.target.value }));
       bind("fLoop", "change", (event) => patchLayer({ loop: event.target.checked }));
@@ -1405,10 +1409,15 @@
   // ---- edits ----
 
   function patchLayer(patch, timelines) {
+    patchLayerById(state.selectedId, patch, timelines);
+  }
+
+  function patchLayerById(id, patch, timelines) {
+    if (!id) return;
     // Правка в категории создаёт её собственную реакцию — общую композицию
     // трогать нельзя, иначе менялись бы все остальные категории.
     const composition = ensureActive();
-    const layer = composition.layers.find((item) => item.id === state.selectedId);
+    const layer = composition.layers.find((item) => item.id === id);
     if (!layer) return;
     const index = composition.layers.indexOf(layer);
     Object.assign(layer, patch);
@@ -1565,6 +1574,40 @@
     return layer;
   }
 
+  // Длительность видео читаем из файла: новый ролик должен занять на
+  // таймлайне столько, сколько длится сам, а не стандартные пять секунд.
+  // Ошибка или битый файл ни на что не влияют — остаётся прежняя длина.
+  function probeMediaDuration(src) {
+    return new Promise((resolve) => {
+      const url = LC.resolveMedia(src, previewOptions);
+      if (!url) {
+        resolve(0);
+        return;
+      }
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.muted = true;
+      const done = () => {
+        const seconds = Number(video.duration);
+        resolve(Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 0);
+      };
+      video.addEventListener("loadedmetadata", done, { once: true });
+      video.addEventListener("error", () => resolve(0), { once: true });
+      video.src = url;
+      // Сеть или кодек могут не ответить — не держим обещание вечно.
+      setTimeout(() => resolve(0), 4000);
+    });
+  }
+
+  function fitVideoDuration(id, src) {
+    probeMediaDuration(src).then((ms) => {
+      if (!(ms > 0)) return;
+      const duration = clamp(Math.round(ms / 50) * 50, MIN_DURATION, MAX_TIME);
+      patchLayerById(id, { duration });
+      if (state.selectedId === id) renderInspector();
+    });
+  }
+
   async function pickFile(layer) {
     if (!window.desktop || typeof window.desktop.pickSoundFile !== "function") return;
     const kind =
@@ -1572,6 +1615,7 @@
     const result = await window.desktop.pickSoundFile(kind);
     if (!result || !result.ok || !result.relativePath) return;
     patchLayer({ src: result.relativePath });
+    if (layer.type === "video") fitVideoDuration(layer.id, result.relativePath);
     renderInspector();
   }
 
