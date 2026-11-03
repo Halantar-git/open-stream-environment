@@ -85,6 +85,7 @@
     }),
     scope: "",
     selectedId: null,
+    selectedIds: [],
     playing: false,
     drag: null,
     previewDrag: null,
@@ -140,6 +141,15 @@
 
   function findLayer(id) {
     return activeLayers().find((layer) => layer.id === id) || null;
+  }
+
+  function isSelected(id) {
+    return state.selectedIds.indexOf(id) >= 0;
+  }
+
+  function setSelection(ids, primary) {
+    state.selectedIds = ids.slice();
+    state.selectedId = primary != null ? primary : ids.length ? ids[ids.length - 1] : null;
   }
 
   // Редактор показывает либо общую композицию, либо реакцию выбранной
@@ -342,7 +352,7 @@
   // очищает сцену, и рамка исчезала бы при каждом обновлении превью.
   function renderSelection() {
     const layer = findLayer(state.selectedId);
-    if (!layer || state.playing || layer.type === "audio") {
+    if (!layer || state.playing || layer.type === "audio" || state.selectedIds.length > 1) {
       selection.hidden = true;
       return;
     }
@@ -485,7 +495,7 @@
     rows.appendChild(grid);
     activeLayers().forEach((layer, index) => {
       const row = document.createElement("div");
-      row.className = "te-row" + (layer.id === state.selectedId ? " is-selected" : "");
+      row.className = "te-row" + (isSelected(layer.id) ? " is-selected" : "");
       row.dataset.id = layer.id;
 
       const label = document.createElement("button");
@@ -497,13 +507,13 @@
         '</span><span class="te-row__name">' +
         escapeHtml(layerTitle(layer, index)) +
         "</span>";
-      label.addEventListener("click", () => selectLayer(layer.id));
+      label.addEventListener("click", (event) => selectLayer(layer.id, event.ctrlKey || event.metaKey ? "toggle" : event.shiftKey ? "range" : ""));
 
       const track = document.createElement("div");
       track.className = "te-row__track";
       const clip = document.createElement("div");
       clip.className =
-        "te-clip te-clip--" + layer.type + (layer.id === state.selectedId ? " is-selected" : "");
+        "te-clip te-clip--" + layer.type + (isSelected(layer.id) ? " is-selected" : "");
       clip.dataset.id = layer.id;
       clip.style.left = (layer.start / span) * 100 + "%";
       clip.style.width = Math.max(1, (layer.duration / span) * 100) + "%";
@@ -534,7 +544,7 @@
     layers.forEach((layer, index) => {
       const item = document.createElement("button");
       item.type = "button";
-      item.className = "te-layer-item" + (layer.id === state.selectedId ? " is-selected" : "");
+      item.className = "te-layer-item" + (isSelected(layer.id) ? " is-selected" : "");
       item.innerHTML =
         '<span class="te-layer-item__kind">' +
         escapeHtml(typeMark(layer.type)) +
@@ -543,7 +553,12 @@
         '</span><span class="te-layer-item__time">' +
         (layer.start / 1000).toFixed(1) +
         "s</span>";
-      item.addEventListener("click", () => selectLayer(layer.id));
+      item.addEventListener("click", (event) =>
+        selectLayer(
+          layer.id,
+          event.ctrlKey || event.metaKey ? "toggle" : event.shiftKey ? "range" : ""
+        )
+      );
       layerList.appendChild(item);
     });
   }
@@ -756,8 +771,66 @@
     }
   }
 
+  // Выделено несколько слоёв: общие поля меняют всех сразу. Сейчас такое
+  // поле одно — длительность, ради него и нужно было множественное выделение.
+  function renderBulkInspector(selected) {
+    const duration = Math.round(selected[0].duration);
+    inspector.innerHTML =
+      '<div class="te-inspector__title"><span>' +
+      escapeHtml(t("timelineEditor.selectedCount", { count: selected.length })) +
+      '</span><button class="md-button md-button--text" id="delLayer" type="button">' +
+      escapeHtml(t("timelineEditor.deleteSelected")) +
+      "</button></div>" +
+      '<p class="te-hint">' +
+      escapeHtml(t("timelineEditor.selectionHint")) +
+      "</p>" +
+      '<div class="te-field"><label>' +
+      escapeHtml(t("timelineEditor.durationMs")) +
+      '</label><input type="number" id="fBulkDuration" min="' +
+      MIN_DURATION +
+      '" step="50" value="' +
+      duration +
+      '"></div>';
+
+    const input = inspector.querySelector("#fBulkDuration");
+    input.addEventListener("input", (event) => {
+      const value = Number(event.target.value);
+      if (!Number.isFinite(value)) return;
+      applyDurationToSelected(value);
+    });
+    input.addEventListener("change", (event) => {
+      const value = Number(event.target.value);
+      if (!Number.isFinite(value)) return;
+      event.target.value = String(clamp(value, MIN_DURATION, MAX_TIME));
+    });
+    inspector.querySelector("#delLayer").addEventListener("click", deleteSelected);
+  }
+
+  function applyDurationToSelected(value) {
+    const ids = new Set(state.selectedIds);
+    if (!ids.size) return;
+    const composition = ensureActive();
+    const duration = clamp(value, MIN_DURATION, MAX_TIME);
+    composition.layers.forEach((layer, index) => {
+      if (!ids.has(layer.id)) return;
+      layer.duration = duration;
+      Object.assign(layer, LC.normalizeLayer(layer, index));
+    });
+    renderRows();
+    renderLayerList();
+    renderRuler();
+    updateActualDuration();
+    schedulePreview();
+  }
+
   function renderInspector() {
-    const layer = findLayer(state.selectedId);
+    const layers = activeLayers();
+    const selected = layers.filter((layer) => isSelected(layer.id));
+    if (selected.length > 1) {
+      renderBulkInspector(selected);
+      return;
+    }
+    const layer = selected.length === 1 ? selected[0] : findLayer(state.selectedId);
     if (!layer) {
       inspector.innerHTML = '<p class="te-empty">' + escapeHtml(t("timelineEditor.noSelection")) + "</p>";
       return;
@@ -1348,12 +1421,29 @@
     schedulePreview();
   }
 
-  function selectLayer(id) {
-    if (state.selectedId === id) {
-      renderSelection();
-      return;
+  function selectLayer(id, mode) {
+    const layers = activeLayers();
+    const ids = state.selectedIds.slice();
+    if (mode === "toggle") {
+      const at = ids.indexOf(id);
+      if (at >= 0) ids.splice(at, 1);
+      else ids.push(id);
+      setSelection(ids, ids.indexOf(id) >= 0 ? id : ids[ids.length - 1]);
+    } else if (mode === "range" && state.selectedId) {
+      const from = layers.findIndex((layer) => layer.id === state.selectedId);
+      const to = layers.findIndex((layer) => layer.id === id);
+      if (from >= 0 && to >= 0) {
+        const [a, b] = from <= to ? [from, to] : [to, from];
+        setSelection(
+          layers.slice(a, b + 1).map((layer) => layer.id),
+          id
+        );
+      } else {
+        setSelection([id], id);
+      }
+    } else {
+      setSelection([id], id);
     }
-    state.selectedId = id;
     renderRows();
     renderLayerList();
     renderInspector();
@@ -1375,14 +1465,16 @@
     stopPlayback();
     state.scope = scope;
     const layers = activeLayers();
-    state.selectedId = layers.length ? layers[0].id : null;
+    const first = layers.length ? layers[0].id : null;
+    setSelection(first ? [first] : [], first);
     renderAll();
   }
 
   function createReaction() {
     ensureActive();
     const layers = activeLayers();
-    state.selectedId = layers.length ? layers[0].id : null;
+    const first = layers.length ? layers[0].id : null;
+    setSelection(first ? [first] : [], first);
     renderAll();
   }
 
@@ -1391,21 +1483,28 @@
     stopPlayback();
     delete state.config.reactions[state.scope];
     const layers = activeLayers();
-    state.selectedId = layers.length ? layers[0].id : null;
+    const first = layers.length ? layers[0].id : null;
+    setSelection(first ? [first] : [], first);
     renderAll();
   }
 
   function deleteSelected() {
+    const ids = new Set(state.selectedIds);
+    if (!ids.size) return;
     const current = activeLayers();
-    const index = current.findIndex((layer) => layer.id === state.selectedId);
+    const index = current.findIndex((layer) => ids.has(layer.id));
     if (index < 0) return;
-    if (typeof window.confirm === "function" && !window.confirm(t("timelineEditor.confirmDelete"))) {
+    const message =
+      ids.size > 1
+        ? t("timelineEditor.confirmDeleteMany", { count: ids.size })
+        : t("timelineEditor.confirmDelete");
+    if (typeof window.confirm === "function" && !window.confirm(message)) {
       return;
     }
     const composition = ensureActive();
-    composition.layers.splice(index, 1);
+    composition.layers = composition.layers.filter((layer) => !ids.has(layer.id));
     const next = composition.layers[Math.min(index, composition.layers.length - 1)];
-    state.selectedId = next ? next.id : null;
+    setSelection(next ? [next.id] : [], next ? next.id : null);
     renderAll();
   }
 
@@ -1460,7 +1559,7 @@
       composition.layers.length
     );
     composition.layers.push(layer);
-    state.selectedId = layer.id;
+    setSelection([layer.id], layer.id);
     renderAll();
     return layer;
   }
@@ -1480,6 +1579,11 @@
   function startDrag(event, layer) {
     if (event.button !== 0) return;
     event.preventDefault();
+    // С модификатором клип только меняет выделение — тянуть его не начинаем.
+    if (event.ctrlKey || event.metaKey || event.shiftKey) {
+      selectLayer(layer.id, event.ctrlKey || event.metaKey ? "toggle" : "range");
+      return;
+    }
     const handle = event.target && event.target.classList;
     const mode =
       handle && handle.contains("te-clip__handle--start")
@@ -1719,7 +1823,8 @@
       reactions: config.reactions,
     });
     state.scope = "";
-    state.selectedId = state.config.layers.length ? state.config.layers[0].id : null;
+    const first = state.config.layers.length ? state.config.layers[0].id : null;
+    setSelection(first ? [first] : [], first);
     renderAll();
   }
 
