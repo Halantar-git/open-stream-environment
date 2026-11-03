@@ -350,26 +350,14 @@
     el.style.top = layer.y + "%";
     el.style.width = layer.w + "%";
     el.style.height = layer.h + "%";
-    // Шрифт задан в `cqw` при создании слоя; при растягивании рамки его
-    // нужно обновить тем же выражением, иначе текст отстаёт от рамки.
-    if (layer.type === "text") {
-      const text = el.children && el.children[0];
-      if (text) text.style.fontSize = "calc(" + layer.size + "cqw * var(--la-text-scale, 1))";
-    }
   }
 
   function syncGeometryFields(layer) {
     const values = { fX: layer.x, fY: layer.y, fW: layer.w, fH: layer.h };
-    Object.keys(values).forEach((key) => {
-      const field = document.getElementById(key);
-      if (field) field.value = String(round1(values[key]));
+    Object.keys(values).forEach((id) => {
+      const field = inspector.querySelector("#" + id);
+      if (field) field.value = String(round1(values[id]));
     });
-    if (layer.type === "text") {
-      const size = document.getElementById("fSize");
-      if (size) size.value = String(layer.size);
-      const label = document.getElementById("fSizeValue");
-      if (label) label.textContent = round1(layer.size);
-    }
   }
 
   function bindPreviewLayers() {
@@ -1289,17 +1277,6 @@
     renderAll();
   }
 
-  // Стартовый размер текста считаем от высоты его рамки и пропорций кадра:
-  // на вытянутом по вертикали виджете фиксированные 5 единиц выглядели бы
-  // слишком мелко, а на широком — слишком крупно.
-  function initialTextSize(heightPercent) {
-    const w = Number(state.geometry.w) || 48;
-    const h = Number(state.geometry.h) || 30;
-    const frameRatio = (h * 9) / (w * 16);
-    const size = 0.7 * heightPercent * frameRatio;
-    return clamp(Math.round(size * 2) / 2, 0.5, 30);
-  }
-
   function addLayer(type, src) {
     const current = activeLayers();
     if (type === "video") {
@@ -1328,7 +1305,7 @@
         duration: 5000,
         z: maxZ + 1,
         opacity: 1,
-        size: type === "text" ? initialTextSize(20) : undefined,
+        size: type === "text" ? 5 : undefined,
         color: isShape ? "#7b2cff" : "#ffffff",
         color2: "#ff4fd8",
         angle: 90,
@@ -1457,7 +1434,7 @@
       startY: event.clientY,
       width: rect.width,
       height: rect.height,
-      orig: { x: layer.x, y: layer.y, w: layer.w, h: layer.h, size: layer.size },
+      orig: { x: layer.x, y: layer.y, w: layer.w, h: layer.h },
     };
     document.addEventListener("pointermove", onPreviewDragMove);
     document.addEventListener("pointerup", onPreviewDragEnd, { once: true });
@@ -1482,12 +1459,6 @@
     layer.y = next.y;
     layer.w = next.w;
     layer.h = next.h;
-
-    // Текстовый слой тянется вместе с рамкой: иначе после каждого изменения
-    // её высоты приходилось бы подкручивать «Размер» вручную.
-    if (layer.type === "text" && Number.isFinite(drag.orig.size) && drag.orig.h > 0) {
-      layer.size = clamp((drag.orig.size * next.h) / drag.orig.h, 0.5, 30);
-    }
 
     updatePreviewLayer(layer);
     renderSelection();
