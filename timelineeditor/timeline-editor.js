@@ -228,6 +228,7 @@
     const keys = {
       follow: "timelineEditor.kinds.follow",
       sub: "timelineEditor.kinds.sub",
+      resub: "timelineEditor.kinds.resub",
       gift_sub: "timelineEditor.kinds.giftSub",
       cheer: "timelineEditor.kinds.cheer",
       donation: "timelineEditor.kinds.donation",

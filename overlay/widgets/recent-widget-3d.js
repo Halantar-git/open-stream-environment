@@ -104,15 +104,6 @@
       if (!this.nodes) this.refresh(true);
     }
 
-    // Фильтр категорий: пустой список — все события. Так из одного виджета
-    // получаются «Последние фолловеры» или «Последние донаты».
-    _events(list) {
-      const kinds = Array.isArray(this.config.kinds) ? this.config.kinds : [];
-      const events = Array.isArray(list) ? list : [];
-      if (!kinds.length) return events;
-      return events.filter((event) => event && kinds.indexOf(String(event.kind || "")) >= 0);
-    }
-
     duration() {
       return Math.max(80, Math.min(2000, Number(this.config.animationMs) || 840));
     }

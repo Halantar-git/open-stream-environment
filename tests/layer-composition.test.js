@@ -292,6 +292,34 @@ describe("layer-composition: модель", () => {
     expect(LayerComposition.compositionForEvent(config, "follow").layers).toEqual([]);
   });
 
+  test("продление подписки — отдельная категория с откатом к «Подписке»", () => {
+    const resubAlert = { kind: "sub", resub: true, months: 7 };
+    expect(LayerComposition.eventKind(resubAlert)).toBe("resub");
+    expect(LayerComposition.eventKind({ kind: "sub", resub: false })).toBe("sub");
+    expect(LayerComposition.EVENT_KINDS).toContain("resub");
+
+    // Старые настройки с одной «Подпиской» продолжают ловить продления.
+    expect(LayerComposition.matchesEvent({ eventKinds: ["sub"] }, resubAlert)).toBe(true);
+    expect(LayerComposition.matchesEvent({ eventKinds: ["resub"] }, resubAlert)).toBe(true);
+    expect(LayerComposition.matchesEvent({ eventKinds: ["resub"] }, { kind: "sub" })).toBe(false);
+
+    const withOwn = {
+      layers: [{ id: "d", text: "default" }],
+      reactions: {
+        sub: { layers: [{ id: "s", text: "sub" }] },
+        resub: { layers: [{ id: "r", text: "resub" }] },
+      },
+    };
+    expect(LayerComposition.compositionForEvent(withOwn, "resub").layers[0].text).toBe("resub");
+
+    // Без своей реакции продление играет реакцией «Подписка», не общей.
+    const inherited = {
+      layers: [{ id: "d", text: "default" }],
+      reactions: { sub: { layers: [{ id: "s", text: "sub" }] } },
+    };
+    expect(LayerComposition.compositionForEvent(inherited, "resub").layers[0].text).toBe("sub");
+  });
+
   test("audio-слой хранит громкость и повтор", () => {
     const config = LayerComposition.normalizeConfig({
       layers: [{ type: "audio", src: "media/theme.mp3", volume: 2, loop: false }],

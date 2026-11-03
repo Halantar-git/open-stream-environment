@@ -64,7 +64,16 @@ export function initPropertiesPanel({
 
   // Категории, которые «Последние события» умеют подписывать. Отметка одной
   // категории превращает виджет в отдельный блок — например, только фолловеры.
-  const RECENT_KINDS = ["follow", "sub", "gift_sub", "cheer", "donation", "boosty_sub", "boosty_resub"];
+  const RECENT_KINDS = [
+    "follow",
+    "sub",
+    "resub",
+    "gift_sub",
+    "cheer",
+    "donation",
+    "boosty_sub",
+    "boosty_resub",
+  ];
 
   function recentFilterHtml(config) {
     const kinds = Array.isArray(config.kinds) ? config.kinds : [];

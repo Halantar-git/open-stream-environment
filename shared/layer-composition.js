@@ -56,6 +56,7 @@
   const EVENT_KINDS = [
     "follow",
     "sub",
+    "resub",
     "gift_sub",
     "cheer",
     "donation",
@@ -162,6 +163,17 @@
     return kinds;
   }
 
+  /*
+    Twitch присылает продление подписки как `sub` с флагом `resub`, а не
+    отдельным `kind`. Для редактора и реакций это всё равно отдельная
+    категория: иначе нельзя оформить продление иначе, чем первую подписку.
+  */
+  function eventKind(alert) {
+    const kind = String((alert && alert.kind) || "");
+    if (kind === "sub" && alert && alert.resub === true) return "resub";
+    return kind;
+  }
+
   // Слои одной композиции. Идентификатор нужен редактору и проигрывателю,
   // поэтому дубликаты разводим суффиксом, а не оставляем двум слоям один ключ.
   function normalizeLayers(value) {
@@ -246,6 +258,9 @@
     const normalized = normalizeConfig(config);
     const own = kind ? normalized.reactions[String(kind)] : null;
     if (own) return own;
+    // Продление без своей реакции играет реакцией «Подписка», иначе оно
+    // проваливалось бы в общую композицию и теряло оформление подписок.
+    if (kind === "resub" && normalized.reactions.sub) return normalized.reactions.sub;
     return {
       durationMs: normalized.durationMs,
       stack: normalized.stack,
@@ -356,7 +371,10 @@
   function matchesEvent(config, alert) {
     const kinds = normalizeKinds(config && config.eventKinds);
     if (!kinds.length) return true;
-    return kinds.indexOf(String((alert && alert.kind) || "")) >= 0;
+    const kind = eventKind(alert);
+    if (kinds.indexOf(kind) >= 0) return true;
+    // Старые настройки с одной «Подпиской» продолжают ловить и продления.
+    return kind === "resub" && kinds.indexOf("sub") >= 0;
   }
 
   // Слой без списка событий участвует всегда; со списком — только для своей
@@ -364,7 +382,9 @@
   function layerMatchesAlert(layer, alert) {
     const kinds = normalizeKinds(layer && layer.kinds);
     if (!kinds.length) return true;
-    return kinds.indexOf(String((alert && alert.kind) || "")) >= 0;
+    const kind = eventKind(alert);
+    if (kinds.indexOf(kind) >= 0) return true;
+    return kind === "resub" && kinds.indexOf("sub") >= 0;
   }
 
   function layersForAlert(layers, alert) {
@@ -391,6 +411,7 @@
   const EVENT_KIND_LABELS = [
     "follow",
     "sub",
+    "resub",
     "gift_sub",
     "cheer",
     "donation",
@@ -1076,6 +1097,7 @@
     normalizeConfig,
     compositionForEvent,
     compositionDuration,
+    eventKind,
     applyLayerDrag,
     snapToGrid,
     matchesEvent,

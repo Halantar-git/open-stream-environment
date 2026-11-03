@@ -137,7 +137,10 @@
           if (!alert) return;
           if (!LayerComposition.matchesEvent(this.config, alert)) return;
           // У категории может быть своя реакция: в список попадает по ней.
-          const composition = LayerComposition.compositionForEvent(this.config, alert.kind);
+          const composition = LayerComposition.compositionForEvent(
+            this.config,
+            LayerComposition.eventKind(alert)
+          );
           if (!composition.stack || !composition.persistent) return;
           if (!composition.layers.length) return;
           if (!LayerComposition.passesAmount(composition, alert)) return;
@@ -147,7 +150,10 @@
 
     queueAlert(alert) {
       if (!alert || !LayerComposition.matchesEvent(this.config, alert)) return;
-      const composition = LayerComposition.compositionForEvent(this.config, alert.kind);
+      const composition = LayerComposition.compositionForEvent(
+        this.config,
+        LayerComposition.eventKind(alert)
+      );
       // Порог суммы — часть композиции категории, поэтому проверяем его после
       // выбора реакции, а не до.
       if (!LayerComposition.passesAmount(composition, alert)) return;
@@ -176,7 +182,10 @@
         const pending = this.pendingStack;
         this.pendingStack = [];
         pending.forEach((alert) => {
-          const composition = LayerComposition.compositionForEvent(this.config, alert.kind);
+          const composition = LayerComposition.compositionForEvent(
+            this.config,
+            LayerComposition.eventKind(alert)
+          );
           if (!composition.layers.length) return;
           if (composition.stack) this.stack.push(composition, alert);
           else this.queue.push(alert);
@@ -188,7 +197,10 @@
       // Цикл вместо рекурсии: очередь может быть длинной.
       let alert = this.queue.shift();
       while (alert) {
-        const composition = LayerComposition.compositionForEvent(this.config, alert.kind);
+        const composition = LayerComposition.compositionForEvent(
+          this.config,
+          LayerComposition.eventKind(alert)
+        );
         if (composition.layers.length) {
           if (composition.stack) {
             this.stack.push(composition, alert);

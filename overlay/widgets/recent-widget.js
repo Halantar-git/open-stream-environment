@@ -34,6 +34,14 @@
 })(typeof window !== "undefined" ? window : globalThis, function (BaseWidget) {
   "use strict";
 
+  // Twitch присылает продление как `sub` с флагом `resub`; в фильтре это
+  // отдельная категория — так же, как в алерт-композиции.
+  function eventKind(event) {
+    const kind = String((event && event.kind) || "");
+    if (kind === "sub" && event && event.resub === true) return "resub";
+    return kind;
+  }
+
   class RecentWidget extends BaseWidget {
     onMount() {
       this._applyPerspective();
@@ -98,7 +106,12 @@
       const kinds = Array.isArray(this.config.kinds) ? this.config.kinds : [];
       const events = Array.isArray(list) ? list : [];
       if (!kinds.length) return events;
-      return events.filter((event) => event && kinds.indexOf(String(event.kind || "")) >= 0);
+      return events.filter((event) => {
+        if (!event) return false;
+        const kind = eventKind(event);
+        // Старая настройка «Подписка» продолжает ловить продления.
+        return kinds.indexOf(kind) >= 0 || (kind === "resub" && kinds.indexOf("sub") >= 0);
+      });
     }
 
     _text(evt) {
