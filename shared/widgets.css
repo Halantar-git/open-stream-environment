@@ -1039,6 +1039,7 @@
    draw the edge light, the inner cyan hairline and the faint perspective grid
    so the cut corner still reads as a neon frame. Driven by the decoration
    token, so custom themes can borrow the same look. */
+[data-decoration="retrowave"] .widget-alert,
 [data-decoration="retrowave"] .widget-goal,
 [data-decoration="retrowave"] .widget-recent,
 [data-decoration="retrowave"] .widget-participants,
@@ -1056,6 +1057,7 @@
     var(--panel-glow),
     inset 0 0 0 1px rgba(45, 226, 230, 0.16);
 }
+[data-decoration="retrowave"] .widget-alert::before,
 [data-decoration="retrowave"] .widget-goal::before,
 [data-decoration="retrowave"] .widget-recent::before,
 [data-decoration="retrowave"] .widget-participants::before,
@@ -1075,6 +1077,7 @@
 
 /* Неоновые канты по верхней и нижней кромке: короткие градиентные штрихи
    продолжают косую грань и добавляют панелям света без второй рамки. */
+[data-decoration="retrowave"] .widget-alert::after,
 [data-decoration="retrowave"] .widget-goal::after,
 [data-decoration="retrowave"] .widget-recent::after,
 [data-decoration="retrowave"] .widget-participants::after,
@@ -1110,6 +1113,7 @@
 [data-decoration="retrowave"] .widget-chat__user {
   text-shadow: 0 0 9px rgba(255, 45, 149, 0.65);
 }
+[data-decoration="retrowave"] .widget-alert { padding-left: 42px; }
 [data-decoration="retrowave"] .widget-goal { padding-left: 38px; }
 [data-decoration="retrowave"] .widget-recent { padding-left: 38px; }
 [data-decoration="retrowave"] .widget-participants { padding-left: 38px; }
@@ -1120,6 +1124,7 @@
 
 /* Cyan icon rings and per-message chat chips carry the same leading-edge
    language as the panels. */
+[data-decoration="retrowave"] .widget-alert__icon,
 [data-decoration="retrowave"] .widget-stat__icon {
   background: rgba(45, 226, 230, 0.10);
   color: var(--md-secondary);
@@ -1141,115 +1146,6 @@
   background: linear-gradient(180deg, var(--md-secondary), var(--md-primary));
   opacity: 0.85;
   filter: drop-shadow(0 0 4px rgba(255, 45, 149, 0.55));
-}
-
-/* ---------- Retrowave: неоновый баннер алерта ----------
-   Алерт темы — баннер синтвейва: косая рама-параллелограмм с двойным неоном,
-   закатное солнце в полосках, пальма у левой кромки и сетка-пол внизу.
-   Картинок тема за собой не тянет: солнце, пальма и сетка — встроенный SVG,
-   остальное — градиенты.
-
-   Кант по косой кромке рамкой не нарисовать (у clip-path нет border), поэтому
-   силуэт собирается слоями: фон самого элемента — неоновая рама, ::before —
-   циановая волосяная линия, ::after — заливка со сценой. Псевдоэлементы сидят
-   на пару пикселей внутри, а содержимое поднято над ними по z-index. */
-[data-decoration="retrowave"] .widget-alert {
-  position: relative;
-  border: 0;
-  box-shadow: none;
-  padding: 14px 26px 14px 56px;
-  gap: 14px;
-  background-image: linear-gradient(100deg, #ff2d95 0%, #a02cff 48%, #2de2e6 100%);
-  clip-path: polygon(30px 0, 100% 0, calc(100% - 20px) 100%, 0 100%);
-  filter: drop-shadow(0 0 8px rgba(255, 45, 149, 0.45)) drop-shadow(0 0 26px rgba(122, 60, 255, 0.3));
-}
-[data-decoration="retrowave"] .widget-alert::before,
-[data-decoration="retrowave"] .widget-alert::after {
-  content: "";
-  position: absolute;
-  z-index: 0;
-  pointer-events: none;
-}
-[data-decoration="retrowave"] .widget-alert::before {
-  inset: 3px;
-  clip-path: polygon(27px 0, 100% 0, calc(100% - 17px) 100%, 0 100%);
-  background: linear-gradient(100deg, rgba(45, 226, 230, 0.08), rgba(45, 226, 230, 0.55) 52%, rgba(45, 226, 230, 0.95));
-}
-[data-decoration="retrowave"] .widget-alert::after {
-  inset: 4px;
-  clip-path: polygon(26px 0, 100% 0, calc(100% - 16px) 100%, 0 100%);
-  background:
-    /* Пальма темнее неба, но светлее панели: силуэт читается и на солнце, и на тёмной заливке. */
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 130'%3E%3Cg fill='%23221040'%3E%3Cpath d='M50 129C52 104 53 80 55 58' fill='none' stroke='%23221040' stroke-width='7' stroke-linecap='round'/%3E%3Cpath id='l' d='M54 57c13-10 28-12 42-7-13 2-28 7-42 7z'/%3E%3Cuse href='%23l' transform='rotate(-40 54 57)'/%3E%3Cuse href='%23l' transform='rotate(-80 54 57)'/%3E%3Cuse href='%23l' transform='rotate(-120 54 57)'/%3E%3Cuse href='%23l' transform='rotate(-160 54 57)'/%3E%3Cuse href='%23l' transform='rotate(30 54 57)'/%3E%3Cuse href='%23l' transform='rotate(70 54 57)'/%3E%3Ccircle cx='54' cy='54' r='3.5'/%3E%3C/g%3E%3C/svg%3E")
-      left -8% bottom 1% / auto 104% no-repeat,
-    /* Солнце в полосках: верх срезан верхней кромкой, как на афише. */
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23ffe66d'/%3E%3Cstop offset='.5' stop-color='%23ffa24c'/%3E%3Cstop offset='1' stop-color='%23ff2d95'/%3E%3C/linearGradient%3E%3CclipPath id='c'%3E%3Ccircle cx='60' cy='60' r='58'/%3E%3C/clipPath%3E%3C/defs%3E%3Cg clip-path='url(%23c)'%3E%3Crect width='120' height='120' fill='url(%23g)'/%3E%3Cg fill='%23140a28'%3E%3Crect y='62' width='120' height='3'/%3E%3Crect y='72' width='120' height='4'/%3E%3Crect y='84' width='120' height='5'/%3E%3Crect y='98' width='120' height='6'/%3E%3Crect y='112' width='120' height='8'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")
-      left 2% top -26% / auto 104% no-repeat,
-    /* Сетка-пол: горизонтали рисует SVG (их растяжение не портит), вертикали —
-       ровный градиент. Сходящиеся линии тут не нужны: на высоте в пару
-       десятков пикселей перспектива всё равно не читается. */
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 100' preserveAspectRatio='none'%3E%3Cg fill='none' stroke-width='1'%3E%3Cpath d='M-20 0 H420' stroke='%23ff2d95' stroke-opacity='.55'/%3E%3Cg stroke='%23ff8ac4' stroke-opacity='.26'%3E%3Cpath d='M-20 12 H420 M-20 28 H420 M-20 48 H420 M-20 72 H420'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")
-      left bottom / 100% 22% no-repeat,
-    repeating-linear-gradient(90deg, rgba(45, 226, 230, 0.22) 0 1px, transparent 1px 40px)
-      left bottom / 100% 22% no-repeat,
-    /* Тёмная коробка: сцена остаётся в левой трети, текст ложится на глухое. */
-    linear-gradient(90deg, rgba(11, 5, 24, 0) 0 9%, rgba(11, 5, 24, 0.62) 20%, rgba(11, 5, 24, 0.9) 30%, rgba(11, 5, 24, 0.94) 100%),
-    linear-gradient(180deg, rgba(18, 8, 38, 0.9), rgba(9, 4, 20, 0.96));
-}
-
-/* Эмблема — гранёный кристалл под цвет события (сердце, корона, камень),
-   как в наборе баннеров темы. */
-[data-decoration="retrowave"] .widget-alert__icon {
-  width: auto;
-  height: 78%;
-  min-width: 44px;
-  max-width: 92px;
-  border-radius: 0;
-  clip-path: polygon(50% 0, 100% 26%, 84% 100%, 16% 100%, 0 26%);
-  background-image:
-    radial-gradient(circle at 50% 62%, rgba(11, 5, 24, 0.85) 0 26%, rgba(11, 5, 24, 0) 58%),
-    linear-gradient(160deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 46%),
-    linear-gradient(150deg, #ffd1f0 0%, #ff2d95 26%, #a02cff 62%, #2de2e6 100%);
-  color: #fff;
-  filter: drop-shadow(0 0 6px rgba(255, 45, 149, 0.7)) drop-shadow(0 0 16px rgba(122, 60, 255, 0.45));
-}
-
-/* Подпись события — неоновая надпись, а не плашка Material: на баннере
-   плашка спорит с косой рамой. */
-[data-decoration="retrowave"] .widget-alert__kicker {
-  background: none;
-  padding: 0;
-  font-family: var(--font-display);
-  letter-spacing: 2.4px;
-  color: var(--md-secondary);
-  text-shadow: 0 0 10px rgba(45, 226, 230, 0.7);
-}
-
-/* Появление алерта анимирует filter и держит его через forwards, поэтому
-   без своей дорожки свечение баннера гасло сразу после входа: в финальном
-   кадре оставался только blur(0). */
-[data-decoration="retrowave"] .widget-alert.alert-enter-active {
-  animation-name: retrowave-alert-in;
-}
-@keyframes retrowave-alert-in {
-  0% {
-    opacity: 0;
-    transform: scale(0.86);
-    filter: blur(6px) drop-shadow(0 0 0 rgba(255, 45, 149, 0));
-  }
-  60% { opacity: 1; filter: blur(0) drop-shadow(0 0 8px rgba(255, 45, 149, 0.45)) drop-shadow(0 0 26px rgba(122, 60, 255, 0.3)); }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-    filter: blur(0) drop-shadow(0 0 8px rgba(255, 45, 149, 0.45)) drop-shadow(0 0 26px rgba(122, 60, 255, 0.3));
-  }
-}
-
-/* Сцена и канты живут в псевдоэлементах поверх заливки карточки, поэтому
-   содержимое поднимаем над ними по z-index. Слой искр остаётся как был. */
-[data-decoration="retrowave"] .widget-alert > :not(.widget-alert__spark) {
-  position: relative;
-  z-index: 1;
 }
 
 /* 3D-виджеты Retrowave (цель, чат, алерт) собирают панель из токенов темы
