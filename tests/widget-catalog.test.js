@@ -111,11 +111,12 @@ describe("widget-catalog helpers", () => {
         "terminal-goal",
         "terminal-chat",
         "terminal-holo-alert",
+        "terminal-sysinfo",
         "terminal-recent",
         "terminal-ticker",
       ])
     );
-    expect(terminal).toHaveLength(6);
+    expect(terminal).toHaveLength(7);
 
     expect(widgetsForTheme("")).toEqual([]);
   });

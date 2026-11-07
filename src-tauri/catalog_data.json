@@ -1,5 +1,5 @@
 {
-  "sourceHash": "e3ff4b80bb63edff",
+  "sourceHash": "0c1ad5778fe9082f",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -2160,7 +2160,8 @@
         "showPercentage": true,
         "showBackground": true,
         "perspective": 0,
-        "perspectiveDirection": "left"
+        "perspectiveDirection": "left",
+        "crt": true
       }
     },
     "terminal-chat": {
@@ -2185,7 +2186,9 @@
       "minH": 16,
       "defaultConfig": {
         "maxMessages": 50,
-        "perspective": 0
+        "perspective": 0,
+        "crt": true,
+        "typeMs": 16
       }
     },
     "terminal-holo-alert": {
@@ -2209,7 +2212,31 @@
       },
       "minW": 16,
       "minH": 10,
-      "defaultConfig": {}
+      "defaultConfig": {
+        "crt": true,
+        "typeMs": 16
+      }
+    },
+    "terminal-sysinfo": {
+      "type": "terminal-sysinfo",
+      "label": "Система Terminal",
+      "description": "Сводка стрима как neofetch: аптайм, фолловеры, сабы, донаты и цель (только для темы Terminal)",
+      "icon": "widgetTerminalSysinfo",
+      "dimension": "3d",
+      "theme": "terminal",
+      "renderType": "2d",
+      "defaultGeometry": {
+        "x": 3,
+        "y": 6,
+        "w": 25,
+        "h": 21
+      },
+      "minW": 16,
+      "minH": 10,
+      "defaultConfig": {
+        "perspective": 0,
+        "crt": true
+      }
     },
     "terminal-recent": {
       "type": "terminal-recent",

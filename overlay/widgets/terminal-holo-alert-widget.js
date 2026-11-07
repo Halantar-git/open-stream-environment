@@ -51,8 +51,16 @@
   const DEFAULT_ACCENT = "#58a6ff";
   const DEFAULT_ERROR = "#ff3333";
 
-  // Скорость печати: 16 мс на символ — быстро, но эффект виден.
+  // Скорость печати: 16 мс на такт — быстро, но эффект виден.
   const TYPE_MS = 16;
+  // Пределы из инспектора: мусор в конфиге не должен подвесить печать.
+  const MAX_TYPE_MS = 200;
+
+  function clampTypeMs(value) {
+    const n = Math.floor(Number(value));
+    if (!Number.isFinite(n) || n < 0) return TYPE_MS;
+    return Math.min(MAX_TYPE_MS, n);
+  }
 
   // Команда, которой «устанавливается» событие — своя для каждого вида.
   const COMMANDS = {
@@ -94,6 +102,7 @@
       this._readColors();
       this.element.classList.add("terminal-surface");
       this._applySurface();
+      this._applyCrt();
       // Скрыт до первого алерта — окно не должно висеть на экране.
       this.element.style.opacity = "0";
 
@@ -121,6 +130,7 @@
       if (this.playing && this._cardHeight > 0) {
         this.element.style.height = this._cardHeight + "px";
       }
+      this._applyCrt();
     }
 
     _readColors() {
@@ -145,6 +155,15 @@
       style.border = (read && read("--panel-border")) || DEFAULT_BORDER;
       style.borderRadius = (read && read("--panel-radius")) || "6px";
       style.boxShadow = (read && read("--panel-glow")) || DEFAULT_GLOW;
+    }
+
+    // Сканлайны CRT снимаются тумблером в инспекторе: на мелком тексте
+    // алерта в эфире они иногда съедают читаемость.
+    _applyCrt() {
+      const on = this.config.crt !== false;
+      if (this.element && this.element.dataset) {
+        this.element.dataset.crt = on ? "on" : "off";
+      }
     }
 
     // ---- очередь ----
@@ -366,7 +385,8 @@
 
       const reduceMotion =
         typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
-      if (reduceMotion) {
+      const typeMs = clampTypeMs(this.config.typeMs);
+      if (reduceMotion || typeMs === 0) {
         rows.forEach((row) => {
           row.innerHTML = row.dataset.html;
         });
@@ -423,7 +443,7 @@
         }
       };
 
-      this.typeTimer = setInterval(step, TYPE_MS);
+      this.typeTimer = setInterval(step, typeMs);
     }
 
     _stopTyping() {

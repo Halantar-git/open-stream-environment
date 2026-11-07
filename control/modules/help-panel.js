@@ -163,6 +163,7 @@ const SECTIONS = [
       { type: "p", key: "help.themes.p3" },
       { type: "p", key: "help.themes.p4" },
       { type: "p", key: "help.themes.p5" },
+      { type: "p", key: "help.themes.p6" },
     ],
   },
   {

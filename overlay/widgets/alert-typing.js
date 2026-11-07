@@ -30,7 +30,9 @@
 
   Опции: `keepCaret: false` убирает каретку с последней строки (когда она
   нужна только во время печати), `onTick` зовётся после каждого такта —
-  чату по нему нужно доскроллить растущую строку.
+  чату по нему нужно доскроллить растущую строку. `typeMs` задаёт скорость
+  в миллисекундах на такт (0 — не печатать вовсе), `onDone` зовётся, когда
+  текст допечатан или печать прервана: по нему чат снимает флаг `-- INSERT --`.
 */
 (function (root, factory) {
   const api = factory();
@@ -78,11 +80,23 @@
     const settings = options || {};
     const keepCaret = settings.keepCaret !== false;
     const onTick = typeof settings.onTick === "function" ? settings.onTick : null;
-    const idle = { stop() {} };
-    if (!root || !root.childNodes || reduceMotion()) return idle;
+    const onDone = typeof settings.onDone === "function" ? settings.onDone : null;
+    // 0 — печатать нечего: текст уже стоит на месте, а ждать такта незачем.
+    const typeMs = Number.isFinite(settings.typeMs) ? Math.max(0, settings.typeMs) : TYPE_MS;
+    const notifyDone = () => {
+      if (onDone) onDone();
+    };
+    const idle = { stop() { notifyDone(); } };
+    if (!root || !root.childNodes || reduceMotion() || typeMs === 0) {
+      notifyDone();
+      return idle;
+    }
 
     const nodes = collectTextNodes(root);
-    if (!nodes.length) return idle;
+    if (!nodes.length) {
+      notifyDone();
+      return idle;
+    }
 
     const originals = nodes.map((node) => node.nodeValue);
     // Режем по code point'ам: иначе эмодзи из сообщения на один такт развалится
@@ -128,6 +142,7 @@
       stopTimer();
       showAll();
       dropCaret();
+      notifyDone();
     };
 
     const step = () => {
@@ -154,6 +169,7 @@
         // если виджет не попросил её убрать.
         if (!keepCaret) dropCaret();
         stopTimer();
+        notifyDone();
       }
     };
 
@@ -161,7 +177,7 @@
       node.nodeValue = "";
     });
     placeCaret(nodes[0]);
-    timer = setInterval(step, TYPE_MS);
+    timer = setInterval(step, typeMs);
 
     return { stop: finish };
   }

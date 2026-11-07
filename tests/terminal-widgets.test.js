@@ -30,6 +30,7 @@ const WidgetTerminalCube = require("../overlay/widgets/terminal-cube-widget");
 const WidgetTerminalGoal = require("../overlay/widgets/terminal-goal-widget");
 const WidgetTerminalChat = require("../overlay/widgets/terminal-chat-widget");
 const WidgetTerminalHoloAlert = require("../overlay/widgets/terminal-holo-alert-widget");
+const WidgetTerminalSysinfo = require("../overlay/widgets/terminal-sysinfo-widget");
 const WidgetManager = require("../overlay/widgets/widget-manager");
 
 // ---- минимальные заглушки DOM и canvas ----
@@ -273,6 +274,18 @@ describe("WidgetTerminalGoal", () => {
     widget.unmount();
   });
 
+  test("строка состояния и CRT-тумблер", () => {
+    const widget = new WidgetTerminalGoal(item("terminal-goal"), makeContext("terminal"));
+    widget.mount(makeEl("div"));
+
+    expect(widget.statusEl.innerHTML).toContain("[ONLINE]");
+    expect(widget.element.dataset.crt).toBe("on");
+
+    widget.update({ config: { crt: false } });
+    expect(widget.element.dataset.crt).toBe("off");
+    widget.unmount();
+  });
+
   test("не инициализируется на чужой теме", () => {
     const widget = new WidgetTerminalGoal(item("terminal-goal"), makeContext("sf"));
     widget.mount(makeEl("div"));
@@ -346,6 +359,57 @@ describe("WidgetTerminalChat", () => {
     context.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "c", message: "3" });
 
     expect(widget.messagesInner.children).toHaveLength(2);
+    widget.unmount();
+  });
+
+  test("под логом стоят приглашение и строка состояния", () => {
+    const context = makeContext("terminal");
+    const widget = new WidgetTerminalChat(item("terminal-chat"), context);
+    widget.mount(makeEl("div"));
+
+    expect(widget.promptEl.innerHTML).toContain("visitor@ose-chat");
+    expect(widget.statusEl.innerHTML).toContain("[ONLINE]");
+    expect(widget.statusEl.innerHTML).toContain("msgs 0");
+
+    // Пока строка печатается, в строке состояния горит INSERT — как в vi.
+    widget._updateStatus(true);
+    expect(widget.statusEl.innerHTML).toContain("-- INSERT --");
+    widget._updateStatus(false);
+    expect(widget.statusEl.innerHTML).toContain("[ONLINE]");
+
+    context.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "bob", message: "hi" });
+    expect(widget.statusEl.innerHTML).toContain("msgs 1");
+
+    widget.unmount();
+  });
+
+  test("скорость печати берётся из настроек: 0 — без печати", () => {
+    const AlertTyping = require("../overlay/widgets/alert-typing");
+    const spy = jest.spyOn(AlertTyping, "typeAlertText").mockImplementation(() => ({ stop() {} }));
+    try {
+      const context = makeContext("terminal");
+      const widget = new WidgetTerminalChat(item("terminal-chat", { config: { typeMs: 0 } }), context);
+      widget.mount(makeEl("div"));
+
+      context.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "bob", message: "hi" });
+      expect(spy).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ typeMs: 0 }));
+
+      widget.unmount();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test("CRT-сканлайны снимаются тумблером", () => {
+    const widget = new WidgetTerminalChat(
+      item("terminal-chat", { config: { crt: false } }),
+      makeContext("terminal"),
+    );
+    widget.mount(makeEl("div"));
+    expect(widget.element.dataset.crt).toBe("off");
+
+    widget.update({ config: { crt: true } });
+    expect(widget.element.dataset.crt).toBe("on");
     widget.unmount();
   });
 
@@ -442,10 +506,94 @@ describe("WidgetTerminalHoloAlert", () => {
     }
   });
 
+  test("typeMs: 0 показывает вывод сразу, без печати", () => {
+    const context = makeContext("terminal");
+    const widget = new WidgetTerminalHoloAlert(
+      item("terminal-holo-alert", { config: { typeMs: 0 } }),
+      context,
+    );
+    widget.mount(makeEl("div"));
+
+    context.bus.emit(EVENT_TYPES.ALERT, { kind: "follow", user: "bob", durationMs: 5000 });
+    const card = widget.host.children[0];
+    const body = card.children[1];
+    expect(body.children.every((row) => row.innerHTML === row.dataset.html)).toBe(true);
+
+    widget.unmount();
+  });
+
   test("не инициализируется на чужой теме", () => {
     const widget = new WidgetTerminalHoloAlert(item("terminal-holo-alert"), makeContext("sf"));
     widget.mount(makeEl("div"));
     expect(widget.host).toBeNull();
+    widget.unmount();
+  });
+});
+
+describe("WidgetTerminalSysinfo", () => {
+  function sysinfoContext() {
+    const context = makeContext("terminal");
+    context.state.stats = { followerCount: 1500, subscriberCount: 7 };
+    context.state.sessionDonations = { count: 3, amount: 1500, currency: "RUB" };
+    return context;
+  }
+
+  // Строки панели: 0 — заголовок, 1 — разделитель, дальше по одной на метрику.
+  const rowAt = (widget, index) => widget.rowsEl.children[index];
+  const valueAt = (widget, index) => rowAt(widget, index).children[1];
+
+  test("показывает сводку стрима строками neofetch", () => {
+    const widget = new WidgetTerminalSysinfo(item("terminal-sysinfo"), sysinfoContext());
+    widget.mount(makeEl("div"));
+
+    expect(widget.windowEl).toBeTruthy();
+    expect(widget.titleEl.textContent).toBe("sysinfo.title");
+    expect(rowAt(widget, 0).textContent).toBe("ose@terminal");
+    expect(rowAt(widget, 3).children[0].textContent).toBe("sysinfo.followers");
+    expect(valueAt(widget, 3).innerHTML).toBe("1500");
+    expect(valueAt(widget, 4).innerHTML).toBe("7");
+    expect(valueAt(widget, 5).innerHTML).toContain("1500");
+    expect(valueAt(widget, 6).innerHTML).toContain("50%");
+    widget.unmount();
+  });
+
+  test("счётчик сообщений растёт без перерисовки панели", () => {
+    const context = sysinfoContext();
+    const widget = new WidgetTerminalSysinfo(item("terminal-sysinfo"), context);
+    widget.mount(makeEl("div"));
+    const rows = widget.rowsEl.children.length;
+
+    context.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "bob", message: "hi" });
+    expect(widget.chatValueEl.textContent).toBe("1");
+    expect(widget.rowsEl.children.length).toBe(rows);
+    widget.unmount();
+  });
+
+  test("цель пересчитывается по событию", () => {
+    const context = sysinfoContext();
+    const widget = new WidgetTerminalSysinfo(item("terminal-sysinfo"), context);
+    widget.mount(makeEl("div"));
+
+    context.state.goal = { title: "Новая", current: 3, target: 4, currency: "RUB" };
+    context.bus.emit(EVENT_TYPES.GOAL_UPDATE, context.state.goal);
+    expect(valueAt(widget, 6).innerHTML).toContain("75%");
+    widget.unmount();
+  });
+
+  test("CRT-тумблер снимает сканлайны", () => {
+    const widget = new WidgetTerminalSysinfo(
+      item("terminal-sysinfo", { config: { crt: false } }),
+      sysinfoContext(),
+    );
+    widget.mount(makeEl("div"));
+    expect(widget.element.dataset.crt).toBe("off");
+    widget.unmount();
+  });
+
+  test("не инициализируется на чужой теме", () => {
+    const widget = new WidgetTerminalSysinfo(item("terminal-sysinfo"), makeContext("sf"));
+    widget.mount(makeEl("div"));
+    expect(widget.windowEl).toBeNull();
     widget.unmount();
   });
 });

@@ -400,6 +400,7 @@ export function initPropertiesPanel({
         <div class="md-field"><label>${t("properties.currency")}</label><input type="text" id="pGoalCurrency" value="${escapeAttr(state.goal.currency || "")}"></div>
         <div class="properties__toggle-row"><label>${t("properties.showPercent")}</label>${switchHtml("pShowPercent", !!config.showPercentage)}</div>
         <div class="properties__toggle-row"><label>${t("properties.showBackground")}</label>${switchHtml("pShowBackground", config.showBackground !== false)}</div>
+        ${inst.type === "terminal-goal" ? `<div class="properties__toggle-row"><label>${t("properties.crt")}</label>${switchHtml("pCrt", config.crt !== false)}</div>` : ""}
         ${inst.type === "goal" ? "" : `<div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>
         <div class="md-field"><label>${t("properties.perspectiveDirection")}</label>
           <select id="pPerspectiveDirection">
@@ -416,7 +417,15 @@ export function initPropertiesPanel({
       extraHtml = `
         <div class="md-field"><label>${t("properties.maxMessages")}</label><input type="number" id="pMaxMessages" min="1" max="100" value="${config.maxMessages || 50}"></div>
         ${inst.type === "teso-chat" ? "" : `<div class="properties__toggle-row"><label>${t("properties.chatShowTime")}</label>${switchHtml("pChatShowTime", config.showTime !== false)}</div>`}
+        ${inst.type === "terminal-chat" ? `<div class="properties__toggle-row"><label>${t("properties.crt")}</label>${switchHtml("pCrt", config.crt !== false)}</div>
+        <div class="md-field"><label>${t("properties.typeSpeed")}</label><input type="number" id="pTypeSpeed" min="0" max="200" step="1" value="${config.typeMs ?? 16}"></div>` : ""}
         <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>`;
+    } else if (inst.type === "terminal-holo-alert" || inst.type === "terminal-sysinfo") {
+      extraHtml = `
+        <div class="properties__toggle-row"><label>${t("properties.crt")}</label>${switchHtml("pCrt", config.crt !== false)}</div>
+        ${inst.type === "terminal-holo-alert"
+          ? `<div class="md-field"><label>${t("properties.typeSpeed")}</label><input type="number" id="pTypeSpeed" min="0" max="200" step="1" value="${config.typeMs ?? 16}"></div>`
+          : `<div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>`}`;
     } else if (inst.type === "grimhex" || inst.type === "musain" || inst.type === "nuclear" || inst.type === "cobra" || inst.type === "elite-sign" || inst.type === "teso-seal" || inst.type === "md3-orb" || inst.type === "pixel-cube" || inst.type === "wardogs-cube" || inst.type === "retrowave-symbol" || inst.type === "orbital-symbol" || inst.type === "sf-tachometer" || inst.type === "sf-cube" || inst.type === "terminal-cube") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>
@@ -1002,6 +1011,8 @@ export function initPropertiesPanel({
       propertiesEl.querySelector("#pGoalCurrency").addEventListener("change", (e) => send(EVENT_TYPES.CMD_SET_GOAL, { currency: e.target.value }));
       wireSwitch(propertiesEl.querySelector("#pShowPercent"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showPercentage: on } } }));
       wireSwitch(propertiesEl.querySelector("#pShowBackground"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showBackground: on } } }));
+      // CRT есть только у терминальной цели: у остальных тумблера нет.
+      wireSwitch(propertiesEl.querySelector("#pCrt"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { crt: on } } }));
       // Наклон есть только у 3D-целей: у обычной «goal» ползунка нет.
       const perspective = propertiesEl.querySelector("#pPerspective");
       if (perspective) {
@@ -1021,12 +1032,32 @@ export function initPropertiesPanel({
     } else if (inst.type === "grimhex-chat" || inst.type === "nuclear-chat" || inst.type === "cobra-chat" || inst.type === "md3-chat" || inst.type === "pixel-chat" || inst.type === "teso-chat" || inst.type === "wardogs-chat" || inst.type === "retrowave-chat" || inst.type === "sf-chat" || inst.type === "terminal-chat") {
       propertiesEl.querySelector("#pMaxMessages").addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { maxMessages: Number(e.target.value) } } }));
       wireSwitch(propertiesEl.querySelector("#pChatShowTime"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showTime: on } } }));
+      wireSwitch(propertiesEl.querySelector("#pCrt"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { crt: on } } }));
+      const typeSpeed = propertiesEl.querySelector("#pTypeSpeed");
+      if (typeSpeed) {
+        typeSpeed.addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { typeMs: Math.max(0, Math.min(200, Math.floor(Number(e.target.value) || 0))) } } }));
+      }
       propertiesEl.querySelector("#pPerspective").addEventListener("input", (e) => {
         const v = Number(e.target.value);
         const label = propertiesEl.querySelector("#pPerspectiveValue");
         if (label) label.textContent = String(v);
         send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { perspective: v } } });
       });
+    } else if (inst.type === "terminal-holo-alert" || inst.type === "terminal-sysinfo") {
+      wireSwitch(propertiesEl.querySelector("#pCrt"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { crt: on } } }));
+      const typeSpeed = propertiesEl.querySelector("#pTypeSpeed");
+      if (typeSpeed) {
+        typeSpeed.addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { typeMs: Math.max(0, Math.min(200, Math.floor(Number(e.target.value) || 0))) } } }));
+      }
+      const perspective = propertiesEl.querySelector("#pPerspective");
+      if (perspective) {
+        perspective.addEventListener("input", (e) => {
+          const value = Number(e.target.value);
+          const label = propertiesEl.querySelector("#pPerspectiveValue");
+          if (label) label.textContent = String(value);
+          send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { perspective: value } } });
+        });
+      }
     } else if (inst.type === "grimhex" || inst.type === "musain" || inst.type === "nuclear" || inst.type === "cobra" || inst.type === "elite-sign" || inst.type === "teso-seal" || inst.type === "md3-orb" || inst.type === "pixel-cube" || inst.type === "wardogs-cube" || inst.type === "retrowave-symbol" || inst.type === "orbital-symbol" || inst.type === "sf-tachometer" || inst.type === "sf-cube" || inst.type === "terminal-cube") {
       propertiesEl.querySelector("#pPerspective").addEventListener("input", (e) => {
         const v = Number(e.target.value);

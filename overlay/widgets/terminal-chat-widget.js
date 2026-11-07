@@ -54,12 +54,23 @@
   const DEFAULT_MAX_MESSAGES = 50;
   const MAX_MESSAGES_LIMIT = 200;
 
+  // Скорость печати по умолчанию — как у алерта Terminal (16 мс на такт,
+  // два символа). Ноль в настройках означает «печатать сразу».
+  const DEFAULT_TYPE_MS = 16;
+  const MAX_TYPE_MS = 200;
+
   // Лимит строк из инспектора (1..200). Мусор в конфиге не должен снимать
   // лимит: иначе DOM рос бы безгранично за многочасовой эфир.
   function clampMaxMessages(value) {
     const n = Math.floor(Number(value));
     if (!Number.isFinite(n) || n < 1) return DEFAULT_MAX_MESSAGES;
     return Math.min(MAX_MESSAGES_LIMIT, n);
+  }
+
+  function clampTypeMs(value) {
+    const n = Math.floor(Number(value));
+    if (!Number.isFinite(n) || n < 0) return DEFAULT_TYPE_MS;
+    return Math.min(MAX_TYPE_MS, n);
   }
 
   class WidgetTerminalChat extends BaseWidget {
@@ -74,6 +85,9 @@
       this.windowEl = null;
       this.messagesScroller = null;
       this.messagesInner = null;
+      this.promptEl = null;
+      this.statusEl = null;
+      this._messageCount = 0;
       this._typing = null;
     }
 
@@ -84,6 +98,7 @@
       this._readColors();
       this.element.classList.add("terminal-surface");
       this._applySurface();
+      this._applyCrt();
 
       this.windowEl = document.createElement("div");
       this.windowEl.className = "terminal-window";
@@ -111,6 +126,21 @@
         "display:flex;flex-direction:column;justify-content:flex-end;min-height:100%;";
       this.messagesScroller.appendChild(this.messagesInner);
 
+      // Приглашение под логом — как в открытой консоли: видно, что шелл ждёт
+      // ввода. Каретка мигает блоком, поэтому чат читается живым.
+      this.promptEl = document.createElement("div");
+      this.promptEl.className = "terminal-prompt-line";
+      this.promptEl.innerHTML =
+        '<b>visitor@ose-chat:~$</b><span class="terminal-caret"></span>';
+      body.appendChild(this.promptEl);
+
+      // Строка состояния: счётчик сообщений, кодировка и часы. Флаг слева
+      // меняется на `-- INSERT --`, пока печатается последняя строка.
+      this.statusEl = document.createElement("div");
+      this.statusEl.className = "terminal-status";
+      this.windowEl.appendChild(this.statusEl);
+      this._updateStatus(false);
+
       this._applyPerspective();
       this.bindEvents();
     }
@@ -121,10 +151,13 @@
       this.windowEl = null;
       this.messagesScroller = null;
       this.messagesInner = null;
+      this.promptEl = null;
+      this.statusEl = null;
     }
 
     onUpdate(prev, next) {
       if (prev.perspective !== next.perspective) this._applyPerspective();
+      if (prev.crt !== next.crt) this._applyCrt();
     }
 
     _readColors() {
@@ -150,6 +183,13 @@
       style.border = border;
       style.borderRadius = radius;
       style.boxShadow = glow;
+    }
+
+    // CRT-сканлайны — часть темы, но на мелком тексте в эфире они иногда
+    // мешают: тумблер в инспекторе снимает их с конкретного виджета.
+    _applyCrt() {
+      const on = this.config.crt !== false;
+      this.element.dataset.crt = on ? "on" : "off";
     }
 
     _applyPerspective() {
@@ -199,6 +239,7 @@
         this.messagesInner.firstChild.remove();
       }
 
+      this._messageCount += 1;
       this._scrollToEnd();
       this._typeMessage(textEl);
 
@@ -212,9 +253,15 @@
     // в живом чате ждать очереди нельзя, иначе печать отстаёт от эфира.
     _typeMessage(textEl) {
       this._stopTyping();
+      this._updateStatus(true);
       this._typing = AlertTyping
-        ? AlertTyping.typeAlertText(textEl, { onTick: () => this._scrollToEnd() })
+        ? AlertTyping.typeAlertText(textEl, {
+            typeMs: clampTypeMs(this.config.typeMs),
+            onTick: () => this._scrollToEnd(),
+            onDone: () => this._updateStatus(false),
+          })
         : null;
+      if (!this._typing) this._updateStatus(false);
     }
 
     _stopTyping() {
@@ -222,6 +269,19 @@
         this._typing.stop();
         this._typing = null;
       }
+    }
+
+    // Строка состояния: `-- INSERT --`, пока печатается строка, счётчик
+    // пришедших сообщений, кодировка и часы.
+    _updateStatus(typing) {
+      if (!this.statusEl) return;
+      const escapeHtml = this.context.escapeHtml || ((value) => String(value));
+      const flag = typing ? "-- INSERT --" : "[ONLINE]";
+      this.statusEl.innerHTML =
+        `<span class="terminal-status__flag${typing ? "" : " is-idle"}">${flag}</span>` +
+        `<span>msgs ${this._messageCount}</span>` +
+        `<span>utf-8</span>` +
+        `<span class="terminal-status__spacer">${escapeHtml(BaseWidget.clockTime())}</span>`;
     }
 
     // Строка растёт по мере печати — держим прокрутку внизу.

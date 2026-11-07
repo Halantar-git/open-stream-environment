@@ -370,6 +370,7 @@
         "--term-prompt": "#00ff66",
         "--term-accent": "#58a6ff",
         "--term-error": "#ff3333",
+        "--term-warn": "#ffb000",
         "--term-dim": "#8b949e",
         "--term-glow": "rgba(0, 255, 102, 0.25)",
 

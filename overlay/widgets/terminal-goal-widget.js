@@ -71,6 +71,7 @@
       this.titleEl = null;
       this.barEl = null;
       this.amountEl = null;
+      this.statusEl = null;
       this.bareTitleEl = null;
       // Ширина клетки и служебного символа в текущем шрифте: по ним считается,
       // сколько клеток влезает в панель.
@@ -88,6 +89,7 @@
 
       this.element.classList.add("terminal-surface");
       this._applySurface();
+      this._applyCrt();
 
       this.windowEl = document.createElement("div");
       this.windowEl.className = "terminal-window";
@@ -128,6 +130,12 @@
         "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
       body.appendChild(this.amountEl);
 
+      // Строка состояния под шкалой — как в терминале: видно, что виджет
+      // жив и когда последний раз обновлялся.
+      this.statusEl = document.createElement("div");
+      this.statusEl.className = "terminal-status";
+      this.windowEl.appendChild(this.statusEl);
+
       this._updateDom();
 
       // Ширину двигает не только перетаскивание рамки: окно OBS и превью
@@ -155,6 +163,7 @@
       this.titleEl = null;
       this.barEl = null;
       this.amountEl = null;
+      this.statusEl = null;
       this.bareTitleEl = null;
     }
 
@@ -170,6 +179,7 @@
         this._applySurface();
         this._updateDom();
       }
+      if (prev.crt !== next.crt) this._applyCrt();
       if (prev.perspective !== next.perspective || prev.perspectiveDirection !== next.perspectiveDirection) {
         this._applyPerspective();
       }
@@ -201,6 +211,13 @@
       } else {
         this._setTilt("");
       }
+    }
+
+    // Сканлайны — эффект темы; тумблер «CRT-эффект» снимает их, когда они
+    // мешают читать мелкую шкалу в эфире.
+    _applyCrt() {
+      const on = this.config.crt !== false;
+      this.element.dataset.crt = on ? "on" : "off";
     }
 
     // Корпус панели из токенов темы. Отключённый фон снимает только панель:
@@ -306,6 +323,14 @@
         `${escapeHtml(currencySymbol(goal.currency))}`;
       const titlePrefix = framed ? "" : `${escapeHtml(title)}  `;
       this.amountEl.innerHTML = titlePrefix + amounts;
+
+      if (this.statusEl) {
+        this.statusEl.innerHTML =
+          '<span class="terminal-status__flag is-idle">[ONLINE]</span>' +
+          '<span>goal</span>' +
+          '<span>utf-8</span>' +
+          `<span class="terminal-status__spacer">${escapeHtml(BaseWidget.clockTime())}</span>`;
+      }
     }
   }
 

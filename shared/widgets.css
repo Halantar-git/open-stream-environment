@@ -1360,18 +1360,25 @@
   gap: 4px;
   flex-shrink: 0;
 }
+/* «Кнопки» окна — ASCII, как в терминале GNU/Linux: цветные кружки macOS
+   в этой теме были бы чужим языком. Знаки те же, что в tmux и Midnight
+   Commander, и остаются моноширинными. */
 .terminal-tab__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--term-error, #ff3333);
+  color: var(--term-dim, #8b949e);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1;
   opacity: 0.85;
 }
-.terminal-tab__dot:nth-child(2) {
-  background: #ffb000;
+.terminal-tab__dot::before {
+  content: "[−]";
 }
-.terminal-tab__dot:nth-child(3) {
-  background: var(--term-prompt, #00ff66);
+.terminal-tab__dot:nth-child(2)::before {
+  content: "[□]";
+}
+.terminal-tab__dot:nth-child(3)::before {
+  content: "[×]";
 }
 .terminal-body {
   flex: 1 1 auto;
@@ -1394,6 +1401,38 @@
   font-family: var(--font-mono);
   font-size: 11px;
   line-height: 1.3;
+}
+/* Режим печати — как в vi: пока строка набирается, в строке состояния
+   горит INSERT, иначе — обычный ONLINE. */
+.terminal-status__flag {
+  color: var(--term-prompt, #00ff66);
+  font-weight: 700;
+}
+.terminal-status__flag.is-idle {
+  color: var(--term-dim, #8b949e);
+  font-weight: 400;
+}
+.terminal-status__spacer {
+  margin-left: auto;
+}
+
+/* Приглашение под логом: чат выглядит открытой консолью, а не списком. */
+.terminal-prompt-line {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 0 0;
+  color: var(--term-dim, #8b949e);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.terminal-prompt-line b {
+  color: var(--term-prompt, #00ff66);
+  font-weight: 700;
 }
 .terminal-caret::after {
   content: "▌";
@@ -1432,6 +1471,55 @@
     border-color: var(--md-outline, #30363d);
     box-shadow: var(--panel-glow);
   }
+}
+
+/* Сканлайны CRT — эффект, а не необходимость: тумблер «CRT-эффект» в
+   инспекторе снимает их с конкретного виджета, когда они мешают читать
+   мелкий текст в эфире. */
+.terminal-surface[data-crt="off"]::after {
+  display: none;
+}
+
+/* ---------- Terminal в 2D ----------
+   Свои виджеты темы живут только с включённым 3D. В 2D остаются общие панели,
+   и токен --panel-decoration = "terminal" добавляет им то, что отличает
+   консоль от обычной тёмной карточки: моноширинный набор, редкие сканлайны
+   и волосяную линию под приглашение в верхней кромке. */
+[data-decoration="terminal"] .widget-alert,
+[data-decoration="terminal"] .widget-goal:not(.widget-goal--no-bg),
+[data-decoration="terminal"] .widget-recent,
+[data-decoration="terminal"] .widget-chat,
+[data-decoration="terminal"] .widget-stat,
+[data-decoration="terminal"] .widget-social,
+[data-decoration="terminal"] .exec-timer,
+[data-decoration="terminal"] .widget-custom.has-card,
+[data-decoration="terminal"] .ticker__frame {
+  position: relative;
+  font-family: var(--font-mono);
+  background-image: repeating-linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.16) 0 1px,
+    transparent 1px 3px
+  );
+}
+[data-decoration="terminal"] .widget-alert::before,
+[data-decoration="terminal"] .widget-goal:not(.widget-goal--no-bg)::before,
+[data-decoration="terminal"] .widget-recent::before,
+[data-decoration="terminal"] .widget-chat::before,
+[data-decoration="terminal"] .widget-stat::before,
+[data-decoration="terminal"] .widget-social::before,
+[data-decoration="terminal"] .exec-timer::before,
+[data-decoration="terminal"] .widget-custom.has-card::before,
+[data-decoration="terminal"] .ticker__frame::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 10px;
+  right: 10px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--md-primary) 0 34px, transparent 34px);
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

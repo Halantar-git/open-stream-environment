@@ -1,5 +1,5 @@
 {
-  "sourceHash": "548a62833237f3c3",
+  "sourceHash": "980da34454977959",
   "builtinThemes": {
     "nebula": {
       "id": "nebula",
@@ -203,6 +203,7 @@
         "--term-prompt": "#00ff66",
         "--term-accent": "#58a6ff",
         "--term-error": "#ff3333",
+        "--term-warn": "#ffb000",
         "--term-dim": "#8b949e",
         "--term-glow": "rgba(0, 255, 102, 0.25)",
         "--panel-radius": "6px",

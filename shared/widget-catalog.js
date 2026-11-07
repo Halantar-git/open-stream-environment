@@ -1232,7 +1232,7 @@
       defaultGeometry: { x: 3, y: 83, w: 34, h: 9 },
       minW: 18,
       minH: 6,
-      defaultConfig: { showPercentage: true, showBackground: true, perspective: 0, perspectiveDirection: "left" },
+      defaultConfig: { showPercentage: true, showBackground: true, perspective: 0, perspectiveDirection: "left", crt: true },
     },
     "terminal-chat": {
       type: "terminal-chat",
@@ -1246,7 +1246,7 @@
       defaultGeometry: { x: 68, y: 6, w: 29, h: 48 },
       minW: 16,
       minH: 16,
-      defaultConfig: { maxMessages: 50, perspective: 0 },
+      defaultConfig: { maxMessages: 50, perspective: 0, crt: true, typeMs: 16 },
     },
     "terminal-holo-alert": {
       type: "terminal-holo-alert",
@@ -1260,7 +1260,20 @@
       defaultGeometry: { x: 38, y: 18, w: 26, h: 16 },
       minW: 16,
       minH: 10,
-      defaultConfig: {},
+      defaultConfig: { crt: true, typeMs: 16 },
+    },
+    "terminal-sysinfo": {
+      type: "terminal-sysinfo",
+      label: "Система Terminal",
+      description: "Сводка стрима как neofetch: аптайм, фолловеры, сабы, донаты и цель (только для темы Terminal)",
+      icon: "widgetTerminalSysinfo",
+      dimension: "3d",
+      theme: "terminal",
+      renderType: "2d",
+      defaultGeometry: { x: 3, y: 6, w: 25, h: 21 },
+      minW: 16,
+      minH: 10,
+      defaultConfig: { perspective: 0, crt: true },
     },
 
     "terminal-recent": recent3d(

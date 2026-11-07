@@ -490,6 +490,7 @@
   manager.register("terminal-goal", OW.WidgetTerminalGoal);
   manager.register("terminal-chat", OW.WidgetTerminalChat);
   manager.register("terminal-holo-alert", OW.WidgetTerminalHoloAlert);
+  manager.register("terminal-sysinfo", OW.WidgetTerminalSysinfo);
   manager.register("donatex-ai", OW.DonatexAiWidget);
   manager.register("music", OW.MusicWidget);
 

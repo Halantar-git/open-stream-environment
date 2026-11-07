@@ -1529,12 +1529,15 @@ export function initCanvasEditor({
         const filled = Math.round((pct / 100) * 24);
         const on = "█".repeat(filled);
         const off = "░".repeat(24 - filled);
+        const tab = `<div style="display:flex;align-items:center;gap:4px;padding:2px 6px;border-bottom:1px solid ${escapeAttr(accent)};background:rgba(88, 166, 255, 0.1);color:${escapeAttr(accent)};font-family:var(--font-mono);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="color:${escapeAttr(prompt)};">root@ose-goal:~#</span><span style="color:${escapeAttr(muted)};">${escapeHtml(state.goal.title || "")}</span><span style="margin-left:auto;color:${escapeAttr(muted)};opacity:0.85;">[−][□][×]</span></div>`;
+        const status = `<div style="display:flex;align-items:center;gap:5px;padding:1px 6px;border-top:1px solid #21262d;background:rgba(0,255,102,0.04);color:${escapeAttr(muted)};font-family:var(--font-mono);font-size:9px;line-height:1.4;"><span style="color:${escapeAttr(prompt)};">[ONLINE]</span><span>goal</span><span>utf-8</span><span style="margin-left:auto;">12:00</span></div>`;
         return `<div style="position:relative;height:100%;box-sizing:border-box;background:${escapeAttr(bg)};border:${escapeAttr(border)};border-radius:6px;box-shadow:${escapeAttr(glow)};display:flex;flex-direction:column;overflow:hidden;">
-          <div style="padding:2px 6px;border-bottom:1px solid ${escapeAttr(accent)};background:rgba(88, 166, 255, 0.1);color:${escapeAttr(accent)};font-family:var(--font-mono);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">root@ose-goal:~#</div>
+          ${tab}
           <div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:4px 6px;">
             <div style="font-family:var(--font-mono);font-size:12px;white-space:nowrap;overflow:hidden;color:${escapeAttr(muted)};">[<span style="color:${escapeAttr(prompt)};">${on}</span>${off}] <span style="color:${escapeAttr(prompt)};">[${pct}%]</span></div>
             <div style="font-family:var(--font-mono);font-size:11px;color:${escapeAttr(muted)};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${formatMoney(state.goal.current)} / ${formatMoney(state.goal.target)}</div>
           </div>
+          ${status}
         </div>`;
       }
       case "terminal-chat": {
@@ -1559,8 +1562,47 @@ export function initCanvasEditor({
           )
           .join("");
         return `<div style="position:relative;height:100%;box-sizing:border-box;background:${escapeAttr(bg)};border:${escapeAttr(border)};border-radius:6px;box-shadow:${escapeAttr(glow)};display:flex;flex-direction:column;overflow:hidden;">
-          <div style="padding:2px 6px;border-bottom:1px solid ${escapeAttr(accent)};background:rgba(88, 166, 255, 0.1);color:${escapeAttr(accent)};font-family:var(--font-mono);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="color:${escapeAttr(prompt)};">root@ose-chat:~#</span> ${escapeHtml(t("editor.chat"))}</div>
-          <div style="flex:1;min-height:0;padding:4px 6px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;">${rows}</div>
+          <div style="display:flex;align-items:center;gap:4px;padding:2px 6px;border-bottom:1px solid ${escapeAttr(accent)};background:rgba(88, 166, 255, 0.1);color:${escapeAttr(accent)};font-family:var(--font-mono);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="color:${escapeAttr(prompt)};">root@ose-chat:~#</span><span style="color:${escapeAttr(muted)};">${escapeHtml(t("editor.chat"))}</span><span style="margin-left:auto;color:${escapeAttr(muted)};opacity:0.85;">[−][□][×]</span></div>
+          <div style="flex:1;min-height:0;padding:4px 6px 0;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;">${rows}</div>
+          <div style="padding:0 6px;font-family:var(--font-mono);font-size:10px;color:${escapeAttr(muted)};white-space:nowrap;overflow:hidden;"><b style="color:${escapeAttr(prompt)};">visitor@ose-chat:~$</b> <span style="color:${escapeAttr(prompt)};">▌</span></div>
+          <div style="display:flex;align-items:center;gap:5px;padding:1px 6px;border-top:1px solid #21262d;background:rgba(0,255,102,0.04);color:${escapeAttr(muted)};font-family:var(--font-mono);font-size:9px;line-height:1.4;"><span style="color:${escapeAttr(prompt)};">[ONLINE]</span><span>msgs 3</span><span>utf-8</span><span style="margin-left:auto;">12:00</span></div>
+        </div>`;
+      }
+      case "terminal-sysinfo": {
+        const tokens = state.appearance.tokens || {};
+        const bg = tokens["--panel-bg"] || "rgba(13, 17, 23, 0.92)";
+        const border = tokens["--panel-border"] || "1px solid #30363d";
+        const glow = tokens["--panel-glow"] || "0 0 18px rgba(0, 255, 102, 0.25)";
+        const prompt = tokens["--term-prompt"] || "#00ff66";
+        const accent = tokens["--term-accent"] || "#58a6ff";
+        const text = tokens["--md-on-surface"] || "#c9d1d9";
+        const muted = tokens["--md-on-surface-variant"] || "#8b949e";
+        const pct = state.goal && state.goal.target ? Math.min(100, Math.round((state.goal.current / state.goal.target) * 100)) : 0;
+        const filled = Math.round((pct / 100) * 8);
+        const row = (key, value) =>
+          `<div style="display:flex;gap:8px;font-family:var(--font-mono);font-size:10px;line-height:1.45;"><span style="min-width:7ch;color:${escapeAttr(muted)};">${escapeHtml(key)}</span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${escapeAttr(text)};">${value}</span></div>`;
+        const rows = [
+          row(t("sysinfo.uptime"), "2h 13m"),
+          row(t("sysinfo.followers"), formatMoney((state.stats && state.stats.followerCount) || 0)),
+          row(t("sysinfo.subs"), formatMoney((state.stats && state.stats.subscriberCount) || 0)),
+          row(
+            t("sysinfo.donated"),
+            `${formatMoney((state.sessionDonations && state.sessionDonations.count) || 0)} · ${formatMoney((state.sessionDonations && state.sessionDonations.amount) || 0)} ${escapeHtml(currencySymbol("RUB"))}`,
+          ),
+          row(
+            t("sysinfo.goal"),
+            `<span style="color:${escapeAttr(muted)};">[</span><span style="color:${escapeAttr(prompt)};">${"█".repeat(filled)}</span>${escapeAttr("░".repeat(8 - filled))}<span style="color:${escapeAttr(muted)};">]</span> <span style="color:${escapeAttr(prompt)};">${pct}%</span>`,
+          ),
+          row(t("sysinfo.chat"), "128"),
+        ].join("");
+        return `<div style="position:relative;height:100%;box-sizing:border-box;background:${escapeAttr(bg)};border:${escapeAttr(border)};border-radius:6px;box-shadow:${escapeAttr(glow)};display:flex;flex-direction:column;overflow:hidden;">
+          <div style="display:flex;align-items:center;gap:4px;padding:2px 6px;border-bottom:1px solid ${escapeAttr(accent)};background:rgba(88, 166, 255, 0.1);color:${escapeAttr(accent)};font-family:var(--font-mono);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="color:${escapeAttr(prompt)};">root@ose-sysinfo:~#</span><span style="color:${escapeAttr(muted)};">${escapeHtml(t("sysinfo.title"))}</span><span style="margin-left:auto;color:${escapeAttr(muted)};opacity:0.85;">[−][□][×]</span></div>
+          <div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:1px;padding:4px 6px;">
+            <div style="font-family:var(--font-mono);font-size:10px;font-weight:700;color:${escapeAttr(prompt)};">ose@terminal</div>
+            <div style="border-bottom:1px dashed ${escapeAttr(muted)};opacity:0.5;margin:1px 0 3px;"></div>
+            ${rows}
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;padding:1px 6px;border-top:1px solid #21262d;background:rgba(0,255,102,0.04);color:${escapeAttr(muted)};font-family:var(--font-mono);font-size:9px;line-height:1.4;"><span style="color:${escapeAttr(prompt)};">[ONLINE]</span><span>sysinfo</span><span>utf-8</span><span style="margin-left:auto;">12:00</span></div>
         </div>`;
       }
       case "terminal-holo-alert": {
@@ -1572,7 +1614,7 @@ export function initCanvasEditor({
         const accent = tokens["--term-accent"] || "#58a6ff";
         const text = tokens["--md-on-surface"] || "#c9d1d9";
         return `<div style="position:relative;height:100%;box-sizing:border-box;background:${escapeAttr(bg)};border:${escapeAttr(border)};border-radius:6px;box-shadow:${escapeAttr(glow)};display:flex;flex-direction:column;overflow:hidden;">
-          <div style="padding:2px 6px;border-bottom:1px solid ${escapeAttr(accent)};background:rgba(88, 166, 255, 0.1);color:${escapeAttr(accent)};font-family:var(--font-mono);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="color:${escapeAttr(prompt)};">root@ose-alert:~#</span> ${escapeHtml(t("properties.testFollow"))}</div>
+          <div style="display:flex;align-items:center;gap:4px;padding:2px 6px;border-bottom:1px solid ${escapeAttr(accent)};background:rgba(88, 166, 255, 0.1);color:${escapeAttr(accent)};font-family:var(--font-mono);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="color:${escapeAttr(prompt)};">root@ose-alert:~#</span><span>${escapeHtml(t("properties.testFollow"))}</span><span style="margin-left:auto;color:#8b949e;opacity:0.85;">[−][□][×]</span></div>
           <div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:1px;padding:5px 6px;font-family:var(--font-mono);font-size:11px;line-height:1.35;color:${escapeAttr(text)};overflow:hidden;">
             <div><span style="color:${escapeAttr(prompt)};font-weight:700;">$</span> sudo apt install follow</div>
             <div><span style="color:${escapeAttr(prompt)};">[OK]</span> New follower: nova_viewer</div>

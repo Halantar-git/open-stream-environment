@@ -287,6 +287,7 @@
       "terminal-goal": OW.WidgetTerminalGoal,
       "terminal-chat": OW.WidgetTerminalChat,
       "terminal-holo-alert": OW.WidgetTerminalHoloAlert,
+      "terminal-sysinfo": OW.WidgetTerminalSysinfo,
       "donatex-ai": OW.DonatexAiWidget,
       music: OW.MusicWidget,
     };
