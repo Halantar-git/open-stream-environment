@@ -166,7 +166,8 @@
       "lang": "lang <ru|en> — interface language",
       "status": "status — current system state",
       "clear": "clear — clear logs",
-      "help": "help — list commands"
+      "help": "help — list commands",
+      "emotes": "emotes [name] — what came from Twitch: channel and account emotes, whether the name is in the list"
     },
     "scene": { "usage": "Specify a scene. Example: scene brb", "switched": "Scene switched: {{scene}} (OBS: {{name}})" },
     "cam": { "usage": "Specify an angle id. Example: cam cam_main", "obsOffline": "OBS not connected — angle not switched", "switched": "Camera angle switched: {{id}}", "failed": "Failed to switch angle: {{error}}" },
@@ -218,6 +219,7 @@
     "filters": { "none": "No camera filters", "title": "Camera filters:" },
     "lang": { "done": "Interface language: {{lang}}" },
     "logs": { "usage": "Usage: logs <info|success|warn|error|hint|all>", "all": "Log filter: all levels", "set": "Log filter: {{level}}", "unknown": "Unknown level. Available: {{levels}}, all" },
+    "emotes": { "report": "Twitch emotes: channel {{channel}}, account {{account}}", "notLoaded": "not loaded", "none": "Twitch emotes have not been requested yet: chat has not connected since launch.", "error": "Account set did not come: {{error}}. 401/403 means the token lacks user:read:emotes — reconnect Twitch.", "found": "{{name}} is in the list", "missing": "{{name}} is not in the list" },
     "media": { "cleaned": "Orphaned files removed: {{count}}", "none": "No orphaned media files found", "empty": "Media directory is empty", "title": "Media files:" },
     "modtest": { "usage": "Usage: modtest <message>", "ok": "Moderation: no violations", "hit": "Moderation: {{type}} → warn {{warn}}, action {{action}}" },
     "status": { "obs": "OBS: {{status}}", "scene": "Active scene: {{scene}}", "camera": "Active camera angle: {{cam}}", "theme": "Theme: {{theme}}", "channel": "Channel: {{channel}}", "death": "Deaths: {{death}}", "goal": "Goal: {{goal}}", "uptime": "Uptime: {{uptime}}" },

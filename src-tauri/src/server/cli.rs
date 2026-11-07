@@ -33,7 +33,7 @@ const ERR: char = '\u{1}';
 const COMMANDS: &[&str] = &[
     "scene", "cam", "filter", "sound", "death", "wheel", "giveaway", "sim", "alert", "chat",
     "ticker", "theme", "themes", "goal", "obs", "sounds", "cameras", "filters", "logs", "media",
-    "modtest", "lang", "status", "clear", "help",
+    "modtest", "lang", "emotes", "status", "clear", "help",
 ];
 
 /// Подкоманды составных команд.
@@ -84,6 +84,7 @@ const HELP_KEYS: &[&str] = &[
     "media",
     "modtest",
     "lang",
+    "emotes",
     "status",
     "clear",
     "help",
@@ -130,6 +131,7 @@ pub fn execute(diagnostics: &Diagnostics, locales: Option<&Locales>, raw: &str) 
         "filters" => cli.list_filters(),
         "lang" => cli.lang(args.first().copied()),
         "logs" => cli.logs(args.first().copied()),
+        "emotes" => cli.emotes(args.first().copied()),
         "media" => cli.media(args.first().copied()),
         "clear" => {
             cli.broadcast(event_types::CLEAR_TERMINAL, json!({}));
@@ -314,6 +316,51 @@ impl Cli<'_> {
         for key in HELP_KEYS {
             let line = self.t(&format!("cli.help.{key}"), &[]);
             self.log("info", &format!("  {line}"));
+        }
+    }
+
+    /// Что пришло из Twitch со смайлами: набор канала, набор аккаунта и есть
+    /// ли в них искомое имя. Единственный способ увидеть это без дебага в
+    /// оверлее: строка в журнале легко проскакивает до подключения панели.
+    fn emotes(&self, name: Option<&str>) {
+        let report = self.diagnostics.twitch_emote_report();
+        if report.is_null() {
+            self.log("warn", &self.t("cli.emotes.none", &[]));
+            return;
+        }
+        let channel = report.get("channel").and_then(Value::as_u64).unwrap_or(0);
+        let account = match report.get("account").and_then(Value::as_u64) {
+            Some(count) => count.to_string(),
+            None => self.t("cli.emotes.notLoaded", &[]),
+        };
+        self.log(
+            "info",
+            &self.t(
+                "cli.emotes.report",
+                &[("channel", channel.to_string()), ("account", account)],
+            ),
+        );
+        if let Some(error) = report.get("error").and_then(Value::as_str) {
+            self.log(
+                "warn",
+                &self.t("cli.emotes.error", &[("error", error.to_string())]),
+            );
+        }
+        if let Some(name) = name.map(str::trim).filter(|name| !name.is_empty()) {
+            let found = self
+                .diagnostics
+                .twitch_emote_names()
+                .iter()
+                .any(|known| known == name);
+            let key = if found {
+                "cli.emotes.found"
+            } else {
+                "cli.emotes.missing"
+            };
+            self.log(
+                if found { "success" } else { "warn" },
+                &self.t(key, &[("name", name.to_string())]),
+            );
         }
     }
 

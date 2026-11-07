@@ -142,6 +142,9 @@ pub struct Diagnostics {
     /// Анонимный чат их не отдаёт: подписки и фолловер-смайлы видит только
     /// авторизованное соединение, поэтому список несёт панели отдельно.
     twitch_emotes: Arc<Mutex<Vec<Value>>>,
+    /// Итог последнего запроса смайлов: сколько пришло от канала и от аккаунта
+    /// (или почему набор аккаунта не пришёл). Для `emotes` в терминале.
+    twitch_emote_report: Arc<Mutex<Value>>,
     /// Отправка в чат и модерация: Helix + обмен токена, сеть настоящая.
     chat_sender: ChatSender,
     /// Чат-бот: движок команд и модерация поверх читателя и `ChatSender`.
@@ -393,6 +396,7 @@ impl Diagnostics {
             )),
             twitch_badges: Arc::new(Mutex::new(BadgeMap::new())),
             twitch_emotes: Arc::new(Mutex::new(Vec::new())),
+            twitch_emote_report: Arc::new(Mutex::new(Value::Null)),
             chat_sender,
             chat_bot,
             twitch_events,
@@ -1494,6 +1498,7 @@ impl Diagnostics {
         let tokens = twitch_tokens(Arc::clone(&self.config));
         let twitch = self.twitch_config();
         let cache = Arc::clone(&self.twitch_emotes);
+        let report_cache = Arc::clone(&self.twitch_emote_report);
         let clients = Arc::clone(&self.clients);
         let log = self.logger("twitch");
         std::mem::drop(tauri::async_runtime::spawn(async move {
@@ -1504,17 +1509,28 @@ impl Diagnostics {
                 crate::integrations::twitch_helix::load_user_emotes(&get, &tokens, &twitch),
             );
             let mut emotes = channel;
+            let channel_count = emotes.len();
+            let report = match &user {
+                Ok(list) => json!({ "channel": channel_count, "account": list.len() }),
+                Err(error) => json!({ "channel": channel_count, "account": Value::Null, "error": error }),
+            };
+            {
+                let mut slot = report_cache
+                    .lock()
+                    .unwrap_or_else(|error| error.into_inner());
+                *slot = report;
+            }
             // Одна строка в журнал: без неё не видно, пришёл ли вообще набор
             // аккаунта и сколько в нём смайлов — с этого начинается разбор
             // «смайл из чужого канала не рисуется».
             match &user {
                 Ok(list) => log.info(
                     "смайлы Twitch",
-                    Some(&json!({ "channel": emotes.len(), "account": list.len() })),
+                    Some(&json!({ "channel": channel_count, "account": list.len() })),
                 ),
                 Err(error) => log.info(
                     "смайлы Twitch",
-                    Some(&json!({ "channel": emotes.len(), "account": error })),
+                    Some(&json!({ "channel": channel_count, "account": error })),
                 ),
             }
             if let Ok(list) = user {
@@ -1539,6 +1555,26 @@ impl Diagnostics {
                 .to_string(),
             );
         }));
+    }
+
+    /// Итог последнего запроса смайлов: `{ channel, account, error? }` или
+    /// `null`, если запрос ещё не выполнялся. Читает команда `emotes`.
+    pub fn twitch_emote_report(&self) -> Value {
+        self.twitch_emote_report
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .clone()
+    }
+
+    /// Имена смайлов из последнего удачного списка.
+    pub fn twitch_emote_names(&self) -> Vec<String> {
+        self.twitch_emotes
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .iter()
+            .filter_map(|emote| emote.get("name").and_then(Value::as_str))
+            .map(str::to_string)
+            .collect()
     }
 
     /// Забрать наборы значков Twitch (глобальные и канальные) и обновить кэш.

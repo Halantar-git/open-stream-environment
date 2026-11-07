@@ -33,7 +33,7 @@ const HISTORY_LIMIT = 100;
 const COMMANDS = [
   "scene", "cam", "filter", "sound", "death", "wheel", "giveaway",
   "sim", "alert", "chat", "theme", "themes", "goal", "obs",
-  "sounds", "cameras", "filters", "logs", "media", "lang", "status", "clear", "help",
+  "sounds", "cameras", "filters", "logs", "media", "lang", "emotes", "status", "clear", "help",
 ];
 
 const SUBCOMMANDS = {
