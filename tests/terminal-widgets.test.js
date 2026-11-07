@@ -279,6 +279,45 @@ describe("WidgetTerminalGoal", () => {
     expect(widget.windowEl).toBeNull();
     widget.unmount();
   });
+
+  // Ширина виджета — единственное, что задаёт длину шкалы: панель шире — клеток
+  // больше. Раньше их всегда было ровно 24, и полоска тонула в широкой рамке.
+  function measurableDocument() {
+    const original = global.document.createElement;
+    global.document.createElement = (tag) => {
+      const el = original(tag);
+      // Шрифт-заглушка: каждое знакоместо шириной 8px.
+      el.getBoundingClientRect = () => ({ width: String(el.textContent || "").length * 8 });
+      return el;
+    };
+    return () => {
+      global.document.createElement = original;
+    };
+  }
+
+  test("шкала считается по ширине виджета", () => {
+    const restore = measurableDocument();
+    const widget = new WidgetTerminalGoal(item("terminal-goal"), makeContext("terminal"));
+    widget.mount(makeEl("div"));
+    restore();
+
+    // 320px по 8px — 40 знакомест; скобки и « [50%]» съедают восемь.
+    expect(widget.barEl.innerHTML.match(/[█░]/g)).toHaveLength(32);
+    expect(widget.barEl.innerHTML).toContain("50%");
+    widget.unmount();
+  });
+
+  test("на узкой панели шкала не вырождается в огрызок", () => {
+    const restore = measurableDocument();
+    const widget = new WidgetTerminalGoal(item("terminal-goal"), makeContext("terminal"));
+    widget.mount(makeEl("div"));
+    restore();
+
+    widget.barEl.clientWidth = 40;
+    widget.render();
+    expect(widget.barEl.innerHTML.match(/[█░]/g).length).toBeGreaterThanOrEqual(6);
+    widget.unmount();
+  });
 });
 
 describe("WidgetTerminalChat", () => {

@@ -49,8 +49,13 @@
   const DEFAULT_MUTED = "#8b949e";
   const DEFAULT_PROMPT = "#00ff66";
 
-  // Ширина шкалы в символах: 24 клетки читаются и на узкой панели, и на широкой.
+  // Ширина шкалы в символах: 24 клетки — значение на случай, когда ширину
+  // измерить нечем (виджет скрыт или ещё не разложен).
   const BARS = 24;
+  // Ниже этого шкала перестаёт читаться: лучше обрезать панель, чем оставить
+  // огрызок из двух клеток.
+  const MIN_BARS = 6;
+  const BAR_FONT = "font-family:var(--font-mono);font-size:13px;line-height:1.2;";
 
   class WidgetTerminalGoal extends BaseWidget {
     constructor(config, context) {
@@ -67,6 +72,11 @@
       this.barEl = null;
       this.amountEl = null;
       this.bareTitleEl = null;
+      // Ширина клетки и служебного символа в текущем шрифте: по ним считается,
+      // сколько клеток влезает в панель.
+      this._cellWidth = 0;
+      this._signWidth = 0;
+      this._observer = null;
     }
 
     onMount() {
@@ -109,8 +119,7 @@
 
       this.barEl = document.createElement("div");
       this.barEl.style.cssText =
-        "font-family:var(--font-mono);font-size:13px;line-height:1.2;white-space:nowrap;" +
-        "overflow:hidden;text-overflow:clip;";
+        BAR_FONT + "white-space:nowrap;overflow:hidden;text-overflow:clip;";
       body.appendChild(this.barEl);
 
       this.amountEl = document.createElement("div");
@@ -121,12 +130,25 @@
 
       this._updateDom();
 
+      // Ширину двигает не только перетаскивание рамки: окно OBS и превью
+      // панели тоже её меняют, поэтому шкала пересчитывается на любое изменение.
+      if (typeof ResizeObserver !== "undefined") {
+        this._observer = new ResizeObserver(() => this._updateDom());
+        this._observer.observe(this.element);
+      }
+
       const { EVENT_TYPES } = this.context;
       this.subscribe(EVENT_TYPES.GOAL_UPDATE, () => this._updateDom());
       this.subscribe(EVENT_TYPES.LOCALES, () => this._updateDom());
     }
 
     onUnmount() {
+      if (this._observer) {
+        this._observer.disconnect();
+        this._observer = null;
+      }
+      this._cellWidth = 0;
+      this._signWidth = 0;
       if (this.windowEl) this.windowEl.innerHTML = "";
       this.windowEl = null;
       this.tabEl = null;
@@ -134,6 +156,12 @@
       this.barEl = null;
       this.amountEl = null;
       this.bareTitleEl = null;
+    }
+
+    // Смена геометрии у DOM-виджета проходит через render(): здесь и
+    // пересчитываем шкалу под новую ширину.
+    render() {
+      this._updateDom();
     }
 
     onUpdate(prev, next) {
@@ -203,12 +231,54 @@
       style.boxShadow = (read && read("--panel-glow")) || DEFAULT_GLOW;
     }
 
+    // Ширина строки в текущем шрифте терминала.
+    _textWidth(text) {
+      if (typeof document.createElement !== "function") return 0;
+      const probe = document.createElement("span");
+      probe.textContent = text;
+      probe.style.cssText =
+        "position:absolute;left:0;top:0;visibility:hidden;pointer-events:none;white-space:pre;" +
+        BAR_FONT;
+      this.element.appendChild(probe);
+      const rect =
+        typeof probe.getBoundingClientRect === "function" ? probe.getBoundingClientRect() : null;
+      const width = rect ? rect.width : 0;
+      this.element.removeChild(probe);
+      return width;
+    }
+
+    // Ширина клетки и служебного символа в текущем шрифте. Блоки `█`/`░` в
+    // моноширинном шрифте могут подменяться системным, поэтому ширину берём не
+    // из CSS, а из замера.
+    _measureFont() {
+      if (this._cellWidth > 0) return;
+      this._cellWidth = this._textWidth("█".repeat(20)) / 20;
+      this._signWidth = this._textWidth("[]0123456789% ") / 14;
+    }
+
+    // Сколько клеток влезает в строку при текущей ширине виджета.
+    _fitBars(percentText) {
+      this._measureFont();
+      const width = this.barEl ? this.barEl.clientWidth : 0;
+      if (!(this._cellWidth > 0) || !(width > 0)) return BARS;
+      // Скобки и подпись процента занимают место наравне с клетками.
+      const reserved = (2 + percentText.length) * (this._signWidth || this._cellWidth);
+      let bars = Math.max(MIN_BARS, Math.floor((width - reserved) / this._cellWidth));
+      // Запасной шаг: замер приблизительный (подстановка шрифта, округления),
+      // а обрезанная скобка выдаёт ошибку сильнее, чем одна потерянная клетка.
+      while (bars > MIN_BARS && this._textWidth("[" + "█".repeat(bars) + "]" + percentText) > width) {
+        bars -= 1;
+      }
+      return bars;
+    }
+
     // Шкала символами: заполненные клетки — зелёным, пустые — приглушённым.
     _barHtml(pct) {
-      const filled = Math.round((pct / 100) * BARS);
-      const on = "█".repeat(filled);
-      const off = "░".repeat(BARS - filled);
       const percent = this.config.showPercentage === false ? "" : ` [${pct}%]`;
+      const bars = this._fitBars(percent);
+      const filled = Math.round((pct / 100) * bars);
+      const on = "█".repeat(filled);
+      const off = "░".repeat(bars - filled);
       return (
         `<span style="color:${this.mutedColor};">[</span>` +
         `<span style="color:${this.promptColor};">${on}</span>` +
