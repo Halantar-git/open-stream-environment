@@ -1508,33 +1508,40 @@ impl Diagnostics {
                 crate::integrations::twitch_helix::load_channel_emotes(&get, &tokens, &twitch),
                 crate::integrations::twitch_helix::load_user_emotes(&get, &tokens, &twitch),
             );
-            let mut emotes = channel;
-            let channel_count = emotes.len();
-            let report = match &user {
-                Ok(list) => json!({ "channel": channel_count, "account": list.len() }),
-                Err(error) => json!({ "channel": channel_count, "account": Value::Null, "error": error }),
-            };
+            // Оба запроса могут ответить ошибкой по отдельности: канал без
+            // авторизации, аккаунт — без scope `user:read:emotes`. В отчёте
+            // поэтому число или текст ошибки на каждую половину.
+            let mut report = json!({ "channel": Value::Null, "account": Value::Null });
+            let mut emotes = Vec::new();
+            match &channel {
+                Ok(list) => {
+                    report["channel"] = json!(list.len());
+                    emotes.extend(list.iter().cloned());
+                }
+                Err(error) => report["channelError"] = json!(error),
+            }
+            match &user {
+                Ok(list) => {
+                    report["account"] = json!(list.len());
+                    emotes.extend(list.iter().cloned());
+                }
+                Err(error) => report["error"] = json!(error),
+            }
+            // Одна строка в журнал: без неё не видно, пришёл ли вообще набор
+            // аккаунта и сколько в нём смайлов — с этого начинается разбор
+            // «смайл из чужого канала не рисуется».
+            let mut line = json!({ "channel": report["channel"].clone() });
+            for key in ["account", "channelError", "error"] {
+                if !report[key].is_null() {
+                    line[key] = report[key].clone();
+                }
+            }
+            log.info("смайлы Twitch", Some(&line));
             {
                 let mut slot = report_cache
                     .lock()
                     .unwrap_or_else(|error| error.into_inner());
                 *slot = report;
-            }
-            // Одна строка в журнал: без неё не видно, пришёл ли вообще набор
-            // аккаунта и сколько в нём смайлов — с этого начинается разбор
-            // «смайл из чужого канала не рисуется».
-            match &user {
-                Ok(list) => log.info(
-                    "смайлы Twitch",
-                    Some(&json!({ "channel": channel_count, "account": list.len() })),
-                ),
-                Err(error) => log.info(
-                    "смайлы Twitch",
-                    Some(&json!({ "channel": channel_count, "account": error })),
-                ),
-            }
-            if let Ok(list) = user {
-                emotes.extend(list);
             }
             if emotes.is_empty() {
                 // Сеть или авторизация могли отвалиться — уже собранный список
@@ -1557,8 +1564,10 @@ impl Diagnostics {
         }));
     }
 
-    /// Итог последнего запроса смайлов: `{ channel, account, error? }` или
-    /// `null`, если запрос ещё не выполнялся. Читает команда `emotes`.
+    /// Итог последнего запроса смайлов: `{ channel, account, error?, channelError? }`
+    /// или `null`, если запрос ещё не выполнялся. Вместо числа в поле может
+    /// лежать текст ошибки только у `channel` — он в `channelError`. Читает
+    /// команда `emotes`.
     pub fn twitch_emote_report(&self) -> Value {
         self.twitch_emote_report
             .lock()

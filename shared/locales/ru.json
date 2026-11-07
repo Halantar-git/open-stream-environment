@@ -219,7 +219,7 @@
     "filters": { "none": "Нет фильтров камер", "title": "Фильтры камер:" },
     "lang": { "done": "Язык интерфейса: {{lang}}" },
     "logs": { "usage": "Использование: logs <info|success|warn|error|hint|all>", "all": "Фильтр логов: все уровни", "set": "Фильтр логов: {{level}}", "unknown": "Неизвестный уровень. Доступно: {{levels}}, all" },
-    "emotes": { "report": "Смайлы Twitch: канал {{channel}}, аккаунт {{account}}", "notLoaded": "не загружен", "none": "Смайлы Twitch ещё не запрашивались: чат не подключался после запуска.", "error": "Набор аккаунта не пришёл: {{error}}. 401/403 — токен без user:read:emotes, переподключите Twitch.", "found": "{{name}} есть в списке", "missing": "{{name}} в списке нет" },
+    "emotes": { "report": "Смайлы Twitch: канал {{channel}}, аккаунт {{account}}", "notLoaded": "не загружен", "none": "Смайлы Twitch ещё не запрашивались: чат не подключался после запуска.", "error": "Набор аккаунта не пришёл: {{error}}. 401/403 — токен без user:read:emotes, переподключите Twitch.", "channelError": "Набор канала не пришёл: {{error}}", "found": "{{name}} есть в списке", "missing": "{{name}} в списке нет" },
     "media": { "cleaned": "Удалено осиротевших файлов: {{count}}", "none": "Осиротевших медиафайлов не найдено", "empty": "Каталог медиа пуст", "title": "Файлы медиа:" },
     "modtest": { "usage": "Использование: modtest <message>", "ok": "Модерация: нарушений нет", "hit": "Модерация: {{type}} → варн {{warn}}, действие {{action}}" },
     "status": { "obs": "OBS: {{status}}", "scene": "Активная сцена: {{scene}}", "camera": "Активный ракурс: {{cam}}", "theme": "Тема: {{theme}}", "channel": "Канал: {{channel}}", "death": "Смертей: {{death}}", "goal": "Цель: {{goal}}", "uptime": "Аптайм: {{uptime}}" },

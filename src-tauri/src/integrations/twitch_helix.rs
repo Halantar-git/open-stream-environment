@@ -206,6 +206,8 @@ pub const CHANNELS_URL: &str = "https://api.twitch.tv/helix/channels";
 pub const CHANNEL_EMOTES_URL: &str = "https://api.twitch.tv/helix/chat/emotes";
 /// Смайлы, доступные аккаунту: свой канал и каналы, на которые он подписан.
 pub const USER_EMOTES_URL: &str = "https://api.twitch.tv/helix/chat/emotes/user";
+/// Без параметров отдаёт владельца токена — из него берётся `user_id`.
+pub const USERS_URL: &str = "https://api.twitch.tv/helix/users";
 /// Поиск игры по названию — из него берётся `game_id`.
 pub const CATEGORY_SEARCH_URL: &str = "https://api.twitch.tv/helix/search/categories";
 
@@ -214,34 +216,36 @@ pub const CATEGORY_SEARCH_URL: &str = "https://api.twitch.tv/helix/search/catego
 /// Анонимному IRC они не видны: подписки и фолловерские смайлы Twitch отдаёт
 /// только тому, кто на них имеет право. Helix же отдаёт весь набор канала без
 /// дополнительных scope — его и передаём оверлею.
-pub async fn load_channel_emotes(get: &JsonGetFn, tokens: &Tokens, twitch: &Value) -> Vec<Value> {
+pub async fn load_channel_emotes(
+    get: &JsonGetFn,
+    tokens: &Tokens,
+    twitch: &Value,
+) -> Result<Vec<Value>, String> {
     if !is_authorized(twitch) {
-        return Vec::new();
+        return Err("auth".to_string());
     }
     let broadcaster_id = text(twitch, "broadcasterId");
     let Some(token) = ensure_token(tokens).await else {
-        return Vec::new();
+        return Err("auth".to_string());
     };
     let url = format!(
         "{CHANNEL_EMOTES_URL}?broadcaster_id={}",
         crate::server::oauth::encode_uri_component(&broadcaster_id)
     );
-    let (status, body) = match get_with_retry(get, tokens, url, token).await {
-        Ok(outcome) => outcome,
-        Err(_) => return Vec::new(),
-    };
+    let (status, body) = get_with_retry(get, tokens, url, token).await?;
     if !(200..300).contains(&status) {
-        return Vec::new();
+        return Err(http_error_text(status, &body));
     }
-    parse_emote_list(&body)
+    Ok(parse_emote_list(&body))
 }
 
 /// Смайлы, доступные пользователю `{ name, url }`.
 ///
 /// Это наборы всех каналов, на которые аккаунт подписан (и фолловерские):
 /// без него в чате остаются текстом чужие родные смайлы. Нужен scope
-/// `user:read:emotes` — у старого токена его нет, тогда ответ пустой и
-/// остаётся только набор своего канала.
+/// `user:read:emotes` — у старого токена его нет, тогда приходит ошибка и
+/// остаётся только набор своего канала. `user_id` здесь — владелец токена,
+/// а не канал: чужой id Twitch отвергает.
 pub async fn load_user_emotes(
     get: &JsonGetFn,
     tokens: &Tokens,
@@ -253,12 +257,44 @@ pub async fn load_user_emotes(
     let Some(token) = ensure_token(tokens).await else {
         return Err("auth".to_string());
     };
-    let (status, body) = get_with_retry(get, tokens, USER_EMOTES_URL.to_string(), token).await?;
+    // `user_id` обязателен, и это должен быть владелец токена: чужой id Twitch
+    // отвергает с 400. Канал, чей чат читается, бывает и чужим, поэтому id
+    // спрашиваем у самого аккаунта (`/users` без параметров).
+    let (status, body) = get_with_retry(get, tokens, USERS_URL.to_string(), token.clone()).await?;
     if !(200..300).contains(&status) {
-        // 403 — токен выдан без `user:read:emotes`: набор канала при этом цел.
-        return Err(format!("http_{status}"));
+        return Err(http_error_text(status, &body));
+    }
+    let user_id = body
+        .get("data")
+        .and_then(Value::as_array)
+        .and_then(|items| items.first())
+        .and_then(|user| user.get("id"))
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_string();
+    if user_id.is_empty() {
+        return Err("нет id пользователя".to_string());
+    }
+    // Без `broadcaster_id`: он сузил бы ответ до одного канала, а нужны все
+    // наборы, которые аккаунт вообще может рисовать.
+    let url = format!(
+        "{USER_EMOTES_URL}?user_id={}",
+        crate::server::oauth::encode_uri_component(&user_id)
+    );
+    let (status, body) = get_with_retry(get, tokens, url, token).await?;
+    if !(200..300).contains(&status) {
+        // 401 — токен выдан без `user:read:emotes`: набор канала при этом цел.
+        return Err(http_error_text(status, &body));
     }
     Ok(parse_emote_list(&body))
+}
+
+/// Код ответа плюс пояснение Twitch — без него 400 не разобрать.
+fn http_error_text(status: u16, body: &Value) -> String {
+    match body.get("message").and_then(Value::as_str) {
+        Some(message) if !message.is_empty() => format!("http_{status}: {message}"),
+        _ => format!("http_{status}"),
+    }
 }
 
 /// `data` ответа Helix в плоский список `{ name, url }`.
@@ -940,7 +976,9 @@ mod tests {
                 )
             })
         });
-        let emotes = load_channel_emotes(&get, &tokens(), &authorized()).await;
+        let emotes = load_channel_emotes(&get, &tokens(), &authorized())
+            .await
+            .unwrap();
         assert_eq!(
             emotes[0],
             json!({ "name": "ldogmanOk", "url": "https://cdn/2x" })
@@ -956,14 +994,21 @@ mod tests {
         });
         assert!(load_channel_emotes(&get, &tokens(), &Value::Null)
             .await
-            .is_empty());
+            .is_err());
     }
 
     #[tokio::test]
     async fn user_emotes_are_read_from_the_personal_endpoint() {
         let get: JsonGetFn = Arc::new(|url: String, _token: String| {
             Box::pin(async move {
-                assert_eq!(url, "https://api.twitch.tv/helix/chat/emotes/user");
+                if url.ends_with("/users") {
+                    return (200, json!({ "data": [{ "id": "own" }] }));
+                }
+                // `user_id` — владелец токена, а не канал из конфига («bid»).
+                assert_eq!(
+                    url,
+                    "https://api.twitch.tv/helix/chat/emotes/user?user_id=own"
+                );
                 (
                     200,
                     json!({ "data": [
@@ -980,6 +1025,23 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn user_emotes_stay_empty_without_the_account_id() {
+        // `/users` ответил пустым списком — из чего брать `user_id`, неизвестно.
+        let get: JsonGetFn = Arc::new(|url: String, _token: String| {
+            Box::pin(async move {
+                if url.ends_with("/users") {
+                    return (200, json!({ "data": [] }));
+                }
+                panic!("без id пользователя смайлы не запрашиваются");
+            })
+        });
+        assert_eq!(
+            load_user_emotes(&get, &tokens(), &authorized()).await,
+            Err("нет id пользователя".to_string())
+        );
+    }
+
+    #[tokio::test]
     async fn user_emotes_stay_empty_without_the_scope() {
         // Токен, выданный до появления scope, отвечает ошибкой — чат без
         // этого списка продолжает работать на наборе канала.
@@ -988,7 +1050,20 @@ mod tests {
         });
         assert_eq!(
             load_user_emotes(&get, &tokens(), &authorized()).await,
-            Err("http_403".to_string())
+            Err("http_403: missing scope: user:read:emotes".to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn a_rejected_user_emote_request_keeps_the_twitch_message() {
+        // 400 без `user_id` не разобрать без текста ответа, а именно с него
+        // начинался разбор «набор аккаунта не пришёл».
+        let get: JsonGetFn = Arc::new(|_url: String, _token: String| {
+            Box::pin(async { (400, json!({ "message": "Missing required parameter \"user_id\"" })) })
+        });
+        assert_eq!(
+            load_user_emotes(&get, &tokens(), &authorized()).await,
+            Err("http_400: Missing required parameter \"user_id\"".to_string())
         );
     }
 

@@ -328,7 +328,10 @@ impl Cli<'_> {
             self.log("warn", &self.t("cli.emotes.none", &[]));
             return;
         }
-        let channel = report.get("channel").and_then(Value::as_u64).unwrap_or(0);
+        let channel = match report.get("channel").and_then(Value::as_u64) {
+            Some(count) => count.to_string(),
+            None => self.t("cli.emotes.notLoaded", &[]),
+        };
         let account = match report.get("account").and_then(Value::as_u64) {
             Some(count) => count.to_string(),
             None => self.t("cli.emotes.notLoaded", &[]),
@@ -340,6 +343,12 @@ impl Cli<'_> {
                 &[("channel", channel.to_string()), ("account", account)],
             ),
         );
+        if let Some(error) = report.get("channelError").and_then(Value::as_str) {
+            self.log(
+                "warn",
+                &self.t("cli.emotes.channelError", &[("error", error.to_string())]),
+            );
+        }
         if let Some(error) = report.get("error").and_then(Value::as_str) {
             self.log(
                 "warn",

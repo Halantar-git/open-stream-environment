@@ -204,3 +204,17 @@ describe("TwitchEmotes — родные смайлы канала", () => {
     expect(html).not.toContain("betterttv");
   });
 });
+
+describe("TwitchEmotes — смайлы из тега emotes", () => {
+  test("новый формат id (emotesv2_) даёт картинку, а не текст", () => {
+    const id = "emotesv2_258ad654439746539456aac26d14470c";
+    const html = TwitchEmotes.renderEmotes("ldogmanOk", { [id]: ["0-8"] });
+    expect(html).toContain(`https://static-cdn.jtvnw.net/emoticons/v2/${id}/default/dark/2.0`);
+    expect(html).toContain('alt="ldogmanOk"');
+    expect(html).toContain('class="twitch-emote"');
+  });
+
+  test("идентификатор с посторонними символами в адрес не попадает", () => {
+    expect(TwitchEmotes.renderEmotes("kappa", { '"><script>': ["0-4"] })).toBe("kappa");
+  });
+});
