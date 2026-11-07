@@ -47,6 +47,13 @@ const RESPONSES = {
       ],
     },
   },
+  // Поиск по имени: у 7TV это POST в GraphQL, у FFZ — обычный GET.
+  "https://7tv.io/v3/gql": {
+    data: { emotes: { items: [{ id: "other-7tv", name: "OtherChannelEmote" }] } },
+  },
+  "https://api.frankerfacez.com/v1/emotes?q=FfzOnlyEmote": {
+    emoticons: [{ name: "FfzOnlyEmote", urls: { "2": "https://cdn.frankerfacez.com/other/2" } }],
+  },
 };
 
 let TwitchEmotes;
@@ -132,5 +139,48 @@ describe("TwitchEmotes — сторонние наборы", () => {
     // Три глобальных набора, канальные запросы не нужны.
     expect(global.fetch.mock.calls.length).toBe(3);
     expect(TwitchEmotes.renderEmotes("PogU", null)).toContain("bttv-global");
+  });
+});
+
+describe("TwitchEmotes — смайлы чужих каналов", () => {
+  const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  test("незнакомый смайл ищется по имени и рисуется со следующего рендера", async () => {
+    await configure();
+    const first = TwitchEmotes.renderEmotes("OtherChannelEmote", null);
+    expect(first).toContain("twitch-emote-pending");
+
+    await flush();
+    expect(TwitchEmotes.renderEmotes("OtherChannelEmote", null)).toContain(
+      "https://cdn.7tv.app/emote/other-7tv/2x.webp"
+    );
+  });
+
+  test("если 7TV смайла не знает, спрашиваем FrankerFaceZ", async () => {
+    await configure();
+    expect(TwitchEmotes.renderEmotes("FfzOnlyEmote", null)).toContain("twitch-emote-pending");
+
+    await flush();
+    expect(TwitchEmotes.renderEmotes("FfzOnlyEmote", null)).toContain(
+      "https://cdn.frankerfacez.com/other/2"
+    );
+  });
+
+  test("промах запоминается: за тем же словом повторно не ходим", async () => {
+    await configure();
+    TwitchEmotes.renderEmotes("UnknownEmote", null);
+    await flush();
+    const calls = global.fetch.mock.calls.length;
+
+    TwitchEmotes.renderEmotes("UnknownEmote", null);
+    await flush();
+    expect(global.fetch.mock.calls.length).toBe(calls);
+  });
+
+  test("обычные слова в нижнем регистре в сеть не уходят", async () => {
+    await configure();
+    const calls = global.fetch.mock.calls.length;
+    expect(TwitchEmotes.renderEmotes("привет всем", null)).toBe("привет всем");
+    expect(global.fetch.mock.calls.length).toBe(calls);
   });
 });
