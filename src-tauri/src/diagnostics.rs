@@ -1495,15 +1495,31 @@ impl Diagnostics {
         let twitch = self.twitch_config();
         let cache = Arc::clone(&self.twitch_emotes);
         let clients = Arc::clone(&self.clients);
+        let log = self.logger("twitch");
         std::mem::drop(tauri::async_runtime::spawn(async move {
             // Набор канала и наборы аккаунта (каналы, на которые он подписан):
-            // вторые приходят пустыми, если токен выдан без `user:read:emotes`.
+            // вторые приходят ошибкой, если токен выдан без `user:read:emotes`.
             let (channel, user) = tokio::join!(
                 crate::integrations::twitch_helix::load_channel_emotes(&get, &tokens, &twitch),
                 crate::integrations::twitch_helix::load_user_emotes(&get, &tokens, &twitch),
             );
             let mut emotes = channel;
-            emotes.extend(user);
+            // Одна строка в журнал: без неё не видно, пришёл ли вообще набор
+            // аккаунта и сколько в нём смайлов — с этого начинается разбор
+            // «смайл из чужого канала не рисуется».
+            match &user {
+                Ok(list) => log.info(
+                    "смайлы Twitch",
+                    Some(&json!({ "channel": emotes.len(), "account": list.len() })),
+                ),
+                Err(error) => log.info(
+                    "смайлы Twitch",
+                    Some(&json!({ "channel": emotes.len(), "account": error })),
+                ),
+            }
+            if let Ok(list) = user {
+                emotes.extend(list);
+            }
             if emotes.is_empty() {
                 // Сеть или авторизация могли отвалиться — уже собранный список
                 // не затираем: смайлы на экране остаются нужными.

@@ -242,22 +242,23 @@ pub async fn load_channel_emotes(get: &JsonGetFn, tokens: &Tokens, twitch: &Valu
 /// без него в чате остаются текстом чужие родные смайлы. Нужен scope
 /// `user:read:emotes` — у старого токена его нет, тогда ответ пустой и
 /// остаётся только набор своего канала.
-pub async fn load_user_emotes(get: &JsonGetFn, tokens: &Tokens, twitch: &Value) -> Vec<Value> {
+pub async fn load_user_emotes(
+    get: &JsonGetFn,
+    tokens: &Tokens,
+    twitch: &Value,
+) -> Result<Vec<Value>, String> {
     if !is_authorized(twitch) {
-        return Vec::new();
+        return Err("auth".to_string());
     }
     let Some(token) = ensure_token(tokens).await else {
-        return Vec::new();
+        return Err("auth".to_string());
     };
-    let (status, body) = match get_with_retry(get, tokens, USER_EMOTES_URL.to_string(), token).await
-    {
-        Ok(outcome) => outcome,
-        Err(_) => return Vec::new(),
-    };
+    let (status, body) = get_with_retry(get, tokens, USER_EMOTES_URL.to_string(), token).await?;
     if !(200..300).contains(&status) {
-        return Vec::new();
+        // 403 — токен выдан без `user:read:emotes`: набор канала при этом цел.
+        return Err(format!("http_{status}"));
     }
-    parse_emote_list(&body)
+    Ok(parse_emote_list(&body))
 }
 
 /// `data` ответа Helix в плоский список `{ name, url }`.
@@ -973,7 +974,7 @@ mod tests {
         });
         let emotes = load_user_emotes(&get, &tokens(), &authorized()).await;
         assert_eq!(
-            emotes,
+            emotes.unwrap(),
             vec![json!({ "name": "ForeignEmote", "url": "https://cdn/u1" })]
         );
     }
@@ -985,9 +986,10 @@ mod tests {
         let get: JsonGetFn = Arc::new(|_url: String, _token: String| {
             Box::pin(async { (403, json!({ "message": "missing scope: user:read:emotes" })) })
         });
-        assert!(load_user_emotes(&get, &tokens(), &authorized())
-            .await
-            .is_empty());
+        assert_eq!(
+            load_user_emotes(&get, &tokens(), &authorized()).await,
+            Err("http_403".to_string())
+        );
     }
 
     #[tokio::test]
