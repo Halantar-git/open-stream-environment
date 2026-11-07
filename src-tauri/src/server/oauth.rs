@@ -98,7 +98,7 @@ pub fn build_twitch_authorize_url(config: &Value, port: u16, states: &PendingSta
         ("response_type", "code".to_string()),
         (
             "scope",
-            "moderator:read:followers channel:read:subscriptions bits:read channel:read:redemptions user:write:chat moderator:manage:banned_users clips:edit channel:manage:broadcast channel:manage:redemptions".to_string(),
+            "moderator:read:followers channel:read:subscriptions bits:read channel:read:redemptions user:write:chat moderator:manage:banned_users clips:edit channel:manage:broadcast channel:manage:redemptions user:read:emotes".to_string(),
         ),
         ("state", state),
         ("force_verify", "true".to_string()),

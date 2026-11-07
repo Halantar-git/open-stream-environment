@@ -2003,6 +2003,7 @@
       "p1": "Chat connects anonymously and only needs the channel name.",
       "p2": "For follow/sub/cheer alerts you need a Twitch application and authorization.",
       "p3": "You can send chat messages from the Chat window and Web Remote — they are posted as the streamer via Twitch Helix (scope user:write:chat), so sending requires the authorization described below.",
+      "p4": "Chat emotes are matched by name. The channel's own set comes from Twitch, third-party ones (7TV and FrankerFaceZ) are looked up by name, and emotes of channels you are subscribed to appear after reconnecting Twitch once: the new scopes include reading emotes (user:read:emotes). Emotes of channels you are not subscribed to and other channels' BetterTTV emotes are not found this way — Twitch does not give them to your account.",
       "s1": "Register an app at dev.twitch.tv/console/apps.",
       "s2": "Set the Redirect URI to the value shown in Settings → Twitch.",
       "s3": "Paste the Client ID and Client Secret.",

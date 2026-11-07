@@ -1022,6 +1022,11 @@ impl Diagnostics {
             crate::state::config::save_twitch_tokens(&mut config, patch);
         }
         self.restart_twitch_events();
+        // Новый токен мог принести новые права: заново забираем значки и
+        // смайлы (без `user:read:emotes` чужой набор каналов не даётся).
+        self.refresh_twitch_badges();
+        self.refresh_twitch_emotes();
+        self.broadcast_state();
     }
 
     /// Сохранить токены DonationAlerts и перезапустить службу.
@@ -1480,7 +1485,7 @@ impl Diagnostics {
         self.refresh_twitch_emotes();
     }
 
-    /// Забрать родные смайлы канала (Helix) и обновить кэш.
+    /// Забрать смайлы Twitch (набор канала и наборы аккаунта) и обновить кэш.
     ///
     /// Анонимному IRC они не видны, поэтому без этого списка в чате оставались
     /// текстом смайлы даже своего канала — «ldogmanOk» из такой истории.
@@ -1491,9 +1496,14 @@ impl Diagnostics {
         let cache = Arc::clone(&self.twitch_emotes);
         let clients = Arc::clone(&self.clients);
         std::mem::drop(tauri::async_runtime::spawn(async move {
-            let emotes =
-                crate::integrations::twitch_helix::load_channel_emotes(&get, &tokens, &twitch)
-                    .await;
+            // Набор канала и наборы аккаунта (каналы, на которые он подписан):
+            // вторые приходят пустыми, если токен выдан без `user:read:emotes`.
+            let (channel, user) = tokio::join!(
+                crate::integrations::twitch_helix::load_channel_emotes(&get, &tokens, &twitch),
+                crate::integrations::twitch_helix::load_user_emotes(&get, &tokens, &twitch),
+            );
+            let mut emotes = channel;
+            emotes.extend(user);
             if emotes.is_empty() {
                 // Сеть или авторизация могли отвалиться — уже собранный список
                 // не затираем: смайлы на экране остаются нужными.

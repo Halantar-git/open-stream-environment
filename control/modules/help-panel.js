@@ -205,6 +205,7 @@ const SECTIONS = [
       { type: "p", key: "help.twitch.p1" },
       { type: "p", key: "help.twitch.p2" },
       { type: "p", key: "help.twitch.p3" },
+      { type: "p", key: "help.twitch.p4" },
       { type: "steps", items: ["help.twitch.s1", "help.twitch.s2", "help.twitch.s3", "help.twitch.s4"] },
     ],
   },

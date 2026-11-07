@@ -204,6 +204,8 @@ pub type PatchFn = PostFn;
 pub const CHANNELS_URL: &str = "https://api.twitch.tv/helix/channels";
 /// Родные смайлы канала (все тиры и фолловерские).
 pub const CHANNEL_EMOTES_URL: &str = "https://api.twitch.tv/helix/chat/emotes";
+/// Смайлы, доступные аккаунту: свой канал и каналы, на которые он подписан.
+pub const USER_EMOTES_URL: &str = "https://api.twitch.tv/helix/chat/emotes/user";
 /// Поиск игры по названию — из него берётся `game_id`.
 pub const CATEGORY_SEARCH_URL: &str = "https://api.twitch.tv/helix/search/categories";
 
@@ -231,6 +233,35 @@ pub async fn load_channel_emotes(get: &JsonGetFn, tokens: &Tokens, twitch: &Valu
     if !(200..300).contains(&status) {
         return Vec::new();
     }
+    parse_emote_list(&body)
+}
+
+/// Смайлы, доступные пользователю `{ name, url }`.
+///
+/// Это наборы всех каналов, на которые аккаунт подписан (и фолловерские):
+/// без него в чате остаются текстом чужие родные смайлы. Нужен scope
+/// `user:read:emotes` — у старого токена его нет, тогда ответ пустой и
+/// остаётся только набор своего канала.
+pub async fn load_user_emotes(get: &JsonGetFn, tokens: &Tokens, twitch: &Value) -> Vec<Value> {
+    if !is_authorized(twitch) {
+        return Vec::new();
+    }
+    let Some(token) = ensure_token(tokens).await else {
+        return Vec::new();
+    };
+    let (status, body) = match get_with_retry(get, tokens, USER_EMOTES_URL.to_string(), token).await
+    {
+        Ok(outcome) => outcome,
+        Err(_) => return Vec::new(),
+    };
+    if !(200..300).contains(&status) {
+        return Vec::new();
+    }
+    parse_emote_list(&body)
+}
+
+/// `data` ответа Helix в плоский список `{ name, url }`.
+fn parse_emote_list(body: &Value) -> Vec<Value> {
     body.get("data")
         .and_then(Value::as_array)
         .map(|data| {
@@ -923,6 +954,38 @@ mod tests {
             Box::pin(async { panic!("без авторизации в сеть не ходим") })
         });
         assert!(load_channel_emotes(&get, &tokens(), &Value::Null)
+            .await
+            .is_empty());
+    }
+
+    #[tokio::test]
+    async fn user_emotes_are_read_from_the_personal_endpoint() {
+        let get: JsonGetFn = Arc::new(|url: String, _token: String| {
+            Box::pin(async move {
+                assert_eq!(url, "https://api.twitch.tv/helix/chat/emotes/user");
+                (
+                    200,
+                    json!({ "data": [
+                        { "id": "u1", "name": "ForeignEmote", "images": { "url_2x": "https://cdn/u1" } },
+                    ] }),
+                )
+            })
+        });
+        let emotes = load_user_emotes(&get, &tokens(), &authorized()).await;
+        assert_eq!(
+            emotes,
+            vec![json!({ "name": "ForeignEmote", "url": "https://cdn/u1" })]
+        );
+    }
+
+    #[tokio::test]
+    async fn user_emotes_stay_empty_without_the_scope() {
+        // Токен, выданный до появления scope, отвечает ошибкой — чат без
+        // этого списка продолжает работать на наборе канала.
+        let get: JsonGetFn = Arc::new(|_url: String, _token: String| {
+            Box::pin(async { (403, json!({ "message": "missing scope: user:read:emotes" })) })
+        });
+        assert!(load_user_emotes(&get, &tokens(), &authorized())
             .await
             .is_empty());
     }
