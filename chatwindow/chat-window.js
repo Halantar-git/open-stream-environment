@@ -255,6 +255,10 @@
             channelId: msg.payload.twitchBroadcasterId,
           });
         }
+        // Родные смайлы канала: анонимный чат их не видит, список даёт сервер.
+        if (window.TwitchEmotes && window.TwitchEmotes.setNativeEmotes) {
+          window.TwitchEmotes.setNativeEmotes(msg.payload.twitchEmotes);
+        }
         break;
       case EVENT_TYPES.CHAT_MESSAGE: {
         const payload = msg.payload || {};
@@ -283,6 +287,12 @@
       case EVENT_TYPES.CHAT_HUD_CONFIG_UPDATE:
         if (isHud && msg.payload && msg.payload.config) {
           applyHudStyle(msg.payload.config.opacity, msg.payload.config.fontSize);
+        }
+        break;
+      case EVENT_TYPES.CHANNEL_EMOTES:
+        // Смайлы канала доехали после старта: подставляем без перезагрузки.
+        if (window.TwitchEmotes && window.TwitchEmotes.setNativeEmotes) {
+          window.TwitchEmotes.setNativeEmotes(msg.payload && msg.payload.emotes);
         }
         break;
       case EVENT_TYPES.LOCALES:

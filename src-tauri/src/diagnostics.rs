@@ -138,6 +138,10 @@ pub struct Diagnostics {
     /// Наборы значков Twitch «имя/версия → адрес картинки»: наполняется из Helix
     /// (`refresh_twitch_badges`), читается при сборке кадров чата.
     twitch_badges: Arc<Mutex<BadgeMap>>,
+    /// Родные смайлы канала `{ name, url }` из Helix (`refresh_twitch_emotes`).
+    /// Анонимный чат их не отдаёт: подписки и фолловер-смайлы видит только
+    /// авторизованное соединение, поэтому список несёт панели отдельно.
+    twitch_emotes: Arc<Mutex<Vec<Value>>>,
     /// Отправка в чат и модерация: Helix + обмен токена, сеть настоящая.
     chat_sender: ChatSender,
     /// Чат-бот: движок команд и модерация поверх читателя и `ChatSender`.
@@ -388,6 +392,7 @@ impl Diagnostics {
                 crate::integrations::twitch_chat_control::RECONNECT_DELAY_MS,
             )),
             twitch_badges: Arc::new(Mutex::new(BadgeMap::new())),
+            twitch_emotes: Arc::new(Mutex::new(Vec::new())),
             chat_sender,
             chat_bot,
             twitch_events,
@@ -1469,9 +1474,45 @@ impl Diagnostics {
         };
         self.twitch_chat
             .restart(enabled, &channel, self.chat_emit());
-        // Значки Twitch меняются редко: обновляем вместе с чатом — на старте,
-        // при смене канала и по кнопке «переподключить».
+        // Значки и смайлы Twitch меняются редко: обновляем вместе с чатом —
+        // на старте, при смене канала и по кнопке «переподключить».
         self.refresh_twitch_badges();
+        self.refresh_twitch_emotes();
+    }
+
+    /// Забрать родные смайлы канала (Helix) и обновить кэш.
+    ///
+    /// Анонимному IRC они не видны, поэтому без этого списка в чате оставались
+    /// текстом смайлы даже своего канала — «ldogmanOk» из такой истории.
+    pub fn refresh_twitch_emotes(&self) {
+        let get = http::helix_get_authed(Arc::clone(&self.config));
+        let tokens = twitch_tokens(Arc::clone(&self.config));
+        let twitch = self.twitch_config();
+        let cache = Arc::clone(&self.twitch_emotes);
+        let clients = Arc::clone(&self.clients);
+        std::mem::drop(tauri::async_runtime::spawn(async move {
+            let emotes =
+                crate::integrations::twitch_helix::load_channel_emotes(&get, &tokens, &twitch)
+                    .await;
+            if emotes.is_empty() {
+                // Сеть или авторизация могли отвалиться — уже собранный список
+                // не затираем: смайлы на экране остаются нужными.
+                return;
+            }
+            {
+                let mut slot = cache.lock().unwrap_or_else(|error| error.into_inner());
+                *slot = emotes.clone();
+            }
+            // Список нужен сразу: оверлей уже читает чат и до следующего
+            // снимка состояния не доживёт — рисуем без смайлов.
+            clients.broadcast_text(
+                &json!({
+                    "type": event_types::CHANNEL_EMOTES,
+                    "payload": { "emotes": emotes },
+                })
+                .to_string(),
+            );
+        }));
     }
 
     /// Забрать наборы значков Twitch (глобальные и канальные) и обновить кэш.
@@ -2122,6 +2163,16 @@ impl Diagnostics {
             // Счёт стрима с итогом в базовой валюте: суммы по валютам сами по
             // себе панели недостаточно — ей нужен один итог.
             map.insert("sessionDonations".to_string(), self.session_stats());
+            // Родные смайлы канала: оверлей открывает их по имени, а в анонимном
+            // чате их нет — список приходит только от нас.
+            map.insert(
+                "twitchEmotes".to_string(),
+                self.twitch_emotes
+                    .lock()
+                    .unwrap_or_else(|error| error.into_inner())
+                    .clone()
+                    .into(),
+            );
             // Имена сцен подключённой OBS — подсказки в полях маппинга. Без
             // них имена вписывают руками и промахиваются регистром.
             if let Some(Value::Object(obs)) = map.get_mut("obs") {

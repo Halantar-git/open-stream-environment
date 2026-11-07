@@ -55,6 +55,9 @@
   let loading = null;
   // Имя смайла -> URL картинки. Канальные наборы перекрывают глобальные.
   let thirdParty = new Map();
+  // Родные смайлы канала из Helix: анонимный IRC их не отдаёт, а в наборах
+  // провайдеров их нет — список приходит от сервера.
+  const native = new Map();
   // Результаты поиска по имени: `pending` — запрос в пути, пустая строка —
   // провайдеры такого смайла не знают. Кэш живёт страницу целиком.
   const lookups = new Map();
@@ -338,12 +341,31 @@
     return configure(current);
   }
 
+  /**
+   * Список родных смайлов канала от сервера (`[{ name, url }]`). Приходит
+   * снимком состояния и отдельным кадром — анонимному чату Twitch их не отдаёт,
+   * поэтому без него «ldogmanOk» и подобные оставались текстом.
+   */
+  function setNativeEmotes(list) {
+    if (!Array.isArray(list) || !list.length) return;
+    for (const item of list) {
+      const name = item && item.name ? String(item.name) : "";
+      const url = item && item.url ? String(item.url) : "";
+      if (!name || !url) continue;
+      native.set(name, url);
+      // Сообщения уже на экране: заглушки меняем сразу.
+      applyEmote(name, url);
+    }
+  }
+
   function thirdPartyHtml(chunk) {
     // Режем по пробелам, сохраняя их: имя смайла — это целое слово.
     return chunk
       .split(/(\s+)/)
       .map((token) => {
         if (!token || /^\s+$/.test(token)) return escapeHtml(token);
+        const nativeUrl = native.get(token);
+        if (nativeUrl) return emoteImg(token, nativeUrl);
         const url = thirdParty.get(token);
         if (url) return emoteImg(token, url);
         // Смайл чужого канала: ищем по имени, а пока рисуем заглушку — как
@@ -376,7 +398,7 @@
     return html;
   }
 
-  root.TwitchEmotes = { renderEmotes, configure, refresh };
+  root.TwitchEmotes = { renderEmotes, configure, refresh, setNativeEmotes };
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = root.TwitchEmotes;

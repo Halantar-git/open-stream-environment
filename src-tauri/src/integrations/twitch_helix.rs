@@ -202,8 +202,63 @@ pub type PatchFn = PostFn;
 
 /// `PATCH /helix/channels` — название и игра канала.
 pub const CHANNELS_URL: &str = "https://api.twitch.tv/helix/channels";
+/// Родные смайлы канала (все тиры и фолловерские).
+pub const CHANNEL_EMOTES_URL: &str = "https://api.twitch.tv/helix/chat/emotes";
 /// Поиск игры по названию — из него берётся `game_id`.
 pub const CATEGORY_SEARCH_URL: &str = "https://api.twitch.tv/helix/search/categories";
+
+/// Смайлы канала `{ name, url }`.
+///
+/// Анонимному IRC они не видны: подписки и фолловерские смайлы Twitch отдаёт
+/// только тому, кто на них имеет право. Helix же отдаёт весь набор канала без
+/// дополнительных scope — его и передаём оверлею.
+pub async fn load_channel_emotes(get: &JsonGetFn, tokens: &Tokens, twitch: &Value) -> Vec<Value> {
+    if !is_authorized(twitch) {
+        return Vec::new();
+    }
+    let broadcaster_id = text(twitch, "broadcasterId");
+    let Some(token) = ensure_token(tokens).await else {
+        return Vec::new();
+    };
+    let url = format!(
+        "{CHANNEL_EMOTES_URL}?broadcaster_id={}",
+        crate::server::oauth::encode_uri_component(&broadcaster_id)
+    );
+    let (status, body) = match get_with_retry(get, tokens, url, token).await {
+        Ok(outcome) => outcome,
+        Err(_) => return Vec::new(),
+    };
+    if !(200..300).contains(&status) {
+        return Vec::new();
+    }
+    body.get("data")
+        .and_then(Value::as_array)
+        .map(|data| {
+            data.iter()
+                .filter_map(|item| {
+                    let name = item.get("name").and_then(Value::as_str)?;
+                    let image = item
+                        .get("images")
+                        .and_then(|images| images.get("url_2x"))
+                        .and_then(Value::as_str)
+                        .filter(|url| !url.is_empty())
+                        .map(str::to_string);
+                    // Картинку можно собрать и из id — она та же самая.
+                    let url = match image {
+                        Some(url) => url,
+                        None => {
+                            let id = item.get("id").and_then(Value::as_str)?;
+                            format!(
+                                "https://static-cdn.jtvnw.net/emoticons/v2/{id}/default/dark/2.0"
+                            )
+                        }
+                    };
+                    Some(json!({ "name": name, "url": url }))
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
 
 /// Прочитать текущее название и категорию канала.
 pub async fn load_channel(get: &JsonGetFn, tokens: &Tokens, twitch: &Value) -> Value {
@@ -837,6 +892,39 @@ mod tests {
         assert_eq!(result["ok"], json!(true));
         assert_eq!(result["title"], json!("Стрим"));
         assert_eq!(result["category"], json!("Just Chatting"));
+    }
+
+    #[tokio::test]
+    async fn channel_emotes_come_back_as_name_and_url() {
+        let get: JsonGetFn = Arc::new(|url: String, _token: String| {
+            Box::pin(async move {
+                assert!(url.contains("/chat/emotes?broadcaster_id=bid"));
+                (
+                    200,
+                    json!({ "data": [
+                        { "id": "emote-1", "name": "ldogmanOk", "images": { "url_2x": "https://cdn/2x" } },
+                        { "name": "без-id", "images": {} },
+                    ] }),
+                )
+            })
+        });
+        let emotes = load_channel_emotes(&get, &tokens(), &authorized()).await;
+        assert_eq!(
+            emotes[0],
+            json!({ "name": "ldogmanOk", "url": "https://cdn/2x" })
+        );
+        // Смайл без id и картинки пропускается — рисовать нечего.
+        assert_eq!(emotes.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn channel_emotes_need_authorization() {
+        let get: JsonGetFn = Arc::new(|_url: String, _token: String| {
+            Box::pin(async { panic!("без авторизации в сеть не ходим") })
+        });
+        assert!(load_channel_emotes(&get, &tokens(), &Value::Null)
+            .await
+            .is_empty());
     }
 
     #[tokio::test]

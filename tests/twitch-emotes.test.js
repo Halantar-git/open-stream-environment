@@ -184,3 +184,23 @@ describe("TwitchEmotes — смайлы чужих каналов", () => {
     expect(global.fetch.mock.calls.length).toBe(calls);
   });
 });
+
+describe("TwitchEmotes — родные смайлы канала", () => {
+  test("смайл из списка сервера рисуется без наборов провайдеров", async () => {
+    await configure();
+    TwitchEmotes.setNativeEmotes([
+      { name: "ldogmanOk", url: "https://static-cdn.jtvnw.net/emoticons/v2/777/default/dark/2.0" },
+    ]);
+    expect(TwitchEmotes.renderEmotes("ldogmanOk", null)).toContain(
+      "https://static-cdn.jtvnw.net/emoticons/v2/777/default/dark/2.0"
+    );
+  });
+
+  test("родной смайл важнее одноимённого стороннего", async () => {
+    await configure();
+    TwitchEmotes.setNativeEmotes([{ name: "PogU", url: "https://cdn/native-pogu" }]);
+    const html = TwitchEmotes.renderEmotes("PogU", null);
+    expect(html).toContain("https://cdn/native-pogu");
+    expect(html).not.toContain("betterttv");
+  });
+});

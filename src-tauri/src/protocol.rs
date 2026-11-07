@@ -101,6 +101,7 @@ event_types! {
     TWITCH_ACTION_RESULT => "twitch_action_result",
     STREAM_INFO_RESULT => "stream_info_result",
     STREAM_CATEGORIES_RESULT => "stream_categories_result",
+    CHANNEL_EMOTES => "channel_emotes",
     GUEST_STATUS => "guest_status",
     GUEST_INVITE => "guest_invite",
     GUEST_JOIN_REQUEST => "guest_join_request",

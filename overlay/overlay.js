@@ -48,6 +48,12 @@
       window.TwitchEmotes.configure({ channel, channelId });
     }
   };
+  // Родные смайлы канала приходят только от сервера: анонимный чат их не видит.
+  const setNativeEmotes = (list) => {
+    if (window.TwitchEmotes && window.TwitchEmotes.setNativeEmotes) {
+      window.TwitchEmotes.setNativeEmotes(list);
+    }
+  };
 
   const canvas = document.getElementById("canvas");
   const bus = new window.OSEWidgets.EventBus();
@@ -509,6 +515,7 @@
       case EVENT_TYPES.STATE: {
         const p = msg.payload || {};
         configureEmotes(p.twitchChannel, p.twitchBroadcasterId);
+        setNativeEmotes(p.twitchEmotes);
         state.goal = p.goal || state.goal;
         state.recentEvents = p.recentEvents || [];
         state.stats = p.stats || state.stats;
@@ -649,6 +656,10 @@
       case EVENT_TYPES.GUEST_LEFT:
       case EVENT_TYPES.GUEST_DECLINED:
         bus.emit(msg.type, msg.payload || {});
+        break;
+      case EVENT_TYPES.CHANNEL_EMOTES:
+        // Смайлы канала доехали после старта: подставляем без перезагрузки.
+        setNativeEmotes(msg.payload && msg.payload.emotes);
         break;
       case EVENT_TYPES.LOCALES:
         if (window.I18n) {

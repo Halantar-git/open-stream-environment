@@ -660,6 +660,7 @@ curl -X POST -H "Content-Type: application/zip" -H "x-ose-install: 1" \
 | `TWITCH_ACTION_RESULT` | `twitch_action_result` | { action, ok, message?, error? } — server -> control: clip/marker feedback |
 | `STREAM_INFO_RESULT` | `stream_info_result` | { action: 'load'\|'apply', twitch, youtube } — название/категория/теги/описание эфира; `error: 'disabled'` — сервис выключен и ничего не получал |
 | `STREAM_CATEGORIES_RESULT` | `stream_categories_result` | { service: 'twitch'\|'youtube', query, ok, items: [{ id, name }] } — подсказки категорий |
+| `CHANNEL_EMOTES` | `channel_emotes` | { emotes: [{ name, url }] } — родные смайлы канала; анонимному IRC они не видны |
 | `GUEST_STATUS` | `guest_status` | { slots: [{ slot, name, state, guest? }] } — server -> все локальные окна |
 | `GUEST_INVITE` | `guest_invite` | { slot, token, host, port } — server -> панель после создания приглашения |
 | `GUEST_JOIN_REQUEST` | `guest_join_request` | { slot, name? } — гость подключился, нужно подтверждение |

@@ -190,6 +190,10 @@
             channelId: msg.payload.twitchBroadcasterId,
           });
         }
+        // Родные смайлы канала: анонимный чат их не видит, список даёт сервер.
+        if (window.TwitchEmotes && window.TwitchEmotes.setNativeEmotes) {
+          window.TwitchEmotes.setNativeEmotes(msg.payload.twitchEmotes);
+        }
         applyTheme(msg.payload.appearance);
         recentEvents = msg.payload.recentEvents || [];
         topDonation = msg.payload.topDonation || topDonation;
@@ -199,6 +203,12 @@
         // Первое состояние пришло — тема и содержимое на месте, можно
         // показывать страницу (см. `body.is-pending` в scene.css).
         document.body.classList.remove("is-pending");
+        break;
+      case EVENT_TYPES.CHANNEL_EMOTES:
+        // Смайлы канала доехали после старта: подставляем без перезагрузки.
+        if (window.TwitchEmotes && window.TwitchEmotes.setNativeEmotes) {
+          window.TwitchEmotes.setNativeEmotes(msg.payload && msg.payload.emotes);
+        }
         break;
       case EVENT_TYPES.REMOTE_ACTION: {
         const action = msg.payload && msg.payload.action;
