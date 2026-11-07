@@ -89,6 +89,9 @@
       this.statusEl = null;
       this._messageCount = 0;
       this._typing = null;
+      // Приглашение живёт на самой свежей строке и переезжает к новому
+      // сообщению — так лог выглядит сессией в открытой консоли.
+      this._promptSpan = null;
     }
 
     onMount() {
@@ -153,6 +156,7 @@
       this.messagesInner = null;
       this.promptEl = null;
       this.statusEl = null;
+      this._promptSpan = null;
     }
 
     onUpdate(prev, next) {
@@ -211,17 +215,35 @@
       if (!this.messagesInner || !message) return;
       const { escapeHtml, renderEmotes } = this.context;
 
+      // Приглашение переезжает к свежему сообщению: в консоли команду набирают
+      // после него, поэтому последняя строка читается как ввод, а всё выше —
+      // уже вывод. Подсказка пустого лога при этом убирается.
+      if (this._promptSpan && this._promptSpan.parentNode) {
+        this._promptSpan.parentNode.removeChild(this._promptSpan);
+      }
+      if (this.promptEl) this.promptEl.style.display = "none";
+
       const row = document.createElement("div");
       row.style.cssText =
         `font-family:var(--font-mono);font-size:13px;line-height:1.35;color:${this.textColor};` +
         "padding:1px 0;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap;";
+
+      // Приглашение — первым узлом строки, остальное — отдельным контейнером:
+      // так его можно перенести в следующую строку, не пересобирая разметку.
+      this._promptSpan = document.createElement("span");
+      this._promptSpan.className = "terminal-prompt";
+      this._promptSpan.textContent = "visitor@ose-chat:~$ ";
+      row.appendChild(this._promptSpan);
+
+      const bodyEl = document.createElement("span");
+      row.appendChild(bodyEl);
 
       const time = this.config.showTime === false ? "" : BaseWidget.clockTime();
       const userColor = message.color || this.accentColor;
       const text = renderEmotes ? renderEmotes(message.message, message.emotes) : escapeHtml(message.message);
 
       // Строка как в tail -f: время приглушено, ник — синим, текст — основным.
-      row.innerHTML =
+      bodyEl.innerHTML =
         (time ? `<span style="color:${this.mutedColor};">[${escapeHtml(time)}]</span> ` : "") +
         `<span style="color:${escapeHtml(userColor)};">${escapeHtml(message.user)}</span>` +
         `<span style="color:${this.mutedColor};">:</span> `;
@@ -230,7 +252,7 @@
       // терминале, а время и ник появляются сразу.
       const textEl = document.createElement("span");
       textEl.innerHTML = text;
-      row.appendChild(textEl);
+      bodyEl.appendChild(textEl);
 
       this.messagesInner.appendChild(row);
 

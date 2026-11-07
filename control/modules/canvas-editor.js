@@ -1549,22 +1549,22 @@ export function initCanvasEditor({
         const accent = tokens["--term-accent"] || "#58a6ff";
         const text = tokens["--md-on-surface"] || "#c9d1d9";
         const muted = tokens["--md-on-surface-variant"] || "#8b949e";
+        const promptPrefix = `<span style="color:${escapeAttr(prompt)};font-weight:700;">visitor@ose-chat:~$ </span>`;
         const rows = [
           { user: "nova_viewer", message: t("preview.chat1") },
           { user: "star_gazer", message: t("preview.chat2") },
           { user: "orbit_fan", message: t("preview.chat3") },
         ]
           .map(
-            (m) =>
+            (m, index, all) =>
               `<div style="padding:1px 0;font-family:var(--font-mono);font-size:11px;line-height:1.35;color:${escapeAttr(text)};white-space:pre-wrap;overflow-wrap:anywhere;">
-                ${config.showTime === false ? "" : `<span style="color:${escapeAttr(muted)};">[12:00]</span> `}<span style="color:${escapeAttr(accent)};">${escapeHtml(m.user)}</span><span style="color:${escapeAttr(muted)};">:</span> ${escapeHtml(m.message)}
+                ${index === all.length - 1 ? promptPrefix : ""}${config.showTime === false ? "" : `<span style="color:${escapeAttr(muted)};">[12:00]</span> `}<span style="color:${escapeAttr(accent)};">${escapeHtml(m.user)}</span><span style="color:${escapeAttr(muted)};">:</span> ${escapeHtml(m.message)}
               </div>`,
           )
           .join("");
         return `<div style="position:relative;height:100%;box-sizing:border-box;background:${escapeAttr(bg)};border:${escapeAttr(border)};border-radius:6px;box-shadow:${escapeAttr(glow)};display:flex;flex-direction:column;overflow:hidden;">
           <div style="display:flex;align-items:center;gap:4px;padding:2px 6px;border-bottom:1px solid ${escapeAttr(accent)};background:rgba(88, 166, 255, 0.1);color:${escapeAttr(accent)};font-family:var(--font-mono);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="color:${escapeAttr(prompt)};">root@ose-chat:~#</span><span style="color:${escapeAttr(muted)};">${escapeHtml(t("editor.chat"))}</span><span style="margin-left:auto;color:${escapeAttr(muted)};opacity:0.85;">[−][□][×]</span></div>
           <div style="flex:1;min-height:0;padding:4px 6px 0;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;">${rows}</div>
-          <div style="padding:0 6px;font-family:var(--font-mono);font-size:10px;color:${escapeAttr(muted)};white-space:nowrap;overflow:hidden;"><b style="color:${escapeAttr(prompt)};">visitor@ose-chat:~$</b> <span style="color:${escapeAttr(prompt)};">▌</span></div>
           <div style="display:flex;align-items:center;gap:5px;padding:1px 6px;border-top:1px solid #21262d;background:rgba(0,255,102,0.04);color:${escapeAttr(muted)};font-family:var(--font-mono);font-size:9px;line-height:1.4;"><span style="color:${escapeAttr(prompt)};">[ONLINE]</span><span>msgs 3</span><span>utf-8</span><span style="margin-left:auto;">12:00</span></div>
         </div>`;
       }

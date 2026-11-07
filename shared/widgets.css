@@ -1434,6 +1434,13 @@
   color: var(--term-prompt, #00ff66);
   font-weight: 700;
 }
+
+/* Приглашение перед последним сообщением: свежая строка лога выглядит как
+   набранная в шелле команда, а предыдущие — как вывод. */
+.terminal-prompt {
+  color: var(--term-prompt, #00ff66);
+  font-weight: 700;
+}
 .terminal-caret::after {
   content: "▌";
   color: var(--term-prompt, #00ff66);

@@ -344,7 +344,30 @@ describe("WidgetTerminalChat", () => {
 
     context.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "bob", message: "hi", badges: [] });
     expect(widget.messagesInner.children).toHaveLength(1);
-    expect(widget.messagesInner.children[0].innerHTML).toContain("bob");
+    // Строка = приглашение + контейнер с временем, ником и текстом.
+    const first = widget.messagesInner.children[0];
+    expect(first.children[1].innerHTML).toContain("bob");
+
+    widget.unmount();
+  });
+
+  test("приглашение стоит перед последним сообщением и переезжает к новому", () => {
+    const context = makeContext("terminal");
+    const widget = new WidgetTerminalChat(item("terminal-chat"), context);
+    widget.mount(makeEl("div"));
+    // Пока лог пуст, приглашение с кареткой висит внизу — виджет не пустой.
+    expect(widget.promptEl.innerHTML).toContain("visitor@ose-chat");
+
+    context.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "bob", message: "hi" });
+    expect(widget.promptEl.style.display).toBe("none");
+    expect(widget.messagesInner.children[0].children[0].className).toBe("terminal-prompt");
+
+    context.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "ann", message: "yo" });
+    const rows = widget.messagesInner.children;
+    // Свежая строка читается как ввод, предыдущая осталась обычным логом.
+    expect(rows[1].children[0].className).toBe("terminal-prompt");
+    expect(rows[1].children[0].textContent).toContain("visitor@ose-chat");
+    expect(rows[0].children.some((child) => child.className === "terminal-prompt")).toBe(false);
 
     widget.unmount();
   });
