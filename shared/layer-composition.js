@@ -43,7 +43,19 @@
   const LAYER_TYPES = ["text", "image", "video", "audio", "shape"];
   const ANIMATIONS = ["none", "fade", "slide-left", "slide-right", "slide-up", "slide-down", "zoom"];
   const ALIGNS = ["left", "center", "right"];
-  const FONTS = ["body", "display", "mono"];
+  const FONTS = [
+    "body",
+    "display",
+    "mono",
+    "monoton",
+    "audiowide",
+    "vt323",
+    "press-start-2p",
+    "vampiro-one",
+  ];
+  // Декоративные наборы без кириллицы: на русском тексте они отдают буквы
+  // основному шрифту темы, и в монтаже об этом стоит сказать заранее.
+  const FONTS_WITHOUT_CYRILLIC = ["monoton", "audiowide", "vt323", "vampiro-one"];
   const FITS = ["contain", "cover"];
   // Как текст слоя появляется на экране: сразу, посимвольно как в теме Terminal,
   // по словам, по буквам или дешифровкой.
@@ -76,10 +88,18 @@
   const MIN_TYPE_MS = 4;
   const MAX_TYPE_MS = 120;
 
+  // Первые три — слоты темы (они меняются вместе с палитрой), остальные —
+  // встроенные декоративные наборы из shared/fonts.css. Фолбэк после каждого
+  // декоративного держит текст читаемым: у большинства из них нет кириллицы.
   const FONT_VARS = {
     body: "var(--font-body, sans-serif)",
     display: "var(--font-display, sans-serif)",
     mono: "var(--font-mono, monospace)",
+    monoton: "'Monoton', 'Manrope', cursive",
+    audiowide: "'Audiowide', 'Manrope', sans-serif",
+    vt323: "'VT323', 'JetBrains Mono', monospace",
+    "press-start-2p": "'Press Start 2P', 'JetBrains Mono', monospace",
+    "vampiro-one": "'Vampiro One', 'Manrope', cursive",
   };
 
   function clamp(value, min, max) {
@@ -1083,6 +1103,8 @@
     ANIMATIONS,
     ALIGNS,
     FONTS,
+    FONTS_WITHOUT_CYRILLIC,
+    FONT_VARS,
     FITS,
     TEXT_ANIMS,
     EVENT_KINDS,

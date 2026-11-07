@@ -120,6 +120,7 @@ const SECTIONS = [
       { type: "p", key: "help.alertLayers.p3" },
       { type: "p", key: "help.alertLayers.p4" },
       { type: "p", key: "help.alertLayers.p5" },
+      { type: "p", key: "help.alertLayers.p6" },
     ],
   },
   {

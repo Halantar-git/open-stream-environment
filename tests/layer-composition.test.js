@@ -121,6 +121,22 @@ describe("layer-composition: модель", () => {
     expect(LayerComposition.normalizeLayer({ textAnim: "shimmer" }, 0).textAnim).toBe("none");
   });
 
+  test("шрифт слоя: слоты темы и встроенные наборы", () => {
+    // Слоты темы остаются первыми — старые композиции не меняются на глаз.
+    expect(LayerComposition.FONTS.slice(0, 3)).toEqual(["body", "display", "mono"]);
+    expect(LayerComposition.FONTS).toEqual(
+      expect.arrayContaining(["monoton", "audiowide", "vt323", "press-start-2p", "vampiro-one"])
+    );
+    // У каждого варианта есть чем набрать текст, иначе он упадёт в системный.
+    LayerComposition.FONTS.forEach((name) => {
+      expect(typeof LayerComposition.FONT_VARS[name]).toBe("string");
+      expect(LayerComposition.FONT_VARS[name].length).toBeGreaterThan(0);
+    });
+    expect(LayerComposition.normalizeLayer({ type: "text", font: "vt323" }, 0).font).toBe("vt323");
+    // Незнакомое имя — основной шрифт темы, а не пустая строка в style.
+    expect(LayerComposition.normalizeLayer({ type: "text", font: "comic" }, 0).font).toBe("body");
+  });
+
   test("normalizeConfig сохраняет имя экземпляра", () => {
     expect(LayerComposition.normalizeConfig({ name: "  Фолловеры  " }).name).toBe("Фолловеры");
     expect(LayerComposition.normalizeConfig({}).name).toBe("");

@@ -871,16 +871,22 @@
         escapeHtml(t("timelineEditor.align." + name)) +
         "</option>"
     ).join("");
-    const fontOptions = LC.FONTS.map(
-      (name) =>
+    const fontOptions = LC.FONTS.map((name) => {
+      // Шрифт в style у `<option>` даёт предпросмотр прямо в списке: видно,
+      // чем наберётся слой, не переключаясь. Слоты темы остаются
+      // `var(--font-*)` и рисуются шрифтом текущей темы.
+      const stack = (LC.FONT_VARS && LC.FONT_VARS[name]) || "";
+      return (
         '<option value="' +
         name +
         '"' +
         (layer.font === name ? " selected" : "") +
+        (stack ? ' style="font-family:' + stack.replace(/"/g, "&quot;") + '"' : "") +
         ">" +
         escapeHtml(t("timelineEditor.font." + name)) +
         "</option>"
-    ).join("");
+      );
+    }).join("");
     const fitOptions = LC.FITS.map(
       (name) =>
         '<option value="' +
@@ -978,6 +984,11 @@
           '</label><select id="fFont">' +
           fontOptions +
           "</select></div></div>" +
+          // У декоративных наборов, кроме Press Start 2P, нет кириллицы — на
+          // русском тексте они молча отдают буквы основному шрифту темы.
+          (LC.FONTS_WITHOUT_CYRILLIC.indexOf(layer.font) >= 0
+            ? '<p class="te-hint">' + escapeHtml(t("timelineEditor.fontCyrillicHint")) + "</p>"
+            : "") +
           '<div class="te-row2">' +
           '<div class="te-field"><label>' +
           escapeHtml(t("timelineEditor.textAnimLabel")) +
