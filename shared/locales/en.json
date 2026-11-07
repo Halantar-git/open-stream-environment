@@ -2106,7 +2106,7 @@
     },
     "notifications": {
       "title": "Notifications",
-      "p1": "When someone follows, subscribes, gifts a sub, donates or cheers, a popup card appears in the top-right corner of the control panel. It disappears on its own after a few seconds.",
+      "p1": "When someone follows, subscribes, gifts a sub, donates or cheers, a popup card appears in the bottom-right corner of the control panel. Cards stack up to five deep: the newest sits at the corner, older ones rise above it, and each disappears on its own after a few seconds.",
       "p2": "If the panel is minimized to tray or out of focus, a native Windows toast notification is shown instead of the in-panel card.",
       "p3": "The notification sound (buzzer.wav) and its volume are configured in Settings → Application: the Notification sound toggle and Notification volume slider."
     },

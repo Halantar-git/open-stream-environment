@@ -2519,19 +2519,23 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
   box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.22);
 }
 
-/* ---------- Alert toasts (follow/sub/cheer/donation notifications) ---------- */
+/* ---------- Alert toasts (follow/sub/cheer/donation notifications) ----------
+   Правый нижний угол: стопка растёт вверх, а `column-reverse` держит новую
+   карточку у самого края — глазу не надо искать её в середине экрана. */
 .alert-toasts {
   position: fixed;
-  top: 64px;
-  right: 14px;
+  right: 16px;
+  bottom: 16px;
   z-index: 60;
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse;
+  align-items: flex-end;
   gap: 8px;
   pointer-events: none;
 }
 .alert-toast {
-  pointer-events: auto;
+  /* Уведомление только показывает: клики по инспектору под ним проходят. */
+  pointer-events: none;
   display: flex;
   align-items: flex-start;
   gap: 10px;
@@ -2547,7 +2551,7 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 }
 .alert-toast.is-leaving {
   opacity: 0;
-  transform: translateY(-6px);
+  transform: translateY(6px);
   transition: opacity 220ms var(--easing-standard), transform 220ms var(--easing-standard);
 }
 .alert-toast__dot {
@@ -2583,7 +2587,7 @@ html, body { margin: 0; height: 100%; background: var(--md-surface-dim); color: 
 .alert-toast[data-kind="donation"] .alert-toast__dot { background: #e5c890; }
 
 @keyframes alert-toast-in {
-  from { opacity: 0; transform: translateY(-8px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
