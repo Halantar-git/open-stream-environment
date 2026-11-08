@@ -738,6 +738,19 @@ describe("WidgetTerminalSysinfo", () => {
     }
   });
 
+  test("ключи добиваются пробелами до колонки", () => {
+    const context = sysinfoContext();
+    // В реальном словаре ключи короткие — воспроизводим именно этот случай.
+    context.t = (key) => (key === "sysinfo.followers" ? "followers" : key);
+    const widget = new WidgetTerminalSysinfo(item("terminal-sysinfo"), context);
+    widget.mount(makeEl("div"));
+
+    const key = rowAt(widget, 3).children[0].textContent;
+    expect(key).toBe("followers".padEnd(11));
+    expect(key.endsWith("  ")).toBe(true);
+    widget.unmount();
+  });
+
   test("CRT-тумблер снимает сканлайны", () => {
     const widget = new WidgetTerminalSysinfo(
       item("terminal-sysinfo", { config: { crt: false } }),

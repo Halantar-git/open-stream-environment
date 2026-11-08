@@ -53,6 +53,11 @@
   // в сплошную полосу.
   const BAR_CELLS = 5;
 
+  // Ширина колонки ключа в символах. Выравниваем пробелами, как в neofetch:
+  // тогда значение не прилипает к ключу, даже если CSS не применился —
+  // например, OBS держит старый кэш стилей.
+  const KEY_COLUMN = 11;
+
   class WidgetTerminalSysinfo extends BaseWidget {
     constructor(config, context) {
       super(config, context);
@@ -297,7 +302,7 @@
 
         const keyEl = document.createElement("span");
         keyEl.className = "terminal-sysinfo__key";
-        keyEl.textContent = row.key;
+        keyEl.textContent = String(row.key).padEnd(KEY_COLUMN, " ");
         rowEl.appendChild(keyEl);
 
         const valueEl = document.createElement("span");

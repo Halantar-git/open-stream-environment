@@ -1509,6 +1509,8 @@
 }
 .terminal-sysinfo__key {
   flex: 0 0 auto;
+  /* Ключ добит пробелами до колонки — пробелы должны остаться видимыми. */
+  white-space: pre;
   min-width: 9ch;
   color: var(--term-dim, #8b949e);
 }

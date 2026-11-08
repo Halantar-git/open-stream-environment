@@ -1607,7 +1607,7 @@ export function initCanvasEditor({
         const pct = state.goal && state.goal.target ? Math.min(100, Math.round((state.goal.current / state.goal.target) * 100)) : 0;
         const filled = Math.round((pct / 100) * 5);
         const row = (key, value) =>
-          `<div style="display:flex;gap:8px;font-family:var(--font-mono);font-size:10px;line-height:1.45;"><span style="min-width:7ch;color:${escapeAttr(muted)};">${escapeHtml(key)}</span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${escapeAttr(text)};">${value}</span></div>`;
+          `<div style="display:flex;gap:8px;font-family:var(--font-mono);font-size:10px;line-height:1.45;"><span style="min-width:11ch;white-space:pre;color:${escapeAttr(muted)};">${escapeHtml(String(key).padEnd(11))}</span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${escapeAttr(text)};">${value}</span></div>`;
         const rows = [
           row(t("sysinfo.uptime"), "2h 13m"),
           row(t("sysinfo.followers"), formatMoney((state.stats && state.stats.followerCount) || 0)),
