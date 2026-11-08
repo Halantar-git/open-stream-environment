@@ -545,6 +545,33 @@ describe("WidgetTerminalHoloAlert", () => {
     widget.unmount();
   });
 
+  test("строка состояния показывает печать и exit 0", () => {
+    const context = makeContext("terminal");
+    const widget = new WidgetTerminalHoloAlert(item("terminal-holo-alert"), context);
+    widget.mount(makeEl("div"));
+
+    context.bus.emit(EVENT_TYPES.ALERT, { kind: "follow", user: "bob", durationMs: 5000 });
+    const card = widget.host.children[0];
+    const status = card.children[2];
+    expect(status.className).toBe("terminal-status");
+    expect(status.innerHTML).toContain("-- INSERT --");
+    widget.unmount();
+  });
+
+  test("после печати строка состояния показывает exit 0", () => {
+    const context = makeContext("terminal");
+    const widget = new WidgetTerminalHoloAlert(
+      item("terminal-holo-alert", { config: { typeMs: 0 } }),
+      context,
+    );
+    widget.mount(makeEl("div"));
+
+    context.bus.emit(EVENT_TYPES.ALERT, { kind: "follow", user: "bob", durationMs: 5000 });
+    const status = widget.host.children[0].children[2];
+    expect(status.innerHTML).toContain("exit 0");
+    widget.unmount();
+  });
+
   test("не инициализируется на чужой теме", () => {
     const widget = new WidgetTerminalHoloAlert(item("terminal-holo-alert"), makeContext("sf"));
     widget.mount(makeEl("div"));

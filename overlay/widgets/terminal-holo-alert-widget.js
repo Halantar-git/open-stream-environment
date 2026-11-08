@@ -166,6 +166,19 @@
       }
     }
 
+    // Строка состояния карточки: пока строки набираются — `-- INSERT --`,
+    // после — `exit 0`. Тот же язык, что у чата и цели: видно, что вывод
+    // закончен, а не оборвался.
+    _setStatus(card, typing) {
+      const el = card && card._statusEl;
+      if (!el) return;
+      const escapeHtml = this.context.escapeHtml || ((value) => String(value));
+      const flag = typing ? "-- INSERT --" : "exit 0";
+      el.innerHTML =
+        `<span class="terminal-status__flag">${flag}</span>` +
+        `<span class="terminal-status__spacer">${escapeHtml(BaseWidget.clockTime())}</span>`;
+    }
+
     // ---- очередь ----
 
     queueAlert(alert) {
@@ -215,7 +228,9 @@
         );
       }
 
+      this._setStatus(card, true);
       this._typeLines(card, () => {
+        this._setStatus(card, false);
         const holdMs = alert.durationMs || 5000;
         this.later(() => {
           if (card.animate) {
@@ -325,6 +340,12 @@
       body.className = "terminal-body";
       body.style.cssText = "gap:1px;padding:5px 9px 7px;flex:0 0 auto;overflow:visible;";
       card.appendChild(body);
+
+      // Строка состояния под телом — как в остальных окнах темы.
+      const status = document.createElement("div");
+      status.className = "terminal-status";
+      card.appendChild(status);
+      card._statusEl = status;
 
       const prompt = `<span style="color:${this.promptColor};font-weight:700;">$</span> `;
       const lines = [
