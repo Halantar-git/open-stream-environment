@@ -746,8 +746,22 @@ describe("WidgetTerminalSysinfo", () => {
     widget.mount(makeEl("div"));
 
     const key = rowAt(widget, 3).children[0].textContent;
-    expect(key).toBe("followers".padEnd(11));
-    expect(key.endsWith("  ")).toBe(true);
+    expect(key).toBe("followers".padEnd(12));
+    expect(key.endsWith("   ")).toBe(true);
+    widget.unmount();
+  });
+
+  test("у коротких ключей (chat, uptime) тоже есть отступ", () => {
+    const context = sysinfoContext();
+    context.t = (key) => key.replace("sysinfo.", "");
+    const widget = new WidgetTerminalSysinfo(item("terminal-sysinfo"), context);
+    widget.mount(makeEl("div"));
+
+    // uptime — 2-я строка, chat — последняя: оба короткие и оба добиты пробелами.
+    expect(rowAt(widget, 2).children[0].textContent).toBe("uptime".padEnd(12));
+    const chatRow = rowAt(widget, 8);
+    expect(chatRow.children[0].textContent).toBe("chat".padEnd(12));
+    expect(chatRow.children[1].innerHTML).toBe("0");
     widget.unmount();
   });
 

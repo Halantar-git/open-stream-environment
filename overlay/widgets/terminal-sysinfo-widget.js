@@ -56,7 +56,7 @@
   // Ширина колонки ключа в символах. Выравниваем пробелами, как в neofetch:
   // тогда значение не прилипает к ключу, даже если CSS не применился —
   // например, OBS держит старый кэш стилей.
-  const KEY_COLUMN = 11;
+  const KEY_COLUMN = 12;
 
   class WidgetTerminalSysinfo extends BaseWidget {
     constructor(config, context) {
