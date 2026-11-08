@@ -667,6 +667,8 @@ describe("WidgetTerminalSysinfo", () => {
     expect(valueAt(widget, 5).innerHTML).toContain("1500");
     expect(valueAt(widget, 6).innerHTML).toContain("big_fan");
     expect(valueAt(widget, 7).innerHTML).toContain("50%");
+    // Шкала короткая: пять клеток рядом с процентом, а не полоса во всю панель.
+    expect(valueAt(widget, 7).innerHTML.match(/[█░]/g)).toHaveLength(5);
     widget.unmount();
   });
 

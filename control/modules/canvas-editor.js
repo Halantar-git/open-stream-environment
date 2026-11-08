@@ -1605,7 +1605,7 @@ export function initCanvasEditor({
         const text = tokens["--md-on-surface"] || "#c9d1d9";
         const muted = tokens["--md-on-surface-variant"] || "#8b949e";
         const pct = state.goal && state.goal.target ? Math.min(100, Math.round((state.goal.current / state.goal.target) * 100)) : 0;
-        const filled = Math.round((pct / 100) * 8);
+        const filled = Math.round((pct / 100) * 5);
         const row = (key, value) =>
           `<div style="display:flex;gap:8px;font-family:var(--font-mono);font-size:10px;line-height:1.45;"><span style="min-width:7ch;color:${escapeAttr(muted)};">${escapeHtml(key)}</span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${escapeAttr(text)};">${value}</span></div>`;
         const rows = [
@@ -1619,7 +1619,7 @@ export function initCanvasEditor({
           row(t("sysinfo.top"), `star_gazer · ${formatMoney(1000)} ${escapeHtml(currencySymbol("RUB"))}`),
           row(
             t("sysinfo.goal"),
-            `<span style="color:${escapeAttr(muted)};">[</span><span style="color:${escapeAttr(prompt)};">${"█".repeat(filled)}</span>${escapeAttr("░".repeat(8 - filled))}<span style="color:${escapeAttr(muted)};">]</span> <span style="color:${escapeAttr(prompt)};">${pct}%</span>`,
+            `<span style="color:${escapeAttr(muted)};">[</span><span style="color:${escapeAttr(prompt)};">${"█".repeat(filled)}</span>${escapeAttr("░".repeat(5 - filled))}<span style="color:${escapeAttr(muted)};">]</span> <span style="color:${escapeAttr(prompt)};">${pct}%</span>`,
           ),
           row(t("sysinfo.chat"), "128"),
         ].join("");

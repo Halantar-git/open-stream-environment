@@ -1484,6 +1484,48 @@
   font-size: 12px;
 }
 
+/* «Система Terminal»: строки neofetch — ключ слева фиксированной колонкой,
+   значение справа с многоточием. Без этого правила ключ и значение слипались
+   в одну строку, а шкала растягивалась во всю панель. */
+.terminal-sysinfo__head {
+  color: var(--term-prompt, #00ff66);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.terminal-sysinfo__sep {
+  border-bottom: 1px dashed var(--md-outline, #30363d);
+  margin: 1px 0 3px;
+}
+.terminal-sysinfo__row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.45;
+  min-width: 0;
+}
+.terminal-sysinfo__key {
+  flex: 0 0 auto;
+  min-width: 9ch;
+  color: var(--term-dim, #8b949e);
+}
+.terminal-sysinfo__value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--md-on-surface);
+}
+.terminal-sysinfo__bar {
+  color: var(--term-prompt, #00ff66);
+}
+.terminal-sysinfo__bar-off {
+  color: var(--term-dim, #8b949e);
+}
+
 /* Общий 3D-виджет событий рисует карточку; в терминале — плоская строка.
    Вход — короткий подъём, без разворота карточки из глубины. */
 .terminal-recent .widget-recent3d__item {

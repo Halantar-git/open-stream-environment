@@ -49,8 +49,9 @@
   const DEFAULT_PROMPT = "#00ff66";
 
   // Шкала цели в этой панели короткая: строка делится с подписью и цифрами,
-  // поэтому клеток ровно восемь — их видно и в узком виджете.
-  const BAR_CELLS = 8;
+  // поэтому клеток пять — восемь занимали половину панели и превращали строку
+  // в сплошную полосу.
+  const BAR_CELLS = 5;
 
   class WidgetTerminalSysinfo extends BaseWidget {
     constructor(config, context) {
