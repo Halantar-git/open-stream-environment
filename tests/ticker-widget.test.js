@@ -206,6 +206,22 @@ describe("WidgetTicker", () => {
     w.unmount();
   });
 
+  test("«Очистить ленту» убирает накопленные события", () => {
+    const ctx = makeContext();
+    const w = new WidgetTicker(item(), ctx);
+    w.mount(makeEl("div"));
+
+    ctx.bus.emit(EVENT_TYPES.ALERT, { kind: "donation", user: "bob", amount: 150, currency: "RUB" });
+    expect(w._items().length).toBeGreaterThan(0);
+    w._hiddenMessages.add("старое объявление");
+
+    ctx.bus.emit(EVENT_TYPES.TICKER_CONTROL, { action: "reset" });
+    expect(w._items()).toHaveLength(0);
+    expect(w._hiddenMessages.size).toBe(0);
+
+    w.unmount();
+  });
+
   test("выключенный источник не попадает в ленту", () => {
     const ctx = makeContext();
     const w = new WidgetTicker(item("ticker", { sources: { follows: false } }), ctx);

@@ -341,6 +341,14 @@
     // раскладки, а индекс к этому времени другой.
     _applyTickerControl(payload) {
       const action = String((payload && payload.action) || "");
+      if (action === "reset") {
+        // Кнопка «Очистить ленту» из инспектора: убрать всё, что успело
+        // накопиться, — события и скрытые объявления. Новые придут как обычно.
+        this._events = [];
+        this._hiddenMessages.clear();
+        this._rebuild();
+        return;
+      }
       if (action === "clear") {
         this._events = this._events.filter((event) => event.kind !== "message");
         this._hiddenMessages.clear();

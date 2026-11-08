@@ -514,6 +514,7 @@ export function initPropertiesPanel({
         ${sourceToggle("pTickerSourceGoal", "goal", "properties.tickerSourceGoal")}
         ${sourceToggle("pTickerSourceTop", "top", "properties.tickerSourceTop")}
         <div class="md-field"><label>${t("properties.tickerMaxItems")}</label><input type="number" id="pTickerMaxItems" min="1" max="60" value="${config.maxItems || 24}"></div>
+        <button class="md-button md-button--tonal" id="pTickerClear" type="button">${t("properties.tickerClear")}</button>
         ${ticker3d ? `${inst.type === "terminal-ticker" ? terminalLookHtml(config) : ""}<div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>` : ""}
         <p class="properties__hint">${t("properties.tickerHint")}</p>`;
     } else if (inst.type === "stat") {
@@ -1153,6 +1154,12 @@ export function initPropertiesPanel({
       wireSwitch(propertiesEl.querySelector("#pTickerSourceGoal"), (on) => setSource("goal", on));
       wireSwitch(propertiesEl.querySelector("#pTickerSourceTop"), (on) => setSource("top", on));
       propertiesEl.querySelector("#pTickerMaxItems").addEventListener("change", (e) => patchTicker({ maxItems: Math.max(1, Math.min(60, Number(e.target.value) || 24)) }));
+      const tickerClear = propertiesEl.querySelector("#pTickerClear");
+      if (tickerClear) {
+        // Отдельно от «Убрать объявления» в «Шаблонах»: здесь чистится всё,
+        // что уже накопилось в ленте, а не только отправленные фразы.
+        tickerClear.addEventListener("click", () => send(EVENT_TYPES.CMD_TICKER_CONTROL, { action: "reset" }));
+      }
       const perspective = propertiesEl.querySelector("#pPerspective");
       if (perspective) {
         perspective.addEventListener("input", (e) => {

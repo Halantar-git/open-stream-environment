@@ -1227,6 +1227,7 @@
     "tickerSourceGoal": "Donation goal",
     "tickerSourceTop": "Top donation",
     "tickerMaxItems": "Events in the line",
+    "tickerClear": "Clear ticker",
     "tickerHint": "Speed is set in pixels per second and does not depend on message length. Channel point rewards are shown as a breaking band by default.",
     "volume": "Volume",
     "current": "Raised",
@@ -2123,7 +2124,8 @@
       "p1": "The Templates button in the header opens a panel with ready-made phrases for the news ticker. Type into the New template field and press Add — the phrase is saved in settings and survives a restart.",
       "p2": "Each row has two buttons: To ticker puts the phrase into the common event flow, To breaking shows it as a separate bar above the ticker without waiting for the cycle to end. Edits happen right in the row; an empty row and a duplicate remove themselves.",
       "p3": "Up to 20 phrases of 200 characters each are stored. The same message can be sent from the terminal with ticker [breaking] <text> or from the Web Remote.",
-      "p4": "Each template has Pause and Remove next to the send buttons. Pause hides the announcement in the ticker without deleting it: other events keep going, and Resume brings it back. Remove deletes it from the ticker until the next send. Clear announcements removes all announcements at once, while Pause ticker stops the whole line without clearing events and is saved in settings."
+      "p4": "Each template has Pause and Remove next to the send buttons. Pause hides the announcement in the ticker without deleting it: other events keep going, and Resume brings it back. Remove deletes it from the ticker until the next send. Clear announcements removes all announcements at once, while Pause ticker stops the whole line without clearing events and is saved in settings.",
+      "p5": "The ticker widget's inspector has a Clear ticker button: it drops everything already collected — donations, follows, subs and sent phrases — and the line starts filling again from now on. In contrast, Clear announcements in this panel wipes only the sent phrases, and Pause ticker deletes nothing."
     },
     "wheel": {
       "title": "Fortune Wheel",

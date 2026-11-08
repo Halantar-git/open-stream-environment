@@ -327,6 +327,7 @@ const SECTIONS = [
       { type: "p", key: "help.templates.p2" },
       { type: "p", key: "help.templates.p3" },
       { type: "p", key: "help.templates.p4" },
+      { type: "p", key: "help.templates.p5" },
     ],
   },
   {
