@@ -1616,6 +1616,7 @@ export function initCanvasEditor({
             t("sysinfo.donated"),
             `${formatMoney((state.sessionDonations && state.sessionDonations.count) || 0)} · ${formatMoney((state.sessionDonations && state.sessionDonations.amount) || 0)} ${escapeHtml(currencySymbol("RUB"))}`,
           ),
+          row(t("sysinfo.top"), `star_gazer · ${formatMoney(1000)} ${escapeHtml(currencySymbol("RUB"))}`),
           row(
             t("sysinfo.goal"),
             `<span style="color:${escapeAttr(muted)};">[</span><span style="color:${escapeAttr(prompt)};">${"█".repeat(filled)}</span>${escapeAttr("░".repeat(8 - filled))}<span style="color:${escapeAttr(muted)};">]</span> <span style="color:${escapeAttr(prompt)};">${pct}%</span>`,

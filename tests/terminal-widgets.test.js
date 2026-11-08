@@ -646,6 +646,7 @@ describe("WidgetTerminalSysinfo", () => {
     const context = makeContext("terminal");
     context.state.stats = { followerCount: 1500, subscriberCount: 7 };
     context.state.sessionDonations = { count: 3, amount: 1500, currency: "RUB" };
+    context.state.topDonation = { user: "big_fan", amount: 1000, currency: "RUB" };
     return context;
   }
 
@@ -664,7 +665,8 @@ describe("WidgetTerminalSysinfo", () => {
     expect(valueAt(widget, 3).innerHTML).toBe("1500");
     expect(valueAt(widget, 4).innerHTML).toBe("7");
     expect(valueAt(widget, 5).innerHTML).toContain("1500");
-    expect(valueAt(widget, 6).innerHTML).toContain("50%");
+    expect(valueAt(widget, 6).innerHTML).toContain("big_fan");
+    expect(valueAt(widget, 7).innerHTML).toContain("50%");
     widget.unmount();
   });
 
@@ -687,8 +689,51 @@ describe("WidgetTerminalSysinfo", () => {
 
     context.state.goal = { title: "Новая", current: 3, target: 4, currency: "RUB" };
     context.bus.emit(EVENT_TYPES.GOAL_UPDATE, context.state.goal);
-    expect(valueAt(widget, 6).innerHTML).toContain("75%");
+    expect(valueAt(widget, 7).innerHTML).toContain("75%");
     widget.unmount();
+  });
+
+  test("чужая валюта в донатах — отдельным слагаемым", () => {
+    const context = sysinfoContext();
+    context.state.sessionDonations = {
+      count: 2,
+      amount: 500,
+      currency: "RUB",
+      unconverted: [{ amount: 5, currency: "USD" }],
+    };
+    const widget = new WidgetTerminalSysinfo(item("terminal-sysinfo"), context);
+    widget.mount(makeEl("div"));
+
+    const donated = valueAt(widget, 5).innerHTML;
+    expect(donated).toContain("500");
+    expect(donated).toContain("+ 5 USD");
+    widget.unmount();
+  });
+
+  test("аптайм идёт дальше суток", () => {
+    const context = sysinfoContext();
+    const widget = new WidgetTerminalSysinfo(item("terminal-sysinfo"), context);
+    widget.mount(makeEl("div"));
+
+    widget._startedAt = Date.now() - (86400 + 3600) * 1000;
+    widget._render();
+    expect(valueAt(widget, 2).innerHTML).toBe("1d 01h");
+    widget.unmount();
+  });
+
+  test("аптайм и часы тикают без событий", () => {
+    jest.useFakeTimers();
+    try {
+      const widget = new WidgetTerminalSysinfo(item("terminal-sysinfo"), sysinfoContext());
+      widget.mount(makeEl("div"));
+      const spy = jest.spyOn(widget, "_render");
+
+      jest.advanceTimersByTime(30000);
+      expect(spy).toHaveBeenCalled();
+      widget.unmount();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   test("CRT-тумблер снимает сканлайны", () => {

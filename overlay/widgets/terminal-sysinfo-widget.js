@@ -127,9 +127,13 @@
       const { EVENT_TYPES } = this.context;
       this.subscribe(EVENT_TYPES.STAT_UPDATE, () => this._render());
       this.subscribe(EVENT_TYPES.SESSION_STATS, () => this._render());
+      this.subscribe(EVENT_TYPES.TOP_DONATION_UPDATE, () => this._render());
       this.subscribe(EVENT_TYPES.GOAL_UPDATE, () => this._render());
       this.subscribe(EVENT_TYPES.LOCALES, () => this._render());
       this.subscribe(EVENT_TYPES.CHAT_MESSAGE, () => this._countMessage());
+      // Аптайм и часы должны идти сами: в тихом чате событий нет, и без
+      // тика панель выглядела бы зависшей.
+      this.every(() => this._render(), 30000);
     }
 
     onUnmount() {
@@ -189,13 +193,39 @@
     }
 
     // Аптайм — время с момента монтирования панели: для OBS это время жизни
-    // источника, для превью — с момента открытия страницы.
+    // источника, для превью — с момента открытия страницы. Часы в сутках идут
+    // дальше, а не сбрасываются на ноль.
     _uptime() {
       const seconds = Math.max(0, Math.floor((Date.now() - this._startedAt) / 1000));
-      const hours = Math.floor(seconds / 3600);
+      const days = Math.floor(seconds / 86400);
+      const hours = Math.floor((seconds % 86400) / 3600);
       const minutes = Math.floor((seconds % 3600) / 60);
+      if (days > 0) return `${days}d ${String(hours).padStart(2, "0")}h`;
       if (hours > 0) return `${hours}h ${String(minutes).padStart(2, "0")}m`;
       return `${minutes}m`;
+    }
+
+    // Итог донатов стрима: количество, сумма в основной валюте и отдельными
+    // слагаемыми то, что пересчитать не удалось. Та же логика, что у виджета
+    // «Статистика»: одна цифра не должна врать из-за чужой валюты.
+    _sessionAmount(session) {
+      const { formatMoney, currencySymbol } = this.context;
+      const extra = (Array.isArray(session.unconverted) ? session.unconverted : [])
+        .map((item) => ({
+          amount: Number(item && item.amount) || 0,
+          currency: (item && item.currency) || "",
+        }))
+        .filter((item) => item.amount > 0);
+
+      const base = Number(session.amount) || 0;
+      const parts = [];
+      if (base > 0 || !extra.length) {
+        parts.push(`${formatMoney(base)} ${currencySymbol(session.currency || "RUB")}`.trim());
+      }
+      for (const item of extra) {
+        parts.push(`${formatMoney(item.amount)} ${currencySymbol(item.currency)}`.trim());
+      }
+      return parts.join(" + ");
     }
 
     _barHtml(pct) {
@@ -214,6 +244,7 @@
       const stats = (state && state.stats) || {};
       const goal = (state && state.goal) || {};
       const session = state && state.sessionDonations;
+      const top = (state && state.topDonation) || null;
       const count = (value) => (value != null ? formatMoney(value) : "—");
       const pct = goal.target
         ? Math.min(100, Math.round(((Number(goal.current) || 0) / goal.target) * 100))
@@ -226,8 +257,15 @@
         {
           key: t("sysinfo.donated"),
           value: session
-            ? `${formatMoney(session.count)} · ${formatMoney(session.amount)} ${currencySymbol(session.currency || "RUB")}`
+            ? `${formatMoney(session.count)} · ${this._sessionAmount(session)}`
             : "—",
+        },
+        {
+          key: t("sysinfo.top"),
+          value:
+            top && Number(top.amount) > 0
+              ? `${top.user} · ${formatMoney(top.amount)} ${currencySymbol(top.currency || "RUB")}`.trim()
+              : "—",
         },
         { key: t("sysinfo.goal"), bar: pct },
         { key: t("sysinfo.chat"), value: String(this._messages), slot: "chat" },
