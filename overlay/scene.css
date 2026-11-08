@@ -308,6 +308,28 @@ body.is-pending .scene-wrapper {
   border-color: rgba(167, 173, 168, 0.2);
 }
 
+/* Terminal: карточка сцены — окно консоли: моноширинный набор, редкие
+   сканлайны и волосяная линия-приглашение в верхней кромке. */
+[data-decoration="terminal"] .scene-card {
+  font-family: var(--font-mono);
+  background-image: repeating-linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.16) 0 1px,
+    transparent 1px 3px
+  );
+}
+[data-decoration="terminal"] .scene-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 64px;
+  right: 64px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--md-primary) 0 34px, transparent 34px);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
 [data-decoration="nuclear"] .scene-card::before {
   content: "";
   position: absolute;

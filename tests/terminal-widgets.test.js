@@ -31,6 +31,8 @@ const WidgetTerminalGoal = require("../overlay/widgets/terminal-goal-widget");
 const WidgetTerminalChat = require("../overlay/widgets/terminal-chat-widget");
 const WidgetTerminalHoloAlert = require("../overlay/widgets/terminal-holo-alert-widget");
 const WidgetTerminalSysinfo = require("../overlay/widgets/terminal-sysinfo-widget");
+const WidgetTerminalRecent = require("../overlay/widgets/terminal-recent-widget");
+const WidgetTerminalTicker = require("../overlay/widgets/terminal-ticker-widget");
 const WidgetManager = require("../overlay/widgets/widget-manager");
 
 // ---- минимальные заглушки DOM и canvas ----
@@ -274,6 +276,19 @@ describe("WidgetTerminalGoal", () => {
     widget.unmount();
   });
 
+  test("CRT-шрифт пересчитывает шкалу", () => {
+    const widget = new WidgetTerminalGoal(item("terminal-goal"), makeContext("terminal"));
+    widget.mount(makeEl("div"));
+    widget._cellWidth = 7;
+    widget._signWidth = 7;
+
+    widget.update({ config: { crtFont: true } });
+    expect(widget.element.classList.contains("is-crt-font")).toBe(true);
+    // Ширина знакоместа у VT323 другая — замер сбрасывается.
+    expect(widget._cellWidth).toBe(0);
+    widget.unmount();
+  });
+
   test("строка состояния и CRT-тумблер", () => {
     const widget = new WidgetTerminalGoal(item("terminal-goal"), makeContext("terminal"));
     widget.mount(makeEl("div"));
@@ -436,6 +451,39 @@ describe("WidgetTerminalChat", () => {
     widget.unmount();
   });
 
+  test("CRT-шрифт — класс на корне окна", () => {
+    const widget = new WidgetTerminalChat(
+      item("terminal-chat", { config: { crtFont: true } }),
+      makeContext("terminal"),
+    );
+    widget.mount(makeEl("div"));
+    expect(widget.element.classList.contains("is-crt-font")).toBe(true);
+
+    widget.update({ config: { crtFont: false } });
+    expect(widget.element.classList.contains("is-crt-font")).toBe(false);
+    widget.unmount();
+  });
+
+  test("если эфир быстрее печати, в статусе горит WARN", () => {
+    // Печать не завершается, пока приходит следующее сообщение, — ровно тот
+    // случай, ради которого статус меняется на WARN.
+    const AlertTyping = require("../overlay/widgets/alert-typing");
+    const spy = jest.spyOn(AlertTyping, "typeAlertText").mockImplementation(() => ({ stop() {} }));
+    try {
+      const context = makeContext("terminal");
+      const widget = new WidgetTerminalChat(item("terminal-chat"), context);
+      widget.mount(makeEl("div"));
+
+      widget._typingActive = true;
+      context.bus.emit(EVENT_TYPES.CHAT_MESSAGE, { user: "bob", message: "hi" });
+      expect(widget.statusEl.innerHTML).toContain("[WARN]");
+
+      widget.unmount();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   test("не инициализируется на чужой теме", () => {
     const widget = new WidgetTerminalChat(item("terminal-chat"), makeContext("pixel"));
     widget.mount(makeEl("div"));
@@ -572,6 +620,19 @@ describe("WidgetTerminalHoloAlert", () => {
     widget.unmount();
   });
 
+  test("команда печатается после приглашения", () => {
+    const context = makeContext("terminal");
+    const widget = new WidgetTerminalHoloAlert(item("terminal-holo-alert"), context);
+    widget.mount(makeEl("div"));
+
+    context.bus.emit(EVENT_TYPES.ALERT, { kind: "follow", user: "bob", durationMs: 5000 });
+    const body = widget.host.children[0].children[1];
+    const prompt = body.children[0].children[0];
+    expect(prompt.className).toBe("terminal-prompt");
+    expect(prompt.textContent).toContain("visitor@ose-alert");
+    widget.unmount();
+  });
+
   test("не инициализируется на чужой теме", () => {
     const widget = new WidgetTerminalHoloAlert(item("terminal-holo-alert"), makeContext("sf"));
     widget.mount(makeEl("div"));
@@ -645,6 +706,82 @@ describe("WidgetTerminalSysinfo", () => {
     widget.mount(makeEl("div"));
     expect(widget.windowEl).toBeNull();
     widget.unmount();
+  });
+});
+
+describe("WidgetTerminalRecent", () => {
+  function recentContext() {
+    const context = makeContext("terminal");
+    const now = Date.now();
+    context.state.recentEvents = [
+      { at: now, kind: "follow", user: "bob" },
+      { at: now - 60000, kind: "donation", user: "ann", amount: 500 },
+    ];
+    return context;
+  }
+
+  test("рисует строки журнала с тегом и временем", () => {
+    const widget = new WidgetTerminalRecent(item("terminal-recent"), recentContext());
+    widget.mount(makeEl("div"));
+
+    expect(widget.windowEl).toBeTruthy();
+    expect(widget.listEl.children).toHaveLength(2);
+    const row = widget.listEl.children[0];
+    expect(row.innerHTML).toContain("[FOLLOW]");
+    expect(row.innerHTML).toContain("recent.follow");
+    expect(row.innerHTML).toMatch(/\[\d{2}:\d{2}\]/);
+    expect(widget.statusEl.innerHTML).toContain("[ONLINE]");
+    widget.unmount();
+  });
+
+  test("пустой лог подсказывает, что событий ещё не было", () => {
+    const context = makeContext("terminal");
+    context.state.recentEvents = [];
+    const widget = new WidgetTerminalRecent(
+      item("terminal-recent", { config: { crtFont: true } }),
+      context,
+    );
+    widget.mount(makeEl("div"));
+
+    expect(widget.listEl.children[0].className).toBe("terminal-log__empty");
+    expect(widget.element.classList.contains("is-crt-font")).toBe(true);
+    widget.unmount();
+  });
+
+  test("не инициализируется на чужой теме", () => {
+    const widget = new WidgetTerminalRecent(item("terminal-recent"), makeContext("sf"));
+    widget.mount(makeEl("div"));
+    expect(widget.windowEl).toBeNull();
+    widget.unmount();
+  });
+});
+
+describe("WidgetTerminalTicker", () => {
+  test("строка журнала: тег латиницей и разделитель", () => {
+    const widget = new WidgetTerminalTicker(item("terminal-ticker"), makeContext("terminal"));
+    const el = widget._itemEl({ kind: "follow", tag: "Фолловер", text: "bob" });
+
+    expect(el.classList.contains("ticker__item--term")).toBe(true);
+    expect(el.children[0].textContent).toBe("[FOLLOW]");
+    expect(el.children[2].textContent).toBe("|");
+  });
+
+  test("CRT-шрифт и сканлайны — классы на корне", () => {
+    const widget = new WidgetTerminalTicker(
+      item("terminal-ticker", { config: { crtFont: true, crt: false } }),
+      makeContext("terminal"),
+    );
+    widget.element = makeEl("div");
+    widget._applyLook();
+
+    expect(widget.element.classList.contains("is-crt-font")).toBe(true);
+    expect(widget.element.classList.contains("is-crt-off")).toBe(true);
+  });
+
+  test("не строит DOM на чужой теме", () => {
+    const widget = new WidgetTerminalTicker(item("terminal-ticker"), makeContext("sf"));
+    widget.onMount();
+    expect(widget.frameEl).toBeUndefined();
   });
 });
 

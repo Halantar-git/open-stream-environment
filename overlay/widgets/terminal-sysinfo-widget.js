@@ -81,6 +81,7 @@
       this.element.classList.add("terminal-surface");
       this._applySurface();
       this._applyCrt();
+      this._applyCrtFont();
       this._startedAt = Date.now();
 
       this.windowEl = document.createElement("div");
@@ -142,6 +143,7 @@
     onUpdate(prev, next) {
       if (prev.perspective !== next.perspective) this._applyPerspective();
       if (prev.crt !== next.crt) this._applyCrt();
+      if (prev.crtFont !== next.crtFont) this._applyCrtFont();
     }
 
     _readColors() {
@@ -169,6 +171,10 @@
       if (this.element && this.element.dataset) {
         this.element.dataset.crt = on ? "on" : "off";
       }
+    }
+
+    _applyCrtFont() {
+      this.element.classList.toggle("is-crt-font", this.config.crtFont === true);
     }
 
     _applyPerspective() {

@@ -418,7 +418,7 @@
   manager.register("pixel-recent", OW.RecentWidget3d);
   manager.register("retrowave-recent", OW.RecentWidget3d);
   manager.register("sf-recent", OW.RecentWidget3d);
-  manager.register("terminal-recent", OW.RecentWidget3d);
+  manager.register("terminal-recent", OW.WidgetTerminalRecent);
   manager.register("ticker", OW.WidgetTicker);
   manager.register("grimhex-ticker", OW.WidgetTicker);
   manager.register("nuclear-ticker", OW.WidgetTicker);
@@ -429,7 +429,7 @@
   manager.register("pixel-ticker", OW.WidgetTicker);
   manager.register("retrowave-ticker", OW.WidgetTicker);
   manager.register("sf-ticker", OW.WidgetTicker);
-  manager.register("terminal-ticker", OW.WidgetTicker);
+  manager.register("terminal-ticker", OW.WidgetTerminalTicker);
   manager.register("stat", OW.StatWidget);
   manager.register("social", OW.SocialWidget);
   manager.register("participants", OW.ParticipantsWidget);

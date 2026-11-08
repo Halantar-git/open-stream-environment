@@ -103,6 +103,7 @@
       this.element.classList.add("terminal-surface");
       this._applySurface();
       this._applyCrt();
+      this._applyCrtFont();
       // Скрыт до первого алерта — окно не должно висеть на экране.
       this.element.style.opacity = "0";
 
@@ -131,6 +132,7 @@
         this.element.style.height = this._cardHeight + "px";
       }
       this._applyCrt();
+      this._applyCrtFont();
     }
 
     _readColors() {
@@ -164,6 +166,11 @@
       if (this.element && this.element.dataset) {
         this.element.dataset.crt = on ? "on" : "off";
       }
+    }
+
+    _applyCrtFont() {
+      if (!this.element || !this.element.classList) return;
+      this.element.classList.toggle("is-crt-font", this.config.crtFont === true);
     }
 
     // Строка состояния карточки: пока строки набираются — `-- INSERT --`,
@@ -347,9 +354,14 @@
       card.appendChild(status);
       card._statusEl = status;
 
-      const prompt = `<span style="color:${this.promptColor};font-weight:700;">$</span> `;
+      const prompt =
+        '<span class="terminal-prompt">visitor@ose-alert:~$ </span>';
       const lines = [
-        { text: command, html: `${prompt}<span style="color:${this.textColor};">${escapeHtml(command)}</span>` },
+        {
+          text: command,
+          html: `${prompt}<span style="color:${this.textColor};">${escapeHtml(command)}</span>`,
+          prompt: true,
+        },
         {
           text: `[OK] ${response.text}`,
           html:
@@ -384,6 +396,14 @@
           "white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;";
         row.dataset.html = line.html;
         row.dataset.plain = line.text;
+        // Приглашение — отдельным узлом: печать идёт только по команде, а знак
+        // стоит на месте с первого кадра, как в настоящем шелле.
+        if (line.prompt) {
+          const promptEl = document.createElement("span");
+          promptEl.className = "terminal-prompt";
+          promptEl.textContent = "visitor@ose-alert:~$ ";
+          row._promptEl = promptEl;
+        }
         row.innerHTML = "";
         body.appendChild(row);
         return row;
@@ -427,6 +447,7 @@
       const startRow = (row) => {
         row.innerHTML = "";
         if (caret.parentNode) caret.parentNode.removeChild(caret);
+        if (row._promptEl) row.appendChild(row._promptEl);
         textEl = document.createElement("span");
         textEl.style.color = this.textColor;
         row.appendChild(textEl);

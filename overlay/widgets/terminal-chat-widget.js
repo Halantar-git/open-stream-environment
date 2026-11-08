@@ -89,6 +89,9 @@
       this.statusEl = null;
       this._messageCount = 0;
       this._typing = null;
+      // Идёт ли печать прямо сейчас: по нему видно, что чат не успевает за
+      // эфиром, и в строке состояния загорается `[WARN]`.
+      this._typingActive = false;
       // Приглашение живёт на самой свежей строке и переезжает к новому
       // сообщению — так лог выглядит сессией в открытой консоли.
       this._promptSpan = null;
@@ -102,6 +105,7 @@
       this.element.classList.add("terminal-surface");
       this._applySurface();
       this._applyCrt();
+      this._applyCrtFont();
 
       this.windowEl = document.createElement("div");
       this.windowEl.className = "terminal-window";
@@ -162,6 +166,7 @@
     onUpdate(prev, next) {
       if (prev.perspective !== next.perspective) this._applyPerspective();
       if (prev.crt !== next.crt) this._applyCrt();
+      if (prev.crtFont !== next.crtFont) this._applyCrtFont();
     }
 
     _readColors() {
@@ -196,6 +201,10 @@
       this.element.dataset.crt = on ? "on" : "off";
     }
 
+    _applyCrtFont() {
+      this.element.classList.toggle("is-crt-font", this.config.crtFont === true);
+    }
+
     _applyPerspective() {
       const value = Math.max(0, Math.min(100, Number(this.config.perspective) || 0));
       if (value > 0) {
@@ -214,6 +223,8 @@
     pushMessage(message) {
       if (!this.messagesInner || !message) return;
       const { escapeHtml, renderEmotes } = this.context;
+      // Строка ещё печаталась — значит сообщения идут быстрее печати.
+      const lagging = this._typingActive;
 
       // Приглашение переезжает к свежему сообщению: в консоли команду набирают
       // после него, поэтому последняя строка читается как ввод, а всё выше —
@@ -263,7 +274,7 @@
 
       this._messageCount += 1;
       this._scrollToEnd();
-      this._typeMessage(textEl);
+      this._typeMessage(textEl, lagging);
 
       if (row.animate) {
         row.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 90, easing: "linear" });
@@ -273,17 +284,24 @@
     // Печать сообщения, как в алерте Terminal. Новый текст начинает печататься
     // сразу, а недопечатанное предыдущее сообщение дорисовывается мгновенно:
     // в живом чате ждать очереди нельзя, иначе печать отстаёт от эфира.
-    _typeMessage(textEl) {
+    _typeMessage(textEl, lagging) {
       this._stopTyping();
-      this._updateStatus(true);
+      this._updateStatus(lagging ? "warn" : "typing");
+      this._typingActive = true;
       this._typing = AlertTyping
         ? AlertTyping.typeAlertText(textEl, {
             typeMs: clampTypeMs(this.config.typeMs),
             onTick: () => this._scrollToEnd(),
-            onDone: () => this._updateStatus(false),
+            onDone: () => {
+              this._typingActive = false;
+              this._updateStatus(false);
+            },
           })
         : null;
-      if (!this._typing) this._updateStatus(false);
+      if (!this._typing) {
+        this._typingActive = false;
+        this._updateStatus(false);
+      }
     }
 
     _stopTyping() {
@@ -293,14 +311,22 @@
       }
     }
 
-    // Строка состояния: `-- INSERT --`, пока печатается строка, счётчик
-    // пришедших сообщений, кодировка и часы.
-    _updateStatus(typing) {
+    // Строка состояния: `-- INSERT --`, пока печатается строка, `[WARN]`,
+    // если сообщения пришли быстрее печати, иначе `[ONLINE]`; рядом счётчик,
+    // кодировка и часы.
+    _updateStatus(mode) {
       if (!this.statusEl) return;
       const escapeHtml = this.context.escapeHtml || ((value) => String(value));
-      const flag = typing ? "-- INSERT --" : "[ONLINE]";
+      const state = mode === "warn" ? "warn" : mode === true || mode === "typing" ? "typing" : "idle";
+      const flag = state === "warn" ? "[WARN]" : state === "typing" ? "-- INSERT --" : "[ONLINE]";
+      const flagClass =
+        state === "warn"
+          ? "terminal-status__flag is-warn"
+          : state === "typing"
+            ? "terminal-status__flag"
+            : "terminal-status__flag is-idle";
       this.statusEl.innerHTML =
-        `<span class="terminal-status__flag${typing ? "" : " is-idle"}">${flag}</span>` +
+        `<span class="${flagClass}">${flag}</span>` +
         `<span>msgs ${this._messageCount}</span>` +
         `<span>utf-8</span>` +
         `<span class="terminal-status__spacer">${escapeHtml(BaseWidget.clockTime())}</span>`;

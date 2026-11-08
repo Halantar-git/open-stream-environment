@@ -90,6 +90,7 @@
       this.element.classList.add("terminal-surface");
       this._applySurface();
       this._applyCrt();
+      this._applyCrtFont();
 
       this.windowEl = document.createElement("div");
       this.windowEl.className = "terminal-window";
@@ -180,6 +181,7 @@
         this._updateDom();
       }
       if (prev.crt !== next.crt) this._applyCrt();
+      if (prev.crtFont !== next.crtFont) this._applyCrtFont();
       if (prev.perspective !== next.perspective || prev.perspectiveDirection !== next.perspectiveDirection) {
         this._applyPerspective();
       }
@@ -218,6 +220,16 @@
     _applyCrt() {
       const on = this.config.crt !== false;
       this.element.dataset.crt = on ? "on" : "off";
+    }
+
+    // VT323 вместо JetBrains Mono. Ширина клетки шкалы зависит от шрифта,
+    // поэтому после переключения мерим заново — иначе шкала осталась бы
+    // посчитанной под прежний шрифт.
+    _applyCrtFont() {
+      this.element.classList.toggle("is-crt-font", this.config.crtFont === true);
+      this._cellWidth = 0;
+      this._signWidth = 0;
+      if (this.barEl) this._updateDom();
     }
 
     // Корпус панели из токенов темы. Отключённый фон снимает только панель:

@@ -317,14 +317,20 @@ export function initCanvasEditor({
     </div>`;
   }
 
-  function tickerPreview(is3d) {
+  function tickerPreview(is3d, terminal) {
     const label = escapeHtml(t("ticker.label"));
-    const item = (kind, tagKey, text) =>
-      `<span class="ticker__item" data-kind="${kind}"><span class="ticker__tag">${escapeHtml(t(tagKey))}</span><span class="ticker__text">${escapeHtml(text)}</span><span class="ticker__sep">◆</span></span>`;
+    const sep = terminal ? "|" : "◆";
+    const item = (kind, tagKey, text, termTag) =>
+      `<span class="ticker__item${terminal ? " ticker__item--term" : ""}" data-kind="${kind}"><span class="ticker__tag">${escapeHtml(terminal && termTag ? termTag : t(tagKey))}</span><span class="ticker__text">${escapeHtml(text)}</span><span class="ticker__sep">${sep}</span></span>`;
     const items = [
-      item("donation", "ticker.tagDonation", t("ticker.donation", { user: "star_gazer", amount: `+${formatMoney(750)} ${currencySymbol("RUB")}` })),
-      item("follow", "ticker.tagFollow", t("ticker.follow", { user: "neon_rider" })),
-      item("sub", "ticker.tagSub", t("ticker.sub", { user: "pixelwave", tier: "2" })),
+      item(
+        "donation",
+        "ticker.tagDonation",
+        t("ticker.donation", { user: "star_gazer", amount: `+${formatMoney(750)} ${currencySymbol("RUB")}` }),
+        "[DONATE]",
+      ),
+      item("follow", "ticker.tagFollow", t("ticker.follow", { user: "neon_rider" }), "[FOLLOW]"),
+      item("sub", "ticker.tagSub", t("ticker.sub", { user: "pixelwave", tier: "2" }), "[SUB]"),
     ].join("");
     return `<div class="ticker${is3d ? " ticker--3d" : ""}" style="--ticker-font:12px;--ticker-tilt:${is3d ? "3deg" : "0deg"}">
       <div class="ticker__frame">
@@ -395,7 +401,7 @@ export function initCanvasEditor({
     const config = inst.config || {};
     const previewType = effectiveType(inst);
     if (previewType === "ticker" || previewType.endsWith("-ticker")) {
-      return tickerPreview(previewType !== "ticker");
+      return tickerPreview(previewType !== "ticker", previewType === "terminal-ticker");
     }
     switch (previewType) {
       case "goal": {
@@ -433,6 +439,28 @@ export function initCanvasEditor({
           .join("");
         return `<div class="widget-chat">${rows}</div>`;
       }
+      case "terminal-recent": {
+        const tokens = state.appearance.tokens || {};
+        const bg = tokens["--panel-bg"] || "rgba(13, 17, 23, 0.92)";
+        const border = tokens["--panel-border"] || "1px solid #30363d";
+        const glow = tokens["--panel-glow"] || "0 0 18px rgba(0, 255, 102, 0.25)";
+        const prompt = tokens["--term-prompt"] || "#00ff66";
+        const accent = tokens["--term-accent"] || "#58a6ff";
+        const text = tokens["--md-on-surface"] || "#c9d1d9";
+        const muted = tokens["--md-on-surface-variant"] || "#8b949e";
+        const tags = { follow: "[FOLLOW]", sub: "[SUB]", donation: "[DONATE]" };
+        const rows = SAMPLE_RECENT.slice(0, Math.min(3, config.maxItems || 5))
+          .map(
+            (e) =>
+              `<div style="display:flex;gap:6px;font-family:var(--font-mono);font-size:10px;line-height:1.5;white-space:nowrap;overflow:hidden;"><span style="color:${escapeAttr(prompt)};">${escapeHtml(tags[e.kind] || "[LOG]")}</span><span style="color:${escapeAttr(muted)};">[12:04]</span><span style="color:${escapeAttr(text)};overflow:hidden;text-overflow:ellipsis;">${recentTextPreview(e)}</span></div>`,
+          )
+          .join("");
+        return `<div style="position:relative;height:100%;box-sizing:border-box;background:${escapeAttr(bg)};border:${escapeAttr(border)};border-radius:6px;box-shadow:${escapeAttr(glow)};display:flex;flex-direction:column;overflow:hidden;">
+          <div style="display:flex;align-items:center;gap:4px;padding:2px 6px;border-bottom:1px solid ${escapeAttr(accent)};background:rgba(88, 166, 255, 0.1);color:${escapeAttr(accent)};font-family:var(--font-mono);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="color:${escapeAttr(prompt)};">root@ose-log:~#</span><span style="color:${escapeAttr(muted)};">${escapeHtml(t("preview.recentTitle"))}</span><span style="margin-left:auto;color:${escapeAttr(muted)};opacity:0.85;">[−][□][×]</span></div>
+          <div style="flex:1;min-height:0;padding:4px 6px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;justify-content:flex-start;overflow:hidden;">${rows}</div>
+          <div style="display:flex;align-items:center;gap:5px;padding:1px 6px;border-top:1px solid #21262d;background:rgba(0,255,102,0.04);color:${escapeAttr(muted)};font-family:var(--font-mono);font-size:9px;line-height:1.4;"><span style="color:${escapeAttr(prompt)};">[ONLINE]</span><span>log</span><span style="margin-left:auto;">12:00</span></div>
+        </div>`;
+      }
       case "grimhex-recent":
       case "nuclear-recent":
       case "cobra-recent":
@@ -441,8 +469,7 @@ export function initCanvasEditor({
       case "md3-recent":
       case "pixel-recent":
       case "retrowave-recent":
-      case "sf-recent":
-      case "terminal-recent": {
+      case "sf-recent": {
         const items = SAMPLE_RECENT.slice(0, Math.min(3, config.maxItems || 5))
           .map((e) => `<div class="widget-recent__item widget-recent3d__item"><span class="widget-recent__dot" data-kind="${escapeAttr(e.kind)}"></span><span class="widget-recent3d__text">${recentTextPreview(e)}</span></div>`)
           .join("");
