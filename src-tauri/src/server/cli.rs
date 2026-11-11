@@ -999,10 +999,12 @@ impl Cli<'_> {
         }
         if args.first().copied() == Some("add") {
             let amount = js_number(args.get(1).copied().map(Value::from).as_ref());
-            let goal = {
+            let (before, goal) = {
                 let mut config = self.diagnostics.config();
-                config::add_to_goal(&mut config, &json!(amount))
+                let before = config.get("goal").cloned().unwrap_or(Value::Null);
+                (before, config::add_to_goal(&mut config, &json!(amount)))
             };
+            self.log_goal_change(json!({ "add": amount }), &before, &goal);
             self.broadcast(event_types::GOAL_UPDATE, goal.clone());
             self.log(
                 "success",
@@ -1037,13 +1039,22 @@ impl Cli<'_> {
             self.log("error", &self.t("cli.goal.usage", &[]));
             return;
         }
-        let goal = {
+        let (before, goal) = {
             let mut config = self.diagnostics.config();
-            config::set_goal(
-                &mut config,
-                &json!({ "current": current, "target": target }),
+            let before = config.get("goal").cloned().unwrap_or(Value::Null);
+            (
+                before,
+                config::set_goal(
+                    &mut config,
+                    &json!({ "current": current, "target": target }),
+                ),
             )
         };
+        self.log_goal_change(
+            json!({ "current": current, "target": target }),
+            &before,
+            &goal,
+        );
         self.broadcast(event_types::GOAL_UPDATE, goal.clone());
         self.log(
             "success",
@@ -1060,6 +1071,16 @@ impl Cli<'_> {
                     ),
                 ],
             ),
+        );
+    }
+
+    // Ручная правка цели из терминала тоже попадает в журнал службы `goal`:
+    // иначе при разборе «шкала закрылась сама» видно только донаты и сервисы,
+    // а собственную команду — нет.
+    fn log_goal_change(&self, patch: Value, before: &Value, after: &Value) {
+        Logger::new("goal", None).info(
+            "goal changed from cli",
+            Some(&json!({ "patch": patch, "before": before, "after": after })),
         );
     }
 

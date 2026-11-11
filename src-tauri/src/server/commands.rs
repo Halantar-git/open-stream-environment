@@ -37,6 +37,7 @@ use crate::server::locales::{self, Locales};
 use crate::server::remote;
 use crate::state::{appearance, config, donation_media, layout, poll, scenes};
 use crate::storage::history::{js_number, js_number_or_zero, js_truthy};
+use crate::storage::logger::Logger;
 
 /// Разобрать и выполнить команду клиента без привязки к отправителю.
 ///
@@ -252,10 +253,19 @@ pub fn handle_message(
 
         // ---- Цель и настройки ----
         event_types::CMD_SET_GOAL => {
-            let goal = {
+            let (before, goal) = {
                 let mut config = diagnostics.config();
-                config::set_goal(&mut config, &payload)
+                let before = config.get("goal").cloned().unwrap_or(Value::Null);
+                (before, config::set_goal(&mut config, &payload))
             };
+            // Ручная правка цели раньше нигде не оставалась: при разборе
+            // «шкала закрылась сама» в журнале были видны только донаты и
+            // сервисы, а испорченное число в поле — нет. Пишем патч и то, что
+            // было до него.
+            Logger::new("goal", None).info(
+                "goal changed from control",
+                Some(&json!({ "patch": payload, "before": before, "after": goal })),
+            );
             broadcast(diagnostics, event_types::GOAL_UPDATE, goal);
         }
         event_types::CMD_SET_APP_CONFIG => {
