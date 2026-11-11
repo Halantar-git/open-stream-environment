@@ -1028,8 +1028,23 @@ export function initPropertiesPanel({
 
     if (inst.type === "goal" || inst.type === "grimhex-goal" || inst.type === "nuclear-goal" || inst.type === "cobra-goal" || inst.type === "wardogs-goal" || inst.type === "md3-goal" || inst.type === "pixel-goal" || inst.type === "teso-goal" || inst.type === "retrowave-goal" || inst.type === "sf-goal" || inst.type === "terminal-goal") {
       propertiesEl.querySelector("#pGoalTitle").addEventListener("change", (e) => send(EVENT_TYPES.CMD_SET_GOAL, { title: e.target.value }));
-      propertiesEl.querySelector("#pGoalCurrent").addEventListener("change", (e) => send(EVENT_TYPES.CMD_SET_GOAL, { current: Number(e.target.value) }));
-      propertiesEl.querySelector("#pGoalTarget").addEventListener("change", (e) => send(EVENT_TYPES.CMD_SET_GOAL, { target: Number(e.target.value) }));
+      // Пустое поле и мусор не отправляем: Number("") — это 0, а нулевую цель
+      // бэкенд поднимает до 1 ₽, после чего любой донат закрывает шкалу целиком.
+      // Невалидный ввод возвращаем к тому, что сохранено.
+      const setGoalNumber = (id, key, min) => {
+        const input = propertiesEl.querySelector("#" + id);
+        if (!input) return;
+        input.addEventListener("change", () => {
+          const value = Number(input.value);
+          if (input.value.trim() === "" || !Number.isFinite(value) || value < min) {
+            input.value = String(Number(state.goal[key]) || 0);
+            return;
+          }
+          send(EVENT_TYPES.CMD_SET_GOAL, { [key]: value });
+        });
+      };
+      setGoalNumber("pGoalCurrent", "current", 0);
+      setGoalNumber("pGoalTarget", "target", 1);
       propertiesEl.querySelector("#pGoalCurrency").addEventListener("change", (e) => send(EVENT_TYPES.CMD_SET_GOAL, { currency: e.target.value }));
       wireSwitch(propertiesEl.querySelector("#pGoalSync"), (on) => send(EVENT_TYPES.CMD_SET_GOAL, { syncFromServices: on }));
       wireSwitch(propertiesEl.querySelector("#pShowPercent"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showPercentage: on } } }));
