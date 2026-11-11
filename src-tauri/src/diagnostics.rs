@@ -3070,18 +3070,38 @@ fn apply_bus_event(event: &Value, ctx: &BusContext) {
         "goal_external_update" => {
             // Своя цель из сервиса донатов применяется только к той же кампании:
             // чужая сумма сбора закрывала полоску цели в OSE (см.
-            // `apply_external_goal`).
-            let goal = {
+            // `apply_external_goal`). В журнал пишем обе суммы — без локальной
+            // цели непонятно, почему обновление отброшено.
+            let (goal, local_target) = {
                 let mut config = config.lock().unwrap_or_else(|error| error.into_inner());
-                crate::state::config::apply_external_goal(&mut config, &payload)
+                let local_target = config
+                    .get("goal")
+                    .and_then(|goal| goal.get("target"))
+                    .cloned()
+                    .unwrap_or(Value::Null);
+                (
+                    crate::state::config::apply_external_goal(&mut config, &payload),
+                    local_target,
+                )
             };
             match goal {
-                Some(goal) => broadcast_clients(clients, event_types::GOAL_UPDATE, goal),
+                Some(goal) => {
+                    Logger::new("goal", None).info(
+                        "goal updated by service",
+                        Some(&json!({
+                            "current": goal.get("current").cloned().unwrap_or(Value::Null),
+                            "target": goal.get("target").cloned().unwrap_or(Value::Null),
+                        })),
+                    );
+                    broadcast_clients(clients, event_types::GOAL_UPDATE, goal)
+                }
                 None => Logger::new("goal", None).info(
                     "goal update from service ignored",
                     Some(&json!({
                         "current": payload.get("current").cloned().unwrap_or(Value::Null),
                         "target": payload.get("target").cloned().unwrap_or(Value::Null),
+                        "localTarget": local_target,
+                        "currency": payload.get("currency").cloned().unwrap_or(Value::Null),
                     })),
                 ),
             }
