@@ -991,6 +991,12 @@ impl Cli<'_> {
     }
 
     fn goal(&self, args: &[&str]) {
+        // Без аргументов — сводка: по ней видно, почему шкала стоит полной,
+        // то есть в какой валюте и сколько собрано против цели.
+        if args.is_empty() {
+            self.goal_report();
+            return;
+        }
         if args.first().copied() == Some("add") {
             let amount = js_number(args.get(1).copied().map(Value::from).as_ref());
             let goal = {
@@ -1052,6 +1058,46 @@ impl Cli<'_> {
                         "target",
                         crate::state::js_string(goal.get("target").unwrap_or(&Value::Null)),
                     ),
+                ],
+            ),
+        );
+    }
+
+    fn goal_report(&self) {
+        let goal = {
+            let config = self.diagnostics.config();
+            config.get("goal").cloned().unwrap_or(Value::Null)
+        };
+        let current = js_number(Some(goal.get("current").unwrap_or(&Value::Null)));
+        let target = js_number(Some(goal.get("target").unwrap_or(&Value::Null)));
+        let currency = crate::state::currency_code(goal.get("currency").unwrap_or(&Value::Null));
+        // Процент не режем на сотне: 125 % объясняет полную шкалу, а 100 % —
+        // нет.
+        let percent = if target > 0.0 {
+            (current / target * 100.0).round()
+        } else {
+            0.0
+        };
+        // Название подставляется готовым куском в кавычках: у безымянной цели
+        // не остаётся пустых скобок.
+        let title = crate::state::js_string(goal.get("title").unwrap_or(&Value::Null))
+            .trim()
+            .to_string();
+        let title = if title.is_empty() {
+            String::new()
+        } else {
+            format!(" «{title}»")
+        };
+        self.log(
+            "info",
+            &self.t(
+                "cli.goal.report",
+                &[
+                    ("title", title),
+                    ("current", integer_text(current)),
+                    ("target", integer_text(target)),
+                    ("currency", currency),
+                    ("percent", integer_text(percent)),
                 ],
             ),
         );

@@ -157,7 +157,7 @@
       "ticker": "ticker [breaking] <text> — message to the news ticker",
       "chat": "chat <message> — test chat message",
       "theme": "theme <id> | themes — switch/list themes",
-      "goal": "goal <current> <target> | goal add <amount> — donation goal",
+      "goal": "goal | goal <current> <target> | goal add <amount> — donation goal",
       "obs": "obs <id> | obs list — run/list OBS commands",
       "lists": "sounds | cameras | filters — resource lists",
       "logs": "logs <info|success|warn|error|hint|all> — filter log levels",
@@ -212,7 +212,7 @@
     "chat": { "usage": "Usage: chat <message>", "done": "Chat message: {{message}}" },
     "theme": { "usage": "Specify a theme id. Example: theme pixel", "switched": "Theme switched: {{id}}", "notFound": "Theme not found: {{id}}" },
     "themes": { "none": "No themes", "title": "Themes:" },
-    "goal": { "added": "Goal: {{current}} / {{target}} (+{{amount}})", "usage": "Usage: goal <current> <target> | goal add <amount>", "updated": "Goal updated: {{current}} / {{target}}" },
+    "goal": { "added": "Goal: {{current}} / {{target}} (+{{amount}})", "usage": "Usage: goal <current> <target> | goal add <amount> | goal", "updated": "Goal updated: {{current}} / {{target}}", "report": "Goal{{title}}: {{current}} / {{target}} {{currency}} — {{percent}}%" },
     "obs": { "none": "No custom OBS commands", "title": "Custom OBS commands:", "notFound": "OBS command not found: {{id}}", "emptyRequestType": "Command {{id}} has an empty requestType", "offline": "OBS not connected", "done": "OBS command executed: {{id}}", "failed": "OBS command error: {{error}}" },
     "sounds": { "none": "No soundboard sounds", "title": "Soundboard sounds:" },
     "cameras": { "none": "No camera angles", "title": "Camera angles:" },
@@ -2116,7 +2116,7 @@
     "terminal": {
       "title": "Terminal and commands",
       "p1": "The Terminal button in the header opens the built-in console: it shows server and integration logs in real time.",
-      "p2": "Type commands in the input (e.g. scene brb, death +1, wheel spin, sim sub user, theme pixel, status). Type help for the full list.",
+      "p2": "Type commands in the input (e.g. scene brb, death +1, wheel spin, sim sub user, theme pixel, status, goal). Type help for the full list.",
       "p3": "Tab autocompletes commands and arguments (scenes, sounds, cameras, filters). The search field in the terminal header filters logs by text, and logs <level> filters by level."
     },
     "templates": {

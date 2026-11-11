@@ -157,7 +157,7 @@
       "ticker": "ticker [breaking] <текст> — сообщение в новостную ленту",
       "chat": "chat <message> — тестовое сообщение в чат",
       "theme": "theme <id> | themes — переключение/список тем",
-      "goal": "goal <current> <target> | goal add <amount> — цель доната",
+      "goal": "goal | goal <current> <target> | goal add <amount> — цель доната",
       "obs": "obs <id> | obs list — выполнение/список OBS-команд",
       "lists": "sounds | cameras | filters — списки ресурсов",
       "logs": "logs <info|success|warn|error|hint|all> — фильтр уровней логов",
@@ -212,7 +212,7 @@
     "chat": { "usage": "Использование: chat <message>", "done": "Сообщение в чат: {{message}}" },
     "theme": { "usage": "Укажите id темы. Пример: theme pixel", "switched": "Тема переключена: {{id}}", "notFound": "Тема не найдена: {{id}}" },
     "themes": { "none": "Нет тем", "title": "Темы:" },
-    "goal": { "added": "Цель: {{current}} / {{target}} (+{{amount}})", "usage": "Использование: goal <current> <target> | goal add <amount>", "updated": "Цель обновлена: {{current}} / {{target}}" },
+    "goal": { "added": "Цель: {{current}} / {{target}} (+{{amount}})", "usage": "Использование: goal <current> <target> | goal add <amount> | goal", "updated": "Цель обновлена: {{current}} / {{target}}", "report": "Цель{{title}}: {{current}} / {{target}} {{currency}} — {{percent}}%" },
     "obs": { "none": "Нет кастомных OBS-команд", "title": "Кастомные OBS-команды:", "notFound": "OBS-команда не найдена: {{id}}", "emptyRequestType": "У команды {{id}} пустой requestType", "offline": "OBS не подключён", "done": "Выполнена OBS-команда: {{id}}", "failed": "Ошибка OBS-команды: {{error}}" },
     "sounds": { "none": "Нет звуков саундборда", "title": "Звуки саундборда:" },
     "cameras": { "none": "Нет ракурсов камер", "title": "Ракурсы камер:" },
@@ -2116,7 +2116,7 @@
     "terminal": {
       "title": "Терминал и команды",
       "p1": "Кнопка «Терминал» в шапке открывает встроенную консоль: там видны логи сервера и интеграций в реальном времени.",
-      "p2": "В поле ввода работают команды (например, scene brb, death +1, wheel spin, sim sub user, theme pixel, status). Введите help для полного списка.",
+      "p2": "В поле ввода работают команды (например, scene brb, death +1, wheel spin, sim sub user, theme pixel, status, goal). Введите help для полного списка.",
       "p3": "Tab автодополняет команды и аргументы (сцены, звуки, камеры, фильтры). Поле поиска в шапке терминала фильтрует логи по тексту, а команда logs <уровень> — по уровню."
     },
     "templates": {
