@@ -3072,16 +3072,19 @@ fn apply_bus_event(event: &Value, ctx: &BusContext) {
             // чужая сумма сбора закрывала полоску цели в OSE (см.
             // `apply_external_goal`). В журнал пишем обе суммы — без локальной
             // цели непонятно, почему обновление отброшено.
-            let (goal, local_target) = {
+            let (goal, local_target, sync_enabled) = {
                 let mut config = config.lock().unwrap_or_else(|error| error.into_inner());
                 let local_target = config
                     .get("goal")
                     .and_then(|goal| goal.get("target"))
                     .cloned()
                     .unwrap_or(Value::Null);
+                // Флаг читаем до применения: после него в секции уже новое значение.
+                let sync_enabled = crate::state::config::goal_sync_from_services(&config);
                 (
                     crate::state::config::apply_external_goal(&mut config, &payload),
                     local_target,
+                    sync_enabled,
                 )
             };
             match goal {
@@ -3102,6 +3105,7 @@ fn apply_bus_event(event: &Value, ctx: &BusContext) {
                         "target": payload.get("target").cloned().unwrap_or(Value::Null),
                         "localTarget": local_target,
                         "currency": payload.get("currency").cloned().unwrap_or(Value::Null),
+                        "syncEnabled": sync_enabled,
                     })),
                 ),
             }

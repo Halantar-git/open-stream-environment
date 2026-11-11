@@ -416,6 +416,8 @@ export function initPropertiesPanel({
           <div class="md-field"><label>${t("properties.target")}</label><input type="number" id="pGoalTarget" value="${state.goal.target || 0}"></div>
         </div>
         <div class="md-field"><label>${t("properties.currency")}</label><input type="text" id="pGoalCurrency" value="${escapeAttr(state.goal.currency || "")}"></div>
+        <div class="properties__toggle-row"><label>${t("properties.goalSync")}</label>${switchHtml("pGoalSync", state.goal.sync_from_services !== false)}</div>
+        <div class="properties__hint">${t("properties.goalSyncHint")}</div>
         <div class="properties__toggle-row"><label>${t("properties.showPercent")}</label>${switchHtml("pShowPercent", !!config.showPercentage)}</div>
         <div class="properties__toggle-row"><label>${t("properties.showBackground")}</label>${switchHtml("pShowBackground", config.showBackground !== false)}</div>
         ${inst.type === "terminal-goal" ? terminalLookHtml(config) : ""}
@@ -1029,6 +1031,7 @@ export function initPropertiesPanel({
       propertiesEl.querySelector("#pGoalCurrent").addEventListener("change", (e) => send(EVENT_TYPES.CMD_SET_GOAL, { current: Number(e.target.value) }));
       propertiesEl.querySelector("#pGoalTarget").addEventListener("change", (e) => send(EVENT_TYPES.CMD_SET_GOAL, { target: Number(e.target.value) }));
       propertiesEl.querySelector("#pGoalCurrency").addEventListener("change", (e) => send(EVENT_TYPES.CMD_SET_GOAL, { currency: e.target.value }));
+      wireSwitch(propertiesEl.querySelector("#pGoalSync"), (on) => send(EVENT_TYPES.CMD_SET_GOAL, { syncFromServices: on }));
       wireSwitch(propertiesEl.querySelector("#pShowPercent"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showPercentage: on } } }));
       wireSwitch(propertiesEl.querySelector("#pShowBackground"), (on) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { showBackground: on } } }));
       // CRT есть только у терминальной цели: у остальных тумблеров нет.

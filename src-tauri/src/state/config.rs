@@ -79,6 +79,15 @@ pub fn set_goal(config: &mut ConfigFile, patch: &Value) -> Value {
             Value::from(js_string(currency).chars().take(8).collect::<String>()),
         );
     }
+    // Тумблер «Брать собранное из сервиса донатов» живёт в той же секции: он
+    // относится к цели, а не к конкретной интеграции, и работает для обоих
+    // сервисов сразу.
+    if let Some(sync) = patch.get("syncFromServices") {
+        goal.insert(
+            "sync_from_services".to_string(),
+            Value::Bool(js_truthy(Some(sync))),
+        );
+    }
     put_section(config, "goal", goal)
 }
 
@@ -92,6 +101,19 @@ pub fn add_to_goal(config: &mut ConfigFile, amount: &Value) -> Value {
     put_section(config, "goal", goal)
 }
 
+/// Брать ли «собрано» из кампании сервиса донатов.
+///
+/// По умолчанию да — так цель работала до появления настройки. Выключенный
+/// тумблер оставляет только донаты, пришедшие через OSE: это нужно, когда на
+/// сервисе висит старая кампания с той же суммой цели и её `raised` закрывает
+/// шкалу вчерашним сбором.
+pub fn goal_sync_from_services(config: &ConfigFile) -> bool {
+    match section(config, "goal").get("sync_from_services") {
+        Some(value) => js_truthy(Some(value)),
+        None => true,
+    }
+}
+
 /// Применить обновление цели от сервиса донатов (DonateX, DonationAlerts).
 ///
 /// Цель ведётся в настройках OSE, а сервис присылает свою кампанию со своей
@@ -100,8 +122,12 @@ pub fn add_to_goal(config: &mut ConfigFile, amount: &Value) -> Value {
 /// чужая кампания, и её сумму сбора нельзя подставлять в нашу цель: одна
 /// такая подмена закрывала полоску на цели в двадцать пять тысяч.
 ///
-/// `None` — обновление не применили (нет суммы сбора или она чужая).
+/// `None` — обновление не применили (нет суммы сбора, она чужая или сверка с
+/// сервисом выключена тумблером).
 pub fn apply_external_goal(config: &mut ConfigFile, patch: &Value) -> Option<Value> {
+    if !goal_sync_from_services(config) {
+        return None;
+    }
     let local_target = js_number_or_zero(section(config, "goal").get("target"));
     let external_target = patch.get("target").filter(|value| js_truthy(Some(value)));
     let matches = match external_target {
@@ -1275,6 +1301,11 @@ pub fn normalize_config(config: &mut ConfigFile) {
             },
             "current": number_value(js_number_or_zero(goal.get("current")).max(0.0)),
             "target": number_value(js_number_or_zero(goal.get("target")).max(0.0)),
+            // Без ключа считаем включённым: так цель вела себя до тумблера.
+            "sync_from_services": goal
+                .get("sync_from_services")
+                .map(|value| js_truthy(Some(value)))
+                .unwrap_or(true),
             "currency": match goal.get("currency").and_then(Value::as_str) {
                 // `typeof currency === "string" && currency.trim()` → trim + slice(0,8).
                 Some(text) if !text.trim().is_empty() => {
@@ -2338,6 +2369,37 @@ mod tests {
     }
 
     #[test]
+    fn the_service_goal_can_be_turned_off() {
+        let fixture = Fixture::new("goal-sync");
+        let mut config = fixture.config();
+        set_goal(
+            &mut config,
+            &json!({ "current": 0, "target": 25000, "currency": "RUB" }),
+        );
+
+        // Тумблер выключен: даже совпавшая кампания сервиса не двигает цель.
+        let goal = set_goal(&mut config, &json!({ "syncFromServices": false }));
+        assert_eq!(goal["sync_from_services"], json!(false));
+        assert!(
+            apply_external_goal(&mut config, &json!({ "current": 150, "target": 25000 })).is_none()
+        );
+        assert_eq!(config.get("goal").unwrap()["current"], json!(0));
+
+        // Выбор не теряется при перезапуске: нормализация его сохраняет.
+        normalize_config(&mut config);
+        assert_eq!(
+            config.get("goal").unwrap()["sync_from_services"],
+            json!(false)
+        );
+
+        // Включили обратно — сверка снова работает.
+        set_goal(&mut config, &json!({ "syncFromServices": true }));
+        let goal = apply_external_goal(&mut config, &json!({ "current": 150, "target": 25000 }))
+            .expect("с включённой сверкой цель применяется");
+        assert_eq!(goal["current"], json!(150));
+    }
+
+    #[test]
     fn normalization_fills_defaults_without_touching_other_keys() {
         let fixture = Fixture::new("normalize");
         let mut config = fixture.config();
@@ -2362,6 +2424,11 @@ mod tests {
         assert_eq!(
             config.get("alert_queue").unwrap()["merge_window_sec"],
             json!(20)
+        );
+        // Сверка цели с сервисом по умолчанию включена — как до появления тумблера.
+        assert_eq!(
+            config.get("goal").unwrap()["sync_from_services"],
+            json!(true)
         );
     }
 

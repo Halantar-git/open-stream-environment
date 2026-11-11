@@ -1233,6 +1233,8 @@
     "current": "Raised",
     "target": "Goal",
     "currency": "Currency",
+    "goalSync": "Raised from the service",
+    "goalSyncHint": "“Raised” comes from the DonationAlerts or DonateX campaign. Turn off if an old campaign with the same target keeps closing the bar without donations.",
     "showPercent": "Show %",
     "showBackground": "Background",
     "maxMessages": "Max messages",
@@ -2058,6 +2060,7 @@
       "p1": "Donations automatically increase the goal counter and trigger an alert.",
       "p2": "Donation voice-over (TTS): in the DonationAlerts card you can enable reading the donation message aloud — language, voice, volume and speech rate, plus a test button. If the service returns a voice link, the DonationAlerts voice can also be used for regular donations (a separate toggle).",
       "p3": "The DA button in the top bar opens a pair of panels: DonationAlerts itself and, to its left, the alert queue. They open and close together and share one close button: the queue shows what is on air and what is waiting, and lets you pause alerts and set the display rules — hide donations below an amount and merge consecutive donations from the same viewer.",
+      "p4": "The service sends its own fundraising campaign, and OSE takes its “raised” value when the target matches. The “Raised from the service” toggle in the goal widget settings turns that off: then only donations that came through OSE move the goal. Turn it off if an old campaign with the same target is left on the service — its past total would otherwise close the bar without new donations.",
       "s1": "Create a client at donationalerts.com/application/clients.",
       "s2": "Set the Redirect URI to the value shown in Settings → DonationAlerts.",
       "s3": "Paste the Client ID and Client Secret, then press Connect DonationAlerts."
