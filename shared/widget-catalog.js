@@ -1273,7 +1273,7 @@
       defaultGeometry: { x: 3, y: 6, w: 25, h: 21 },
       minW: 16,
       minH: 10,
-      defaultConfig: { perspective: 0, crt: true },
+      defaultConfig: { perspective: 0, perspectiveDirection: "left", crt: true },
     },
 
     "terminal-recent": recent3d(

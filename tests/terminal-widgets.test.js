@@ -765,6 +765,24 @@ describe("WidgetTerminalSysinfo", () => {
     widget.unmount();
   });
 
+  test("направление перспективы разворачивает наклон", () => {
+    const left = new WidgetTerminalSysinfo(
+      item("terminal-sysinfo", { config: { perspective: 100, perspectiveDirection: "left" } }),
+      sysinfoContext(),
+    );
+    left.mount(makeEl("div"));
+    const right = new WidgetTerminalSysinfo(
+      item("terminal-sysinfo", { config: { perspective: 100, perspectiveDirection: "right" } }),
+      sysinfoContext(),
+    );
+    right.mount(makeEl("div"));
+
+    expect(left._tilt).toContain("rotateY(-15deg)");
+    expect(right._tilt).toContain("rotateY(15deg)");
+    left.unmount();
+    right.unmount();
+  });
+
   test("CRT-тумблер снимает сканлайны", () => {
     const widget = new WidgetTerminalSysinfo(
       item("terminal-sysinfo", { config: { crt: false } }),

@@ -1,5 +1,5 @@
 {
-  "sourceHash": "0c1ad5778fe9082f",
+  "sourceHash": "707a546a2e84beb9",
   "widgetTypes": {
     "alerts": {
       "type": "alerts",
@@ -2235,6 +2235,7 @@
       "minH": 10,
       "defaultConfig": {
         "perspective": 0,
+        "perspectiveDirection": "left",
         "crt": true
       }
     },

@@ -151,9 +151,10 @@
     }
 
     onUpdate(prev, next) {
-      if (prev.perspective !== next.perspective) this._applyPerspective();
+      if (prev.perspective !== next.perspective || prev.perspectiveDirection !== next.perspectiveDirection) {
+        this._applyPerspective();
+      }
       if (prev.crt !== next.crt) this._applyCrt();
-      if (prev.crtFont !== next.crtFont) this._applyCrtFont();
     }
 
     _readColors() {
@@ -189,13 +190,26 @@
 
     _applyPerspective() {
       const value = Math.max(0, Math.min(100, Number(this.config.perspective) || 0));
-      if (value > 0) {
-        const ry = -(value * 0.15);
-        const rx = value * 0.03;
-        this._setTilt(`perspective(1200px) rotateY(${ry}deg) rotateX(${rx}deg)`);
-      } else {
+      if (value <= 0) {
         this._setTilt("");
+        return;
       }
+      // Направление — как у остальных виджетов: `left` повторяет прежнее
+      // поведение панели, остальные оси его разворачивают.
+      const magnitude = value * 0.15; // 0..15deg
+      const direction = this.config.perspectiveDirection || "left";
+      let ry = -magnitude;
+      let rx = magnitude * 0.2;
+      if (direction === "right") {
+        ry = magnitude;
+      } else if (direction === "up") {
+        ry = 0;
+        rx = magnitude;
+      } else if (direction === "down") {
+        ry = 0;
+        rx = -magnitude;
+      }
+      this._setTilt(`perspective(1200px) rotateY(${ry}deg) rotateX(${rx}deg)`);
     }
 
     // Аптайм — время с момента монтирования панели: для OBS это время жизни

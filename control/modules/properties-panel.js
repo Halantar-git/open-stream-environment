@@ -445,7 +445,15 @@ export function initPropertiesPanel({
         ${terminalLookHtml(config)}
         ${inst.type === "terminal-holo-alert"
           ? `<div class="md-field"><label>${t("properties.typeSpeed")}</label><input type="number" id="pTypeSpeed" min="0" max="200" step="1" value="${config.typeMs ?? 16}"></div>`
-          : `<div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>`}`;
+          : `<div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>
+        <div class="md-field"><label>${t("properties.perspectiveDirection")}</label>
+          <select id="pPerspectiveDirection">
+            <option value="left" ${(config.perspectiveDirection || "left") === "left" ? "selected" : ""}>${t("properties.perspectiveLeft")}</option>
+            <option value="right" ${config.perspectiveDirection === "right" ? "selected" : ""}>${t("properties.perspectiveRight")}</option>
+            <option value="up" ${config.perspectiveDirection === "up" ? "selected" : ""}>${t("properties.perspectiveUp")}</option>
+            <option value="down" ${config.perspectiveDirection === "down" ? "selected" : ""}>${t("properties.perspectiveDown")}</option>
+          </select>
+        </div>`}`;
     } else if (inst.type === "grimhex" || inst.type === "musain" || inst.type === "nuclear" || inst.type === "cobra" || inst.type === "elite-sign" || inst.type === "teso-seal" || inst.type === "md3-orb" || inst.type === "pixel-cube" || inst.type === "wardogs-cube" || inst.type === "retrowave-symbol" || inst.type === "orbital-symbol" || inst.type === "sf-tachometer" || inst.type === "sf-cube" || inst.type === "terminal-cube") {
       extraHtml = `
         <div class="md-field"><label>${t("properties.perspective")}: <span id="pPerspectiveValue">${config.perspective || 0}</span></label><input type="range" id="pPerspective" min="0" max="100" step="1" value="${config.perspective || 0}"></div>
@@ -1095,6 +1103,10 @@ export function initPropertiesPanel({
           if (label) label.textContent = String(value);
           send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { perspective: value } } });
         });
+      }
+      const perspectiveDirection = propertiesEl.querySelector("#pPerspectiveDirection");
+      if (perspectiveDirection) {
+        perspectiveDirection.addEventListener("change", (e) => send(EVENT_TYPES.CMD_UPDATE_WIDGET, { id: inst.id, patch: { config: { perspectiveDirection: e.target.value } } }));
       }
     } else if (inst.type === "grimhex" || inst.type === "musain" || inst.type === "nuclear" || inst.type === "cobra" || inst.type === "elite-sign" || inst.type === "teso-seal" || inst.type === "md3-orb" || inst.type === "pixel-cube" || inst.type === "wardogs-cube" || inst.type === "retrowave-symbol" || inst.type === "orbital-symbol" || inst.type === "sf-tachometer" || inst.type === "sf-cube" || inst.type === "terminal-cube") {
       propertiesEl.querySelector("#pPerspective").addEventListener("input", (e) => {
