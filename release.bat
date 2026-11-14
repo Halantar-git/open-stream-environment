@@ -30,7 +30,7 @@ if exist "src-tauri\tauri.conf.json" (
   if errorlevel 1 goto :error
 )
 
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$v=$env:OSE_VERSION; $d=(Get-Date).ToString('yyyy-MM-dd'); $enc=New-Object System.Text.UTF8Encoding($false); $r=[System.IO.File]::ReadAllText('README.md'); $r=$r -replace '\*\*[0-9]+\.[0-9]+\.[0-9]+\*\*\.',('**'+$v+'**.'); [System.IO.File]::WriteAllText('README.md',$r,$enc); $u=[System.IO.File]::ReadAllText('discord-update.txt'); $u=$u -replace '[0-9]+\.[0-9]+\.[0-9]+',$v; [System.IO.File]::WriteAllText('discord-update.txt',$u,$enc); $c=[System.IO.File]::ReadAllText('CHANGELOG.md'); $h='## ['+$v+'] '; if ($c.IndexOf($h) -lt 0) { $i=$c.IndexOf('## ['); $c=$c.Substring(0,$i)+$h+[char]0x2014+' '+$d+[Environment]::NewLine+[Environment]::NewLine+$c.Substring($i) }; [System.IO.File]::WriteAllText('CHANGELOG.md',$c,$enc);"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$v=$env:OSE_VERSION; $d=(Get-Date).ToString('yyyy-MM-dd'); $enc=New-Object System.Text.UTF8Encoding($false); foreach ($f in 'README.md','README.ru.md') { $t=[System.IO.File]::ReadAllText($f); $t=$t -replace '\*\*[0-9]+\.[0-9]+\.[0-9]+\*\*\.',('**'+$v+'**.'); [System.IO.File]::WriteAllText($f,$t,$enc) }; $u=[System.IO.File]::ReadAllText('discord-update.txt'); $u=$u -replace '[0-9]+\.[0-9]+\.[0-9]+',$v; [System.IO.File]::WriteAllText('discord-update.txt',$u,$enc); $c=[System.IO.File]::ReadAllText('CHANGELOG.md'); $h='## ['+$v+'] '; if ($c.IndexOf($h) -lt 0) { $i=$c.IndexOf('## ['); $c=$c.Substring(0,$i)+$h+[char]0x2014+' '+$d+[Environment]::NewLine+[Environment]::NewLine+$c.Substring($i) }; [System.IO.File]::WriteAllText('CHANGELOG.md',$c,$enc);"
 if errorlevel 1 goto :error
 
 git add .
